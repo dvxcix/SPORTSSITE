@@ -3771,7 +3771,8 @@
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/feed"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/feed",
+      "docs/design/mobile-identity-followup-2026-11-22.json#route:/feed"
     ],
     "release": {
       "state": "Live",
@@ -3781,17 +3782,7 @@
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "route:/forum/[category]",
@@ -5325,7 +5316,8 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/picks",
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/picks"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/picks",
+      "docs/design/mobile-identity-followup-2026-11-22.json#route:/picks"
     ],
     "release": {
       "state": "Live",
@@ -5335,17 +5327,7 @@
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "member-experience-2026-11-21",
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "route:/pitcher-report",
@@ -5681,7 +5663,8 @@
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
-      "docs/design/full-mobile-audit-2026-11-22.json#route:/profile/[username]"
+      "docs/design/full-mobile-audit-2026-11-22.json#route:/profile/[username]",
+      "docs/design/mobile-identity-followup-2026-11-22.json#route:/profile/[username]"
     ],
     "release": {
       "state": "Live",
@@ -5691,17 +5674,7 @@
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "route:/research",
@@ -8257,7 +8230,8 @@
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-drawer:Overview",
-      "docs/design/full-mobile-audit-2026-11-22.json#nba-drawer:Overview"
+      "docs/design/full-mobile-audit-2026-11-22.json#nba-drawer:Overview",
+      "docs/design/mobile-identity-followup-2026-11-22.json#nba-drawer:Overview"
     ],
     "release": {
       "state": "Live",
@@ -8273,17 +8247,7 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "nba-drawer:Game tracking",
@@ -8309,7 +8273,8 @@
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-drawer:Game tracking",
-      "docs/design/full-mobile-audit-2026-11-22.json#nba-drawer:Game tracking"
+      "docs/design/full-mobile-audit-2026-11-22.json#nba-drawer:Game tracking",
+      "docs/design/mobile-identity-followup-2026-11-22.json#nba-drawer:Game tracking"
     ],
     "release": {
       "state": "Live",
@@ -8325,17 +8290,7 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "nba-drawer:Ladders",
@@ -8361,7 +8316,8 @@
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-drawer:Ladders",
-      "docs/design/full-mobile-audit-2026-11-22.json#nba-drawer:Ladders"
+      "docs/design/full-mobile-audit-2026-11-22.json#nba-drawer:Ladders",
+      "docs/design/mobile-identity-followup-2026-11-22.json#nba-drawer:Ladders"
     ],
     "release": {
       "state": "Live",
@@ -8377,17 +8333,7 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "nba-drawer:Market Story",
@@ -8413,7 +8359,8 @@
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-drawer:Market Story",
-      "docs/design/full-mobile-audit-2026-11-22.json#nba-drawer:Market Story"
+      "docs/design/full-mobile-audit-2026-11-22.json#nba-drawer:Market Story",
+      "docs/design/mobile-identity-followup-2026-11-22.json#nba-drawer:Market Story"
     ],
     "release": {
       "state": "Live",
@@ -8429,17 +8376,7 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "nba-drawer:Shots",
@@ -8465,7 +8402,8 @@
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-drawer:Shots",
-      "docs/design/full-mobile-audit-2026-11-22.json#nba-drawer:Shots"
+      "docs/design/full-mobile-audit-2026-11-22.json#nba-drawer:Shots",
+      "docs/design/mobile-identity-followup-2026-11-22.json#nba-drawer:Shots"
     ],
     "release": {
       "state": "Live",
@@ -8481,17 +8419,7 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "nba-drawer:All odds",
@@ -8517,7 +8445,8 @@
       "court-review/nba-tests.txt · 714 NBA + 124 freeze tests",
       "court-review/production-tests.txt · 134 source checks",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#nba-drawer:All odds",
-      "docs/design/full-mobile-audit-2026-11-22.json#nba-drawer:All odds"
+      "docs/design/full-mobile-audit-2026-11-22.json#nba-drawer:All odds",
+      "docs/design/mobile-identity-followup-2026-11-22.json#nba-drawer:All odds"
     ],
     "release": {
       "state": "Live",
@@ -8533,17 +8462,7 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "nfl-cheatsheet:Market Edge",
@@ -9245,7 +9164,8 @@
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-drawer:Matchup",
-      "docs/design/full-mobile-audit-2026-11-22.json#nfl-drawer:Matchup"
+      "docs/design/full-mobile-audit-2026-11-22.json#nfl-drawer:Matchup",
+      "docs/design/mobile-identity-followup-2026-11-22.json#nfl-drawer:Matchup"
     ],
     "release": {
       "state": "Live",
@@ -9261,17 +9181,7 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "nfl-drawer:NFL Tracking",
@@ -9297,7 +9207,8 @@
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-drawer:NFL Tracking",
-      "docs/design/full-mobile-audit-2026-11-22.json#nfl-drawer:NFL Tracking"
+      "docs/design/full-mobile-audit-2026-11-22.json#nfl-drawer:NFL Tracking",
+      "docs/design/mobile-identity-followup-2026-11-22.json#nfl-drawer:NFL Tracking"
     ],
     "release": {
       "state": "Live",
@@ -9313,17 +9224,7 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "nfl-drawer:Sportsbooks",
@@ -9349,7 +9250,8 @@
       "sideline-review/browser-layout-audit.json",
       "sideline-review/ui-final.txt",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#nfl-drawer:Sportsbooks",
-      "docs/design/full-mobile-audit-2026-11-22.json#nfl-drawer:Sportsbooks"
+      "docs/design/full-mobile-audit-2026-11-22.json#nfl-drawer:Sportsbooks",
+      "docs/design/mobile-identity-followup-2026-11-22.json#nfl-drawer:Sportsbooks"
     ],
     "release": {
       "state": "Live",
@@ -9365,17 +9267,7 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "nfl-matchup:Role command",
@@ -10563,7 +10455,8 @@
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
-      "docs/design/full-mobile-audit-2026-11-22.json#shared:Member identity, avatar rings and badges"
+      "docs/design/full-mobile-audit-2026-11-22.json#shared:Member identity, avatar rings and badges",
+      "docs/design/mobile-identity-followup-2026-11-22.json#shared:Member identity, avatar rings and badges"
     ],
     "release": {
       "state": "Live",
@@ -10573,17 +10466,7 @@
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "shared:Account menu",
@@ -10789,7 +10672,8 @@
       "docs/operations/research-header-volt-depth-2026-11-21.txt",
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
-      "docs/design/full-mobile-audit-2026-11-22.json#shared:Saved picks drawer"
+      "docs/design/full-mobile-audit-2026-11-22.json#shared:Saved picks drawer",
+      "docs/design/mobile-identity-followup-2026-11-22.json#shared:Saved picks drawer"
     ],
     "release": {
       "state": "Live",
@@ -10799,17 +10683,7 @@
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "member-experience-2026-11-21",
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "shared:NBA Matrix",
@@ -11011,7 +10885,8 @@
       "docs/design/full-site-audit-2026-11-21.json#shared:Comments and share",
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/avatar-decoration-release-2026-11-21.json",
-      "docs/design/full-mobile-audit-2026-11-22.json#shared:Comments and share"
+      "docs/design/full-mobile-audit-2026-11-22.json#shared:Comments and share",
+      "docs/design/mobile-identity-followup-2026-11-22.json#shared:Comments and share"
     ],
     "release": {
       "state": "Live",
@@ -11021,17 +10896,7 @@
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
-    "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
-      "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
-    }
+    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22"
   },
   {
     "id": "shared:Image and video viewer",

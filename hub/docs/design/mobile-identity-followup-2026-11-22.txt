@@ -1,0 +1,25 @@
+SlipSurge mobile identity and player drawer follow-up, 22 November 2026
+
+Changes
+- Unified membership and beta badge labels, spacing and theme colors; verification sits beside the name.
+- One tap opens all earned badge names, descriptions and original artwork. Overflow stays accessible; custom artwork and assignments are retained.
+- Static badges inside links and mention options do not add nested interactive controls.
+- Badge order is consistent across fetched and server-supplied identities.
+- Escape closes nested badge details without closing My Picks; focus returns to its trigger.
+- Profile statistics use compact tiles: six statistics fit in two phone rows, four remain two by two.
+- Binary NBA markets use Yes/No controls and hit-rate labels.
+- NFL statistical window buttons remain on Matchup/Tracking and no longer appear in the unrelated sportsbook price view.
+- Identity review gallery demonstrates the new badge details.
+
+Verification
+134/134 production source checks and 25/25 focused component checks pass, including seven new badge cases. ESLint and the exact final optimized build with TypeScript pass. 130 unique private browser receipts cover all six themes/viewports plus profile tabs, real private comment/reply submission, saved-card selection/history, binary-market labels, NBA window/split controls and NFL previous/next navigation. All six NBA and all three NFL player sections were used in every viewport/theme. The final compiled build separately verifies nested badge Escape and retained My Picks history in all six configurations.
+
+The 15 affected checklist entries link to the companion JSON. Existing owner approvals and release history are preserved.
+
+Limits
+- Browser viewport checks at 320x740, 390x844 and 1440x1000 in both themes; physical phone keyboards are not certified.
+- Private fixtures cover populated saved cards and write cases. No live posts, messages, profile saves or database/schema changes were submitted.
+- No scoring formulas, odds freshness gates, frozen pregame data, access tiers or tool routes changed.
+
+Production
+Pending the authorized main push and live verification.

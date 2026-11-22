@@ -1,0 +1,3088 @@
+{
+  "date": "2026-11-22",
+  "sourceBase": "f3e2f6215c20468bd28dbac7280c370d387a925e",
+  "status": "Verified privately; production receipt follows after the authorized publication.",
+  "scope": "Feed/comments, member profiles, Picks/Watchlist, all six Court and three Sideline player drawer tabs.",
+  "changes": [
+    "Unified membership and beta badge labels, spacing and theme colors; verification sits beside the name.",
+    "One tap opens all earned badge names, descriptions and original artwork. Overflow stays accessible; custom artwork and assignments are retained.",
+    "Static badges inside links and mention options do not add nested interactive controls.",
+    "Badge order is consistent across fetched and server-supplied identities.",
+    "Escape closes nested badge details without closing My Picks; focus returns to its trigger.",
+    "Profile statistics use compact tiles: six statistics fit in two phone rows, four remain two by two.",
+    "Binary NBA markets use Yes/No controls and hit-rate labels.",
+    "NFL statistical window buttons remain on Matchup/Tracking and no longer appear in the unrelated sportsbook price view.",
+    "Identity review gallery demonstrates the new badge details."
+  ],
+  "checks": {
+    "productionSource": {
+      "pass": 134,
+      "fail": 0
+    },
+    "focusedComponents": {
+      "pass": 25,
+      "fail": 0
+    },
+    "newBadgeCases": 7,
+    "lint": "pass",
+    "optimizedBuildWithTypeScript": "pass",
+    "privateBrowserReceipts": 130
+  },
+  "items": [
+    {
+      "id": "route:/feed"
+    },
+    {
+      "id": "route:/profile/[username]"
+    },
+    {
+      "id": "route:/picks"
+    },
+    {
+      "id": "shared:Member identity, avatar rings and badges"
+    },
+    {
+      "id": "shared:Saved picks drawer"
+    },
+    {
+      "id": "shared:Comments and share"
+    },
+    {
+      "id": "nba-drawer:Overview"
+    },
+    {
+      "id": "nba-drawer:Game tracking"
+    },
+    {
+      "id": "nba-drawer:Ladders"
+    },
+    {
+      "id": "nba-drawer:Market Story"
+    },
+    {
+      "id": "nba-drawer:Shots"
+    },
+    {
+      "id": "nba-drawer:All odds"
+    },
+    {
+      "id": "nfl-drawer:Matchup"
+    },
+    {
+      "id": "nfl-drawer:NFL Tracking"
+    },
+    {
+      "id": "nfl-drawer:Sportsbooks"
+    }
+  ],
+  "receipts": [
+    {
+      "case": "Comment posted with newline and keyboard submit",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1743,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Reply submitted within the selected thread",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1802,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Badge details and full artwork",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 892,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Populated NBA and NFL Watchlist cards",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 213,
+      "error": false,
+      "headings": [
+        "Watchlist"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Watchlist parlay selection",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 229,
+      "error": false,
+      "headings": [
+        "Watchlist"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "My Picks all history",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 248,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Feed and member identity",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 892,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Comments with nested replies and badge rows",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1663,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Member profile and compact stats",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 780,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile badge details",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 89,
+      "error": false,
+      "headings": [],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Picks page and author cards",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 301,
+      "error": false,
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Populated Watchlist",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 213,
+      "error": false,
+      "headings": [
+        "Watchlist"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NBA drawer Overview",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1067,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Game log"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Player game log",
+          "wide": false
+        }
+      ],
+      "width": 390
+    },
+    {
+      "case": "NBA drawer Game tracking",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1085,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 24,
+          "label": "2030-11-09: 24.9%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-10: 24.8%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-11: 24.7%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-12: 24.6%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-13: 24.5%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-14: 24.4%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-15: 24.3%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-16: 24.2%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-17: 24.1%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-18: 24.0%",
+          "w": 24
+        }
+      ],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=tracking&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone&metric=usage_percentage",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "NBA game tracking table",
+          "wide": false
+        }
+      ],
+      "width": 390
+    },
+    {
+      "case": "NBA drawer Ladders",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1056,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=ladder&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Alternative lines by sportsbook",
+          "wide": true
+        }
+      ],
+      "width": 390
+    },
+    {
+      "case": "NBA drawer Market Story",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1244,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=movement&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NBA drawer Shots",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1690,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Shot map",
+        "Season shooting"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=court&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NBA drawer All odds",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1105,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=markets&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NFL drawer Matchup",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 237,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NFL drawer NFL Tracking",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 269,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NFL drawer Sportsbooks",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1348,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Feed and member identity",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 892,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Comments with nested replies and badge rows",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 1663,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Member profile and compact stats",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 780,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile badge details",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 89,
+      "error": false,
+      "headings": [],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Picks page and author cards",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 301,
+      "error": false,
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/picks?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Populated Watchlist",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 213,
+      "error": false,
+      "headings": [
+        "Watchlist"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/picks?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NBA drawer Overview",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 1067,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Game log"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Player game log",
+          "wide": false
+        }
+      ],
+      "width": 390
+    },
+    {
+      "case": "NBA drawer Game tracking",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 1085,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 24,
+          "label": "2030-11-09: 24.9%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-10: 24.8%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-11: 24.7%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-12: 24.6%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-13: 24.5%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-14: 24.4%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-15: 24.3%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-16: 24.2%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-17: 24.1%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-18: 24.0%",
+          "w": 24
+        }
+      ],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=tracking&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone&metric=usage_percentage",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "NBA game tracking table",
+          "wide": false
+        }
+      ],
+      "width": 390
+    },
+    {
+      "case": "NBA drawer Ladders",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 1056,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=ladder&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Alternative lines by sportsbook",
+          "wide": true
+        }
+      ],
+      "width": 390
+    },
+    {
+      "case": "NBA drawer Market Story",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 1244,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=movement&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NBA drawer Shots",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 1690,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Shot map",
+        "Season shooting"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=court&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NBA drawer All odds",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 1105,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=markets&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NFL drawer Matchup",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 237,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NFL drawer NFL Tracking",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 269,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NFL drawer Sportsbooks",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 1348,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Feed and member identity",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 892,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Comments with nested replies and badge rows",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 1663,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Member profile and compact stats",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 780,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Profile badge details",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 89,
+      "error": false,
+      "headings": [],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Picks page and author cards",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 301,
+      "error": false,
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Populated Watchlist",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 213,
+      "error": false,
+      "headings": [
+        "Watchlist"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "NBA drawer Overview",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 1067,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Game log"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Player game log",
+          "wide": true
+        }
+      ],
+      "width": 320
+    },
+    {
+      "case": "NBA drawer Game tracking",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 1085,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 24,
+          "label": "2030-11-09: 24.9%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-10: 24.8%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-11: 24.7%",
+          "w": 24
+        }
+      ],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=tracking&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone&metric=usage_percentage",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "NBA game tracking table",
+          "wide": false
+        }
+      ],
+      "width": 320
+    },
+    {
+      "case": "NBA drawer Ladders",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 1056,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=ladder&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Alternative lines by sportsbook",
+          "wide": true
+        }
+      ],
+      "width": 320
+    },
+    {
+      "case": "NBA drawer Market Story",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 1244,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=movement&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "NBA drawer Shots",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 1690,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Shot map",
+        "Season shooting"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=court&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "NBA drawer All odds",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 1105,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=markets&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "NFL drawer Matchup",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 237,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "NFL drawer NFL Tracking",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 269,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "NFL drawer Sportsbooks",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 1348,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Feed and member identity",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 892,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Comments with nested replies and badge rows",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 1663,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Member profile and compact stats",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 780,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Profile badge details",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 89,
+      "error": false,
+      "headings": [],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Picks page and author cards",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 301,
+      "error": false,
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/picks?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Populated Watchlist",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 213,
+      "error": false,
+      "headings": [
+        "Watchlist"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/picks?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "NBA drawer Overview",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 1067,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Game log"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Player game log",
+          "wide": true
+        }
+      ],
+      "width": 320
+    },
+    {
+      "case": "NBA drawer Game tracking",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 1085,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 24,
+          "label": "2030-11-09: 24.9%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-10: 24.8%",
+          "w": 24
+        },
+        {
+          "h": 24,
+          "label": "2030-11-11: 24.7%",
+          "w": 24
+        }
+      ],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=tracking&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone&metric=usage_percentage",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "NBA game tracking table",
+          "wide": false
+        }
+      ],
+      "width": 320
+    },
+    {
+      "case": "NBA drawer Ladders",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 1056,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=ladder&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Alternative lines by sportsbook",
+          "wide": true
+        }
+      ],
+      "width": 320
+    },
+    {
+      "case": "NBA drawer Market Story",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 1244,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=movement&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "NBA drawer Shots",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 1690,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Shot map",
+        "Season shooting"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=court&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "NBA drawer All odds",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 1105,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=markets&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "NFL drawer Matchup",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 237,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "NFL drawer NFL Tracking",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 269,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "NFL drawer Sportsbooks",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 1348,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Feed and member identity",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 892,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Comments with nested replies and badge rows",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 1663,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Member profile and compact stats",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 780,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Profile badge details",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 89,
+      "error": false,
+      "headings": [],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Picks page and author cards",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 301,
+      "error": false,
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Populated Watchlist",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 213,
+      "error": false,
+      "headings": [
+        "Watchlist"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/picks?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NBA drawer Overview",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 1067,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Game log"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Player game log",
+          "wide": false
+        }
+      ],
+      "width": 1440
+    },
+    {
+      "case": "NBA drawer Game tracking",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 422,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=tracking&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone&metric=usage_percentage",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NBA drawer Ladders",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 1056,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=ladder&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Alternative lines by sportsbook",
+          "wide": true
+        }
+      ],
+      "width": 1440
+    },
+    {
+      "case": "NBA drawer Market Story",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 751,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=movement&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NBA drawer Shots",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 1035,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Shot map",
+        "Season shooting"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=court&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NBA drawer All odds",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 1105,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=markets&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NFL drawer Matchup",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 237,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NFL drawer NFL Tracking",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 269,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NFL drawer Sportsbooks",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 1348,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Feed and member identity",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 892,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Comments with nested replies and badge rows",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 1663,
+      "error": false,
+      "headings": [
+        "The Feed"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Member profile and compact stats",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 780,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Profile badge details",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 89,
+      "error": false,
+      "headings": [],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Picks page and author cards",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 301,
+      "error": false,
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/picks?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Populated Watchlist",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 213,
+      "error": false,
+      "headings": [
+        "Watchlist"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/picks?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NBA drawer Overview",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 1067,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Game log"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Player game log",
+          "wide": false
+        }
+      ],
+      "width": 1440
+    },
+    {
+      "case": "NBA drawer Game tracking",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 1085,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=tracking&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone&metric=usage_percentage",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "NBA game tracking table",
+          "wide": false
+        }
+      ],
+      "width": 1440
+    },
+    {
+      "case": "NBA drawer Ladders",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 1056,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=ladder&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Alternative lines by sportsbook",
+          "wide": true
+        }
+      ],
+      "width": 1440
+    },
+    {
+      "case": "NBA drawer Market Story",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 1244,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=movement&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NBA drawer Shots",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 1690,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Shot map",
+        "Season shooting"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=court&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NBA drawer All odds",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 1105,
+      "error": false,
+      "headings": [
+        "Jayson Tatum"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=markets&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NFL drawer Matchup",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 237,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NFL drawer NFL Tracking",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 269,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "NFL drawer Sportsbooks",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 1348,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Profile tab All",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 780,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/jordan-review",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile tab Picks",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 588,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?tab=picks",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile tab Replies",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1298,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?tab=replies",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile tab Reposts",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 589,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?tab=reposts",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile tab Media",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 588,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?tab=media",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile tab Communities",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 594,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?tab=communities",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NBA binary market No selection",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 970,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Game log"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=double_double&side=under&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Player game log",
+          "wide": false
+        }
+      ],
+      "width": 390
+    },
+    {
+      "case": "NBA binary market Yes selection",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 971,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Game log"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=double_double&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Player game log",
+          "wide": false
+        }
+      ],
+      "width": 390
+    },
+    {
+      "case": "NBA log window and home split",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1118,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Game log"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame&reviewTheme=dark&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Player game log",
+          "wide": false
+        }
+      ],
+      "width": 390
+    },
+    {
+      "case": "NFL next player with sportsbook section retained",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1025,
+      "error": false,
+      "headings": [
+        "Travis Kelce"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NFL previous player and preserved tools",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 1348,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile tab All",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 780,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/jordan-review",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile tab Picks",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 588,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?tab=picks",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile tab Replies",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 1298,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?tab=replies",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile tab Reposts",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 589,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?tab=reposts",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile tab Media",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 588,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?tab=media",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Profile tab Communities",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 594,
+      "error": false,
+      "headings": [
+        "Jordan L.",
+        "Join Jordan L.",
+        "Badges and achievements",
+        "Ultimate",
+        "Beta Tester",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/profile/jordan-review?tab=communities",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NBA binary market No selection",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 970,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Game log"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame&reviewTheme=light&reviewMatrix=1&market=double_double&side=under&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Player game log",
+          "wide": false
+        }
+      ],
+      "width": 390
+    },
+    {
+      "case": "NBA binary market Yes selection",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 971,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Game log"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame&reviewTheme=light&reviewMatrix=1&market=double_double&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Player game log",
+          "wide": false
+        }
+      ],
+      "width": 390
+    },
+    {
+      "case": "NBA log window and home split",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 1118,
+      "error": false,
+      "headings": [
+        "Jayson Tatum",
+        "Game log"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-paint?date=2030-11-20&game=900001&player=900110&panel=trends&mode=pregame&reviewTheme=light&reviewMatrix=1&market=points&side=over&book=all&sort=average&order=desc&contract=milestone",
+      "wideTables": [
+        {
+          "keyboard": true,
+          "scroller": "Player game log",
+          "wide": false
+        }
+      ],
+      "width": 390
+    },
+    {
+      "case": "NFL next player with sportsbook section retained",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 1025,
+      "error": false,
+      "headings": [
+        "Travis Kelce"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "NFL previous player and preserved tools",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 1348,
+      "error": false,
+      "headings": [
+        "Josh Allen"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/the-sideline?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Final build: badge Escape preserves My Picks",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 249,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Final build: saved Picks history",
+      "view": "phone-dark",
+      "brokenImages": [],
+      "characters": 248,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Final build: badge Escape preserves My Picks",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 249,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Final build: saved Picks history",
+      "view": "phone-light",
+      "brokenImages": [],
+      "characters": 248,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 844,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 390
+    },
+    {
+      "case": "Final build: badge Escape preserves My Picks",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 249,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Final build: saved Picks history",
+      "view": "narrow-dark",
+      "brokenImages": [],
+      "characters": 248,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Final build: badge Escape preserves My Picks",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 249,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Final build: saved Picks history",
+      "view": "narrow-light",
+      "brokenImages": [],
+      "characters": 248,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 740,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 320
+    },
+    {
+      "case": "Final build: badge Escape preserves My Picks",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 249,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Final build: saved Picks history",
+      "view": "desktop-dark",
+      "brokenImages": [],
+      "characters": 248,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "dark",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=dark&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Final build: badge Escape preserves My Picks",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 249,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    },
+    {
+      "case": "Final build: saved Picks history",
+      "view": "desktop-light",
+      "brokenImages": [],
+      "characters": 248,
+      "error": false,
+      "headings": [
+        "My Picks"
+      ],
+      "height": 1000,
+      "legacyFloating": [],
+      "loading": false,
+      "overflow": false,
+      "smallButtons": [],
+      "theme": "light",
+      "unnamed": 0,
+      "url": "/feed?reviewTheme=light&reviewMatrix=1",
+      "wideTables": [],
+      "width": 1440
+    }
+  ],
+  "privateWrites": [
+    "Submitted a multiline comment with Control+Enter.",
+    "Submitted a reply in its selected thread.",
+    "Selected Watchlist items and canceled the parlay selection."
+  ],
+  "limits": [
+    "Browser viewport checks at 320x740, 390x844 and 1440x1000 in both themes; physical phone keyboards are not certified.",
+    "Private fixtures cover populated saved cards and write cases. No live posts, messages, profile saves or database/schema changes were submitted.",
+    "No scoring formulas, odds freshness gates, frozen pregame data, access tiers or tool routes changed."
+  ],
+  "references": [
+    {
+      "app": "X",
+      "url": "https://mobbin.com/screens/191d7ed0-8eee-47ab-a23c-9af6c02a1b11",
+      "decision": "Verification sits adjacent to the author name, with secondary identity metadata following."
+    },
+    {
+      "app": "Kajabi",
+      "url": "https://mobbin.com/screens/a38fabc8-8a9f-4e59-a9d2-1df4e0db7f67",
+      "decision": "Small identity marks stay beside the name within the author row."
+    }
+  ]
+}

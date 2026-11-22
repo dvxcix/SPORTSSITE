@@ -1281,13 +1281,13 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
         </header>
         <ResearchSectionNav label="NFL player section" value={tab} onChange={changeSection} items={[{value:'matchup',label:'Matchup'},{value:'tracking',label:'NFL Tracking'},{value:'markets',label:'Sportsbooks'}]}/>
         <div className={styles.modalBody} ref={bodyRef}>
-          <div className={styles.modalWindows}>
+          {tab !== 'markets' && <div className={styles.modalWindows}>
             {WINDOW_OPTIONS.map(option => (
               <button type="button" key={option.id} aria-pressed={detailWindow===option.id} className={detailWindow === option.id ? styles.modalWindowActive : ''} onClick={() => setDetailWindow(option.id)}>
                 {option.label}
               </button>
             ))}
-          </div>
+          </div>}
           {tab === 'matchup' ? (
             <>
               <div className={styles.modalHero}>

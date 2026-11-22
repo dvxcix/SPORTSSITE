@@ -226,8 +226,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           {/* Name + badges */}
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-1)] sm:text-3xl">{profile.display_name || profile.username}</h1>
-            <UserBadges userId={profile.id} size={20} maxVisible={6} badges={achievements} />
             {profile.is_verified && <BadgeCheck size={18} className="text-[var(--accent)]" aria-label="Verified" />}
+            <UserBadges userId={profile.id} size={18} maxVisible={6} badges={achievements} interactive />
             {isCreatorProfile && (
               <span className="text-xs font-medium text-[var(--gold)] bg-[var(--gold-dim)] px-2 py-1 rounded-md border border-[var(--border)]">Creator</span>
             )}

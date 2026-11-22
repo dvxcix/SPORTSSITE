@@ -17,15 +17,32 @@ body:has(.ss-context-handoff) .ss-profile-savebar{--profile-resume-offset:76px}
 .ss-member-avatar:not(.ring-none)::before{filter:drop-shadow(0 0 1px rgba(9,18,32,.35))}
 .ss-member-avatar .ss-member-presence{z-index:2;box-shadow:0 0 0 1px var(--surface)}
 
-/* Uploaded transparent wordmarks retain their original colors in either theme. */
-.ss-user-badge-shell,.ss-badge-tooltip-art{background:#111c29;border-color:#314253;box-shadow:inset 0 1px rgba(255,255,255,.08),0 1px 3px rgba(9,18,32,.12);color:#dce7ef}
-.ss-user-badge-shell:hover{background:#182638;border-color:#5d7790}
-.ss-user-badge-shell{border-radius:5px;overflow:visible}
-.ss-user-badge-icon{display:block;object-fit:contain;filter:none}
-.ss-user-badges{max-width:100%;gap:5px;align-items:center;vertical-align:middle}
-.ss-badge-tooltip{max-width:min(280px,calc(100vw - 48px));gap:10px}
-.ss-badge-tooltip small{font-size:12px;line-height:1.45;text-wrap:pretty}
-.ss-badge-tooltip-art{border:1px solid #314253;border-radius:7px;padding:5px;flex-shrink:0}
+/* Membership labels share one baseline; original artwork stays in badge details. */
+.ss-user-badges{max-width:100%;min-width:0;vertical-align:middle}
+.ss-user-badge-trigger,.ss-user-badge-static{display:inline-flex;max-width:100%;align-items:center;border:0;padding:0;background:none;color:var(--text-2);vertical-align:middle}
+.ss-user-badge-trigger{min-height:28px;cursor:pointer;border-radius:6px}
+.ss-user-badge-trigger>span,.ss-user-badge-static>span{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.ss-user-badge-mark{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:21px;padding:2px 5px;border:1px solid var(--border-2);border-radius:5px;background:var(--surface-2);color:var(--text-2);font:600 10px/1.2 var(--font-body,Arial,sans-serif);white-space:nowrap}
+.ss-user-badge-mark svg{flex-shrink:0}
+.ss-user-badge-mark.is-ultimate{color:var(--blue);background:var(--blue-dim);border-color:color-mix(in srgb,var(--blue) 26%,var(--border))}
+.ss-user-badge-mark.is-beta{color:var(--gold);background:var(--gold-dim);border-color:color-mix(in srgb,var(--gold) 26%,var(--border))}
+.ss-user-badge-mark.is-custom{border:0;background:none;padding:0 2px}
+.ss-user-badge-icon{display:block;width:auto;height:var(--badge-art-size,16px);max-width:calc(var(--badge-art-size,16px) * 2.5);object-fit:contain;filter:none}
+.ss-user-badge-trigger:hover .ss-user-badge-mark{border-color:var(--text-3)}
+.ss-user-badge-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ss-user-badge-more{min-width:21px;height:21px;border-radius:5px;font-size:10px;font-weight:600;line-height:1.2}
+.ss-member-badge-panel{padding:12px;border:1px solid var(--border-2);border-radius:12px;background:var(--surface);color:var(--text-1);box-shadow:var(--shadow-overlay);max-height:min(380px,calc(100dvh - 120px));overflow:auto}
+.ss-member-badge-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;font-size:13px}
+.ss-member-badge-panel-head button{display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-2)}
+.ss-member-badge-list{display:grid;gap:14px}
+.ss-member-badge-panel .ss-badge-tooltip{grid-template-columns:64px minmax(0,1fr);min-width:0;gap:10px;max-width:100%}
+.ss-badge-tooltip small{font-size:12px;line-height:1.45;text-wrap:pretty;overflow-wrap:anywhere}
+.ss-member-badge-panel .ss-badge-tooltip-art{width:64px;height:40px;border:1px solid #314253;background:#111c29;border-radius:7px;padding:5px;box-shadow:none}
+.ss-member-badge-panel .ss-badge-tooltip-art img{width:100%;height:100%;filter:none}
+.ss-profile-stats{display:grid;grid-template-columns:repeat(var(--profile-stat-count,4),minmax(0,1fr));gap:8px;padding-top:16px}
+.ss-profile-stat{min-width:0;padding:12px 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2)}
+.ss-profile-stat p:first-child{font-size:20px;overflow-wrap:anywhere}.ss-profile-stat p:last-child{margin-top:6px;font-size:11px}
+@media(max-width:767px){.ss-user-badge-trigger{min-height:44px}.ss-profile-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.ss-profile-stats:has(>:nth-child(4):last-child){grid-template-columns:repeat(2,minmax(0,1fr))}.ss-profile-stat{padding:11px 9px}.ss-profile-stat p:first-child{font-size:18px}}
 
 /* A single sticky filter toolbar prevents the sport and timeline tabs overlapping. */
 .ss-feed-timeline{overflow:visible;box-shadow:none;background:var(--surface)}

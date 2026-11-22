@@ -672,10 +672,10 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                     {post.author.display_name || post.author.username}
                   </Link>
                   </ProfileHoverTarget>
-                  <UserBadges userId={post.author.id} size={18} />
                   {post.author.is_verified && (
                     <BadgeCheck size={15} aria-label="Verified" style={{ color: 'var(--green)', flexShrink: 0 }} />
                   )}
+                  <UserBadges userId={post.author.id} size={16} interactive />
                   <Link href={`/profile/${post.author.username}`} style={{ color: 'var(--text-3)', fontSize: 12, textDecoration: 'none' }}>
                     @{post.author.username}
                   </Link>
@@ -1191,7 +1191,7 @@ function CommentItem({
         <div className="ss-comment-meta">
           <div className="ss-comment-name">{member ? <ProfileHoverTarget profile={member}><Link href={`/profile/${member.username}`}>{name}</Link></ProfileHoverTarget> : name}</div>
           <CommentActions name={name} isOwn={isOwn} currentUserId={currentUserId} authorId={node.author_id} username={node.author?.username} onEdit={() => onStartEdit(node)} onDelete={() => onDelete(node.id)} onReport={() => onReport(node.id)} />
-          <div className="ss-comment-details"><UserBadges userId={node.author_id} size={12} maxVisible={2} /><time dateTime={node.created_at}>{timeAgo(node.created_at, nowMs)}{isEdited ? ' · edited' : ''}</time></div>
+          <div className="ss-comment-details"><UserBadges userId={node.author_id} size={12} maxVisible={2} interactive /><time dateTime={node.created_at}>{timeAgo(node.created_at, nowMs)}{isEdited ? ' · edited' : ''}</time></div>
         </div>
         {editingCommentId === node.id ? <CommentComposer value={editText} onChange={setEditText} onSubmit={() => onSaveEdit(node.id)} onCancel={onCancelEdit} label="Save" placeholder="Edit comment…" autoFocus /> : <p className="ss-comment-text"><LinkifiedText text={node.content} /></p>}
         <div className="ss-comment-actions">
