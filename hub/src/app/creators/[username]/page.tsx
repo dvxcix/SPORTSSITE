@@ -34,7 +34,7 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
     <CreatorFunnelSignal creatorId={creator.id} eventType="storefront_view" />
     <Link href="/creators" className={styles.back}><ArrowLeft size={15} /> Creator marketplace</Link>
     {creator.banner_url&&<div className={styles.storeCover}><SafeImage src={creator.banner_url} alt=""/></div>}
-    <section className={styles.hero} style={creator.banner_url ? { backgroundImage: `linear-gradient(90deg,var(--surface),color-mix(in srgb,var(--surface) 80%,transparent)),url(${creator.banner_url})` } : undefined}>
+    <section className={styles.hero}>
       <div className={styles.identity}><MemberAvatar src={creator.avatar_url} name={creator.display_name || creator.username} size={76} tone="creator" ringStyle={creator.avatar_ring_style} ringColor={creator.avatar_ring_color}/><div><span className={styles.verified}>{creator.is_verified&&<BadgeCheck size={15}/>} {creator.is_verified?'Verified creator':'Creator community'}</span><h1>{creator.display_name || creator.username}</h1><p>@{creator.username} · {creator.follower_count ?? 0} followers</p></div></div>
       <p className={styles.bio}>{creator.bio || 'Premium sports content, research, and member community on SlipSurge.'}</p>
       <nav className={styles.storeNav} aria-label="Storefront sections"><a href="#memberships">Memberships</a><a href="#communities">Communities · {groups.length}</a><a href="#about">About</a></nav>
