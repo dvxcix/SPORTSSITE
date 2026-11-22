@@ -19,7 +19,7 @@ export default async function AdminPagesPage() {
         <h1 className="text-xl font-semibold text-[var(--text-1)]">Pages</h1>
         <span className="text-xs text-[var(--text-3)] bg-[var(--surface-2)] px-2 py-0.5 rounded-full">{pages?.length ?? 0}</span>
       </div>
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
+      <div className="ss-table-region ss-admin-table-region bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-x-auto" role="region" aria-label="Pages table" tabIndex={0}>
         <table className="w-full text-sm">
           <thead className="border-b border-[var(--border)]">
             <tr>{['Page', 'Category', 'Followers', 'Owner', 'Status', 'Actions'].map(h => (

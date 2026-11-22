@@ -12,6 +12,7 @@ import * as spendingPause from '../src/lib/browserbaseSpendingPause.ts'
 import * as scoreIntegrity from '../src/lib/nflScoreIntegrity.ts'
 import * as nflAvailability from '../src/lib/nflAvailability.ts'
 import * as publicResearchPreview from '../src/lib/publicResearchPreview.ts'
+import { DEFAULT_RESEARCH_PREFERENCES } from '../src/lib/researchPreferences.ts'
 import type { SidelineGame } from '../src/app/the-sideline/types.ts'
 
 const start = Date.parse('2026-10-25T17:00:00Z')
@@ -349,6 +350,7 @@ test('historical unavailable research is visible on board, matchup and cheatshee
     '@/lib/nflTouchdownFeed':{getNflTouchdownFeed:async()=>[]},'@/lib/nflPublicResultsServer':{getNflPublicResults:async()=>null},
     '@/lib/nflPregameResearchData':{nflPregameOpen:()=>false},'./NflPregameBoundary':{NflPregameBoundary:'Boundary'},'@/components/sideline/NflScorerBadges':{LiveNflScorerProvider:'Scorers'},
     './NflLastSeen':{NflLastSeen:'LastSeen'},'@/lib/publicResearchPreview':publicResearchPreview,
+    '@/lib/researchPreferencesServer':{readResearchPreferences:async()=>({preferences:structuredClone(DEFAULT_RESEARCH_PREFERENCES),available:true})},
   }
   for(const [name,value] of Object.entries(components)) imports['./'+name]={[name]:value}
   const page=await compiled('src/app/the-sideline/page.tsx',imports)

@@ -121,6 +121,7 @@ export function OnboardingFlow({
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const [bannerUploading, setBannerUploading] = useState(false);
   const draftReady = useRef(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
   const draftKey = `slipsurge:onboarding:${userId}`;
 
   useEffect(() => {
@@ -180,15 +181,20 @@ export function OnboardingFlow({
           if (draft.alerts && typeof draft.alerts === "object")
             setAlerts((current) => ({ ...current, ...draft.alerts }));
           draftReady.current = true;
+          setDraftLoaded(true);
         });
         return () => {
           active = false;
         };
       }
     } catch {
-      localStorage.removeItem(draftKey);
+      try { localStorage.removeItem(draftKey); } catch { /* Storage may be unavailable. */ }
     }
-    draftReady.current = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      draftReady.current = true;
+      setDraftLoaded(true);
+    });
     return () => {
       active = false;
     };
@@ -346,6 +352,8 @@ export function OnboardingFlow({
   const initials = (displayName ||
     initialProfile?.username ||
     "?")[0]?.toUpperCase();
+
+  if (!draftLoaded) return <div className="ss-onboarding-card" role="status" aria-label="Loading account setup"><p className="ss-onboarding-lead">Preparing your setup…</p></div>;
 
   return (
     <>
@@ -781,6 +789,8 @@ export function OnboardingFlow({
                     <b>Connect my accounts</b><small>Link Whop, Discord, or X.</small>
                   </button>
                 </div>
+                <div className="ss-onboarding-nav">
+                <button type="button" disabled={saving} onClick={() => setStep(6)}>Back</button>
                 <button
                   type="button"
                   onClick={finish}
@@ -799,6 +809,7 @@ export function OnboardingFlow({
                         : "Finish & Open My Feed →"
                   )}
                 </button>
+                </div>
               </div>
             )}
           </motion.div>

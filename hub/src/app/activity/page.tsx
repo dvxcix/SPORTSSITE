@@ -56,7 +56,7 @@ export default async function ActivityPage() {
       eyebrow="Your history"
       title="Activity Replay"
       description="Return to the posts, picks, conversations, communities, and research you created."
-      status={(data?.length ?? 0) + ' recent actions'}
+      status={(data?.length ?? 0) + ((data?.length ?? 0) === 1 ? ' recent action' : ' recent actions')}
     />
 
     {error ? <section className={styles.state}><History size={24}/><strong>Activity is temporarily unavailable.</strong></section>

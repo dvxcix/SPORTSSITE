@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Check, ChevronRight, Clock3, Layers3, LockKeyhole, Minus, ShieldCheck, X } from 'lucide-react'
 import { ModalSurface } from '@/components/ui/ModalSurface'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { useAuth } from '@/context/AuthContext'
 import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { nflOddsBoardMove } from '@/lib/nflOddsBoard'
@@ -99,6 +100,7 @@ export function ResearchPreviewClient({ sport, preview, initial }: { sport: Prev
       </nav>
       <div className={styles.topActions}>
         <Link href={user ? '/feed' : signIn}>{user ? 'My account' : 'Sign in'}</Link>
+        <ThemeToggle />
         <Link className={styles.topUpgrade} href={paid ? workspace : pricing}>{paid ? 'Open workspace' : 'View Ultimate'}<ArrowRight size={14} /></Link>
       </div>
     </header>

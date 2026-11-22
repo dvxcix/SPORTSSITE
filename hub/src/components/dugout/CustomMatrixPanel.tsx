@@ -1410,6 +1410,11 @@ export function MatrixButton() {
   const [importCode, setImportCode] = useState('')
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
+  useEffect(() => {
+    const openLibrary = () => setOpen(true)
+    window.addEventListener('ss:open-mlb-matrices', openLibrary)
+    return () => window.removeEventListener('ss:open-mlb-matrices', openLibrary)
+  }, [])
   const profileTier = effectiveTier(
     (profile?.tier as Tier | undefined) ?? 'free',
     profile?.discord_advanced_claimed,

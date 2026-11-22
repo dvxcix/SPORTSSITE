@@ -1,8 +1,8 @@
 'use client'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { AtSign, Bookmark, ChevronDown, ChevronRight, CircleHelp, CreditCard, LogOut, Settings, Shield, Sparkles, User, WalletCards } from 'lucide-react'
+import { AtSign, Bookmark, ChevronDown, ChevronRight, CircleHelp, ClipboardList, CreditCard, Grid3X3, LogOut, Settings, Shield, Sparkles, Star, User, WalletCards } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { effectiveTier, hasFullAccessOverride, type Tier } from '@slipsurge/core/tiers'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
@@ -15,6 +15,7 @@ const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advance
 export function AccountMenu({ placement = 'topbar', compact = false, onNavigate }: { placement?: 'topbar' | 'sidebar'; compact?: boolean; onNavigate?: () => void }) {
   const { user, profile, loading, signOut: signOutSession } = useAuth()
   const router = useRouter()
+  const path = usePathname()
   const hydrated = useSyncExternalStore(subscribeToClient, () => true, () => false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [signOutError, setSignOutError] = useState('')
@@ -46,6 +47,7 @@ export function AccountMenu({ placement = 'topbar', compact = false, onNavigate 
 
   const navigate = () => { setMenuOpen(false); onNavigate?.() }
   const closeMenu = () => { setMenuOpen(false); menuTriggerRef.current?.focus({ preventScroll: true }) }
+  const openSaved = (event: string) => { closeMenu(); onNavigate?.(); requestAnimationFrame(() => window.dispatchEvent(new Event(event))) }
   useEffect(() => {
     if (!menuOpen) return
     const frame = window.requestAnimationFrame(() => document.getElementById(menuId)?.querySelector<HTMLElement>('a[href],button:not([disabled])')?.focus({ preventScroll: true }))
@@ -111,6 +113,9 @@ export function AccountMenu({ placement = 'topbar', compact = false, onNavigate 
                   <Link role="menuitem" href={profileHref} className="ss-dropdown-item" onClick={navigate}>
                     <User size={15} /><span>Profile</span><ChevronRight size={13} />
                   </Link>
+                  <button type="button" role="menuitem" className="ss-dropdown-item" onClick={() => openSaved('ss:open-my-picks')}><ClipboardList size={15} /><span>My picks</span><ChevronRight size={13} /></button>
+                  <button type="button" role="menuitem" className="ss-dropdown-item" onClick={() => openSaved('ss:open-watchlist')}><Star size={15} /><span>Watchlist</span><ChevronRight size={13} /></button>
+                  {(path === '/dugout' || path === '/daily-recap') && <button type="button" role="menuitem" className="ss-dropdown-item" onClick={() => openSaved('ss:open-mlb-matrices')}><Grid3X3 size={15} /><span>MLB matrices</span><ChevronRight size={13} /></button>}
                   <Link role="menuitem" href="/bookmarks" className="ss-dropdown-item" onClick={navigate}>
                     <Bookmark size={15} /><span>Bookmarks</span><ChevronRight size={13} />
                   </Link>

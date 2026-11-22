@@ -68,3 +68,13 @@ if(!table('user_badges').length)table('user_badges').push(...table('users').flat
 if(!table('posts').some(post=>post.id==='00000000-0000-4000-8000-000000000103'))table('posts').push({...posts[0],id:'00000000-0000-4000-8000-000000000103',author_id:REVIEW_USER_ID,user_id:REVIEW_USER_ID,author:reviewProfile(),users:reviewProfile(),user:reviewProfile(),sport:'NBA',visibility:'public',post_type:'pick',type:'pick',content:'Illustrative NBA points selection.',pick_data:{player_name:'Jayson Tatum',pick_type:'nba_points',line:25,side:'over',odds:-110,book:'fanduel',result:'pending',game_pk:'900001',team:'BOS'}})
 
 if(!table('stories').length)table('stories').push(...[{id:'review-story-image',story_type:'image',media_url:'/review-assets/tatum.png',content:'Illustrative photo story'},{id:'review-story-video',story_type:'video',media_url:'/review-assets/story-preview.webm',content:'Local playback test'},{id:'review-story-text',story_type:'text',media_url:null,content:'Research the role. Compare the market.'}].map(story=>({...story,author:jordan,user_id:jordan.id,sport:'NBA',bg_color:'#111111',created_at:now,expires_at:'2031-01-01T00:00:00Z'})))
+
+/* Comment fixtures include long names, decorated avatars and a deep reply chain. */
+if(!table('comments').length){
+  for(const post of table('posts')){
+    const rootId=`review-comment-${post.id}-0`
+    const authors=[jordan,maya,reviewProfile(),jordan,maya,jordan,maya]
+    authors.forEach((author,index)=>table('comments').push({id:index===0?rootId:`review-comment-${post.id}-${index}`,post_id:post.id,author_id:author.id,author:index===1?{...author,display_name:'A member with a longer display name'}:author,parent_id:index===0||index===2?null:index===1?rootId:`review-comment-${post.id}-${index-1}`,content:index===0?'A clear comment with room for the member’s name and badges.':index===1?'A nested reply stays readable on a narrow phone.\nA second line stays in this comment.':'Illustrative reply — https://www.slipsurge.com/the-paint',created_at:now,updated_at:now,reaction_count:index===0?3:0}))
+    post.comment_count=authors.length
+  }
+}

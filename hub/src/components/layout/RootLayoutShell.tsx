@@ -52,6 +52,8 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
     return <><NetworkStatus /><ProductTelemetry /><main id="main-content">{children}</main>{(isLandingPage || isPublicPreviewPath(path)) && <UtilityDock teaserOnly />}</>
   }
 
+  // Single drawer hosts stay mounted here; headers and the account menu open
+  // them. VOLT is the only floating launcher on every route.
   // WatchlistProvider (and its two FABs) used to live inside dugout/page.tsx
   // only, so the watchlist/picks were invisible everywhere else — moved up
   // here so a signed-in user can see and manage them from any page, not just
@@ -76,7 +78,6 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
   // both places too, instead of only the one it happened to be built on.
   const showMatrixButton = path === '/dugout' || path === '/daily-recap'
   const showNflMatrixButton = path === '/the-sideline'
-  const toolsInResearchHeader = path === '/the-paint' || path === '/the-sideline'
 
   return (
     <>
@@ -99,7 +100,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
         </div>
       </div>
       {!isDesktop && <MobileDock hidden={mobileNavOpen} onMenuClick={() => setMobileNavOpen(true)} />}
-      <UtilityDock toolsInHeader={toolsInResearchHeader}>
+      <UtilityDock>
         {showMatrixButton && <MatrixButton />}
         {showNflMatrixButton && <NflMatrixButton />}
         <MyPicksButton />

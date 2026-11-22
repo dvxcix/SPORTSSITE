@@ -60,7 +60,7 @@ export function AdminUserRow({ user: u, displayTier, subLabel, emailVerified }: 
     <>
       <tr className="hover:bg-[color-mix(in_srgb,var(--surface-2)_40%,transparent)] transition-colors">
         <td className="px-4 py-3">
-          <button onClick={() => setOpen(v => !v)} className="flex items-center gap-3 text-left" aria-label="Toggle details">
+          <button type="button" onClick={() => setOpen(v => !v)} className="flex items-center gap-2 text-left" aria-label={`Show details for ${u.display_name || u.username}`} aria-expanded={open}>
             {open ? <ChevronDown size={14} className="text-[var(--text-3)] shrink-0" /> : <ChevronRight size={14} className="text-[var(--text-3)] shrink-0" />}
             <div className="w-8 h-8 rounded-full bg-[var(--surface-3)] flex items-center justify-center text-xs font-semibold text-[var(--text-1)] overflow-hidden shrink-0">
               {u.avatar_url ? <Image unoptimized src={u.avatar_url} alt="" width={32} height={32} className="h-full w-full object-cover" /> : (u.display_name || u.username)[0].toUpperCase()}
@@ -100,17 +100,16 @@ export function AdminUserRow({ user: u, displayTier, subLabel, emailVerified }: 
         <td className="px-4 py-3 text-[var(--text-2)]">{u.follower_count ?? 0}</td>
         <td className="px-4 py-3 text-xs text-[var(--text-3)]">{new Date(u.created_at).toLocaleDateString('en-US', {timeZone:'UTC'})}</td>
         <td className="px-4 py-3">
-          <AdminUserActions
-            userId={u.id}
-            currentType={u.account_type}
-            isVerified={u.is_verified}
-            adminGrantedTier={u.admin_granted_tier}
-          />
+          <button type="button" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-label={`Manage ${u.display_name || u.username}`} className="ss-admin-manage-user">Manage {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</button>
         </td>
       </tr>
       {open && (
         <tr className="bg-[color-mix(in_srgb,var(--bg)_60%,transparent)]">
           <td colSpan={8} className="px-4 py-4">
+            <div className="ss-admin-user-detail">
+            <div className="mb-4 pb-4 border-b border-[var(--border)]">
+              <AdminUserActions userId={u.id} currentType={u.account_type} isVerified={u.is_verified} adminGrantedTier={u.admin_granted_tier} />
+            </div>
             <div className="mb-4 pb-4 border-b border-[var(--border)]">
               <AdminUserSupportActions userId={u.id} emailVerified={emailVerified} />
             </div>
@@ -154,6 +153,7 @@ export function AdminUserRow({ user: u, displayTier, subLabel, emailVerified }: 
                 )}
               </div>
             )}
+            </div>
           </td>
         </tr>
       )}

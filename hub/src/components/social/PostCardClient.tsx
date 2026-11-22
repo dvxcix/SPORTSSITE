@@ -2,14 +2,14 @@
 
 import { memberTone } from '@/lib/memberIdentity'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { useAuth } from '@/context/AuthContext'
-import { MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2, LockKeyhole, Pencil, Trash2, Heart, BadgeCheck, EyeOff, VolumeX } from 'lucide-react'
+import { LoaderCircle, MessageCircle, Repeat2, TrendingUp, Bookmark, Share2, MoreHorizontal, Flag, Link2, LockKeyhole, Pencil, Trash2, Heart, BadgeCheck, EyeOff, VolumeX } from 'lucide-react'
 import Link from 'next/link'
 import type { Post } from '@/lib/supabase/types'
 import { ReportModal } from './ReportModal'
@@ -35,6 +35,8 @@ import { useFeedback } from '@/components/ui/FeedbackProvider'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { SlateEdgeEvidenceCard } from './SlateEdgeEvidenceCard'
 import { isSlateEdgeEvidence } from '@/lib/slateEdgeEvidence'
+import { CommentComposer } from './CommentComposer'
+import { CommentActions } from './CommentActions'
 
 interface PostCardClientProps {
   post: Post & { author: { id?: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle; avatar_ring_color?: string; bio?: string; follower_count?: number; is_verified?: boolean; account_type?: string; tier?: 'free' | 'basic' | 'advanced' | 'ultimate'; beta_access_active?: boolean; pick_record?: { wins: number; losses: number } } }
@@ -99,6 +101,15 @@ function removeFromCommentTree(nodes: CommentNode[], id: string): CommentNode[] 
   return nodes.filter(n => n.id !== id).map(n => ({ ...n, replies: removeFromCommentTree(n.replies, id) }))
 }
 
+function commentBranchSize(nodes: CommentNode[], id: string): number {
+  for (const node of nodes) {
+    if (node.id === id) return 1 + node.replies.reduce((count, reply) => count + commentBranchSize([reply], reply.id), 0)
+    const nested = commentBranchSize(node.replies, id)
+    if (nested) return nested
+  }
+  return 0
+}
+
 function insertReplyIntoTree(nodes: CommentNode[], parentId: string, reply: CommentNode): CommentNode[] {
   return nodes.map(n => n.id === parentId
     ? { ...n, replies: [...n.replies, reply] }
@@ -129,13 +140,17 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   const [repostCount, setRepostCount] = useState(initialPost.repost_count)
   const [commentCount, setCommentCount] = useState(initialPost.comment_count)
   const [showComments, setShowComments] = useState(false)
+  const [commentsLoading, setCommentsLoading] = useState(false)
+  const commentsLoadingRef = useRef<string | null>(null)
   const [commentTree, setCommentTree] = useState<CommentNode[]>([])
   const [commentSort, setCommentSort] = useState<'top' | 'new'>('top')
   const [collapsedThreads, setCollapsedThreads] = useState<Set<string>>(new Set())
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyText, setReplyText] = useState('')
   const [commentText, setCommentText] = useState('')
-  const commentInputRef = useRef<HTMLInputElement>(null)
+  const commentInputRef = useRef<HTMLTextAreaElement>(null)
+  const commentSubmitting = useRef(false), replySubmitting = useRef(false)
+  const [commentPending, setCommentPending] = useState(false), [replyPending, setReplyPending] = useState(false)
   const [loadedComments, setLoadedComments] = useState(false)
   const [commentOwner, setCommentOwner] = useState<string | null>(user?.id ?? null)
   const [commentResultGeneration, setCommentResultGeneration] = useState(0)
@@ -145,6 +160,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   if (observedCommentContext !== commentContext) {
     setObservedCommentContext(commentContext); setCommentGeneration(value => value + 1)
     setLoadedComments(false); setShowComments(false); setCommentTree([])
+    setCommentText(''); setReplyText(''); setReplyingTo(null)
   }
   // Comments only load on-demand (click-to-expand, or immediately in
   // `detail` mode) — fetching this once per actual load, cached in a ref, is
@@ -391,6 +407,10 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   // is small enough that this is cheap.
   async function loadCommentTree() {
     if (authLoading || authUnavailable) { showNotice({ title: 'Comments unavailable', message: 'Please try again.', tone: 'error' }); return }
+    const loadKey = `${post.id}:${user?.id ?? 'guest'}:${commentGeneration}`
+    if (commentsLoadingRef.current === loadKey) return
+    commentsLoadingRef.current = loadKey; setCommentsLoading(true)
+    try {
     let blockedIds: string[] = []
     if (user) {
       if (blockedIdsRef.current?.owner === user.id && blockedIdsRef.current.generation === commentGeneration) blockedIds = blockedIdsRef.current.ids
@@ -418,6 +438,9 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     setCommentResultGeneration(commentGeneration)
     setLoadedComments(true)
     setShowComments(true)
+    } catch {
+      showNotice({ title: 'Comments unavailable', message: 'Please try again.', tone: 'error' })
+    } finally { if (commentsLoadingRef.current === loadKey) { commentsLoadingRef.current = null; setCommentsLoading(false) } }
   }
 
   function toggleComments() {
@@ -454,17 +477,20 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   }
 
   async function submitReply(parentId: string, parentAuthorId: string) {
-    if (!user || !replyText.trim()) return
+    if (!user || !replyText.trim() || replySubmitting.current) return
     const text = replyText.trim()
-    const { data, error } = await supabase.from('comments')
-      .insert({ post_id: post.id, author_id: user.id, parent_id: parentId, content: text })
-      .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url, avatar_ring_style, avatar_ring_color)')
-      .single()
-    if (error || !data) { showNotice({ title: 'Reply not posted', message: 'Your text is still here. Try again.', tone: 'error' }); return }
-    setCommentTree(t => insertReplyIntoTree(t, parentId, { ...(data as any), reaction_count: data.reaction_count ?? 0, liked_by_me: false, replies: [] }))
-    setCommentCount(c => c + 1)
-    setReplyText('')
-    setReplyingTo(null)
+    replySubmitting.current = true; setReplyPending(true)
+    try {
+      const { data, error } = await supabase.from('comments')
+        .insert({ post_id: post.id, author_id: user.id, parent_id: parentId, content: text })
+        .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url, avatar_ring_style, avatar_ring_color)')
+        .single()
+      if (error || !data) { showNotice({ title: 'Reply not posted', message: 'Your text is still here. Try again.', tone: 'error' }); return }
+      setCommentTree(t => insertReplyIntoTree(t, parentId, { ...(data as any), reaction_count: data.reaction_count ?? 0, liked_by_me: false, replies: [] }))
+      setCommentCount(c => c + 1); setReplyText(''); setReplyingTo(null)
+    } catch {
+      showNotice({ title: 'Reply not posted', message: 'Your text is still here. Try again.', tone: 'error' }); return
+    } finally { replySubmitting.current = false; setReplyPending(false) }
     if (!isPrivate) await notify(supabase, {
       userId: parentAuthorId, actorId: user.id, type: 'comment',
       message: 'replied to your comment', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
@@ -472,32 +498,21 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
     if (!isPrivate) await notifyMentions(supabase, user.id, text, `/posts/${post.id}`, post.id, 'a reply', [parentAuthorId])
   }
 
-  function insertCommentEmoji(insertion: string) {
-    const el = commentInputRef.current
-    const start = el?.selectionStart ?? commentText.length
-    const end = el?.selectionEnd ?? commentText.length
-    const next = commentText.slice(0, start) + insertion + commentText.slice(end)
-    setCommentText(next)
-    requestAnimationFrame(() => {
-      el?.focus()
-      el?.setSelectionRange(start + insertion.length, start + insertion.length)
-    })
-  }
-
   async function submitComment() {
-    if (!user || !commentText.trim()) return
+    if (!user || !commentText.trim() || commentSubmitting.current) return
     const text = commentText.trim()
-    const { data, error } = await supabase.from('comments')
-      .insert({ post_id: post.id, author_id: user.id, content: text })
-      .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url, avatar_ring_style, avatar_ring_color)')
-      .single()
-    // Only clear the input / fire notifications once the comment actually
-    // saved — clearing it unconditionally meant a failed submit silently
-    // ate whatever the user had typed.
-    if (error || !data) { showNotice({ title: 'Comment not posted', message: 'Your text is still here. Try again.', tone: 'error' }); return }
-    setCommentTree(t => [...t, { ...(data as any), parent_id: null, reaction_count: data.reaction_count ?? 0, liked_by_me: false, replies: [] }])
-    setCommentCount(c => c + 1)
-    setCommentText('')
+    commentSubmitting.current = true; setCommentPending(true)
+    try {
+      const { data, error } = await supabase.from('comments')
+        .insert({ post_id: post.id, author_id: user.id, content: text })
+        .select('id, content, author_id, parent_id, created_at, updated_at, reaction_count, author:users(username, display_name, avatar_url, avatar_ring_style, avatar_ring_color)')
+        .single()
+      if (error || !data) { showNotice({ title: 'Comment not posted', message: 'Your text is still here. Try again.', tone: 'error' }); return }
+      setCommentTree(t => [...t, { ...(data as any), parent_id: null, reaction_count: data.reaction_count ?? 0, liked_by_me: false, replies: [] }])
+      setCommentCount(c => c + 1); setCommentText('')
+    } catch {
+      showNotice({ title: 'Comment not posted', message: 'Your text is still here. Try again.', tone: 'error' }); return
+    } finally { commentSubmitting.current = false; setCommentPending(false) }
     if (!isPrivate) await notify(supabase, {
       userId: post.author_id, actorId: user.id, type: 'comment',
       message: 'commented on your post', link: `/posts/${post.id}`, targetId: post.id, targetType: 'post',
@@ -527,10 +542,11 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   // visible until the next reload.
   async function deleteComment(id: string) {
     if (!await confirmAction({ title: 'Delete comment?', message: 'The comment and all of its replies will be permanently removed.', confirmLabel: 'Delete comment', tone: 'error' })) return
+    const removedCount = commentBranchSize(commentTree, id)
     const { error } = await supabase.from('comments').delete().eq('id', id)
     if (error) { showNotice({ title: 'Comment not deleted', message: 'Please try again.', tone: 'error' }); return }
     setCommentTree(t => removeFromCommentTree(t, id))
-    setCommentCount(c => Math.max(0, c - 1))
+    setCommentCount(c => Math.max(0, c - Math.max(1, removedCount)))
   }
 
   async function deletePost() {
@@ -634,7 +650,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         <div className="ss-post-body">
           <div className="ss-post-layout">
             {/* Avatar */}
-            <ProfileHoverTarget className="ss-post-avatar-trigger" profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, tier: post.author.tier, account_type: post.author.account_type, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? 0, pick_record: post.author.pick_record || null }}>
+            <ProfileHoverTarget className="ss-post-avatar-trigger" profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, tier: post.author.tier, account_type: post.author.account_type, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? null, pick_record: post.author.pick_record || null }}>
             <Link href={`/profile/${post.author.username}`} style={{ display: 'block', flexShrink: 0 }}>
               <MemberAvatar
                 src={post.author.avatar_url}
@@ -651,7 +667,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
               {/* Header row */}
               <div className="ss-post-header">
                 <div className="ss-post-author-line">
-                  <ProfileHoverTarget profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, tier: post.author.tier, account_type: post.author.account_type, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? 0, pick_record: post.author.pick_record || null }}>
+                  <ProfileHoverTarget profile={{ id: post.author.id || post.author.username, username: post.author.username, display_name: post.author.display_name || null, avatar_url: post.author.avatar_url || null, avatar_ring_style: post.author.avatar_ring_style, avatar_ring_color: post.author.avatar_ring_color, tier: post.author.tier, account_type: post.author.account_type, bio: post.author.bio || null, is_verified: !!post.author.is_verified, follower_count: post.author.follower_count ?? null, pick_record: post.author.pick_record || null }}>
                   <Link href={`/profile/${post.author.username}`} style={{ fontWeight: 700, color: 'var(--text-1)', fontSize: 15, textDecoration: 'none' }}>
                     {post.author.display_name || post.author.username}
                   </Link>
@@ -985,8 +1001,10 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
               {/* Action bar */}
               <div className="ss-post-actions">
                 <ActionBtn
-                  icon={<MessageCircle size={15} />}
+                  icon={commentsLoading ? <LoaderCircle size={15} className="ss-comment-spinner" /> : <MessageCircle size={15} />}
                   label={commentCount > 0 ? `${commentCount} Comment${commentCount === 1 ? '' : 's'}` : 'Comment'}
+                  expanded={showComments}
+                  busy={commentsLoading}
                   hoverBg="rgba(77,158,255,0.08)"
                   hoverColor="var(--blue)"
                   onClick={toggleComments}
@@ -1039,7 +1057,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
         {showComments && commentOwner === (user?.id ?? null) && commentResultGeneration === commentGeneration && !authLoading && !authUnavailable && (
           <div
             onClick={e => e.stopPropagation()}
-            style={{ borderTop: '1px solid var(--border)', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}
+            className="ss-comments"
           >
             {detail && commentTree.length > 0 && (
               <div style={{ display: 'flex', gap: 6 }}>
@@ -1078,37 +1096,18 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                 replyingTo={replyingTo}
                 replyText={replyText}
                 setReplyText={setReplyText}
-                onStartReply={id => { setReplyingTo(id); setReplyText('') }}
+                onStartReply={id => { if (replySubmitting.current) return; setReplyingTo(id); setReplyText('') }}
                 onCancelReply={() => { setReplyingTo(null); setReplyText('') }}
                 onSubmitReply={submitReply}
+                replyPending={replyPending}
                 collapsedThreads={collapsedThreads}
                 onToggleCollapsed={toggleThreadCollapsed}
               />
             ))}
             {user && (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <MemberAvatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={28} tone={memberTone(profile)} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
-                <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
-                  <input
-                    ref={commentInputRef}
-                    value={commentText}
-                    onChange={e => setCommentText(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), submitComment())}
-                    placeholder="Write a comment…"
-                    className="ss-input"
-                    style={{ flex: 1, fontSize: 13, padding: '6px 12px' }}
-                  />
-                  <EmojiPicker onSelect={insertCommentEmoji} />
-                  <GifPicker onSelect={url => insertCommentEmoji(` ${url} `)} />
-                  <button onClick={submitComment} disabled={!commentText.trim()} style={{
-                    padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                    background: commentText.trim() ? 'var(--accent-fill)' : 'var(--surface-3)',
-                    color: commentText.trim() ? 'var(--accent-fg)' : 'var(--text-3)',
-                    border: 'none', cursor: commentText.trim() ? 'pointer' : 'not-allowed',
-                  }}>
-                    Post
-                  </button>
-                </div>
+              <div className="ss-comment-compose-row">
+                <MemberAvatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || 'Member'} size={32} tone={memberTone(profile)} ringStyle={profile?.avatar_ring_style} ringColor={profile?.avatar_ring_color} />
+                <CommentComposer inputRef={commentInputRef} value={commentText} onChange={setCommentText} onSubmit={submitComment} pending={commentPending} />
               </div>
             )}
           </div>
@@ -1167,8 +1166,7 @@ function ReactionNames({ postId, emoji }: { postId: string; emoji: string }) {
 function CommentItem({
   node, depth, nowMs, currentUserId, currentUserAvatar, currentUserDisplay, currentUserRingStyle, currentUserRingColor,
   editingCommentId, editText, setEditText, onStartEdit, onSaveEdit, onCancelEdit,
-  onDelete, onReport, onToggleLike,
-  replyingTo, replyText, setReplyText, onStartReply, onCancelReply, onSubmitReply,
+  onDelete, onReport, onToggleLike, replyingTo, replyText, setReplyText, onStartReply, onCancelReply, onSubmitReply, replyPending,
   collapsedThreads, onToggleCollapsed,
 }: {
   node: CommentNode; depth: number; nowMs: number
@@ -1176,164 +1174,48 @@ function CommentItem({
   currentUserRingStyle?: import('@/lib/avatarStyles').MemberRingStyle; currentUserRingColor?: string
   editingCommentId: string | null; editText: string; setEditText: (v: string) => void
   onStartEdit: (n: CommentNode) => void; onSaveEdit: (id: string) => void; onCancelEdit: () => void
-  onDelete: (id: string) => void; onReport: (id: string) => void
-  onToggleLike: (id: string, alreadyLiked: boolean) => void
-  replyingTo: string | null; replyText: string; setReplyText: (v: string) => void
-  onStartReply: (id: string) => void; onCancelReply: () => void
-  onSubmitReply: (parentId: string, parentAuthorId: string) => void
+  onDelete: (id: string) => void; onReport: (id: string) => void; onToggleLike: (id: string, alreadyLiked: boolean) => void
+  replyingTo: string | null; replyText: string; setReplyText: (v: string) => void; replyPending: boolean
+  onStartReply: (id: string) => void; onCancelReply: () => void; onSubmitReply: (parentId: string, parentAuthorId: string) => void
   collapsedThreads: Set<string>; onToggleCollapsed: (id: string) => void
 }) {
   const isEdited = new Date(node.updated_at).getTime() !== new Date(node.created_at).getTime()
-  const isOwn = currentUserId === node.author_id
-  const indent = Math.min(depth, 4) * 20
-  const collapsed = collapsedThreads.has(node.id)
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', gap: 8, marginLeft: indent }}>
-        <MemberAvatar src={node.author?.avatar_url} name={node.author?.display_name || node.author?.username || 'Member'} size={28} ringStyle={node.author?.avatar_ring_style} ringColor={node.author?.avatar_ring_color} />
-        <div style={{
-          flex: 1, borderRadius: 10, padding: '8px 12px',
-          background: isOwn ? 'rgba(77,158,255,0.10)' : 'var(--surface-2)',
-          border: isOwn ? '1px solid rgba(77,158,255,0.25)' : '1px solid transparent',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{node.author?.display_name || node.author?.username}</span>
-            <UserBadges userId={node.author_id} size={12} />
-            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-              {timeAgo(node.created_at, nowMs)}{isEdited && ` · edited ${timeAgo(node.updated_at, nowMs)}`}
-            </span>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-              {isOwn ? (
-                <>
-                  <button onClick={() => onStartEdit(node)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>Edit</button>
-                  <button onClick={() => onDelete(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>Delete</button>
-                </>
-              ) : currentUserId && (
-                <>
-                  <button onClick={() => onReport(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>Report</button>
-                  {node.author_id && node.author?.username && (
-                    <BlockUserButton
-                      currentUserId={currentUserId}
-                      targetUserId={node.author_id}
-                      targetUsername={node.author.username}
-                      initialBlocked={false}
-                      variant="text"
-                    />
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-          {editingCommentId === node.id ? (
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input
-                value={editText}
-                onChange={e => setEditText(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), onSaveEdit(node.id))}
-                className="ss-input"
-                style={{ flex: 1, fontSize: 13, padding: '5px 10px' }}
-                autoFocus
-              />
-              <button onClick={() => onSaveEdit(node.id)} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>Save</button>
-              <button onClick={onCancelEdit} style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
-            </div>
-          ) : (
-            <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.45 }}><LinkifiedText text={node.content} /></p>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
-            <button
-              onClick={() => onToggleLike(node.id, node.liked_by_me)}
-              disabled={!currentUserId}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: currentUserId ? 'pointer' : 'default', fontSize: 12, fontWeight: 700, color: node.liked_by_me ? 'var(--red)' : 'var(--text-3)' }}>
-              <Heart size={12} fill={node.liked_by_me ? 'currentColor' : 'none'} />
-              {node.reaction_count > 0 ? node.reaction_count : ''}
-            </button>
-            {currentUserId && (
-              <button onClick={() => onStartReply(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>
-                Reply
-              </button>
-            )}
-            {node.replies.length > 0 && (
-              <button onClick={() => onToggleCollapsed(node.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>
-                {collapsed ? `Show ${node.replies.length} repl${node.replies.length === 1 ? 'y' : 'ies'}` : `Hide repl${node.replies.length === 1 ? 'y' : 'ies'}`}
-              </button>
-            )}
-          </div>
+  const isOwn = currentUserId === node.author_id, collapsed = collapsedThreads.has(node.id)
+  const name = node.author?.display_name || node.author?.username || 'Member'
+  const member = node.author?.username ? { id: node.author_id, username: node.author.username, display_name: node.author.display_name || null, avatar_url: node.author.avatar_url || null, avatar_ring_style: node.author.avatar_ring_style, avatar_ring_color: node.author.avatar_ring_color, bio: null, follower_count: null, is_verified: false, pick_record: null } : null
+  const avatar = <MemberAvatar src={node.author?.avatar_url} name={name} size={32} ringStyle={node.author?.avatar_ring_style} ringColor={node.author?.avatar_ring_color} />
+  return <div className="ss-comment-thread" style={{ '--comment-depth': Math.min(depth, 3) } as CSSProperties}>
+    <div className="ss-comment-row">
+      {member ? <ProfileHoverTarget profile={member} className="ss-comment-avatar"><Link href={`/profile/${member.username}`} className="ss-comment-avatar-link" aria-label={`Open ${name}'s profile`}>{avatar}</Link></ProfileHoverTarget> : <span className="ss-comment-avatar-link">{avatar}</span>}
+      <div className="ss-comment-bubble" data-own={isOwn}>
+        <div className="ss-comment-meta">
+          <div className="ss-comment-name">{member ? <ProfileHoverTarget profile={member}><Link href={`/profile/${member.username}`}>{name}</Link></ProfileHoverTarget> : name}</div>
+          <CommentActions name={name} isOwn={isOwn} currentUserId={currentUserId} authorId={node.author_id} username={node.author?.username} onEdit={() => onStartEdit(node)} onDelete={() => onDelete(node.id)} onReport={() => onReport(node.id)} />
+          <div className="ss-comment-details"><UserBadges userId={node.author_id} size={12} maxVisible={2} /><time dateTime={node.created_at}>{timeAgo(node.created_at, nowMs)}{isEdited ? ' · edited' : ''}</time></div>
+        </div>
+        {editingCommentId === node.id ? <CommentComposer value={editText} onChange={setEditText} onSubmit={() => onSaveEdit(node.id)} onCancel={onCancelEdit} label="Save" placeholder="Edit comment…" autoFocus /> : <p className="ss-comment-text"><LinkifiedText text={node.content} /></p>}
+        <div className="ss-comment-actions">
+          <button type="button" aria-label={`${node.liked_by_me ? 'Unlike' : 'Like'} ${name}'s comment`} aria-pressed={node.liked_by_me} onClick={() => onToggleLike(node.id, node.liked_by_me)} disabled={!currentUserId}><Heart size={14} fill={node.liked_by_me ? 'currentColor' : 'none'} aria-hidden="true" />{node.reaction_count > 0 && <span>{node.reaction_count}</span>}</button>
+          {currentUserId && <button type="button" disabled={replyPending} onClick={() => onStartReply(node.id)}>Reply</button>}
+          {node.replies.length > 0 && <button type="button" aria-expanded={!collapsed} onClick={() => onToggleCollapsed(node.id)}>{collapsed ? `Show ${node.replies.length} replies` : 'Hide replies'}</button>}
         </div>
       </div>
-
-      {replyingTo === node.id && (
-        <div style={{ display: 'flex', gap: 8, marginLeft: indent + 36 }}>
-          <MemberAvatar src={currentUserAvatar} name={currentUserDisplay || 'Member'} size={24} ringStyle={currentUserRingStyle} ringColor={currentUserRingColor} />
-          <div className="ss-nested-reply-composer">
-            <input
-              autoFocus
-              value={replyText}
-              onChange={e => setReplyText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), onSubmitReply(node.id, node.author_id))}
-              placeholder={`Reply to ${node.author?.display_name || node.author?.username}…`}
-              className="ss-input"
-              style={{ flex: 1, fontSize: 13, padding: '6px 12px' }}
-            />
-            <EmojiPicker onSelect={value => setReplyText(`${replyText}${value}`)} />
-            <GifPicker onSelect={url => setReplyText(`${replyText}${replyText ? ' ' : ''}${url} `)} />
-            <button onClick={() => onSubmitReply(node.id, node.author_id)} disabled={!replyText.trim()} style={{
-              padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
-              background: replyText.trim() ? 'var(--accent-fill)' : 'var(--surface-3)',
-              color: replyText.trim() ? 'var(--accent-fg)' : 'var(--text-3)',
-              border: 'none', cursor: replyText.trim() ? 'pointer' : 'not-allowed',
-            }}>
-              Reply
-            </button>
-            <button onClick={onCancelReply} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--text-3)' }}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!collapsed && node.replies.map(reply => (
-        <CommentItem
-          key={reply.id}
-          node={reply}
-          depth={depth + 1}
-          nowMs={nowMs}
-          currentUserId={currentUserId}
-          currentUserAvatar={currentUserAvatar}
-          currentUserDisplay={currentUserDisplay}
-          currentUserRingStyle={currentUserRingStyle}
-          currentUserRingColor={currentUserRingColor}
-          editingCommentId={editingCommentId}
-          editText={editText}
-          setEditText={setEditText}
-          onStartEdit={onStartEdit}
-          onSaveEdit={onSaveEdit}
-          onCancelEdit={onCancelEdit}
-          onDelete={onDelete}
-          onReport={onReport}
-          onToggleLike={onToggleLike}
-          replyingTo={replyingTo}
-          replyText={replyText}
-          setReplyText={setReplyText}
-          onStartReply={onStartReply}
-          onCancelReply={onCancelReply}
-          onSubmitReply={onSubmitReply}
-          collapsedThreads={collapsedThreads}
-          onToggleCollapsed={onToggleCollapsed}
-        />
-      ))}
     </div>
-  )
+    {replyingTo === node.id && <div className="ss-comment-compose-row ss-comment-reply-row">
+      <MemberAvatar src={currentUserAvatar} name={currentUserDisplay || 'Member'} size={28} ringStyle={currentUserRingStyle} ringColor={currentUserRingColor} />
+      <CommentComposer value={replyText} onChange={setReplyText} onSubmit={() => onSubmitReply(node.id, node.author_id)} onCancel={onCancelReply} label="Reply" placeholder={`Reply to ${name}…`} pending={replyPending} autoFocus />
+    </div>}
+    {!collapsed && node.replies.map(reply => <CommentItem key={reply.id} node={reply} depth={depth + 1} nowMs={nowMs} currentUserId={currentUserId} currentUserAvatar={currentUserAvatar} currentUserDisplay={currentUserDisplay} currentUserRingStyle={currentUserRingStyle} currentUserRingColor={currentUserRingColor} editingCommentId={editingCommentId} editText={editText} setEditText={setEditText} onStartEdit={onStartEdit} onSaveEdit={onSaveEdit} onCancelEdit={onCancelEdit} onDelete={onDelete} onReport={onReport} onToggleLike={onToggleLike} replyingTo={replyingTo} replyText={replyText} setReplyText={setReplyText} onStartReply={onStartReply} onCancelReply={onCancelReply} onSubmitReply={onSubmitReply} replyPending={replyPending} collapsedThreads={collapsedThreads} onToggleCollapsed={onToggleCollapsed} />)}
+  </div>
 }
 
-function ActionBtn({ icon, label, active, activeColor, hoverBg, hoverColor, onClick }: {
+function ActionBtn({ icon, label, active, activeColor, hoverBg, hoverColor, onClick, expanded, busy }: {
   icon: React.ReactNode; label: string; active?: boolean; activeColor?: string
-  hoverBg?: string; hoverColor?: string; onClick: () => void
+  hoverBg?: string; hoverColor?: string; onClick: () => void; expanded?: boolean; busy?: boolean
 }) {
   const [hovered, setHovered] = useState(false)
   return (
-    <motion.button type="button" className="ss-post-action" onClick={onClick} aria-label={label}
+    <motion.button type="button" className="ss-post-action" onClick={onClick} aria-label={label} aria-expanded={expanded} aria-busy={busy || undefined} disabled={busy}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       whileTap={{ scale: 0.92 }}

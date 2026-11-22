@@ -18,7 +18,7 @@ export default async function AdminGroupsPage() {
       {(groups?.length ?? 0) === 0 ? (
         <div className="text-center py-20 text-[var(--text-3)] text-sm">No groups yet</div>
       ) : (
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
+        <div className="ss-table-region ss-admin-table-region bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-x-auto" role="region" aria-label="Groups table" tabIndex={0}>
           <table className="w-full text-sm">
             <thead className="border-b border-[var(--border)]">
               <tr className="text-left">

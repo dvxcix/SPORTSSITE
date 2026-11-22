@@ -162,6 +162,7 @@
   .brand { font-size: 15px; gap: 4px; }
   .brand img { width: 24px; height: 24px; }
   .switcher a { padding: 5px 8px; }
+  .switcher a, .topActions > a { display: inline-flex; align-items: center; min-height: 44px; }
   .topActions { font-size: 12px; gap: 5px; }
   .topActions .topUpgrade { display: none; }
   .content { padding: 0 10px; }
@@ -196,3 +197,5 @@
   .primaryButton { transition: none; }
   .primaryButton:hover { transform: none; }
 }
+
+@media(max-width:480px){.brand>span{display:none}.brand{min-height:44px;min-width:32px}}

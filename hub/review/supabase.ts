@@ -43,7 +43,15 @@ class Query {
   let rows=all.filter(row=>this.filters.every(test=>test(row)))
   if(this.operation==='insert'||this.operation==='upsert'){rows=(Array.isArray(this.payload)?this.payload:[this.payload]).map((r:any,i:number)=>({id:r.id??'00000000-0000-4000-8000-'+String(Date.now()+i).slice(-12),created_at:new Date().toISOString(),...r}));table(this.name).push(...rows)}
   if(this.operation==='update')rows.forEach(row=>Object.assign(row,this.payload))
-  if(this.operation==='delete')tables[this.name]=all.filter(row=>!rows.includes(row))
+  if(this.operation==='delete'){
+   const removed=new Set(rows.map(row=>row.id))
+   if(this.name==='comments'){let changed=true;while(changed){changed=false;for(const row of all)if(removed.has(row.parent_id)&&!removed.has(row.id)){removed.add(row.id);changed=true}}}
+   tables[this.name]=all.filter(row=>!removed.has(row.id))
+  }
+  if(this.name==='comments'){
+   for(const row of rows){row.author??=table('users').find(user=>user.id===row.author_id);row.updated_at??=row.created_at;row.parent_id??=null}
+   if(this.operation!=='read')for(const post of table('posts'))post.comment_count=table('comments').filter(row=>row.post_id===post.id).length
+  }
   if(this.operation!=='read')persistReviewTables()
   for(const [key,asc]of this.sorts)rows.sort((a,b)=>String(a[key]??'').localeCompare(String(b[key]??''))*(asc?1:-1))
   const count=rows.length;rows=rows.slice(this.offset,this.offset+this.limitBy)
@@ -65,7 +73,7 @@ export function createClient(_url?:any,_key?:any,options?:any):any{
    mfa:{getAuthenticatorAssuranceLevel:()=>ok({currentLevel:'aal2',nextLevel:'aal2',currentAuthenticationMethods:[]}),listFactors:()=>ok({all:[],totp:[],phone:[]}),enroll:()=>ok({id:'review-factor',type:'totp',totp:{qr_code:'',secret:'EXAMPLE-NOT-A-SECRET',uri:''}}),unenroll:()=>ok(),challenge:()=>ok({id:'review-challenge'}),verify:()=>ok()},
    admin:{listUsers:()=>ok({users:table('users')}),getUserById:()=>ok({user}),deleteUser:()=>ok(),updateUserById:()=>ok({user})}
   },
-  channel:()=>{const channel:any={on:()=>channel,subscribe:(fn?:any)=>{fn?.('SUBSCRIBED');return channel},unsubscribe:()=>Promise.resolve(),send:()=>Promise.resolve('ok'),track:()=>Promise.resolve('ok'),presenceState:()=>({})};return channel},
+  channel:()=>{const channel:any={on:()=>channel,subscribe:(fn?:any)=>{fn?.('SUBSCRIBED');return channel},unsubscribe:()=>Promise.resolve(),send:()=>Promise.resolve('ok'),track:()=>Promise.resolve('ok'),untrack:()=>Promise.resolve('ok'),presenceState:()=>({})};return channel},
   removeChannel:()=>Promise.resolve(),removeAllChannels:()=>Promise.resolve(),getChannels:()=>[],
   storage:{from:()=>({getPublicUrl:(p:string)=>({data:{publicUrl:p.startsWith('/')?p:'/review-assets/tatum.png'}}),createSignedUrl:()=>ok({signedUrl:'/review-assets/tatum.png'}),upload:()=>ok({path:'design-review-local'}),remove:()=>ok(),list:()=>ok([])})},
   functions:{invoke:()=>Promise.resolve({data:null,error:{message:'External functions are disabled in design review.'}})}

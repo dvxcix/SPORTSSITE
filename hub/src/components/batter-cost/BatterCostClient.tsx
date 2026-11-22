@@ -473,7 +473,7 @@ export function BatterCostClient({ date, gameKey }: BatterCostClientProps) {
           </button>
         )}
       </div>
-      <div className="batter-cost-table-scroll" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10 }}>
+      <div className="batter-cost-table-scroll" role="region" aria-label="Batter markets, scroll for all columns" tabIndex={0} style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10 }}>
         <table className="batter-cost-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
             <tr>

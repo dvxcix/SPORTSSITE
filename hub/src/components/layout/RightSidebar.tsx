@@ -94,7 +94,7 @@ export async function RightSidebar() {
                 <div>
                   <p className="text-xs text-[var(--text-3)] group-hover:text-[var(--text-2)]">#{i + 1} · Trending</p>
                   <p className="text-sm font-bold text-[var(--text-1)] group-hover:text-[var(--green)] transition-colors">#{t.tag}</p>
-                  <p className="text-xs text-[var(--text-3)]">{formatPostCount(t.count)} posts</p>
+                  <p className="text-xs text-[var(--text-3)]">{formatPostCount(t.count)} {t.count === 1 ? 'post' : 'posts'}</p>
                 </div>
                 {t.hot && (
                   <span className="text-[12px] font-semibold text-[var(--gold)] bg-[color-mix(in_srgb,var(--gold)_10%,transparent)] px-1.5 py-0.5 rounded-full">HOT</span>

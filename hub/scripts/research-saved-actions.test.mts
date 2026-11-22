@@ -27,11 +27,11 @@ const target = { exports: {} as any }
 new Function('require', 'module', 'exports', bundle.outputFiles.find(file => file.path.endsWith('.cjs'))!.text)(require, target, target.exports)
 const api = target.exports
 
-async function fixture({ signedIn = true, toolsInHeader = true, nflMatrix = false } = {}) {
+async function fixture({ signedIn = true, nflMatrix = false } = {}) {
   api.setSignedIn(signedIn)
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)
-  await act(async () => root.render(createElement('div', {}, createElement(api.ResearchSavedActions, { nflMatrix }), createElement(api.UtilityDock, { toolsInHeader }, createElement(api.MyPicksButton), createElement(api.WatchlistButton)))))
+  await act(async () => root.render(createElement('div', {}, createElement(api.ResearchSavedActions, { nflMatrix }), createElement(api.UtilityDock, {}, createElement(api.MyPicksButton), createElement(api.WatchlistButton)))))
   return { host, close: async () => { await act(async () => root.unmount()); host.remove() } }
 }
 
@@ -55,16 +55,16 @@ test('research headers open the existing single drawers from hidden dock hosts a
   } finally { await h.close() }
 })
 
-test('NFL Matrix remains available beside Picks and Watchlist; ordinary site pages retain quick tools', async () => {
-  const h = await fixture({ nflMatrix: true, toolsInHeader: false })
+test('NFL Matrix remains available beside Picks and Watchlist while VOLT is the only floating launcher', async () => {
+  const h = await fixture({ nflMatrix: true })
   let opened = 0
   const matrix = () => { opened++ }
   window.addEventListener('ss:open-nfl-matrices', matrix)
   try {
     const button = h.host.querySelector<HTMLButtonElement>('[aria-label="Open NFL matrices"]')!
     await act(async () => button.click()); assert.equal(opened, 1)
-    assert.ok(h.host.querySelector('[aria-label="Open quick tools"]'))
-    assert.equal(h.host.querySelector('.ss-utility-dock-items')?.hasAttribute('hidden'), false)
+    assert.equal(h.host.querySelector('[aria-label="Open quick tools"]'), null)
+    assert.equal(h.host.querySelector('.ss-utility-dock-items')?.hasAttribute('hidden'), true)
   } finally { window.removeEventListener('ss:open-nfl-matrices', matrix); await h.close() }
 })
 

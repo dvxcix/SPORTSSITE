@@ -46,16 +46,16 @@ function TrendChart({ values, max, line, side, milestone }: {
   const describe = (value: number | null) => value == null ? 'Unavailable' : result(value) === 'win' ? 'Hit' : result(value) === 'push' ? 'Push' : result(value) === 'loss' ? 'Miss' : 'No reference line'
   return <figure className={styles.chartFigure} data-dense={values.length>10||undefined}>
     <div className={styles.chartFrame}><div className={styles.chartAxis} aria-hidden="true"><span>{number(scale,0)}</span><span>{number(scale/2,1)}</span><span>0</span></div>
-    <div className={styles.chart} role="group" aria-label="Game-by-game results" onPointerLeave={event => { if (event.pointerType === 'mouse' && !event.currentTarget.contains(document.activeElement)) setActive(null) }}>
+    <div className={styles.chartViewport} role="region" aria-label="Game results chart, scroll for all games" tabIndex={0}><div className={styles.chart} role="group" aria-label="Game-by-game results" onPointerLeave={event => { if (event.pointerType === 'mouse' && !event.currentTarget.contains(document.activeElement)) setActive(null) }}>
       {line != null && <span className={styles.chartLine} style={{ bottom: (line / scale * 100)+'%' }} aria-hidden="true"/>}
       {values.map(({ log, value }, index) => <button type="button" key={log.id} data-chart-bar data-active={active === index || undefined} data-result={result(value) ?? 'unavailable'} data-known={value!=null} data-zero={value===0||undefined} tabIndex={index === focusIndex ? 0 : -1} aria-label={log.game.date+': '+(value ?? 'Unavailable')+' · '+describe(value)} onPointerEnter={() => setActive(index)} onFocus={() => { setActive(index); setFocus(index) }} onBlur={() => setActive(null)} onClick={() => setActive(index)} onKeyDown={event => {
         if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return
         event.preventDefault()
         const next = event.key === 'Home' ? 0 : event.key === 'End' ? values.length - 1 : (index + (event.key === 'ArrowLeft' ? -1 : 1) + values.length) % values.length
-        event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('button[data-chart-bar]')[next]?.focus({ preventScroll: true })
+        event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('button[data-chart-bar]')[next]?.focus()
       }}>{value!=null&&<span className={styles.chartFill} style={{height:(value/scale*100)+'%'}}/>}<b className={styles.chartValue} style={{bottom:'calc('+((value??0)/scale*100)+'% + 5px)'}}>{value ?? '—'}</b></button>)}
       {!values.length && <small>No game sample</small>}
-    </div></div>
+    </div></div></div>
     <figcaption className={styles.chartLegend}><span data-result="win">Hit</span><span data-result="loss">Miss</span><span data-result="push">Push</span><output aria-live="polite">{selected ? selected.log.game.date+' · '+(selected.value ?? 'Unavailable')+' · '+describe(selected.value) : values.length+' games'+(line == null ? ' · No reference line' : ' · Line '+line)}</output></figcaption>
   </figure>
 }

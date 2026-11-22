@@ -42,7 +42,7 @@ export function AdminShell({ email, children }: { email: string; children: React
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--text-2)]">
-              <span>{group}</span><span aria-hidden="true">/</span><span className="truncate">{title}</span>
+              <span className="hidden sm:inline">{group}</span><span className="hidden sm:inline" aria-hidden="true">/</span><span className="truncate">{title}</span>
             </div>
 
           </div>

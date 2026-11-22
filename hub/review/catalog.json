@@ -1105,7 +1105,7 @@
   },
   {
     "name": "Mlb / Teams / 00000000 0000 4000 8000 000000000101",
-    "href": "/mlb/teams/00000000-0000-4000-8000-000000000101",
+    "href": "/mlb/teams/147",
     "group": "Seasonal tools (hidden from members)",
     "source": "src/app/mlb/teams/[id]/page.tsx"
   },

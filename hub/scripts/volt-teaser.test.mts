@@ -26,11 +26,11 @@ async function fixture(signedIn=true){
   return{host,get trigger(){return host.querySelector('button[aria-label="VOLT — Sparks coming soon"]') as HTMLButtonElement},render,pointer,close,network:()=>network}
 }
 
-test('VOLT is available to visitors while quick tools remain signed-in controls',async()=>{
+test('VOLT is the only floating launcher for visitors and signed-in members',async()=>{
   for(const signedIn of [false,true]){
     const h=await fixture(signedIn)
-    try{assert.ok(h.trigger);assert.equal(h.host.querySelector('[aria-label="Open quick tools"]')!==null,signedIn)
-      if(signedIn){await act(async()=>h.host.querySelector<HTMLButtonElement>('[aria-label="Open quick tools"]')!.click());assert.equal(h.host.querySelector('.ss-utility-dock-items')?.getAttribute('aria-hidden'),'false')}
+    try{assert.ok(h.trigger);assert.equal(h.host.querySelector('[aria-label="Open quick tools"]'),null)
+      if(signedIn){assert.equal(h.host.querySelector('.ss-utility-dock-items')?.hasAttribute('hidden'),true);assert.equal(h.host.querySelector('.ss-utility-dock-items')?.getAttribute('aria-hidden'),'true')}
       await h.render(true);assert.equal(h.host.querySelector('[aria-label="Open quick tools"]'),null);assert.equal(h.network(),0)
     }finally{await h.close()}
   }

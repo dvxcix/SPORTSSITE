@@ -29,7 +29,7 @@ export default async function HashtagPage({ params }: { params: Promise<{ tag: s
 
   return <TierGate requiredTier="basic" label="Hashtags">
     <ProductPageShell narrow>
-      <ProductHero icon={<Hash size={22} />} eyebrow="Topic" title={`#${tag || 'topic'}`} description="The latest community posts in this conversation." status={`${posts.length} posts`} actions={<ProductAction href="/explore"><Compass size={14} /> Explore</ProductAction>} />
+      <ProductHero icon={<Hash size={22} />} eyebrow="Topic" title={`#${tag || 'topic'}`} description="The latest community posts in this conversation." status={`${posts.length} ${posts.length === 1 ? 'post' : 'posts'}`} actions={<ProductAction href="/explore"><Compass size={14} /> Explore</ProductAction>} />
       <ProductSectionHeader title="Latest posts" />
       {!posts.length ? <PageState kind="empty" title={`No posts for #${tag || 'topic'}`} message="New public posts will appear here." actionLabel="Explore the community" actionHref="/explore" /> : <div className="grid gap-3">{posts.map((post: any) => <PostCardClient key={post.id} post={post} />)}</div>}
     </ProductPageShell>

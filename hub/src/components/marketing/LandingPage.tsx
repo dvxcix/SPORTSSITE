@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, ArrowUpRight, Check, ChevronDown } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { sportTeamBackground, sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
 import { PREVIEW_CONFIG } from '@/lib/publicResearchPreview'
 import { ResearchShowcase } from './ResearchShowcase'
@@ -75,6 +76,7 @@ export function LandingPage() {
           <nav className={styles.navActions} aria-label="Account">
             <Link href="/auth/login" className={styles.textLink}>Sign in</Link>
             <Link href="/pricing" className={styles.secondaryButton}>View plans</Link>
+            <ThemeToggle />
           </nav>
         </div>
       </header>

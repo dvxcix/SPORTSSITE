@@ -1,5 +1,7 @@
 SlipSurge page-by-page visual review
 
+Latest full-site follow-up: 22 November 2026. All 239 surfaces have individual four-layout receipts in docs/design/full-mobile-audit-2026-11-22.json; latest rollout verification is recorded in docs/design/full-mobile-audit-2026-11-22.txt.
+
 Every item requires its own review. A shared CSS change does not certify its consumers.
 Checks: desktop dark/light; phone dark/light; keyboard; reduced motion; loading/empty/error; all tools reachable.
 Completed changes are Live in production. Owner visual feedback does not block the authorized rollout. Queued means unfinished overhaul work, not an unavailable tool.

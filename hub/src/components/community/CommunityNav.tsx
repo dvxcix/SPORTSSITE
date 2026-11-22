@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useLayoutEffect, useRef } from 'react'
 import { Bell, Bookmark, CalendarDays, Hash, Home, LayoutGrid, MessageCircle, MessagesSquare, Newspaper, Sparkles, Users } from 'lucide-react'
 
 const destinations = [
@@ -20,7 +21,22 @@ const destinations = [
 
 export function CommunityNav() {
   const pathname = usePathname()
-  return <nav className="ss-community-nav" aria-label="Community">
+  const nav = useRef<HTMLElement>(null)
+  useLayoutEffect(() => {
+    const container = nav.current
+    if (!container) return
+    const reveal = () => {
+      const active = container.querySelector<HTMLElement>('[aria-current="page"]')
+      if (!active) return
+      const item = active.getBoundingClientRect(), rail = container.getBoundingClientRect()
+      if (item.left < rail.left + 4 || item.right > rail.right - 4) container.scrollLeft += item.left - rail.left - 8
+    }
+    reveal()
+    const observer = new ResizeObserver(reveal)
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [pathname])
+  return <nav ref={nav} className="ss-community-nav" aria-label="Community">
     {destinations.map(({ href, label, icon: Icon }) => {
       const active = pathname === href || pathname.startsWith(`${href}/`)
       return <Link key={href} href={href} className={active ? 'is-active' : undefined} aria-current={active ? 'page' : undefined}>

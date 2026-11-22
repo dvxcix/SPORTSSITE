@@ -33,7 +33,7 @@ interface FeedComposerProps {
 }
 
 export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialGameId, openPickBuilder = false }: FeedComposerProps) {
-  const { user, profile } = useAuth()
+  const { user, profile, loading: authLoading, authUnavailable } = useAuth()
   const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const [content, setContent] = useState('')
   const [composerMode, setComposerMode] = useState<'take' | 'pick' | 'poll' | 'research'>(openPickBuilder ? 'pick' : 'take')
@@ -95,6 +95,8 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
     })
   }
 
+  if (authLoading) return <div className="ss-composer-loading" role="status" aria-label="Preparing the composer" aria-busy="true"><span aria-hidden="true" /><div aria-hidden="true"><i /><i /><i /></div><p className="sr-only">Preparing the composer…</p></div>
+  if (authUnavailable || user && !profile) return <div className="ss-composer-account-error" role="status"><p>Your account could not be loaded.</p><button type="button" onClick={() => window.location.reload()}>Try again</button></div>
   if (!user || !profile) {
     return (
       <div className="ss-feed-composer ss-feed-composer-signed-out">

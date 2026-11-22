@@ -482,6 +482,8 @@
   .page { --landing-gutter: 16px; }
   .nav { min-height: 60px; gap: 12px; }
   .navActions { gap: 8px; }
+  .brand > span { display: none; }
+  .brand { min-width: 44px; min-height: 44px; }
   .navActions .secondaryButton { padding-inline: 10px; }
   .hero .actions { gap: 8px 12px; }
   .cardHeader, .cardInfo { inset-inline: 8px; }

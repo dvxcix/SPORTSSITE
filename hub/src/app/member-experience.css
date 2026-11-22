@@ -85,7 +85,37 @@ body:has(.ss-context-handoff) .ss-profile-savebar{--profile-resume-offset:76px}
 .ss-achievement-card-content{min-height:100px;padding:14px}.ss-achievement-icon{width:48px;height:48px;flex-basis:48px;border-radius:10px;border-color:#314253;background:#111c29;box-shadow:none;backdrop-filter:none}
 .ss-achievement-icon img{width:82%;height:82%;filter:none}.ss-achievement-card.has-art::after{background:linear-gradient(90deg,var(--surface),color-mix(in srgb,var(--surface) 94%,transparent) 70%,color-mix(in srgb,var(--surface) 70%,transparent))}
 .ss-mention-profile-popover{padding:16px;box-shadow:var(--shadow-md);border-radius:12px;background:var(--surface);border-color:var(--border-2)}
-.ss-mention-profile-open{min-height:44px;border-radius:8px}
+.ss-mention-profile-top{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px}
+.ss-mention-profile-id strong{display:flex;align-items:center;gap:5px;white-space:normal;overflow-wrap:anywhere;font-size:14px;line-height:1.4}.ss-mention-profile-id strong svg{flex-shrink:0;color:var(--accent)}
+.ss-mention-profile-id small{overflow-wrap:anywhere}.ss-mention-profile-badges{margin-top:10px}.ss-mention-profile-badges:has(>.ss-user-badges:empty),.ss-mention-profile-badges:empty{display:none}
+.ss-mention-profile-stats{flex-wrap:wrap;gap:8px 16px;font-variant-numeric:tabular-nums}.ss-mention-profile-stats:empty{display:none}
+.ss-mention-profile-open{min-height:44px;justify-content:space-between;align-items:center;padding:10px 0 0;border-radius:0;font-family:inherit;font-size:12px;font-weight:600;line-height:1.4;letter-spacing:0;text-transform:none}
+
+/* Threads keep identity, moderation and writing in separate rows at every width. */
+.ss-comments{display:flex;min-width:0;flex-direction:column;gap:14px;padding:14px 12px;border-top:1px solid var(--border)}
+.ss-comment-thread{display:flex;min-width:0;flex-direction:column;gap:10px}
+.ss-comment-row{display:flex;min-width:0;gap:6px;margin-left:calc(var(--comment-depth,0)*16px)}
+.ss-comment-avatar{flex:0 0 44px;align-self:flex-start}.ss-comment-avatar-link{display:grid;width:44px;min-height:44px;place-items:center;flex:0 0 44px;border-radius:50%}
+.ss-comment-bubble{flex:1;min-width:0;padding:5px 10px 0;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)}
+.ss-comment-bubble[data-own=true]{border-color:color-mix(in srgb,var(--accent) 22%,var(--border));background:color-mix(in srgb,var(--accent) 5%,var(--surface-2))}
+.ss-comment-meta{display:grid;grid-template-columns:minmax(0,1fr) 36px;align-items:center;column-gap:4px;row-gap:0}
+.ss-comment-name{min-width:0;font-size:13px;font-weight:650;line-height:1.4;color:var(--text-1);overflow-wrap:anywhere}.ss-comment-name a{padding-block:6px}
+.ss-comment-details{grid-column:1/-1;display:flex;align-items:center;flex-wrap:wrap;gap:5px 8px;min-width:0;margin-bottom:5px}.ss-comment-details time{color:var(--text-3);font-size:11px;white-space:nowrap}.ss-comment-details .ss-user-badges{flex-wrap:wrap}
+.ss-comment-more{display:grid;width:36px;min-height:36px;place-items:center;justify-self:end;border:0;border-radius:8px;color:var(--text-3);background:transparent}
+.ss-comment-more:hover,.ss-comment-actions button:hover{background:var(--surface-3);color:var(--text-1)}
+.ss-comment-text{margin:4px 0 0;font-size:13px;line-height:1.6;color:var(--text-2);overflow-wrap:anywhere;white-space:pre-wrap}
+.ss-comment-actions{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin-top:2px}.ss-comment-actions button{display:inline-flex;min-height:36px;min-width:36px;align-items:center;justify-content:center;gap:5px;padding:5px 8px;border:0;border-radius:7px;background:transparent;color:var(--text-3);font-size:12px;font-weight:550}.ss-comment-actions button[aria-pressed=true]{color:var(--red)}
+.ss-comment-compose-row{display:grid;grid-template-columns:44px minmax(0,1fr);align-items:start;gap:6px;min-width:0}.ss-comment-compose-row>.ss-member-avatar{justify-self:center;margin-top:8px}
+.ss-comment-reply-row{margin-left:calc(var(--comment-depth,0)*16px + 12px)}
+.ss-comment-composer{min-width:0;margin:0;padding:0;border:1px solid var(--control-border);border-radius:11px;background:var(--surface);overflow:hidden}
+.ss-comment-composer:focus-within{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 10%,transparent)}
+.ss-comment-composer textarea{display:block;width:100%;min-width:0;min-height:48px;max-height:160px;resize:vertical;padding:10px 12px;border:0;outline:0;background:transparent;color:var(--text-1);font:inherit;font-size:13px;line-height:1.5;overflow-y:auto}.ss-comment-composer textarea::placeholder{color:var(--text-3)}
+.ss-comment-composer-tools,.ss-comment-composer-tools>div{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.ss-comment-composer-tools{justify-content:space-between;gap:4px;padding:4px 5px;border-top:1px solid var(--border)}
+.ss-comment-composer-tools button{display:inline-flex;min-height:36px;min-width:36px;align-items:center;justify-content:center;gap:6px;border-radius:7px;font-size:12px}.ss-comment-submit{padding:6px 10px;background:var(--accent-fill);color:var(--accent-fg);font-weight:600}.ss-comment-submit:disabled{background:var(--surface-3);color:var(--text-3);cursor:not-allowed}.ss-comment-cancel{padding:6px 8px;color:var(--text-2)}
+.ss-comment-more:focus-visible,.ss-comment-actions button:focus-visible,.ss-comment-avatar-link:focus-visible,.ss-comment-composer button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ss-comment-spinner{animation:ss-comment-spin 900ms linear infinite}@keyframes ss-comment-spin{to{transform:rotate(360deg)}}
+@media(max-width:767px){.ss-comment-row{margin-left:calc(var(--comment-depth,0)*8px)}.ss-comment-reply-row{margin-left:calc(var(--comment-depth,0)*8px + 6px)}.ss-comment-meta{grid-template-columns:minmax(0,1fr) 44px}.ss-comment-more{width:44px;min-height:44px}.ss-comment-actions button,.ss-comment-composer-tools button{min-width:44px;min-height:44px}.ss-comment-composer textarea{font-size:16px}.ss-comment-composer-tools{gap:2px;padding:3px}.ss-comment-composer-tools>div{gap:2px}}
+@media(prefers-reduced-motion:reduce){.ss-comment-spinner{animation:none}}
 
 .ss-member-picks-page>header{position:relative;isolation:isolate}
 .ss-member-picks-page>header::before{position:absolute;z-index:-1;inset:-12px 0 0;background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--accent) 7%,transparent),transparent 60%);pointer-events:none;content:''}
@@ -166,3 +196,6 @@ body:has(.ss-context-handoff) .ss-profile-savebar{--profile-resume-offset:76px}
 @media(prefers-reduced-motion:reduce){.ss-member-cover::before{animation:none}.ss-hot-pick,.ss-member-profile-tabs>a{transition:none}.ss-hot-pick:hover{transform:none}}
 @media(max-width:360px){.ss-composer-modes>button{min-width:44px}.ss-composer-modes>button>svg{display:none}}
 @media(max-width:767px),(max-width:1024px) and (any-pointer:coarse){.ss-account-appearance .ss-theme-switch button{min-height:44px}}
+@media(max-width:767px){body:has(textarea:focus,input:not([type=checkbox]):not([type=radio]):not([type=color]):focus,[contenteditable=true]:focus) :is(.ss-utility-dock,.ss-context-handoff){visibility:hidden;pointer-events:none}}
+.ss-post-author-line>.ss-profile-hover-target{max-width:100%}.ss-post-author-line>.ss-profile-hover-target>a{overflow-wrap:anywhere}
+.ss-composer-loading{display:flex;gap:12px;min-height:240px;padding:18px 16px;border-bottom:1px solid var(--border);background:var(--surface)}.ss-composer-loading>span{flex:0 0 40px;height:40px;border-radius:50%;background:var(--surface-3)}.ss-composer-loading>div{display:grid;flex:1;align-content:start;gap:20px;padding-top:6px}.ss-composer-loading i{display:block;width:75%;height:18px;border-radius:6px;background:var(--surface-3)}.ss-composer-loading i:nth-child(2){width:100%;height:64px}.ss-composer-loading i:nth-child(3){width:42%;height:36px}.ss-composer-account-error{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 16px;border-bottom:1px solid var(--border);color:var(--text-2);font-size:13px}.ss-composer-account-error button{min-width:80px;min-height:44px;padding:8px 12px;border:1px solid var(--control-border);border-radius:8px;background:var(--surface-2)}

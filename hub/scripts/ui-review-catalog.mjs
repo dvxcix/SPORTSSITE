@@ -13,6 +13,7 @@ async function walk(dir){for(const e of await fs.readdir(dir,{withFileTypes:true
  if(href.startsWith('/forum/thread/'))href=href.replace('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000711')
  if(href.startsWith('/nba/players/'))href=href.replace('00000000-0000-4000-8000-000000000101','900110')
  if(href.startsWith('/nba/teams/'))href=href.replace('00000000-0000-4000-8000-000000000101','2')
+ if(href.startsWith('/mlb/teams/'))href=href.replace('00000000-0000-4000-8000-000000000101','147')
  if(href.startsWith('/nfl/players/'))href=href.replace('00000000-0000-4000-8000-000000000101','review-nfl-0')
  const top=href.split('/')[1]
  const group=top==='admin'?'Administration':top==='auth'||top==='onboarding'?'Account entry':['the-paint','nba'].includes(top)?'NBA':['the-sideline','nfl'].includes(top)?'NFL':top==='settings'?'Account & preferences':['feed','community','groups','pages','channels','forum','messages','profile','notifications','bookmarks','events','stories','hashtag','posts'].includes(top)?'Community':['creators','marketplace'].includes(top)?'Creators & marketplace':['mlb','dugout','batter-cost','pitcher-report','spray-charts','slate-breakdown','players','weather-lab','synergy'].includes(top)?'Seasonal tools (hidden from members)':'Platform'

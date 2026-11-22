@@ -27,3 +27,5 @@
 @media(max-width:767px){.factor[data-pipeline=true] .factorTop{grid-template-columns:minmax(0,1fr) 44px}}
 
 .drawer button,.editor button{min-height:44px}.editorOptions>div:first-child button{width:44px;min-width:44px}@media(max-width:767px){.editorOptions>div:first-child button{width:44px;min-width:44px}}
+
+.matrixList article>footer button{min-width:44px}

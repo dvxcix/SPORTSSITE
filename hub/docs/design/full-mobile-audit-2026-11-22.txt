@@ -1,0 +1,34 @@
+SlipSurge full-site mobile follow-up — 22 November 2026
+
+Audit coverage
+Reviewed all 156 page routes and 83 workspace, player-drawer and shared surfaces individually at 1440x1000 and 390x844, in light and dark: 956 catalog receipts. This includes member/community pages, creator pages, settings, account entry, NBA/NFL tools, admin pages and the hidden seasonal pages. MLB remains off-season and hidden. Each inventory entry links to its receipt in full-mobile-audit-2026-11-22.json; existing owner approvals and earlier publication history are retained.
+
+Changes in this release
+- VOLT is the only floating launcher everywhere. My Picks and Watchlist remain in page headers and the account menu. Existing drawer hosts/listeners stay mounted, and MLB/NFL matrix access is retained in its workspace.
+- Comments use multiline fields with separate emoji/GIF/send rows, caret-preserving insertion, pending feedback and Ctrl/Command+Enter submission. Enter adds a line. Duplicate comment/reply submissions are blocked; failures retain text. A pending reply cannot switch threads and discard a draft. Deleting a branch updates the count for every removed reply.
+- Comment authors, badges, timestamps and actions now fit narrow phones. Deep threads cap indentation. Edit, delete, report and block stay in a compact, keyboard-accessible actions menu. Profile links remain available on avatars and names.
+- Member hover cards have a contained avatar, readable identity/badge layout and a clear profile link. Unknown follower counts are omitted. Hover cards stay out of phone navigation; the member's profile link still works. Existing decoration, ring, badge and privacy behavior is preserved.
+- Feed composers show a neutral loading state while authentication resolves, instead of flashing a false sign-in prompt. An unavailable account shows a retry state.
+- DM and group-DM composers have a full-width writing row and separate media/send controls. Conversation height accounts for navigation and banners, keeping Send visible. VOLT and the resume prompt step aside while a text field is focused.
+- Community navigation reveals the current section when it would be offscreen. Feed/activity/hashtag counts use the correct singular form.
+- Admin Blogs, Stories, Events, Groups and Pages tables scroll instead of clipping columns, with named keyboard-focusable regions. Member rows are compact; Manage expands the original administrative controls. HR Intelligence's date and action no longer overlap. Creator administration has consistent outer spacing, and mobile breadcrumbs avoid wrapping group labels.
+- NBA chart bars have 44px phone hit areas and horizontal scrolling, including automatic keyboard focus scrolling. Game-market slider controls, table sort headers, matrix actions, notification filters/dismiss controls, search/menu controls, comparison clearing and workspace actions have usable phone targets. Data, prices, scoring formulas and frozen pregame rules are preserved.
+- Landing and public-preview theme controls sit in header flow, with no overlap on sign-in/account links. Preview controls and phone branding fit small screens.
+- The GIF picker has larger phone category, retry and upload/link controls. Emoji controls and text fields fit without crowding the draft.
+- Onboarding restores the saved draft before showing interactive steps, preventing a late restore from overwriting the first click. Denied browser storage still opens setup. The final review has a Back action, and photo upload has a full touch target.
+
+Verification
+- All 134 production source checks pass.
+- 23 focused comment, identity, saved-drawer, modal and VOLT checks pass, including actual component tests for duplicate submissions, reply races, failed saves, keyboard menus and drawer focus restoration.
+- 63 broader layout, identity, privacy, avatar, visibility and checklist regressions pass.
+- 19 chart, score, sorting and tooltip interaction checks pass.
+- 80 NBA/NFL access, odds-board and frozen-pregame checks pass. The old page harness was updated to supply the existing research-preferences dependency, preserving its original historical-price assertions.
+- Five onboarding checks pass, including server rendering before restoration, restored drafts, unavailable storage and returning from final review.
+- Focused ESLint and the optimized private build with TypeScript pass.
+- Forty additional 320px/short-landscape viewport checks pass in both themes. Send stays above the bottom navigation in the inspected conversations. Additional interaction receipts cover setup steps, media/error states, share previews, visible comparison cards and keyboard chart scrolling.
+
+Practical limits
+Private review uses illustrative data without service credentials. It verifies the listed rendered states and interactions, not every possible live-data condition or physical device keyboard. Operational collectors, admin mutations, public messages/posts, purchases and account/security changes were not submitted. Three legacy standalone browser harnesses require an absent bundled browser and are not counted as passing; their UI areas were exercised through the connected browser on the actual compiled app. Dense line plots retain 24px point markers with whole-plot nearest-point touch selection and chronological keyboard navigation.
+
+Production verification
+Pending the authorized main push and live browser verification. This paragraph is replaced with the actual release receipt after deployment.
