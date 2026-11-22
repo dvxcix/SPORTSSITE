@@ -24,6 +24,8 @@ type CompactQuote=[string,number,string,string,string,string,string,number,numbe
 type GameRow={id:string;away:string;home:string;status:'ready'|'incomplete'|'unavailable'}
 type Pool={date:string;games:GameRow[];quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[];rosterExclusions?:Record<string,string[]>}
 const MAX_POOL_BYTES=4*1024*1024
+// Full NFL events include up to 32 tabs; a complete observed capture can exceed 1 MiB.
+const MAX_FANDUEL_CAPTURE_BYTES=4*1024*1024
 type PickSnapshotRow={snapshot:NflPikkitSnapshot;captured_at:string}
 type FrozenOdds={board:NflObservedOdds;observedAt:string;cutoffAt:number}
 type PickInput=FrozenOdds|PickSnapshotRow|null
@@ -125,7 +127,7 @@ export async function GET(request:NextRequest){
     if(date!==input||games.length>24||new Set(games.map(game=>game.id)).size!==games.length)throw new Error('Schedule unavailable')
     const {clocks}=await sharedNflOddsBoardClocks(date,games)
     const phase=nflOddsBoardSignature(clocks,Date.now())
-    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v13:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
+    const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v14:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
       const admin=createAdminClient(), capturedNow=new Date(Date.now()).toISOString()
       const entries:Array<{game:GameRow;quotes:CompactQuote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[];excluded?:string[]}|null>=Array(games.length).fill(null)
       for(let offset=0;offset<games.length;offset+=3)await Promise.all(games.slice(offset,offset+3).map(async(game,relative)=>{
@@ -157,7 +159,7 @@ export async function GET(request:NextRequest){
           if(index===1&&rows.length&&version(rows[0].board)!==3){row.status='incomplete';return []}
           return rows.flatMap(item=>{
             if(index===1&&version(item.board)!==3){row.status='incomplete';return []}
-            if(index===1){const tabs=(item as {raw_tabs?:unknown}).raw_tabs;if(!Array.isArray(tabs)||!tabs.length||tabs.length>32||Buffer.byteLength(JSON.stringify(tabs))>1024*1024||tabs.some(tab=>!tab||typeof tab!=='object'||tab.incomplete!==false))row.status='incomplete'}
+            if(index===1){const tabs=(item as {raw_tabs?:unknown}).raw_tabs;if(!Array.isArray(tabs)||!tabs.length||tabs.length>32||Buffer.byteLength(JSON.stringify(tabs))>MAX_FANDUEL_CAPTURE_BYTES||tabs.some(tab=>!tab||typeof tab!=='object'||tab.incomplete!==false))row.status='incomplete'}
             const frame=compact(item.board as SidelineOddsBoard,item.captured_at,cutoff,index===0)
             if(!frame){row.status='incomplete';return []}
             return [frame]

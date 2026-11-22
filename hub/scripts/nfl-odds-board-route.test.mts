@@ -269,3 +269,12 @@ test('frozen Props quotes cover a history gap without manufacturing opening or e
   state.archive={value:frozen.board,observedAt:cutoff}
   const invalid=await(await request()).json();assert.deepEqual(invalid.quotes,[])
 })
+
+for (const [name,bytes,incomplete,expected] of [
+ ['complete full-event capture above one MiB',1100000,false,'ready'],
+ ['oversized full-event capture',4*1024*1024,true,'incomplete'],
+ ['genuinely incomplete tab',100,true,'incomplete'],
+] as const) test(name+' retains honest source coverage',async()=>{
+ reset();state.tables.nfl_fanduel_capture_history=[Object.assign(sample('2020-11-02T21:40:00.000Z','2020-11-02T21:39:00.000Z',-120,3),{raw_tabs:[{incomplete,detail:'x'.repeat(bytes)}]})];
+ const result=await(await request()).json();assert.equal(result.games[0].status,expected);assert.ok(result.quotes.length>0);assert.doesNotMatch(JSON.stringify(result),/detail|raw_tabs/);
+});
