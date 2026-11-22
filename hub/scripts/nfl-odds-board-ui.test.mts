@@ -18,6 +18,27 @@ const quote=(game:string,id:number,name:string,team:string,line:number,price:num
 const payload={date:'2020-11-02',games:[{id:'one',away:'SEA',home:'CHI',status:'ready'},{id:'two',away:'MIA',home:'NYJ',status:'ready'}],markets:['receiving_yards'],books:['draftkings'],market:'receiving_yards',book:'draftkings',quotes:[quote('one',1,'Alpha','SEA',25,150,200),quote('one',1,'Alpha','SEA',50,100,200),quote('two',2,'Beta','MIA',25,-140,-110),quote('two',2,'Beta','MIA',50,300,200)],identities:[['one',1,'Alpha','SEA','https://static.www.nfl.com/alpha.png',[]]],teams:[['one','SEA','#002244','#69BE28','https://a.espncdn.com/sea.png'],['two','MIA','#008E97','#FC4C02','https://a.espncdn.com/mia.png']],phaseToken:'a'.repeat(64),phaseObservedAt:new Date().toISOString(),nextStart:null}
 async function mount(value:typeof payload=payload,fetcher?:typeof fetch){const old=globalThis.fetch;globalThis.fetch=fetcher??(async()=>Response.json({...value,phaseObservedAt:new Date().toISOString()}));const host=document.createElement('div');document.body.append(host);const root=createRoot(host);await act(async()=>{root.render(createElement(compiled.exports.BoardHarness,{date:'2020-11-02'}));await new Promise(resolve=>setTimeout(resolve,10))});return{host,phase:async(phase:Phase)=>{await act(async()=>{root.render(createElement(compiled.exports.BoardHarness,{date:'2020-11-02',phase}));await new Promise(resolve=>setTimeout(resolve,10))})},close:async()=>{await act(async()=>root.unmount());host.remove();globalThis.fetch=old}}}
 async function select(host:HTMLElement,name:string,value:string){const node=host.querySelector<HTMLSelectElement>(`select[aria-label="${name}"]`)!;assert.ok(node);await act(async()=>{node.value=value;node.dispatchEvent(new dom.window.Event('change',{bubbles:true}))})}
+test('finished games show exact final totals and each priced rung gets its own hit or miss',async()=>{
+ const value={...payload,finals:[['one',1,'SEA',25],['two',2,'MIA',0]],finalGames:['one','two']}
+ const ui=await mount(value)
+ try{
+  const rows=[...ui.host.querySelectorAll('tbody tr')]
+  const alpha=rows.find(row=>row.textContent?.includes('Alpha'))!
+  const beta=rows.find(row=>row.textContent?.includes('Beta'))!
+  assert.match(alpha.textContent??'',/Final 25/)
+  assert.equal(alpha.querySelectorAll('[data-result="hit"]').length,1)
+  assert.equal(alpha.querySelectorAll('[data-result="miss"]').length,1)
+  assert.match(beta.textContent??'',/Final 0/)
+  assert.equal(beta.querySelectorAll('[data-result="miss"]').length,2)
+  await select(ui.host,'Odds board team','SEA')
+  assert.equal(ui.host.querySelectorAll('tbody tr').length,1)
+  assert.match(ui.host.textContent??'',/Final 25/)
+ }finally{await ui.close()}
+})
+test('missing final stats remain unavailable instead of fabricating zero or a loss',async()=>{
+ const ui=await mount({...payload,finalGames:['one']} as typeof payload)
+ try{assert.match(ui.host.textContent??'',/Final · stat unavailable/);assert.equal(ui.host.querySelectorAll('[data-result]').length,0)}finally{await ui.close()}
+})
 test('the Market menu opens separate scorer boards with named columns', async () => {
   const ui = await mount(payload, async input => {
     const market = new URL(String(input), 'https://www.slipsurge.com').searchParams.get('market')

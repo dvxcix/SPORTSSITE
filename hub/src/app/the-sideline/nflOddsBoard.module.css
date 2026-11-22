@@ -92,6 +92,11 @@
 .shortened { color: var(--green); }
 .lengthened { color: var(--red); }
 .muted { color: var(--text-2); }
+.scroll .finalTotal { display:flex; align-items:center; gap:5px; color:var(--text-2); font-weight:500; }
+.finalTotal strong { color:var(--text-1); font-variant-numeric:tabular-nums; }
+.result { display:inline-flex; align-items:center; justify-content:center; gap:4px; margin-top:8px; padding:4px 9px; border-radius:6px; font-size:12px; font-weight:650; }
+.result[data-result="hit"] { color:var(--green); background:color-mix(in srgb,var(--green) 10%,transparent); }
+.result[data-result="miss"] { color:var(--red); background:color-mix(in srgb,var(--red) 9%,transparent); }
 @media (max-width: 720px) {
   .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .scroll tbody th, .scroll thead th:first-child { min-width: 168px; max-width: 168px; }

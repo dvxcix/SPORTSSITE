@@ -9,12 +9,14 @@ import { nflBoardPickKey, nflUniqueBoardPicks, type NflBoardPick } from '@/lib/n
 import { nflOddsBoardTrust, type NflOddsBoardPhase } from '@/lib/nflOddsBoardTrust'
 import { canShowLastSeenOdds, ODDS_BOARD_LAST_SEEN_MS } from '@/lib/oddsBoardContinuity'
 import { MarketMovement, OddsBoardGuide, PickCount } from '@/components/research/ResearchMetrics'
+import { Check, X } from 'lucide-react'
+import { nflBoardFinalMap, type NflBoardFinal } from '@/lib/nflOddsBoardResults'
 import styles from './nflOddsBoard.module.css'
 
 type Quote=[string,number,string,string,string,string,string,number,number,string,number|null,string|null,number|null,boolean]
 type Game={id:string;away:string;home:string;status:'ready'|'incomplete'|'unavailable'}
 type TeamVisual=[gameId:string,abbr:string,primary:string,secondary:string,logo:string|null]
-type Payload={date:string;games:Game[];markets:string[];books:string[];market:string;book:string;quotes:Quote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[];teams?:TeamVisual[];phaseToken:string;phaseObservedAt:string;nextStart:string|null}
+type Payload={date:string;games:Game[];markets:string[];books:string[];market:string;book:string;quotes:Quote[];picks?:NflBoardPick[];identities?:NflBoardIdentity[];teams?:TeamVisual[];finals?:NflBoardFinal[];finalGames?:string[];resultsUnavailable?:string[];resultsPending?:boolean;phaseToken:string;phaseObservedAt:string;nextStart:string|null}
 type Row={id:string;gameId:string;playerId:number;player:string;team:string;position:string;matchup:string;cells:Map<number,NflOddsBoardQuote>}
 const price=(n:number|null)=>n==null?'—':n>0?`+${n}`:String(n)
 const label=(name:string)=>name.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase()).replace(/\bTds?\b/g,'Touchdowns')
@@ -43,7 +45,7 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
   const lastSeen=!accessDenied&&!!raw&&!trust?.safe&&verified?.value===raw&&canShowLastSeenOdds(now,verified.at,rejected)
   const payload=!accessDenied&&((trust?.safe&&!rejected)||lastSeen)?raw:null
   useEffect(()=>{
-    const controller=new AbortController();let timer:ReturnType<typeof setTimeout>,pending=false,queued=false,nextStart:number|null=null,failures=0
+    const controller=new AbortController();let timer:ReturnType<typeof setTimeout>,pending=false,queued=false,nextStart:number|null=null,failures=0,resultsPending=false
     const load=async()=>{
       if(controller.signal.aborted)return
       if(pending){queued=true;return}
@@ -57,13 +59,13 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
         const value=await response.json() as Payload
         if(value.date!==date||value.market!==market||value.book!==vendor||!Array.isArray(value.games)||!Array.isArray(value.markets)||!Array.isArray(value.books)||!Array.isArray(value.quotes)||value.quotes.length>5000||!value.phaseToken||!value.phaseObservedAt)throw new Error('invalid')
         if(value.nextStart!=null&&!Number.isFinite(Date.parse(value.nextStart)))throw new Error('invalid')
-        if(!controller.signal.aborted){setSaved({key:requestKey,value,receivedAt:Date.now()});setErrorKey(null);setDeniedKey(null);failures=0;nextStart=value.nextStart?Date.parse(value.nextStart):null}
+        if(!controller.signal.aborted){setSaved({key:requestKey,value,receivedAt:Date.now()});setErrorKey(null);setDeniedKey(null);failures=0;resultsPending=value.resultsPending===true;nextStart=value.nextStart?Date.parse(value.nextStart):null}
       }catch{if(!controller.signal.aborted){setErrorKey(requestKey);failures++}}
       finally{
         pending=false
         if(!controller.signal.aborted){
           if(queued&&document.visibilityState==='visible'){queued=false;queueMicrotask(()=>void load())}
-          else {const delay=failures?Math.min(300000,30000*2**Math.min(failures-1,3))+Math.floor(Math.random()*10000):nextStart==null?null:Math.min(300000+Math.floor(Math.random()*15000),Math.max(250,nextStart-Date.now()+250));if(delay!=null)timer=setTimeout(load,delay)}
+          else {const delay=failures?Math.min(300000,30000*2**Math.min(failures-1,3))+Math.floor(Math.random()*10000):resultsPending?30000:nextStart==null?null:Math.min(300000+Math.floor(Math.random()*15000),Math.max(250,nextStart-Date.now()+250));if(delay!=null)timer=setTimeout(load,delay)}
         }
       }
     }
@@ -97,6 +99,8 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
   const scorerLabel = nflOddsBoardScorerLabel(shownMarket)
   const marketOptions = [...new Set([market, ...Object.keys(NFL_ODDS_BOARD_SCORER_MARKETS), ...(catalog?.markets ?? [])])]
   const quotes=useMemo(()=>payload?.quotes.map(unpack)??[],[payload])
+  const finalValues=useMemo(()=>nflBoardFinalMap(payload?.finals,payload?.quotes??[]),[payload])
+  const finalValue=(row:Row)=>finalValues.get(JSON.stringify([row.gameId,row.playerId,row.team]))
   const picks=useMemo(()=>new Map(nflUniqueBoardPicks(payload?.picks).map(row=>[nflBoardPickKey(row[0],row[1],row[2],row[3],row[4],row[5]),row])),[payload])
   const identities=useMemo(()=>new Map((Array.isArray(payload?.identities)?payload.identities:[]).filter(item=>Array.isArray(item)&&item.length===6&&typeof item[0]==='string'&&Number.isSafeInteger(item[1])&&typeof item[2]==='string'&&typeof item[3]==='string'&&Array.isArray(item[5])).map(item=>[nflBoardIdentityKey(item[0],item[1],item[3],item[2]),item])),[payload])
   const visuals=useMemo(()=>new Map((Array.isArray(payload?.teams)?payload.teams:[]).filter(item=>Array.isArray(item)&&item.length===5&&typeof item[0]==='string'&&typeof item[1]==='string').map(item=>[`${item[0]}:${item[1]}`,item])),[payload])
@@ -124,7 +128,8 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
   const playerCard=(row:Row)=>{
     const saved=identities.get(nflBoardIdentityKey(row.gameId,row.playerId,row.team,row.player)),visual=visuals.get(`${row.gameId}:${row.team}`)
     const color=(value:unknown,fallback:string)=>typeof value==='string'&&/^#[\da-f]{6}$/i.test(value)?value:fallback
-    return <span className={styles.player}><SidelinePlayerAvatar player={{name:row.player,headshot:nflBoardImage(saved?.[4]),headshotFallbacks:(saved?.[5]??[]).map(nflBoardImage).filter((value):value is string=>!!value)}} team={{abbr:row.team,name:row.team,color:color(visual?.[2],'#1b2430'),color2:color(visual?.[3],'#111820'),logo:nflBoardImage(visual?.[4])}}/><span className={styles.playerText}><b>{row.player}</b><small>{row.team} · {row.position} · {row.matchup}</small></span></span>
+    const actual=finalValue(row)
+    return <span className={styles.player}><SidelinePlayerAvatar player={{name:row.player,headshot:nflBoardImage(saved?.[4]),headshotFallbacks:(saved?.[5]??[]).map(nflBoardImage).filter((value):value is string=>!!value)}} team={{abbr:row.team,name:row.team,color:color(visual?.[2],'#1b2430'),color2:color(visual?.[3],'#111820'),logo:nflBoardImage(visual?.[4])}}/><span className={styles.playerText}><b>{row.player}</b><small>{row.team} · {row.position} · {row.matchup}</small>{actual!=null?<small className={styles.finalTotal}>Final <strong>{shownMarket==='first_td'?(actual===1?'First TD':'Not first TD'):actual}</strong></small>:payload?.finalGames?.includes(row.gameId)?<small className={styles.muted}>Final · stat unavailable</small>:null}</span></span>
   }
   return <section className={styles.panel} aria-label="NFL odds board">
     <h1 className="sr-only">NFL Odds Board</h1>
@@ -151,9 +156,10 @@ export function NflOddsBoard({date,phase=null,market,onMarket,vendor,onVendor}:{
     {!accessDenied&&!lastSeen&&errorKey===requestKey&&<p role="status">{payload?'Latest update unavailable. Showing saved observations.':'Odds board unavailable.'}</p>}
     {!accessDenied&&!payload&&errorKey!==requestKey&&<p role="status">{raw?'Checking pregame prices…':'Loading saved odds…'}</p>}
     {selectedGameHasPartialCoverage && <p role="status">Showing saved prices. Additional source coverage is incomplete for this game.</p>}
+    {!!payload?.resultsUnavailable?.length && <p role="status">Final results are being verified for {payload.games.filter(item=>payload.resultsUnavailable?.includes(item.id)).map(item=>`${item.away} @ ${item.home}`).join(', ')}.</p>}
     {!!rows.length && !!gamesWithoutPrices.length && <p role="status">No saved prices for this market and sportsbook in {gamesWithoutPrices.map(item => `${item.away} @ ${item.home}`).join(', ')}.</p>}
     {!!rows.length&&<OddsBoardGuide players={rows.length} className={styles.boardMeta}/>}
-    {!!rows.length&&<div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label={scorerLabel ? `${scorerLabel} odds and movement` : "NFL milestone odds and movement"} tabIndex={0}><table><thead><tr><th scope="col">Player</th>{lines.map(line=><th scope="col" key={line}>{scorerLabel ?? `${line}+`}</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row">{playerCard(row)}</th>{lines.map(line=>{const q=row.cells.get(line);if(!q)return <td key={line} className={styles.unknown}>—</td>;const baseline=comparison==='opening'?q.opening:q.previous,move=nflOddsBoardMove(q.current,baseline),count=picks.get(nflBoardPickKey(q.gameId,q.playerId,q.team,q.market,q.vendor,q.line));return <td key={line} className={move==null?styles.unknown:move>0?styles.shortenedCell:move<0?styles.lengthenedCell:styles.unchangedCell}><span className={styles.priceLine}><small className="sr-only">Last seen</small>{' '}<b>{price(q.current)}</b></span><span className={styles.priceLine}><small>{comparison==='opening'?'Open':'Earlier'}</small>{' '}<b>{price(baseline)}</b></span><div className={styles.quoteMeta}><MarketMovement value={move} precision={2}/><PickCount value={count?.[6]} estimated={count?.[7]===true}/></div></td>})}</tr>)}</tbody></table></div>}
+    {!!rows.length&&<div ref={scroll} onScroll={event=>{scrollLeft.current=event.currentTarget.scrollLeft}} className={styles.scroll} role="region" aria-label={scorerLabel ? `${scorerLabel} odds and movement` : "NFL milestone odds and movement"} tabIndex={0}><table><thead><tr><th scope="col">Player</th>{lines.map(line=><th scope="col" key={line}>{scorerLabel ?? `${line}+`}</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><th scope="row">{playerCard(row)}</th>{lines.map(line=>{const q=row.cells.get(line);if(!q)return <td key={line} className={styles.unknown}>—</td>;const baseline=comparison==='opening'?q.opening:q.previous,move=nflOddsBoardMove(q.current,baseline),count=picks.get(nflBoardPickKey(q.gameId,q.playerId,q.team,q.market,q.vendor,q.line)),actual=finalValue(row),hit=actual!=null&&actual>=line;return <td key={line} className={move==null?styles.unknown:move>0?styles.shortenedCell:move<0?styles.lengthenedCell:styles.unchangedCell}><span className={styles.priceLine}><small className="sr-only">Last seen</small>{' '}<b>{price(q.current)}</b></span><span className={styles.priceLine}><small>{comparison==='opening'?'Open':'Earlier'}</small>{' '}<b>{price(baseline)}</b></span><div className={styles.quoteMeta}><MarketMovement value={move} precision={2}/><PickCount value={count?.[6]} estimated={count?.[7]===true}/></div>{actual!=null&&<span className={styles.result} data-result={hit?'hit':'miss'}>{hit?<Check size={13}/>:<X size={13}/>} {hit?'Hit':'Miss'}</span>}</td>})}</tr>)}</tbody></table></div>}
     {payload&&!rows.length&&<p role="status">{scorerLabel ? `No saved ${scorerLabel.toLowerCase()} prices for these filters.` : 'No milestone prices for these filters.'}</p>}
   </section>
 }

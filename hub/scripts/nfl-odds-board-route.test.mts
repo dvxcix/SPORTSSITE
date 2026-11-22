@@ -10,6 +10,7 @@ const require=createRequire(import.meta.url)
 const state={denied:false,aliasedMatchup:false,legacyFinal:false,finalFeed:null as null|Record<string,string>,cutoffs:[] as string[],clocks:0,schedules:0,reads:0,truncated:false,many:false,archiveDelay:false,archiveAborted:0,archiveActive:0,archivePeak:0,archive:null as null|{value:unknown;observedAt:string},capture:null as null|{board:unknown},publicPick:null as unknown,entries:new Map<string,unknown>(),baselines:new Map<string,unknown>(),tables:{} as Record<string,Array<{captured_at:string;board:unknown}>>}
 ;(globalThis as typeof globalThis&{nflBoardRoute:typeof state}).nflBoardRoute=state
 const stubs:Record<string,string>={
+  '@/lib/nflOddsBoardResultsServer':`export const readNflBoardFinals=async()=>({finals:[],finalGames:[],resultsUnavailable:[]})`,
   'server-only':'',
   'next/server':`export class NextResponse extends Response{static json(v,o={}){return new Response(JSON.stringify(v),{...o,headers:{'Content-Type':'application/json',...o.headers}})}}`,
   '@/lib/nflAccess':`export async function requireNflAccess(){return globalThis.nflBoardRoute.denied?{error:new Response('',{status:403})}:{userId:'test'}}`,

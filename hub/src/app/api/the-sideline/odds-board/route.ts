@@ -16,6 +16,7 @@ import { NFL_PAUSED_PROJECTION_ENFORCE_ENABLED, nflLegacyPauseNeedsLastSeen } fr
 import { visibleNflObservedOdds, type NflObservedOdds } from '@/lib/nflPausedProjection'
 import { nflOddsBoardHash, nflOddsBoardSignature, readNflOddsBoardClocks, sharedNflOddsBoardClocks, type NflOddsBoardClock } from '@/lib/nflOddsBoardClock'
 import { nflBoardIdentities,nflBoardIdentityKey,nflBoardImage,type NflBoardIdentity } from '@/lib/nflOddsBoardIdentity'
+import { readNflBoardFinals } from '@/lib/nflOddsBoardResultsServer'
   
 export const dynamic='force-dynamic'
 export const maxDuration=120
@@ -242,11 +243,6 @@ export async function GET(request:NextRequest){
       const observed={...candidate.value,picks:unpackNflBoardPicks(candidate.value.quotes,candidate.value.pickCounts)}
       return packNflBoardPicks(mergePartial(observed,(prior?.payload??null) as Pool|null,clocks),MAX_POOL_BYTES)
     },110)
-    // This is deliberately uncached: a newly corrected earlier kickoff or a
-    // crossed boundary must invalidate the shared payload before it is sent.
-    const phaseObservedAt=new Date().toISOString()
-    const fresh=await readNflOddsBoardClocks(date,games)
-    if(nflOddsBoardSignature(fresh,Date.now())!==phase)return NextResponse.json({error:'Odds board updating'},{status:503,headers:{'Cache-Control':'private, no-store'}})
     const pool=view.stale?{...view.value,games:view.value.games.map(game=>({...game,status:'incomplete' as const}))}:view.value
     if(pool.date!==date||pool.games.length!==games.length||pool.games.some(row=>!games.some(game=>game.id===row.id&&game.away.abbr===row.away&&game.home.abbr===row.home)||!['ready','incomplete','unavailable'].includes(row.status)))throw new Error('Invalid saved odds board')
     // Validate even cached values against the current exact game/cutoff set.
@@ -263,12 +259,20 @@ export async function GET(request:NextRequest){
     const picks=unpackNflBoardPicks(pool.quotes,pool.pickCounts).filter(row=>quoteKeys.has(nflBoardPickKey(row[0],row[1],row[2],row[3],row[4],row[5])))
     // An unavailable future game may acquire its first verified baseline;
     // its schedule is used only to decide when to poll, never to admit data.
-    const future=fresh.flatMap(item=>{const game=games.find(candidate=>candidate.id===item.id);const time=item.cutoff?Date.parse(item.cutoff):game?nflKickoffAt(game)?.getTime():undefined;return time==null?[]:[time]}).filter(time=>time>Date.now())
     const wanted=new Set(quotes.map(q=>nflBoardIdentityKey(q[0],q[1],q[3],q[2])))
     const identities=(Array.isArray(pool.identities)&&pool.identities.length<=3840?pool.identities:[]).filter(item=>Array.isArray(item)&&item.length===6&&typeof item[0]==='string'&&Number.isSafeInteger(item[1])&&typeof item[2]==='string'&&typeof item[3]==='string'&&Array.isArray(item[5])&&wanted.has(nflBoardIdentityKey(item[0],item[1],item[3],item[2])))
     const color=(value:string|null|undefined,fallback:string)=>{const clean=typeof value==='string'?value.replace(/^#/,''):'';return /^[\da-f]{6}$/i.test(clean)?`#${clean}`:fallback}
     const teams=games.flatMap(game=>[game.away,game.home].map(team=>[game.id,team.abbr,color(team.color,'#1b2430'),color(team.color2,'#111820'),nflBoardImage(team.logo)]))
-    const response=fitNflResponsePicks({date,games:pool.games,markets,books,market,book,quotes,picks,identities,teams,phaseToken:nflOddsBoardHash(phase),phaseObservedAt,nextStart:future.length?new Date(Math.min(...future)).toISOString():null})
+    const results=await readNflBoardFinals(games,quotes).catch(()=>({finals:[],finalGames:[],resultsUnavailable:games.filter(game=>game.awayScore!=null&&game.homeScore!=null).map(game=>game.id)}))
+    // Recheck after result reads too: crossing kickoff cannot extend a cached quote's authority.
+    const phaseObservedAt=new Date().toISOString()
+    const fresh=await readNflOddsBoardClocks(date,games)
+    if(nflOddsBoardSignature(fresh,Date.now())!==phase)return NextResponse.json({error:'Odds board updating'},{status:503,headers:{'Cache-Control':'private, no-store'}})
+    const starts=fresh.flatMap(item=>{const game=games.find(candidate=>candidate.id===item.id);const time=item.cutoff?Date.parse(item.cutoff):game?nflKickoffAt(game)?.getTime():undefined;return time==null?[]:[{id:item.id,time}]})
+    const future=starts.filter(item=>item.time>Date.now()).map(item=>item.time)
+    const finished=new Set<string>(results.finalGames)
+    const resultsPending=starts.some(item=>item.time<=Date.now()&&!finished.has(item.id)&&quotes.some(q=>q[0]===item.id))
+    const response=fitNflResponsePicks({date,games:pool.games,markets,books,market,book,quotes,picks,identities,teams,...results,resultsPending,phaseToken:nflOddsBoardHash(phase),phaseObservedAt,nextStart:future.length?new Date(Math.min(...future)).toISOString():null})
     if(Buffer.byteLength(JSON.stringify(response))>1024*1024)throw new Error('Odds board selection exceeds limit')
     return NextResponse.json(response,{headers:{'Cache-Control':'private, no-store'}})
   }catch{return NextResponse.json({error:'Odds board unavailable'},{status:503,headers:{'Cache-Control':'private, no-store'}})}

@@ -1,0 +1,9 @@
+NFL Odds Board final outcomes — 2026-11-22
+
+The board previously sent only frozen pregame quote observations. It now adds a separate result layer from the existing reconciled NFL final feed and public-result grader. Each player shows the selected market's final total; each priced milestone shows Hit or Miss, with a symbol and text in both themes. Equality hits a milestone. Explicit zero remains zero. First-touchdown and two-plus-touchdown contracts retain their own thresholds.
+
+The result feed must agree with the scheduled game, season, week, Eastern date, teams and final scores, and have a valid post-start observation. Unverified feeds, missing/duplicate/wrong-team stats and conflicting result rows stay unavailable. Final-only values never replace frozen pregame prices, MM, baselines or research. Results are read outside the frozen-quote cache; pending results retry while the board is visible. The fresh cutoff check runs after result retrieval too.
+
+Live read-only preflight confirmed reconciled bdl_plays coverage and durable player stats for Thursday 2026_11_IND_HOU and prior weeks. Expected receiving totals include Nico Collins 58, Amon-Ra St. Brown 98 and Ja'Marr Chase 231. No collector or historical job replay and no database mutation were needed.
+
+Validation before release: 94 focused NFL tests passed, including final verification, zero, exact threshold, scorer contracts, missing/ambiguous identities, UI hit/miss rendering, filtering, authorization, polling and kickoff boundaries. Production source suite: 134/134. Source lint passed. Optimized private build passed compilation and TypeScript. Live visual verification and deployment receipt follow after publication.
