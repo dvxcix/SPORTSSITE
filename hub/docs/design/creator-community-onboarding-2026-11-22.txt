@@ -18,13 +18,13 @@ Implemented
 - Studio, payouts, marketplace, storefront, offers, groups, settings and access completion use the existing desktop/mobile and light/dark shell. The 320px channel-type picker wraps instead of overflowing.
 
 Verification completed before release
-- 212/212 targeted creator, membership, main/add-on billing and production source regression tests passed, including 23 creator commerce tests.
+- 213/213 targeted creator, membership, main/add-on billing and production source regression tests passed, including 24 creator commerce tests.
 - 16 isolated Postgres scenarios passed using the live catalog, existing RLS/grants, existing triggers and real rate-limiter definition. Covers free creation, paid access, expiry, duplicate payment, owner binding, child privacy, protected provider columns, existing chat access and public social content.
 - Two transaction-only live verification runs exercised actual free creation and paid membership lifecycle. The paid run included replies, polls, votes and reactions. Each ended with ROLLBACK; follow-up found zero fixture groups, offers, memberships or account links.
 - 12 creator/community routes reviewed in four layouts (1440×1000 and 390×844, light and dark): no page overflow, broken visible images, unnamed visible buttons, legacy floating utility dock or error boundary. A separate 320px settings overflow was found and repaired; final narrow check is recorded with release evidence.
 - Private browser actions: offer save → selected member-community form → create → publish → pause → republish; community chat send and edit; owner preference behavior and Members audience.
 - The isolated review intentionally blocks operational scheduling and real financial account creation. Scheduling and publication logic were exercised by executable route tests. No real Whop subaccount, charge, purchase, withdrawal or transfer was created for QA.
-- Optimized Next.js build and TypeScript validation passed. Final source lint and release build recorded in the release update.
+- Optimized Next.js build and TypeScript validation passed. Final application-source lint passed. Vercel optimized production builds, including TypeScript, reached READY.
 
 Database history
 Applied individually, not by replaying the historical migration tree:
@@ -45,3 +45,13 @@ https://mobbin.com/flows/bfeccf75-606e-4366-a578-03d75ffdafc9?tab=screens&utm_so
 
 Current release state
 Implementation and database repairs verified. Production source publication and the signed child-event delivery test are recorded in the follow-up below.
+
+
+Production verification
+Live creator implementation: 1bb0d4adcf7633606a558d3c41ca56c8557ab39b / dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn. Canonical source is on GitHub main.
+32 unique live route/layout checks passed: eight creator/community pages at 1440×1000 and 390×844, light and dark. Live 320px community creation also passed. Four direct-channel layouts and the repaired 320px settings control passed privately.
+237 automated checks passed: 213 regression tests, 16 auth/middleware tests, eight checklist/private-boundary tests. The 16 isolated database scenarios and live rollback verification are additional.
+The real provider test passed HTTP 200 at 15:41 UTC. An unsigned callback probe returns HTTP 400. Signing material is encrypted in the service-only configuration table. The valid synthetic account sample was acknowledged without changing any user. Zero real creator subaccounts or purchases were made for QA.
+The live check found and corrected a legacy company-ID suffix mismatch and an exact callback route missing from the session-proxy allowlist. Paid publication now requires a persisted successful signed test. No main/add-on hooks or environment keys were changed.
+Additional applied migration: 20261122153744_creator_event_transport_verification. Do not replay it.
+The current checklist has 240 live surfaces and preserves all ten prior owner approvals. The creator follow-up updates 14 entries; historical batch attribution remains intact.

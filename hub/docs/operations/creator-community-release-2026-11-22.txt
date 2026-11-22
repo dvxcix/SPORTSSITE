@@ -1,0 +1,39 @@
+Creator communities production release — 22 November 2026
+
+Canonical GitHub main source:
+c606f1f7a0fcefc54cbed917b6977db187fc6e48 — self-service communities, current Whop contracts, protected membership access and UI.
+f11e816d778ea3535a640c3305f938f2ed9b7392 — legacy Whop company suffix normalized to the existing full account ID.
+1bb0d4adcf7633606a558d3c41ca56c8557ab39b — exact signed callback allowlist and persisted successful transport gate.
+
+Verified Vercel production implementation:
+dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn (READY), www.slipsurge.com.
+
+Applied individually with live preflight; do not replay:
+20261122142312_creator_self_service_communities
+20261122143553_creator_group_rate_contract
+20261122150529_creator_community_child_privacy
+20261122153744_creator_event_transport_verification
+
+Self-service paid setup was explicitly selected by the owner. No SlipSurge creator-application approval is required. Whop identity/card capability verification and the existing 10% creator platform fee remain. Real financial account creation, purchases and withdrawals were not performed for QA.
+
+Dedicated creator webhook configured via the authenticated admin Studio:
+- Existing SlipSurge root account matched after legacy-ID normalization.
+- Child events only, pinned current API version, exact /api/webhooks/whop-creator URL.
+- Separate from unchanged main/add-on webhooks.
+- Signing secret encrypted in a service-only RLS table. No decrypted secret or API key printed or committed.
+- Real provider-generated account.updated delivery passed HTTP 200 at 2026-11-22T15:41:13.965Z.
+- Signed synthetic account sample acknowledged as ignored; no member account changed.
+- Unsigned empty POST rejected HTTP 400.
+- Paid publication and checkout require persisted successful signed delivery plus the creator's current account capability.
+- Failed future transport checks clear readiness. Admin can re-run Test creator events; it reuses the existing configured hook.
+- No environment values changed, no new collectors or cloud jobs, no job replay.
+
+Verification:
+213 combined regression tests including 24 creator-commerce tests; 16 auth/middleware tests; eight checklist/private-review boundary tests. Total 237 passed.
+16 isolated Postgres scenarios using exact live schema, policies, grants and real rate limits.
+Live database transactions exercised free creation and paid child-content access lifecycle and rolled back; zero fixture remnants.
+32 unique live desktop/phone and light/dark route checks; bounded 320px live creation and private settings checks.
+Vercel optimized production builds and TypeScript reached READY. Changed application source lint passed.
+See docs/design/creator-community-onboarding-2026-11-22.txt/json and the updated 240-surface checklist.
+
+The first real creator will complete Whop-hosted verification and choose their price/community. Actual payments were not simulated as successful, and no financial access is granted from a redirect alone.

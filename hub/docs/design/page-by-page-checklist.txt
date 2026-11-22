@@ -4,7 +4,7 @@ Social process follow-up: social-workflow-repair-2026-11-22.txt/json records 48 
 
 Mobile identity follow-up: mobile-identity-followup-2026-11-22.txt/json records the badge, profile, saved-card and NBA/NFL drawer pass, with 130 unique private interaction receipts and 65 verified live checks. Published as 93cc63e1.
 
-Latest verified production: 45b85c3b / dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A. 239 released surfaces, zero queued; ten existing owner approvals preserved.
+Latest verified production: 1bb0d4ad / dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn. 240 released surfaces, zero queued; ten existing owner approvals preserved.
 
 Latest full-site follow-up: 22 November 2026. All 239 surfaces have individual four-layout receipts in docs/design/full-mobile-audit-2026-11-22.json; latest rollout verification is recorded in docs/design/full-mobile-audit-2026-11-22.txt.
 
@@ -20,7 +20,7 @@ The inventory still contains 239 released surfaces, zero queued surfaces, and 22
 This pass adds fresh route-boundary checks and explicit NBA/NFL drawer interaction checks. It does not replace previous release receipts with blanket visual approval.
 Published as 375e1532; all nine live drawer sections and shared table sorting checked in desktop/mobile and light/dark. Full production receipts are in the companion detail-pass JSON.
 
-2026-11-22 creator community follow-up: free communities and paid setup are self-service. See creator-community-onboarding-2026-11-22.txt/json for current API, protected membership access and verification. The inventory adds the checkout-completion screen. Historical owner approvals remain unchanged.
+2026-11-22 creator community follow-up: free communities and paid setup are self-service. See creator-community-onboarding-2026-11-22.txt/json for current API, protected membership access and verification. The inventory adds the checkout-completion screen. Published as c606f1f7, f11e816d and 1bb0d4ad; 32 live layout checks and the signed Whop delivery test passed. Historical owner approvals remain unchanged.
 
 [Live] General | About | /about
 [Live] General | Activity | /activity
@@ -95,7 +95,7 @@ Published as 375e1532; all nine live drawer sections and shared table sorting ch
 [Live] Community | Channels | /channels
 [Live] Community | Community | /community
 [Live] Creators & commerce | Creators · Username | /creators/[username]
-[Ready to deploy] Creators & commerce | Creators · Access · Complete | /creators/access/complete
+[Live] Creators & commerce | Creators · Access · Complete | /creators/access/complete
 [Live] Creators & commerce | Creators · Apply | /creators/apply
 [Live] Creators & commerce | Creators · Offers · ProductId | /creators/offers/[productId]
 [Live] Creators & commerce | Creators | /creators

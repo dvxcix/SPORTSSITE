@@ -3045,7 +3045,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads.",
+    "notes": "Polished page headings, cards, forms, media, conversation scrolling and mobile actions. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: Rechecked social discovery, member badge containment and conversation flows in desktop/phone light/dark. Live REST reply-context failure corrected with scoped RLS reads. 2026-11-22: direct channel route checked in four layouts; message editor is named; existing global-room tier access remains intact.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3060,19 +3060,21 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/channels/[slug]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/channels/[slug]",
-      "docs/design/social-workflow-repair-2026-11-22.json"
+      "docs/design/social-workflow-repair-2026-11-22.json",
+      "docs/design/creator-community-onboarding-2026-11-22.json",
+      "docs/design/creator-community-onboarding-2026-11-22.txt"
     ],
     "release": {
       "state": "Live",
-      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
-      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
-      "verifiedAt": "2026-11-22T13:33:13.202Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
+      "batch": "creator-community-onboarding",
+      "environment": "compiled localhost fixtures",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -3111,9 +3113,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
-      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
-      "verifiedAt": "2026-11-22T13:33:13.202Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -3202,9 +3204,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -3243,7 +3245,13 @@
       "docs/design/creator-community-onboarding-2026-11-22.txt",
       "docs/design/creator-community-onboarding-2026-11-22.json"
     ],
-    "release": null,
+    "release": {
+      "state": "Live",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
+      "url": "https://www.slipsurge.com"
+    },
     "lastAudit": {
       "date": "2026-11-22",
       "batch": "creator-community-onboarding",
@@ -3285,9 +3293,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -3332,9 +3340,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
@@ -3379,9 +3387,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -3425,9 +3433,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -3471,9 +3479,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -4052,9 +4060,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
-      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
-      "verifiedAt": "2026-11-22T13:33:13.202Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
@@ -4101,9 +4109,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
-      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
-      "verifiedAt": "2026-11-22T13:33:13.202Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "avatar-decorations-2026-11-21",
@@ -4149,9 +4157,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
-      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
-      "verifiedAt": "2026-11-22T13:33:13.202Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -4196,9 +4204,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
-      "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
-      "verifiedAt": "2026-11-22T13:33:13.202Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
@@ -6148,9 +6156,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+      "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+      "verifiedAt": "2026-11-22T15:46:12.311Z",
       "url": "https://www.slipsurge.com"
     },
     "latestPolish": "member-experience-2026-11-21",

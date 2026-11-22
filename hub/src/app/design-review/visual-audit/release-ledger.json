@@ -1,9 +1,9 @@
 {
   "production": {
     "state": "Live",
-    "commit": "45b85c3bd93132044dc3e339fa81309a3e52ba65",
-    "deploymentId": "dpl_FhndULbZ1ir3tNWaqcpfanYRdP4A",
-    "verifiedAt": "2026-11-22T13:33:13.202Z",
+    "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+    "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+    "verifiedAt": "2026-11-22T15:46:12.311Z",
     "url": "https://www.slipsurge.com"
   },
   "items": [
@@ -245,7 +245,8 @@
     "shared:Image and video viewer",
     "shared:Confirmation dialogs",
     "shared:Empty, loading and error states",
-    "shared:VOLT and Sparks teaser"
+    "shared:VOLT and Sparks teaser",
+    "route:/creators/access/complete"
   ],
   "history": [
     {

@@ -2,14 +2,14 @@
   "date": "2026-11-22",
   "batch": "creator-community-onboarding",
   "ownerDecision": "Self-service paid setup; no SlipSurge creator approval",
-  "state": "Pre-release verified",
+  "state": "Live, signed provider delivery verified",
   "automated": {
     "combined": {
-      "passed": 212,
+      "passed": 213,
       "failed": 0
     },
     "creatorCommerce": {
-      "passed": 23,
+      "passed": 24,
       "failed": 0
     },
     "isolatedPostgres": {
@@ -28,7 +28,16 @@
       ]
     },
     "build": "optimized Next.js 16.4.6 build and TypeScript passed",
-    "lint": "application source passed; local adapters linted with their existing permissive typing conventions"
+    "lint": "application source passed; local adapters linted with their existing permissive typing conventions",
+    "authMiddleware": {
+      "passed": 16,
+      "failed": 0
+    },
+    "checklistAndPrivateBoundaries": {
+      "passed": 8,
+      "failed": 0
+    },
+    "total": 237
   },
   "privateBrowser": {
     "dimensions": [
@@ -94,8 +103,561 @@
   "migrations": [
     "20261122142312_creator_self_service_communities",
     "20261122143553_creator_group_rate_contract",
-    "20261122150529_creator_community_child_privacy"
+    "20261122150529_creator_community_child_privacy",
+    "20261122153744_creator_event_transport_verification"
   ],
-  "release": null,
-  "providerConnection": null
+  "release": {
+    "state": "Live",
+    "commit": "1bb0d4adcf7633606a558d3c41ca56c8557ab39b",
+    "deploymentId": "dpl_6pcAq6ha5QHHATvnFjZ4ZvfK8zLn",
+    "verifiedAt": "2026-11-22T15:46:12.311Z",
+    "url": "https://www.slipsurge.com"
+  },
+  "providerConnection": {
+    "accountMatches": true,
+    "capabilityReadAvailable": true,
+    "childHookConfigured": true,
+    "signingSecretEncrypted": true,
+    "mainAndAddonHooksUnchanged": true,
+    "lastTestStatus": 200,
+    "verifiedAt": "2026-11-22T15:41:13.965Z",
+    "unsignedProbeStatus": 400,
+    "sampleReceiptStatus": "ignored",
+    "sampleReceiptExplanation": "Valid signed account.updated sample was acknowledged without changing any member.",
+    "realCreatorSubaccountsCreatedForQa": 0,
+    "realChargesForQa": 0
+  },
+  "liveBrowser": [
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Find sports creators and memberships",
+        "Creator memberships"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "ParlayParty",
+        "Choose your access"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/parlayparty",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Balance & payouts",
+        "Your Whop payout account",
+        "Recent commerce activity"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/payouts",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Groups",
+        "Your communities",
+        "Public groups"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/create",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Channels",
+        "Your channels",
+        "Available channels"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/channels",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Your SlipSurge membership"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/settings/membership",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Creator Studio",
+        "Start with your community",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/studio",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Find sports creators and memberships",
+        "Creator memberships"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "ParlayParty",
+        "Choose your access"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/parlayparty",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Balance & payouts",
+        "Your Whop payout account",
+        "Recent commerce activity"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/payouts",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Groups",
+        "Your communities",
+        "Public groups"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups/create",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Channels",
+        "Your channels",
+        "Available channels"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/channels",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Your SlipSurge membership"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/settings/membership",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Creator Studio",
+        "Start with your community",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts"
+      ],
+      "height": 1000,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/studio",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Creator Studio",
+        "Start with your community",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/studio",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Find sports creators and memberships",
+        "Creator memberships"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "ParlayParty",
+        "Choose your access"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/parlayparty",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Balance & payouts",
+        "Your Whop payout account",
+        "Recent commerce activity"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/creators/payouts",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Groups",
+        "Your communities",
+        "Public groups"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/groups/create",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Channels",
+        "Your channels",
+        "Available channels"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/channels",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Your SlipSurge membership"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "light",
+      "url": "/settings/membership",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Creator Studio",
+        "Start with your community",
+        "Your communities",
+        "Your offers",
+        "Draft and schedule posts"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/studio",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Find sports creators and memberships",
+        "Creator memberships"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "ParlayParty",
+        "Choose your access"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/parlayparty",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Balance & payouts",
+        "Your Whop payout account",
+        "Recent commerce activity"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/creators/payouts",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Groups",
+        "Your communities",
+        "Public groups"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Create a group"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/groups/create",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Channels",
+        "Your channels",
+        "Available channels"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/channels",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "error": false,
+      "headings": [
+        "Your SlipSurge membership"
+      ],
+      "height": 844,
+      "legacyFloating": 0,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/settings/membership",
+      "width": 390
+    }
+  ],
+  "liveNarrow": {
+    "brokenVisibleImages": [],
+    "error": false,
+    "headings": [
+      "Create a group"
+    ],
+    "height": 740,
+    "legacyFloating": 0,
+    "overflow": false,
+    "theme": "light",
+    "url": "/groups/create",
+    "width": 320
+  },
+  "privateDirectChannel": [
+    {
+      "brokenVisibleImages": [],
+      "chatLabel": "Message #NBA conversation",
+      "heading": "NBA conversation",
+      "height": 844,
+      "overflow": false,
+      "theme": "light",
+      "url": "/channels/nba",
+      "width": 390
+    },
+    {
+      "brokenVisibleImages": [],
+      "chatLabel": "Message #NBA conversation",
+      "heading": "NBA conversation",
+      "height": 1000,
+      "overflow": false,
+      "theme": "light",
+      "url": "/channels/nba",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "chatLabel": "Message #NBA conversation",
+      "heading": "NBA conversation",
+      "height": 1000,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/channels/nba",
+      "width": 1440
+    },
+    {
+      "brokenVisibleImages": [],
+      "chatLabel": "Message #NBA conversation",
+      "heading": "NBA conversation",
+      "height": 844,
+      "overflow": false,
+      "theme": "dark",
+      "url": "/channels/nba",
+      "width": 390
+    }
+  ],
+  "privateNarrowFinal": {
+    "client": 310,
+    "overflow": false,
+    "route": "/groups/nba-lounge/settings",
+    "scroll": 310,
+    "theme": "dark",
+    "width": 320
+  },
+  "postDeployCorrections": [
+    "Legacy WHOP_COMPANY_ID stored a suffix; normalize the legacy fallback to its existing full biz_ account ID. Explicit platform IDs remain strict. No key changes.",
+    "Real signed delivery initially got HTTP 401 from the session proxy. Add only the exact whop-creator callback to the existing signed-webhook allowlist. Persist signed-test success and fail closed before paid offers launch."
+  ]
 }
