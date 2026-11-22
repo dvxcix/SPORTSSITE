@@ -1,5 +1,7 @@
 SlipSurge page-by-page visual review
 
+Latest verified production: 0e4894aa / dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk. 239 released surfaces, zero queued; ten existing owner approvals preserved.
+
 Latest full-site follow-up: 22 November 2026. All 239 surfaces have individual four-layout receipts in docs/design/full-mobile-audit-2026-11-22.json; latest rollout verification is recorded in docs/design/full-mobile-audit-2026-11-22.txt.
 
 Every item requires its own review. A shared CSS change does not certify its consumers.
