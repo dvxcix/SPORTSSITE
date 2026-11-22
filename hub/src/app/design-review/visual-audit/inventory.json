@@ -6965,9 +6965,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -6979,21 +6979,23 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
       "layouts": [
         "desktop-dark",
         "desktop-light",
         "phone-dark",
         "phone-light"
-      ]
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -8036,9 +8038,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8050,21 +8052,23 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
       "layouts": [
         "desktop-dark",
         "desktop-light",
         "phone-dark",
         "phone-light"
-      ]
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -8101,9 +8105,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
-      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
-      "verifiedAt": "2026-11-22T17:37:13.484Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8115,21 +8119,23 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "creator-business-journey",
-      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
       "layouts": [
         "desktop-dark",
         "desktop-light",
         "phone-dark",
         "phone-light"
-      ]
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -8160,9 +8166,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8174,21 +8180,23 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
       "layouts": [
         "desktop-dark",
         "desktop-light",
         "phone-dark",
         "phone-light"
-      ]
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -8219,9 +8227,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8233,21 +8241,23 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
       "layouts": [
         "desktop-dark",
         "desktop-light",
         "phone-dark",
         "phone-light"
-      ]
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -8278,9 +8288,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8292,21 +8302,23 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
       "layouts": [
         "desktop-dark",
         "desktop-light",
         "phone-dark",
         "phone-light"
-      ]
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -8337,9 +8349,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8351,21 +8363,23 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
       "layouts": [
         "desktop-dark",
         "desktop-light",
         "phone-dark",
         "phone-light"
-      ]
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -8654,9 +8668,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8668,21 +8682,23 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
       "layouts": [
         "desktop-dark",
         "desktop-light",
         "phone-dark",
         "phone-light"
-      ]
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -8713,9 +8729,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8727,21 +8743,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -8772,9 +8787,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8786,21 +8801,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -8831,9 +8845,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8845,21 +8859,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -8890,9 +8903,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8904,21 +8917,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -8949,9 +8961,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -8963,21 +8975,23 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
       "layouts": [
         "desktop-dark",
         "desktop-light",
         "phone-dark",
         "phone-light"
-      ]
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9008,9 +9022,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9022,21 +9036,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9067,9 +9080,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9081,21 +9094,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9126,9 +9138,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9140,21 +9152,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9185,9 +9196,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9199,21 +9210,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9244,9 +9254,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9258,21 +9268,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9303,9 +9312,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9317,21 +9326,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9362,9 +9370,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9376,21 +9384,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9422,9 +9429,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "93cc63e10bebfb6fce0a0b0949703cccfaa9efef",
-      "deploymentId": "dpl_HL2FS23i9vZzr2cTaKnCDjTV4NUK",
-      "verifiedAt": "2026-11-22T12:28:51.897Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9434,13 +9441,25 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22",
+    "lastAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
+      "layouts": [
+        "desktop-dark",
+        "desktop-light",
+        "phone-dark",
+        "phone-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
+    },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9472,9 +9491,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "93cc63e10bebfb6fce0a0b0949703cccfaa9efef",
-      "deploymentId": "dpl_HL2FS23i9vZzr2cTaKnCDjTV4NUK",
-      "verifiedAt": "2026-11-22T12:28:51.897Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9484,13 +9503,25 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22",
+    "lastAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
+      "layouts": [
+        "desktop-dark",
+        "desktop-light",
+        "phone-dark",
+        "phone-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
+    },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9522,9 +9553,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "93cc63e10bebfb6fce0a0b0949703cccfaa9efef",
-      "deploymentId": "dpl_HL2FS23i9vZzr2cTaKnCDjTV4NUK",
-      "verifiedAt": "2026-11-22T12:28:51.897Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9534,13 +9565,25 @@
       "verifiedAt": "2026-11-21 19:46 UTC",
       "url": "https://www.slipsurge.com"
     },
-    "lastAudit": "Mobile identity and drawer follow-up, 2026-11-22",
+    "lastAudit": {
+      "date": "2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
+      "layouts": [
+        "desktop-dark",
+        "desktop-light",
+        "phone-dark",
+        "phone-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
+    },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9571,9 +9614,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9585,21 +9628,23 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
-      "environment": "private compiled app",
+      "batch": "nfl-availability-ranking-2026-11-22",
+      "environment": "production",
       "layouts": [
         "desktop-dark",
         "desktop-light",
         "phone-dark",
         "phone-light"
-      ]
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9630,9 +9675,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9644,21 +9689,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9689,9 +9733,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9703,21 +9747,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9748,9 +9791,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9762,21 +9805,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9807,9 +9849,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9821,21 +9863,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9866,9 +9907,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9880,21 +9921,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9925,9 +9965,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9939,21 +9979,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -9984,9 +10023,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -9998,21 +10037,20 @@
     },
     "lastAudit": {
       "date": "2026-11-22",
-      "batch": "full-mobile-audit-2026-11-22",
+      "batch": "nfl-availability-ranking-2026-11-22",
       "environment": "private compiled app",
       "layouts": [
-        "desktop-dark",
-        "desktop-light",
-        "phone-dark",
-        "phone-light"
-      ]
+        "desktop-light"
+      ],
+      "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json"
     },
     "availabilityAudit": {
       "date": "2026-11-22",
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -10043,9 +10081,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -10071,7 +10109,8 @@
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -10102,9 +10141,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -10130,7 +10169,8 @@
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -10161,9 +10201,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -10189,7 +10229,8 @@
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -10220,9 +10261,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -10248,7 +10289,8 @@
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {
@@ -10591,9 +10633,9 @@
     ],
     "release": {
       "state": "Live",
-      "commit": "0e4894aa716d482b180e5f8a4f42f8d0738c7d12",
-      "deploymentId": "dpl_GMmtUa67HpeZ8FVc3LxNCVQoHzkk",
-      "verifiedAt": "2026-11-22T02:56:55.259Z",
+      "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+      "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+      "verifiedAt": "2026-11-22T18:42:04.066Z",
       "url": "https://www.slipsurge.com"
     },
     "latestAuditRelease": {
@@ -10619,7 +10661,8 @@
       "batch": "nfl-availability-ranking-2026-11-22",
       "evidence": "docs/design/nfl-availability-ranking-2026-11-22.json",
       "automated": "146 NFL + 134 production checks",
-      "publication": "Ready for rollout"
+      "publication": "Live",
+      "liveChecks": 37
     }
   },
   {

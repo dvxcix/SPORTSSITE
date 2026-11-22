@@ -54,3 +54,11 @@ Source limit
 Refresh speed does not guarantee that the upstream report changes immediately.
 Unknown designations stay explicit. Practice participation is never treated as a
 game-day inactive designation. Missing historical evidence is not invented.
+
+Published and verified
+Live on www.slipsurge.com as a4ce9104 / dpl_3uKzDaazc7pCrFFQvawooTrFifG8.
+37 real production checks passed: all six matchup research pages and three
+drawer tabs in desktop/phone light/dark, plus the original Thursday Final 58
+and Hit/Miss result flow. Omar Cooper Jr. and Isaiah Williams were confirmed
+in the separate Out section, without score/MM or selectable player quotes.
+No unrelated local work or historical owner approvals were changed.

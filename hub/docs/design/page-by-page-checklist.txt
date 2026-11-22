@@ -1,6 +1,6 @@
 SlipSurge page-by-page visual review
 
-NFL availability follow-up: nfl-availability-ranking-2026-11-22.txt/json records the report-cache correction, precise game statuses, priced-only ranking pools, separated unlisted/unavailable research, independent expiry and refreshes across every NFL matchup research tool. 59 private browser receipts and 280 automated checks passed. Ready for authorized rollout; owner approvals remain unchanged.
+NFL availability follow-up: nfl-availability-ranking-2026-11-22.txt/json records the report-cache correction, precise game statuses, priced-only ranking pools, separated unlisted/unavailable research, independent expiry and refreshes across every NFL matchup research tool. 59 private browser receipts and 280 automated checks passed. Published as a4ce9104 / dpl_3uKzDaazc7pCrFFQvawooTrFifG8. All 37 live checks passed, including historical Final 58/Hit/Miss. Owner approvals remain unchanged.
 
 Creator/member business follow-up: creator-business-journey-2026-11-22.txt/json records discovery, joining, private invitations, group Posts/Picks/chat, business management and new-offer fee controls. 56 private layout checks and five 320px checks; 280 automated checks and 21 database scenario groups passed. Published as 0890bb6c / dpl_J7URfCgMNyR4j1MLTDQateWjybsi; 32 real live desktop/mobile light/dark checks passed. NFL Final and Hit/Miss correction is already live as 11ef9592.
 
@@ -8,7 +8,7 @@ Social process follow-up: social-workflow-repair-2026-11-22.txt/json records 48 
 
 Mobile identity follow-up: mobile-identity-followup-2026-11-22.txt/json records the badge, profile, saved-card and NBA/NFL drawer pass, with 130 unique private interaction receipts and 65 verified live checks. Published as 93cc63e1.
 
-Latest verified production: 0890bb6c / dpl_J7URfCgMNyR4j1MLTDQateWjybsi. 240 released surfaces, zero queued; ten existing owner approvals preserved.
+Latest verified production: a4ce9104 / dpl_3uKzDaazc7pCrFFQvawooTrFifG8. 240 released surfaces, zero queued; ten existing owner approvals preserved.
 
 Latest full-site follow-up: 22 November 2026. All 239 surfaces have individual four-layout receipts in docs/design/full-mobile-audit-2026-11-22.json; latest rollout verification is recorded in docs/design/full-mobile-audit-2026-11-22.txt.
 

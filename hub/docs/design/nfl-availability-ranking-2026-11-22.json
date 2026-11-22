@@ -3,7 +3,11 @@
   "scope": "NFL availability, ranking eligibility and every matchup research surface",
   "baseCommit": "de8cf6ab09e4cd712b506fc3f5313c0c8fdd4922",
   "publication": {
-    "state": "Ready for rollout"
+    "state": "Live",
+    "commit": "a4ce9104d37ac4319b525a35d65b823e4bf37df1",
+    "deploymentId": "dpl_3uKzDaazc7pCrFFQvawooTrFifG8",
+    "verifiedAt": "2026-11-22T18:42:04.066Z",
+    "url": "https://www.slipsurge.com"
   },
   "automated": {
     "nfl": 146,
@@ -520,7 +524,12 @@
     "nfl-availability-final-phone-dark.png",
     "nfl-availability-final-desktop-light.png",
     "nfl-availability-final-desktop-dark.png",
-    "nfl-availability-final-320-light.png"
+    "nfl-availability-final-320-light.png",
+    "nfl-availability-live-desktop-dark.png",
+    "nfl-availability-live-desktop-light.png",
+    "nfl-availability-live-phone-dark.png",
+    "nfl-availability-live-phone-light.png",
+    "nfl-availability-final-320-dark.png"
   ],
   "affectedInventory": [
     "route:/the-sideline",
@@ -560,5 +569,319 @@
     "nfl-edge:Signal Lab",
     "nfl-tool:Game lines and capture replay"
   ],
-  "liveBrowser": []
+  "liveBrowser": [
+    {
+      "layout": "desktop-dark",
+      "surface": "drawer:Matchup",
+      "context": true,
+      "doc": 1440,
+      "quotedActions": 0,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-dark",
+      "surface": "drawer:NFL Tracking",
+      "context": true,
+      "doc": 1440,
+      "quotedActions": 0,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-dark",
+      "surface": "drawer:Sportsbooks",
+      "context": true,
+      "doc": 1440,
+      "quotedActions": 0,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-dark",
+      "surface": "sideline",
+      "doc": 1430,
+      "errors": [],
+      "heading": "The Sideline · NFL research",
+      "visibleOut": false,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-dark",
+      "surface": "odds-board",
+      "doc": 1430,
+      "errors": [],
+      "heading": "NFL Odds Board",
+      "visibleOut": false,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-dark",
+      "surface": "cheatsheets",
+      "doc": 1430,
+      "errors": [],
+      "heading": "Cheatsheets",
+      "visibleOut": false,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-dark",
+      "surface": "matchup-lab",
+      "doc": 1430,
+      "errors": [],
+      "heading": "Matchup Lab",
+      "visibleOut": false,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-dark",
+      "surface": "public",
+      "doc": 1430,
+      "errors": [],
+      "heading": "The Public",
+      "visibleOut": false,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-dark",
+      "surface": "sportsbooks",
+      "doc": 1430,
+      "errors": [],
+      "heading": "Sportsbooks",
+      "visibleOut": false,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-light",
+      "surface": "sideline",
+      "doc": 1430,
+      "heading": "The Sideline · NFL research",
+      "visibleOut": false,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-light",
+      "surface": "odds-board",
+      "doc": 1430,
+      "heading": "NFL Odds Board",
+      "visibleOut": false,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-light",
+      "surface": "cheatsheets",
+      "doc": 1430,
+      "heading": "Cheatsheets",
+      "visibleOut": false,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-light",
+      "surface": "matchup-lab",
+      "doc": 1430,
+      "heading": "Matchup Lab",
+      "visibleOut": false,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-light",
+      "surface": "public",
+      "doc": 1430,
+      "heading": "The Public",
+      "visibleOut": false,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-light",
+      "surface": "sportsbooks",
+      "doc": 1430,
+      "heading": "Sportsbooks",
+      "visibleOut": false,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-light",
+      "surface": "drawer:Matchup",
+      "context": true,
+      "doc": 1440,
+      "quotedActions": 0,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-light",
+      "surface": "drawer:NFL Tracking",
+      "context": true,
+      "doc": 1440,
+      "quotedActions": 0,
+      "width": 1440
+    },
+    {
+      "layout": "desktop-light",
+      "surface": "drawer:Sportsbooks",
+      "context": true,
+      "doc": 1440,
+      "quotedActions": 0,
+      "width": 1440
+    },
+    {
+      "layout": "phone-light",
+      "surface": "sideline",
+      "doc": 380,
+      "heading": "The Sideline · NFL research",
+      "visibleOut": false,
+      "width": 390
+    },
+    {
+      "layout": "phone-light",
+      "surface": "odds-board",
+      "doc": 380,
+      "heading": "NFL Odds Board",
+      "visibleOut": false,
+      "width": 390
+    },
+    {
+      "layout": "phone-light",
+      "surface": "cheatsheets",
+      "doc": 380,
+      "heading": "Cheatsheets",
+      "visibleOut": false,
+      "width": 390
+    },
+    {
+      "layout": "phone-light",
+      "surface": "matchup-lab",
+      "doc": 380,
+      "heading": "Matchup Lab",
+      "visibleOut": false,
+      "width": 390
+    },
+    {
+      "layout": "phone-light",
+      "surface": "public",
+      "doc": 380,
+      "heading": "The Public",
+      "visibleOut": false,
+      "width": 390
+    },
+    {
+      "layout": "phone-light",
+      "surface": "sportsbooks",
+      "doc": 380,
+      "heading": "Sportsbooks",
+      "visibleOut": false,
+      "width": 390
+    },
+    {
+      "layout": "phone-light",
+      "surface": "drawer:Matchup",
+      "context": true,
+      "doc": 390,
+      "quotedActions": 0,
+      "width": 390
+    },
+    {
+      "layout": "phone-light",
+      "surface": "drawer:NFL Tracking",
+      "context": true,
+      "doc": 390,
+      "quotedActions": 0,
+      "width": 390
+    },
+    {
+      "layout": "phone-light",
+      "surface": "drawer:Sportsbooks",
+      "context": true,
+      "doc": 390,
+      "quotedActions": 0,
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "surface": "sideline",
+      "doc": 380,
+      "heading": "The Sideline · NFL research",
+      "visibleOut": false,
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "surface": "odds-board",
+      "doc": 380,
+      "heading": "NFL Odds Board",
+      "visibleOut": false,
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "surface": "cheatsheets",
+      "doc": 380,
+      "heading": "Cheatsheets",
+      "visibleOut": false,
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "surface": "matchup-lab",
+      "doc": 380,
+      "heading": "Matchup Lab",
+      "visibleOut": false,
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "surface": "public",
+      "doc": 380,
+      "heading": "The Public",
+      "visibleOut": false,
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "surface": "sportsbooks",
+      "doc": 380,
+      "heading": "Sportsbooks",
+      "visibleOut": false,
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "surface": "drawer:Matchup",
+      "context": true,
+      "doc": 390,
+      "quotedActions": 0,
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "surface": "drawer:NFL Tracking",
+      "context": true,
+      "doc": 390,
+      "quotedActions": 0,
+      "width": 390
+    },
+    {
+      "layout": "phone-dark",
+      "surface": "drawer:Sportsbooks",
+      "context": true,
+      "doc": 390,
+      "quotedActions": 0,
+      "width": 390
+    },
+    {
+      "layout": "desktop-dark",
+      "surface": "historical-odds-results",
+      "doc": 1430,
+      "final58": true,
+      "width": 1440
+    }
+  ],
+  "liveVerification": {
+    "checks": 37,
+    "failures": 0,
+    "game": "2026_11_NYJ_LAC",
+    "outPlayer": "Omar Cooper Jr.",
+    "injury": "Ankle, Hip",
+    "knownOutSectionIncludes": [
+      "Omar Cooper Jr.",
+      "Isaiah Williams"
+    ],
+    "historicalCheck": "2026_11_IND_HOU: Nico Collins Final 58; saved Hit/Miss rungs preserved"
+  }
 }
