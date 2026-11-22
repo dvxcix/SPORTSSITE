@@ -1,0 +1,18 @@
+SF/MIN source coverage incident | 23 November 2026 (Europe/Berlin)
+
+Root cause
+The saved FanDuel full-event capture for 2026_11_MIN_SF contained 18 completed tabs and 1,081,409 serialized bytes. The comparison reader imposed a 1 MiB raw-tab limit and therefore incorrectly marked the game incomplete despite valid saved prices and complete tab receipts. Both source histories existed; the canonical source was continuing to update.
+
+Source correction
+The reader now accepts complete raw captures up to a bounded 4 MiB, retaining its 32-tab cap, parser-version checks, explicit completion checks, player/market/offer bounds, opening-conflict handling, response-size limits and pregame cutoff rules. Candidate cache namespace advanced to v15 and saved-view namespace to v12, retaining prior-view recovery, so the corrected source check and fresh capture are served immediately. No historic odds or timestamps were edited.
+Released app commit d61c46f6b558ae622c5fdc7439bbdd51aa69e354, READY deployment dpl_DGBFVvVN3AsRpBPuRfsbnCEKV69a assigned to www.slipsurge.com.
+
+Verification
+38/38 route tests, including a complete capture above 1 MiB, a capture above 4 MiB with all tabs marked complete, and an explicitly incomplete tab. 134/134 production smoke checks. Changed route lint and TypeScript passed.
+The real authenticated API returned SF/MIN ready with 137 FanDuel receiving-yard prices for 13 players. The member page matchup filter displayed MIN @ SF without the partial-source warning. All 11 source candidates were ready.
+
+Authorized one-time refresh
+The existing 16-session daily NFL FanDuel admission cap had blocked the late refresh. The owner explicitly approved one additional paid cloud capture for SF/MIN, capped at 450 seconds. Migration 20261122234805_sf_min_one_capture adds exactly one game-bound allowance: only a valid one-game SF/MIN batch, before 01:12 UTC on 23 November, and only while fewer than 17 NFL FanDuel reservations exist for the current Eastern day. Normal per-game reservation, duplicate, cutoff, timeout, release and all other quota guards remain. No reservation counters were reset.
+The scheduled dispatcher acquired the 17th slot at 23:48:36 UTC. A later manual dispatcher check created zero extra sessions.
+
+Final capture receipt: 22 November 23:53:45.004 UTC (23 November 00:53 local). All 18 tabs completed, 30 players and 445 parsed player markets. Dispatcher HTTP 200, incomplete=false, releaseFailed=false; completed at 23:53:47.178 UTC. The remaining rejected labels include unsupported game, quarter, multi-player and specialty markets; this count is not a claim that every sportsbook betting product is supported by the existing research parser.
