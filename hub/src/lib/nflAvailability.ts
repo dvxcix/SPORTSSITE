@@ -41,6 +41,11 @@ export function nflAvailabilityIsFresh(board: SidelineOddsBoard, now = Date.now(
   return Number.isFinite(observed) && observed <= now && now - observed < 90_000
 }
 
+/** A saved earlier kickoff closes research even when the displayed schedule moved later. */
+export function nflAvailabilityWindowOpen({ scheduledOpen, cutoffAt, started }: { scheduledOpen: boolean; cutoffAt: number; started: boolean }, now = Date.now()) {
+  return scheduledOpen && !started && (!Number.isFinite(cutoffAt) || now < cutoffAt)
+}
+
 export function withoutNflCurrentMarkets(board: SidelineOddsBoard): SidelineOddsBoard {
   return { ...board, status: 'unavailable', availabilityStale: true,
     availabilityPlayers: [...board.players, ...(board.availabilityPlayers ?? [])].map(nflStatusPlayer),

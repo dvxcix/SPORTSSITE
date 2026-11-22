@@ -19,7 +19,7 @@ import { getNflWeather } from '@/lib/nflWeatherServer'
 import { enrichSidelineOddsBoards } from './playerIdentity'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
 import { nflMatchupBoard, nflMatchupTeam } from '@/lib/nflMatchupBoard'
-import { filterNflMarkets, nflAvailabilityIsFresh, nflMarketExclusions, withoutNflCurrentMarkets } from '@/lib/nflAvailability'
+import { filterNflMarkets, nflAvailabilityIsFresh, nflAvailabilityWindowOpen, nflMarketExclusions, withoutNflCurrentMarkets } from '@/lib/nflAvailability'
 import { attachNflDesignations } from '@/lib/nflDesignations'
 import type { SidelineGame, SidelineRosterPlayer } from './types'
 import { scheduledDate, type SidelineScheduleDay } from './scheduleNavigation'
@@ -302,10 +302,12 @@ export async function getSidelineOddsBundle(game: SidelineGame) {
   const visible = !NFL_PAUSED_PROJECTION_ENFORCE_ENABLED && !odds.pausedProjection
     ? odds : visibleNflObservedOdds(odds, game.id, nflLegacyPauseNeedsLastSeen(cutoff))
   const started = gameState?.statusState === 'in_progress' || gameState?.statusState === 'final'
-  const pickCutoff = !started && Number.isFinite(cutoff) ? cutoff : null
+  const availabilityNow = Date.now()
+  const availabilityOpen = nflAvailabilityWindowOpen({ scheduledOpen: nflPregameOpen(game), cutoffAt: cutoff, started }, availabilityNow)
+  const pickCutoff = availabilityOpen && Number.isFinite(cutoff) ? cutoff : null
   const eligible = { ...filterNflMarkets(visible, nflMarketExclusions(odds.players, game.season)),
     ...(Number.isFinite(cutoff) ? { availabilityCutoffAt: new Date(cutoff).toISOString() } : {}) }
-  const stale = nflPregameOpen(game) && !nflAvailabilityIsFresh(odds)
+  const stale = availabilityOpen && !nflAvailabilityIsFresh(odds, availabilityNow)
   return { odds: stale ? withoutNflCurrentMarkets(eligible) : eligible, gameState, pickCutoff: stale ? null : pickCutoff }
 }
 

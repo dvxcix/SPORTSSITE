@@ -11,6 +11,7 @@ import * as pausedProjection from '../src/lib/nflPausedProjection.ts'
 import * as spendingPause from '../src/lib/browserbaseSpendingPause.ts'
 import * as scoreIntegrity from '../src/lib/nflScoreIntegrity.ts'
 import * as nflAvailability from '../src/lib/nflAvailability.ts'
+import * as nflDesignations from '../src/lib/nflDesignations.ts'
 import * as publicResearchPreview from '../src/lib/publicResearchPreview.ts'
 import { DEFAULT_RESEARCH_PREFERENCES } from '../src/lib/researchPreferences.ts'
 import type { SidelineGame } from '../src/app/the-sideline/types.ts'
@@ -141,7 +142,7 @@ test('existing scheduled warmer rotates successful games and only reads peers fo
   assert.deepEqual([a.gameId,b.gameId],['g1','g2']);assert.deepEqual(h.sources,['g1','g2'])
 })
 
-async function dataHarness(writesEnabled = true, spendingPaused = false) {
+async function dataHarness(writesEnabled = true, spendingPaused = false, state = 'in_progress') {
   const h=await archiveHarness(), tables:string[]=[], cutoffs:string[]=[]
   let original:any=null, gameStateHook:null|(()=>void)=null, analyses=0, directoryReads=0, supplement:any=null, currentFailure=false
   const board={...EMPTY_SIDELINE_ODDS,status:'ready',source:'snapshot',bdlGameId:9,capturedAt:new Date(start-5000).toISOString(),players:[{id:1,name:'Captured Name',team:'A',position:'WR',jersey:7,markets:[],tdBaselines:[{averageOdds:333}]}]}
@@ -154,7 +155,7 @@ async function dataHarness(writesEnabled = true, spendingPaused = false) {
     '@/lib/nflMarketArchive':{attachNflTdBaselines:(b:any)=>b},'@/lib/nflOddsTypes':{EMPTY_SIDELINE_ODDS},'@/lib/nflPikkit':{attachNflPikkitSnapshot:(b:any)=>b},'@/lib/sidelinePublicBoard':{sidelinePublicBoard:(b:any)=>b},'@/lib/nflFanduel':{attachNflFanduel:(b:any,s:any)=>s??b,loadNflFanduel:async(_id:string,at:string)=>{if(at)cutoffs.push(at);return supplement}},
     '@/lib/browserbaseSpendingPause':{...spendingPause,BROWSERBASE_SPENDING_PAUSED:spendingPaused,NFL_PAUSED_PROJECTION_WRITES_ENABLED:writesEnabled,NFL_PAUSED_PROJECTION_ENFORCE_ENABLED:writesEnabled},'@/lib/nflPausedProjection':pausedProjection,
     './analysis':{getSidelineLens:async()=>{analyses++;return {status:'calculated'}}},'./boardAnalysis':{getSidelineBoardLens:async()=>{analyses++;return {status:'calculated'}}},'@/lib/nflSample':samples,'@/lib/nflPregameResearchData':h.api,'@/lib/nflResearchUnavailable':unavailable,'@/lib/nflWeatherServer':{getNflWeather:async()=>''},
-    './playerIdentity':{enrichSidelineOddsBoards:async(_g:any,boards:any[])=>{directoryReads++;return boards.map(b=>({...b,players:b.players.map((p:any)=>({...p,jersey:99}))}))}},'@/lib/nflPlayerName':{normalizeNflPlayerName:(s:string)=>s},'@/lib/nflMatchupBoard':{nflMatchupBoard:(b:any)=>b,nflMatchupTeam:(team:string)=>team},'@/lib/nflAvailability':nflAvailability,'./scheduleNavigation':{},'@/lib/nflOdds':{getNflBdlDesignations:async()=>[],getNflBdlGame:async()=>{gameStateHook?.();return {status:'In Progress',status_state:'in_progress'}}},'./kickoff':{nflKickoffAt,sidelinePregameCutoff:(g:SidelineGame)=>h.api.nflPregameOpen(g)?null:nflKickoffAt(g)!.toISOString()}},h.clock as DateConstructor)
+    './playerIdentity':{enrichSidelineOddsBoards:async(_g:any,boards:any[])=>{directoryReads++;return boards.map(b=>({...b,players:b.players.map((p:any)=>({...p,jersey:99}))}))}},'@/lib/nflPlayerName':{normalizeNflPlayerName:(s:string)=>s},'@/lib/nflMatchupBoard':{nflMatchupBoard:(b:any)=>b,nflMatchupTeam:(team:string)=>team},'@/lib/nflAvailability':nflAvailability,'@/lib/nflDesignations':nflDesignations,'./scheduleNavigation':{},'@/lib/nflOdds':{getNflBdlDesignations:async()=>[],getNflBdlGame:async()=>{gameStateHook?.();return {status:state==='scheduled'?'Scheduled':'In Progress',status_state:state}}},'./kickoff':{nflKickoffAt,sidelinePregameCutoff:(g:SidelineGame)=>h.api.nflPregameOpen(g)?null:nflKickoffAt(g)!.toISOString()}},h.clock as DateConstructor)
   return {...h,api,tables,cutoffs,board,setCurrent:(value:any)=>{currentBoard=value},setCurrentFailure:(value:boolean)=>{currentFailure=value},setSupplement:(value:any)=>{supplement=value},setOriginal:(value:any)=>{original=value},setGameStateHook:(f:()=>void)=>{gameStateHook=f},analyses:()=>analyses,directoryReads:()=>directoryReads}
 }
 test('missing closed odds are unavailable without reading current odds or baseline tables',async()=>{
@@ -164,6 +165,28 @@ test('missing closed odds are unavailable without reading current odds or baseli
   assert.ok(!h.tables.includes('nfl_odds_current'));assert.ok(!h.tables.includes('nfl_td_baseline_daily'))
   assert.ok(!h.tables.includes('nba_source_cache'))
   assert.ok(h.cutoffs.every(value=>Date.parse(value)<start),'exact-kickoff frames are excluded')
+})
+
+test('JAX–NYG valid archived quotes survive a later displayed schedule without a live report clock',async()=>{
+  const h=await dataHarness(true,false,'scheduled')
+  const cutoff=Date.parse('2026-11-22T18:00:00Z'), observed=cutoff-6000
+  const target={...game('g1','16:25'),gameday:'2026-11-22'}
+  const offer={vendor:'fanduel',line:50,openingLine:50,type:'milestone',current:{odds:450},opening:null,updatedAt:new Date(observed).toISOString()}
+  const original={...h.board,capturedAt:new Date(observed).toISOString(),players:[{...h.board.players[0],markets:[{key:'receiving_yards:50',propType:'receiving_yards',label:'Receiving yards',category:'receiving',line:50,offers:[offer]}]}]}
+  const marker=pausedProjection.packNflPausedProjection(pausedProjection.createNflPausedProjection(original as never,original as never,'g1'))
+  h.setRow({...original,pausedProjection:marker},observed,cutoff)
+  h.setTime(Date.parse('2026-11-22T20:00:00Z'))
+  const saved=h.getRow()
+  const result=await h.api.getSidelineOddsBundle(target)
+  assert.equal(result.odds.status,'ready')
+  assert.equal(result.odds.players.length,1)
+  assert.equal(result.odds.players[0].markets[0].offers[0].current.odds,450)
+  assert.equal(result.odds.availabilityStale,undefined)
+  assert.equal(result.odds.availabilityCutoffAt,new Date(cutoff).toISOString())
+  assert.equal(result.pickCutoff,null,'a later displayed time cannot reopen the saved cutoff for new picks')
+  assert.deepEqual(h.getRow(),saved,'original pregame observations remain unchanged')
+  assert.equal(h.directoryReads(),0,'no current roster was substituted into the archived board')
+  assert.equal(h.tables.includes('nfl_odds_current'),false)
 })
 test('old original quotes and baselines survive without importing current roster metadata',async()=>{
   const h=await dataHarness();h.setTime(start);h.setOriginal({board:h.board,captured_at:h.board.capturedAt})

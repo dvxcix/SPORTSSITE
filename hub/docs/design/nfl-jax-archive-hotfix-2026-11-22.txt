@@ -1,0 +1,19 @@
+JAX–NYG availability-boundary hotfix — 22 November 2026
+
+The displayed schedule is 4:25 PM ET, while the existing durable pregame
+research cutoff is 1:00 PM ET. The latest availability guard used the displayed
+schedule to require a fresh report on an already frozen, valid archived board.
+That incorrectly stripped player rows and displayed a feed-outage notice.
+
+The guard now respects the effective durable cutoff and game state. Archived
+quotes and observations remain unchanged; passing that cutoff does not reopen
+new pick eligibility. Open games still require fresh availability evidence.
+No data, collector, schedule or frozen snapshot was modified or replayed.
+
+Validation before publication: 65 focused availability/odds/cutoff checks,
+134 production source checks, TypeScript and ESLint passed. A separate
+full-flow getSidelineOddsBundle regression passed for the exact later-display /
+earlier-cutoff case: ready board, original quote, no current roster substitution,
+no archive mutation and no reopened pick cutoff.
+
+Production verification is recorded after the Git deployment becomes Ready.

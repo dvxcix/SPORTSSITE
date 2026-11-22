@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { filterNflMarkets, nflAvailability, nflAvailabilityIsFresh, nflHasCurrentMarket, nflMarketExclusions, withGameAvailability, withoutNflCurrentMarkets } from '../src/lib/nflAvailability'
+import { filterNflMarkets, nflAvailability, nflAvailabilityIsFresh, nflAvailabilityWindowOpen, nflHasCurrentMarket, nflMarketExclusions, withGameAvailability, withoutNflCurrentMarkets } from '../src/lib/nflAvailability'
 import { attachNflDesignations } from '../src/lib/nflDesignations'
 import type { NflBdlDesignation } from '../src/lib/nflOdds'
 import { teamMmHighlights } from '../src/app/the-sideline/teamHighlights'
@@ -135,4 +135,17 @@ test('expiry blocks current markets without deleting status evidence or renewing
  assert.equal(withheld.availabilityPlayers?.[0].availability?.gameStatus,'questionable')
  assert.equal(withheld.availabilityObservedAt,board.availabilityObservedAt)
  assert.equal(board.players.length,1)
+})
+
+test('JAX–NYG earlier durable cutoff keeps its valid archive available despite a later display time',()=>{
+ const now=Date.parse('2026-11-22T18:50:00Z'),cutoffAt=Date.parse('2026-11-22T18:00:00Z')
+ const stored={...EMPTY_SIDELINE_ODDS,status:'ready' as const,players:[{id:1,name:'Archived receiver',team:'JAX',position:'WR',markets:[]}]}
+ assert.equal(nflAvailabilityIsFresh(stored,now),false,'legacy archives have no live report clock')
+ assert.equal(nflAvailabilityWindowOpen({scheduledOpen:true,cutoffAt,started:false},now),false,'the earlier durable cutoff wins over the later displayed schedule')
+ assert.equal(nflAvailabilityWindowOpen({scheduledOpen:true,cutoffAt,started:false},cutoffAt),false)
+ assert.equal(nflAvailabilityWindowOpen({scheduledOpen:true,cutoffAt,started:false},cutoffAt-1),true)
+ assert.equal(nflAvailabilityWindowOpen({scheduledOpen:true,cutoffAt:now+3600000,started:true},now),false)
+ assert.equal(nflAvailabilityWindowOpen({scheduledOpen:false,cutoffAt:now+3600000,started:false},now),false)
+ assert.equal(nflAvailabilityWindowOpen({scheduledOpen:true,cutoffAt:now+3600000,started:false},now),true,'open games still need fresh reports')
+ assert.equal(nflAvailabilityWindowOpen({scheduledOpen:true,cutoffAt:NaN,started:false},now),true,'an unknown boundary does not waive the freshness check')
 })
