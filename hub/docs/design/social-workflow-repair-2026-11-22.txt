@@ -1,0 +1,46 @@
+Social workflow repair — 2026-11-22
+
+Changes
+- Original badge artwork fits inside its thumbnail; long descriptions wrap.
+- Feed, Community, Messages and Picks stay above the scrolling research tools.
+- The header has compact search and Feed, Groups, Live rooms and Messages links.
+  Phones retain one 44px Messages shortcut, the Community dock and the full menu.
+- Channel history names both sender foreign keys and selects the latest messages.
+  Direct and group conversation history also selects the latest bounded page.
+- Confirmed channel sends appear immediately without depending on realtime echo.
+  Channel reconnect and tab-return recover missed history; retry preserves drafts.
+- Direct-message read notifications and accepted-conversation writes now execute.
+- New-message search queries all permitted recipients instead of 50 suggestions.
+  Blocked users and members with DMs disabled remain excluded. Search can retry;
+  selected group members remain visible while searching for the next person.
+- Admins can reach group creation under the same permissions as the live RPC.
+  Owned and joined groups remain accessible separately from public discovery.
+- Failed inbox, channel, membership and group-history reads show recovery states.
+  Interrupted creation or image saving no longer silently reports full success.
+
+Verification
+- 48 browser receipts: 12 social routes in desktop/phone and light/dark.
+- Four additional 320px route checks; no horizontal overflow or broken visible images.
+- Actual private UI exercised channel send/edit/reply/soft-delete, group chat
+  send/edit/reply, recipient search, selected-member chips and direct-message send.
+- 39 focused regression tests and 134 production source checks passed.
+- Changed production TypeScript/React lint passed. Optimized local build and typecheck passed.
+- Real authenticated database roles passed rollback-only group create/join,
+  channel send, direct send, group conversation create/send and history reads.
+  Private groups/channels stayed hidden from nonmembers. Follow-up verified no
+  test groups, conversations or messages remained. No schema or flags changed.
+- NBA tools, Odds Board and NFL tools remain reachable from the full menu and
+  mobile research picker. Existing tier, paid-community and privacy rules remain.
+
+Limits
+PC browser viewport verification, not physical phone certification. No messages
+or invitations were delivered to real members for QA. The private preview uses
+separate browser/server fixture stores; new-group handoff is also covered by
+component tests plus real database creation/read checks inside a rolled-back
+transaction. Those checks are not a real cross-account delivery test.
+
+Design reference: Circle header on Mobbin separates search/messages from section
+navigation: https://mobbin.com/screens/b7e81ab9-f974-4887-81da-b30970ced873
+
+Detailed layout receipts and release verification:
+docs/design/social-workflow-repair-2026-11-22.json

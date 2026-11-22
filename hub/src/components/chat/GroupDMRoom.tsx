@@ -266,6 +266,7 @@ export function GroupDMRoom({
     if ((!content && !mediaUrl) || sending || uploading) return;
     setSending(true);
     setError("");
+    try {
     if (editing) {
       const before = messages;
       setMessages((current) =>
@@ -327,6 +328,12 @@ export function GroupDMRoom({
           targetId: conversation.id,
           targetType: "group_conversation",
         });
+    } catch {
+      if (editing) setMessages(current => current.map(message => message.id === editing.id ? { ...message, content: editing.content, edited_at: editing.edited_at } : message));
+      setError(editing ? "Edit not saved. Try again." : "Message not sent. Try again.");
+    } finally {
+      setSending(false);
+    }
   }
   async function deleteMessage(message: GroupMessage) {
     const before = messages;

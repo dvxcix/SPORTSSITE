@@ -90,9 +90,10 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => scrollMessagePane(scrollRef.current))
-    return () => cancelAnimationFrame(frame)
     void supabase.from('notifications').update({ read: true })
       .eq('user_id', currentUserId).eq('actor_id', partner.id).eq('type', 'message').eq('read', false)
+      .then(() => {}, () => {})
+    return () => cancelAnimationFrame(frame)
   }, [currentUserId, partner.id, supabase])
 
   useEffect(() => {
@@ -204,6 +205,7 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
         status: 'accepted',
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id,partner_id' })
+        .then(() => {}, () => {})
       requestAnimationFrame(jumpToLatest)
 
       const { data: me } = await supabase.from('users').select('username').eq('id', currentUserId).single()

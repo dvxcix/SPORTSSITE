@@ -86,14 +86,8 @@ export async function getChannels(): Promise<Channel[]> {
 
 export async function getChannelMessages(channelId: string, limit = 50): Promise<Message[]> {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('messages')
-    .select(`*, sender:users(id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,is_verified,account_type), reply_to:messages!messages_reply_to_id_fkey(id,content,sender_id,sender:users!messages_sender_id_fkey(id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color))`)
-    .eq('channel_id', channelId)
-    .eq('is_deleted', false)
-    .order('created_at', { ascending: true })
-    .limit(limit)
-  return data ?? []
+  const { loadChannelHistory } = await import('@/lib/channelHistory')
+  return loadChannelHistory(supabase, channelId, limit)
 }
 
 export async function getNotifications(userId: string): Promise<Notification[]> {

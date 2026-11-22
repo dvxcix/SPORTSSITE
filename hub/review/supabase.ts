@@ -64,7 +64,30 @@ export function createClient(_url?:any,_key?:any,options?:any):any{
  const ok=(data:any={})=>Promise.resolve({data,error:null})
  const client:any={
   from:(name:string)=>new Query(name,role,options?.rolePromise),
-  rpc:(name:string,_params?:any)=>name==='get_member_mastery'?ok({points:640,level:3,totals:{posts:12,picks:18,wins:11,replies:28,following:8,communities:3,notes:14},missions:[{key:'review-research',title:'Build your research routine',current:3,target:5,period:'daily',points:40},{key:'review-community',title:'Join the conversation',current:2,target:3,period:'weekly',points:60}],achievements:['first_signal','research_routine']}):new Query(name.includes('feed')?'posts':name.includes('notification')?'notifications':name.includes('group')?'groups':'__review_rpc',role),
+  rpc:(name:string,params?:any)=>{
+   if(name==='get_my_channel_permissions')return ok({view:true,send:true,moderate:role==='admin'||role==='creator'})
+   if(name==='get_my_community_permissions')return ok({view:true,send:true,create_invites:true,manage_channels:role==='admin'||role==='creator'})
+   if(name==='create_group_conversation'){
+    const id=crypto.randomUUID(),at=new Date().toISOString()
+    table('group_conversations').push({id,name:params.conversation_name,owner_id:user?.id,updated_at:at})
+    table('group_conversation_members').push(...[user?.id,...params.invited_user_ids].map(idUser=>({conversation_id:id,user_id:idUser,role:idUser===user?.id?'owner':'member',muted:false,joined_at:at,user:table('users').find(u=>u.id===idUser)})))
+    persistReviewTables();return ok(id)
+   }
+   if(name==='set_group_membership'){
+    const rows=table('group_members'),index=rows.findIndex(row=>row.group_id===params.p_group_id&&row.user_id===user?.id)
+    if(params.p_join&&index<0)rows.push({group_id:params.p_group_id,user_id:user?.id,role:'member',group:table('groups').find(g=>g.id===params.p_group_id)})
+    if(!params.p_join&&index>=0)rows.splice(index,1)
+    persistReviewTables();return ok(params.p_join)
+   }
+   if(name==='create_community_group'){
+    const id=crypto.randomUUID(),channelId=crypto.randomUUID(),channelSlug='group-'+params.p_slug
+    table('groups').push({id,slug:params.p_slug,name:params.p_name,description:params.p_description,sport:params.p_sport,emoji:params.p_emoji,is_public:params.p_is_public,owner_id:user?.id,channel_id:channelId,access_type:'free',member_count:1})
+    table('channels').push({id:channelId,slug:channelSlug,name:params.p_name,group_id:id,channel_type:'public',owner_id:user?.id,member_count:1})
+    table('group_members').push({group_id:id,user_id:user?.id,role:'owner'})
+    persistReviewTables();return ok([{group_id:id,group_slug:params.p_slug,channel_id:channelId,channel_slug:channelSlug}])
+   }
+   return name==='get_member_mastery'?ok({points:640,level:3,totals:{posts:12,picks:18,wins:11,replies:28,following:8,communities:3,notes:14},missions:[{key:'review-research',title:'Build your research routine',current:3,target:5,period:'daily',points:40},{key:'review-community',title:'Join the conversation',current:2,target:3,period:'weekly',points:60}],achievements:['first_signal','research_routine']}):new Query(name.includes('feed')?'posts':name.includes('notification')?'notifications':name.includes('group')?'groups':'__review_rpc',role)
+  },
   auth:{
    getUser:()=>ok({user}),getSession:()=>ok({session}),getUserIdentities:()=>ok({identities:[]}),getClaims:()=>ok({claims:user?{sub:user.id,aal:'aal2'}:null}),refreshSession:()=>ok({session,user}),
    onAuthStateChange:(callback:any)=>{const id=setTimeout(()=>callback('INITIAL_SESSION',session),0);return {data:{subscription:{unsubscribe:()=>clearTimeout(id)}}}},

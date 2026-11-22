@@ -26,6 +26,10 @@ export default async function ChannelPage({ params }: Props) {
     getChannels(),
     supabase.auth.getUser(),
   ])
+  const { data: permissions, error: permissionError } = user
+    ? await supabase.rpc('get_my_channel_permissions', { p_channel_id: channel.id })
+    : { data: null, error: null }
+  if (permissionError) throw new Error('Channel permissions could not be loaded. Try again.')
 
   return (
     <div className="ss-community-room-layout">
@@ -58,7 +62,8 @@ export default async function ChannelPage({ params }: Props) {
         channelName={channel.name}
         initialMessages={messages}
         currentUserId={user?.id}
-        canModerate={channel.owner_id === user?.id}
+        canModerate={Boolean(permissions?.moderate)}
+        readOnly={Boolean(user) && !permissions?.send}
       />
       </section>
     </div>

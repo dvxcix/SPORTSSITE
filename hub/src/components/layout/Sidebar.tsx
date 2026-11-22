@@ -41,6 +41,12 @@ const NBA_LOGO_URL = 'https://a.espncdn.com/i/teamlogos/leagues/500/nba.png'
 // of truth for anything reading the sidebar's width statically.
 const SIDEBAR_W = 220
 const SIDEBAR_W_COLLAPSED = 64
+const socialShortcuts = [
+  { href: '/feed', label: 'Feed', icon: Home },
+  { href: '/community', label: 'Community', icon: Users },
+  { href: '/messages', label: 'Messages', icon: MessageCircle },
+  { href: '/picks', label: 'Picks', icon: TrendingUp },
+]
 const hydrationSubscribe=()=>()=>{}
 
 type NavLink = {
@@ -205,7 +211,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const orderedGroups = [...groups.filter(group => group.heading.section === selectedSport.toUpperCase() + ' Research'), ...groups.filter(group => group.heading.section !== selectedSport.toUpperCase() + ' Research')]
   const visibleNav: NavItem[] = orderedGroups.flatMap(group => {
     if (!query && group.heading.logo && group.heading.section !== selectedSport.toUpperCase() + ' Research') return []
-    const links = query ? group.links.filter(link => (link.label + ' ' + group.heading.section).toLowerCase().includes(query)) : group.links
+    const links = query ? group.links.filter(link => (link.label + ' ' + group.heading.section).toLowerCase().includes(query)) : group.links.filter(link => !socialShortcuts.some(shortcut => shortcut.href === link.href))
     return links.length ? [group.heading, ...links] : []
   })
 
@@ -317,6 +323,9 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         <button type="button" onClick={onClose} className="ss-sidebar-close md:hidden" aria-label="Close menu"><X size={18}/></button>
       </div>
 
+      <nav className="ss-sidebar-social" data-compact={isCollapsed} aria-label="Social navigation">
+        {socialShortcuts.map(({ href, label, icon: Icon }) => <Link key={href} href={href} prefetch={false} onClick={onClose} aria-label={label} aria-current={path === href || path.startsWith(`${href}/`) ? 'page' : undefined}><Icon size={17} aria-hidden="true"/>{!isCollapsed && <span>{label}</span>}</Link>)}
+      </nav>
       <div className={navigationStyles.controls}>
         <ResearchSportSwitcher sport={selectedSport} nflAccess={nflAccess} nbaAccess={nbaAccess} mlbAccess={mlbAccess} compact={isCollapsed} onChange={value => { chooseSport(value); setMenuSearch('') }} />
         {!isCollapsed && <label className={navigationStyles.search}><Search size={16} aria-hidden="true" /><input aria-label="Find a page or tool" placeholder="Find a page…" value={menuSearch} onChange={event => setMenuSearch(event.target.value)} />{menuSearch && <button type="button" aria-label="Clear menu search" onClick={() => setMenuSearch('')}><X size={14} /></button>}</label>}

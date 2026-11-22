@@ -4,8 +4,8 @@ import { AccountMenu } from './AccountMenu'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Search, Bell, ChevronRight, Settings, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu, TrendingUp, X, CheckCheck } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Search, Bell, ChevronRight, Settings, Heart, MessageCircle, UserPlus, AtSign, Trophy, Zap, Repeat2, Users, Menu, TrendingUp, X, CheckCheck, Home, MessagesSquare } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
@@ -28,6 +28,13 @@ const NOTIF_ICONS: Record<string, any> = {
   mention: AtSign, pick_result: Trophy, message: MessageCircle, subscription: Zap, repost: Repeat2,
   group_invite: Users, new_pick: TrendingUp,
 }
+
+const socialDestinations = [
+  { href: '/feed', label: 'Feed', icon: Home },
+  { href: '/groups', label: 'Groups', icon: Users },
+  { href: '/channels', label: 'Live rooms', icon: MessagesSquare },
+  { href: '/messages', label: 'Messages', icon: MessageCircle },
+]
 
 type NotifRow = {
   id: string; type: string; message: string | null; body: string | null
@@ -126,6 +133,7 @@ function TopbarNotificationEntry({
 }
 
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
+  const pathname = usePathname()
   const { user, profile, loading, authUnavailable, retrySession } = useAuth()
   const nbaAccess = hasNbaAccess(profile)
   const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
@@ -559,6 +567,13 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
             )}
         </FloatingSurface>
       </form>
+
+      <nav className="ss-topbar-social" aria-label="Social shortcuts">
+        {socialDestinations.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(`${href}/`)
+          return <Link key={href} href={href} prefetch={false} aria-label={label} aria-current={active ? 'page' : undefined} data-destination={label}><Icon size={17} aria-hidden="true"/><span>{label}</span></Link>
+        })}
+      </nav>
 
       {/* Right controls */}
       <div className="ss-topbar-actions">

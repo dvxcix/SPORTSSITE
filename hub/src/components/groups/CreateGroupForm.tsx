@@ -10,6 +10,7 @@ import { ArrowRight, Camera, ImagePlus, Loader2, X } from 'lucide-react'
 import { uploadMedia } from '@/lib/uploadMedia'
 import { useAuth } from '@/context/AuthContext'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import Link from 'next/link'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'General']
 const EMOJIS = ['👥', '🏆', '🔥', '⚡', '🎯', '💰', '🎲', '🏈', '⚾', '🏀', '🏒', '⚽', '🥊', '🎉', '💎', '🚀', '👑', '🦁', '🎰']
@@ -25,6 +26,7 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
   const [creatorProductId, setCreatorProductId] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [createdSlug, setCreatedSlug] = useState('')
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [bannerFile, setBannerFile] = useState<File | null>(null)
   const avatarPreview = useMemo(() => avatarFile ? URL.createObjectURL(avatarFile) : '', [avatarFile])
@@ -40,9 +42,11 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
 
   async function create(event: React.FormEvent) {
     event.preventDefault()
+    if (submitting || createdSlug) return
     if (!form.name.trim()) { setError('Group name is required'); return }
     setSubmitting(true)
     setError('')
+    try {
     const groupSlug = slug(form.name.trim())
     if (!groupSlug) { setError('Use at least one letter or number in the group name'); setSubmitting(false); return }
     const { data, error: err } = await supabase.rpc('create_community_group', {
@@ -65,6 +69,7 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
       setSubmitting(false)
       return
     }
+    setCreatedSlug(created.group_slug)
     if (avatarFile || bannerFile) {
       const [avatar, banner] = await Promise.all([
         avatarFile ? uploadMedia(avatarFile, 'avatars') : Promise.resolve(null),
@@ -72,8 +77,9 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
       ])
       if ((avatar && 'error' in avatar) || (banner && 'error' in banner)) {
         setError('The group was created, but one of its images could not be uploaded. You can retry in group settings.')
+        return
       } else {
-        await supabase.rpc('update_community_group', {
+        const { error: imageError } = await supabase.rpc('update_community_group', {
           p_group_id: created.group_id,
           p_name: form.name.trim(),
           p_description: form.description.trim() || null,
@@ -82,15 +88,19 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
           p_banner_url: banner && 'publicUrl' in banner ? banner.publicUrl : null,
           p_is_public: form.is_public,
         })
+        if (imageError) { setError('Your group was created. Its images could not be saved; retry in group settings.'); return }
       }
     }
     router.push(`/groups/${created.group_slug}?setup=community`)
     router.refresh()
+    } catch { setError('The request was interrupted. Check your groups before trying again.') }
+    finally { setSubmitting(false) }
   }
 
   return (
     <form className="ss-flow-form" onSubmit={create}>
       {error && <div role="alert" className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
+      {createdSlug && <Link href={`/groups/${createdSlug}?setup=community`} className="ss-flow-back">Open your group <ArrowRight size={15}/></Link>}
 
       <section className="ss-flow-card">
         <div>
@@ -169,7 +179,7 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
         </div>
       </section>
 
-      <button type="submit" disabled={submitting || !form.name.trim()}
+      <button type="submit" disabled={submitting || Boolean(createdSlug) || form.name.trim().length < 2}
         className="ss-flow-submit">
         {submitting ? <><Loader2 size={16} className="animate-spin" /> Creating…</> : <>Create group <ArrowRight size={16} /></>}
       </button>

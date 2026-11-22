@@ -1,6 +1,7 @@
 'use client'
 
 import { scrollMessagePane } from '@/lib/messageScroll'
+import { CHANNEL_MESSAGE_COLUMNS, loadChannelHistory } from '@/lib/channelHistory'
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -35,6 +36,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
+  const [connectionError, setConnectionError] = useState(false)
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [editingMessage, setEditingMessage] = useState<Message | null>(null)
   const [imageUrl, setImageUrl] = useState('')
@@ -46,6 +48,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const atBottomRef = useRef(true)
+  const recoverRef = useRef<() => void>(() => {})
   const supabase = useMemo(() => createClient(), [])
   const messageIds = useMemo(() => messages.map(message => message.id), [messages])
   const { reactions, typingUsers, notifyTyping, toggleReaction, markRead } = useMessageInteractionState({
@@ -68,6 +71,26 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
   }
 
   useEffect(() => {
+    let active = true
+    let recovering = false
+    async function recover() {
+      if (recovering || document.visibilityState === 'hidden') return
+      recovering = true
+      const startedAt = Date.now()
+      try {
+        const recent = await loadChannelHistory(supabase, channelId)
+        if (active) {
+          setMessages(current => {
+            const byId = new Map(recent.map(message => [message.id, message]))
+            for (const message of current) if (new Date(message.edited_at || message.created_at).getTime() >= startedAt) byId.set(message.id, message)
+            return [...byId.values()].sort((a,b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
+          })
+          setConnectionError(false)
+        }
+      } catch { if (active) setConnectionError(true) }
+      finally { recovering = false }
+    }
+    recoverRef.current = () => { void recover() }
     const realtimeChannel = supabase
       .channel(`chat:${channelId}`)
       .on('postgres_changes', {
@@ -99,8 +122,13 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
         const removed = payload.old as Pick<Message, 'id'>
         setMessages(previous => previous.filter(message => message.id !== removed.id))
       })
-      .subscribe()
-    return () => { void supabase.removeChannel(realtimeChannel) }
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') void recover()
+        if (active && (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT')) setConnectionError(true)
+      })
+    document.addEventListener('visibilitychange', recover)
+    window.addEventListener('online', recover)
+    return () => { active = false; document.removeEventListener('visibilitychange', recover); window.removeEventListener('online', recover); void supabase.removeChannel(realtimeChannel) }
   }, [channelId, channelName, currentUserId, supabase])
 
   useEffect(() => {
@@ -138,6 +166,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
     const content = input.trim()
     setSendError('')
     setSending(true)
+    try {
     if (editingMessage) {
       const previousContent = editingMessage.content
       const editedAt = new Date().toISOString()
@@ -159,17 +188,23 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
       reply_to_id: replyingTo?.id ?? null,
       media_urls: imageUrl ? [imageUrl] : [],
       message_type: imageUrl ? 'media' : 'text',
-    }).select('id').single()
+    }).select(CHANNEL_MESSAGE_COLUMNS).single()
     if (!error && data) {
+      const sent = data as unknown as Message
+      setMessages(previous => previous.some(message => message.id === sent.id) ? previous : [...previous, sent])
       setInput('')
       setImageUrl('')
       setReplyingTo(null)
-      await notifyMentions(supabase, currentUserId, content, `/channels/${channelSlug}`, data.id, 'a channel message')
+      void notifyMentions(supabase, currentUserId, content, `/channels/${channelSlug}`, sent.id, 'a channel message').catch(() => {})
       requestAnimationFrame(() => inputRef.current?.focus())
     } else {
       setSendError('Message not sent. Try again.')
     }
-    setSending(false)
+    } catch {
+      if (editingMessage) setMessages(previous => previous.map(message => message.id === editingMessage.id ? { ...message, content: editingMessage.content, edited_at: editingMessage.edited_at } : message))
+      setSendError(editingMessage ? 'Edit not saved. Try again.' : 'Message not sent. Try again.')
+    }
+    finally { setSending(false) }
   }
 
   function beginEdit(message: Message) {
@@ -212,6 +247,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
   }
 
   return <div className="ss-chat-room">
+    {connectionError && <p role="status" className="ss-chat-connection-status">Connection interrupted. Reconnecting… <button type="button" onClick={() => recoverRef.current()}>Reconnect</button></p>}
     <div ref={scrollRef} onScroll={handleScroll} className="ss-chat-messages">
       {!messages.length && <div className="ss-chat-empty"><span>#</span><strong>{channelName}</strong><p>Start the conversation.</p></div>}
       {messages.map((message, index) => {

@@ -14,27 +14,35 @@ export const dynamic = 'force-dynamic'
 export default async function GroupsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const [{ data: profile }, { data: approval }, { data: visibleGroups }] = await Promise.all([
+  const [{ data: profile }, { data: approval }, groupResult, membershipResult] = await Promise.all([
     user ? supabase.from('users').select('account_type').eq('id', user.id).single() : Promise.resolve({ data: null }),
     user ? supabase.from('creator_applications').select('id').eq('user_id', user.id).eq('status', 'approved').maybeSingle() : Promise.resolve({ data: null }),
     supabase.from('groups').select('*').order('member_count', { ascending: false }).limit(50),
+    user ? supabase.from('group_members').select('group_id,group:groups(*)').eq('user_id', user.id) : Promise.resolve({ data: [], error: null }),
   ])
-  const creator = hasCreatorAccess(profile?.account_type, Boolean(approval))
+  if (groupResult.error || membershipResult.error) throw new Error('Groups could not be loaded. Try again.')
+  const creator = profile?.account_type === 'admin' || hasCreatorAccess(profile?.account_type, Boolean(approval))
   const showMlb = !MLB_HIBERNATING || profile?.account_type === 'admin'
-  const allowedGroups = (visibleGroups ?? []).filter(group => showMlb || group.sport?.toUpperCase() !== 'MLB')
+  const memberships = membershipResult.data ?? []
+  const joinedIds = new Set(memberships.map(row => row.group_id))
+  const joinedRows = memberships.flatMap(row => Array.isArray(row.group) ? row.group : row.group ? [row.group] : [])
+  const unique = new Map([...joinedRows, ...(groupResult.data ?? [])].map(group => [group.id, group]))
+  const allowedGroups = [...unique.values()].filter(group => showMlb || group.sport?.toUpperCase() !== 'MLB')
   const owned = allowedGroups.filter(group => group.owner_id === user?.id)
-  const discover = allowedGroups.filter(group => group.owner_id !== user?.id && group.is_public)
+  const joined = allowedGroups.filter(group => group.owner_id !== user?.id && joinedIds.has(group.id))
+  const discover = allowedGroups.filter(group => group.owner_id !== user?.id && !joinedIds.has(group.id) && group.is_public)
 
   return (
     <ProductPageShell>
       <CommunityNav />
       <ProductHero icon={<Users size={21}/>} eyebrow="Community" title="Groups" description="Find communities for games, markets and creators." actions={creator ? <><ProductAction href="/groups/create"><Plus size={15}/> New group</ProductAction><ProductAction href="/creators/studio"><Settings2 size={15}/> Studio</ProductAction></> : undefined}/>
 
-      {creator && <section className="mt-8">
+      {(creator || owned.length > 0) && <section className="mt-8">
         <ProductSectionHeader title="Your communities" meta={`${owned.length} total`}/>
         {owned.length ? <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">{owned.map(group => <GroupCard key={group.id} group={group} owner />)}</div> : <ProductPanel padded className="grid gap-5 md:grid-cols-[1fr_auto] md:items-center"><div><h3 className="font-semibold text-[var(--text-1)]">Launch your first community</h3></div><Link href="/groups/create" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent)]">Create community <ArrowRight size={15}/></Link></ProductPanel>}
       </section>}
 
+      {joined.length > 0 && <section className="mt-8"><ProductSectionHeader title="Joined groups" meta={`${joined.length} total`}/><div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">{joined.map(group => <GroupCard key={group.id} group={group}/>)}</div></section>}
       <section className="mt-10">
         <ProductSectionHeader title="Public groups" meta="Discover"/>
         {discover.length ? <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">{discover.map(group => <GroupCard key={group.id} group={group} />)}</div> : <div className="rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.025)] p-10 text-center"><Users className="mx-auto text-[var(--text-3)]"/><p className="mt-3 font-bold text-[var(--text-2)]">No public groups yet</p><p className="mt-1 text-sm text-[var(--text-3)]">Creator communities will appear here as they launch.</p></div>}

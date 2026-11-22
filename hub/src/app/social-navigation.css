@@ -1,0 +1,16 @@
+.ss-site-topbar .ss-topbar-search{flex:0 1 340px;width:340px;max-width:340px!important;min-width:120px}
+.ss-topbar-social{display:flex;align-items:center;gap:4px;min-width:0;margin-left:8px}
+.ss-topbar-social a{display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:8px 11px;border-radius:8px;color:var(--text-2);font-size:13px;font-weight:550;white-space:nowrap;transition:background-color 120ms,color 120ms}
+.ss-topbar-social a:hover,.ss-sidebar-social a:hover{background:var(--surface-2);color:var(--text-1)}
+.ss-topbar-social a[aria-current=page],.ss-sidebar-social a[aria-current=page]{background:var(--accent-dim);color:var(--accent)}
+.ss-sidebar-social{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex-shrink:0;gap:3px;padding:7px 10px 10px;border-bottom:1px solid var(--border)}
+.ss-sidebar-social a{display:flex;align-items:center;gap:7px;min-width:0;min-height:40px;padding:8px 7px;border-radius:8px;color:var(--text-2);font-size:12px;font-weight:550}
+.ss-sidebar-social a svg{flex-shrink:0}.ss-sidebar-social[data-compact=true]{grid-template-columns:1fr;padding:5px 8px}.ss-sidebar-social[data-compact=true] a{justify-content:center}
+.ss-topbar-social a:focus-visible,.ss-sidebar-social a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(min-width:768px) and (max-width:1150px){.ss-site-topbar .ss-topbar-search{flex:1 1 220px}.ss-topbar-social a{width:42px;padding:8px}.ss-topbar-social a span{display:none}}
+@media(max-width:767px){.ss-site-topbar{gap:6px!important;padding-inline:10px!important}.ss-site-topbar .ss-topbar-search{flex:1;min-width:0;max-width:none!important;width:auto}.ss-topbar-social{margin-left:0;flex-shrink:0}.ss-topbar-social a{display:none}.ss-topbar-social a[data-destination=Messages]{display:flex;width:44px;min-height:44px;padding:0}.ss-topbar-social a span{display:none}.ss-sidebar-social a{min-height:44px}.ss-site-topbar .ss-topbar-search-input{font-size:16px!important}}
+@media(prefers-reduced-motion:reduce){.ss-topbar-social a{transition:none}}
+.ss-new-dm-selected{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px}.ss-new-dm-selected:empty{display:none}.ss-new-dm-selected button{display:flex;align-items:center;gap:6px;max-width:100%;min-height:36px;padding:6px 9px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface-2);color:var(--text-1);font-size:12px;overflow-wrap:anywhere}
+.ss-recipient-status{display:flex;align-items:center;justify-content:center;gap:10px;min-height:100px;padding:20px;color:var(--text-2);font-size:13px}.ss-recipient-status button,.ss-chat-connection-status button{min-height:44px;padding:8px;color:var(--accent);font-weight:600}
+.ss-chat-connection-status{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;padding:6px 12px;background:var(--surface-2);color:var(--text-2);font-size:12px}
+@media(max-width:767px){.ss-new-dm-selected button{min-height:44px}}

@@ -12,12 +12,13 @@ export const dynamic = 'force-dynamic'
 export default async function ChannelsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const [{ data: profile }, { data: approval }, { data: channels }] = await Promise.all([
+  const [{ data: profile }, { data: approval }, { data: channels, error }] = await Promise.all([
     user ? supabase.from('users').select('account_type').eq('id', user.id).single() : Promise.resolve({ data: null }),
     user ? supabase.from('creator_applications').select('id').eq('user_id', user.id).eq('status', 'approved').maybeSingle() : Promise.resolve({ data: null }),
     supabase.from('channels').select('*').order('is_pinned', { ascending: false }).order('member_count', { ascending: false }),
   ])
-  const creator = hasCreatorAccess(profile?.account_type, Boolean(approval))
+  if (error) throw new Error('Channels could not be loaded. Try again.')
+  const creator = profile?.account_type === 'admin' || hasCreatorAccess(profile?.account_type, Boolean(approval))
   const owned = (channels ?? []).filter(channel => channel.owner_id === user?.id)
   const community = (channels ?? []).filter(channel => channel.owner_id !== user?.id)
 

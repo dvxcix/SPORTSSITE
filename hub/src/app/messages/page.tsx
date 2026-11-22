@@ -33,6 +33,7 @@ export default async function MessagesPage() {
     supabase.from('dm_conversation_preferences').select('partner_id,status,muted').eq('user_id', user.id),
     supabase.from('follows').select('following_id').eq('follower_id', user.id),
   ])
+  if ([readPositionsResult, threadsResult, preferencesResult, followsResult].some(result => result.error)) throw new Error('Your inbox could not be loaded. Try again.')
   const blockedIds = new Set(blockedIdList)
   const readAtByPartner = new Map((readPositionsResult.data ?? []).map(row => [row.partner_id, new Date(row.last_read_at).getTime()]))
   const unreadByPartner = new Map<string, number>()
@@ -83,18 +84,21 @@ export default async function MessagesPage() {
     }
   })
 
-  const { data: groupMemberships } = await supabase.from('group_conversation_members').select('conversation_id,last_read_at').eq('user_id', user.id)
+  const { data: groupMemberships, error: groupMembershipError } = await supabase.from('group_conversation_members').select('conversation_id,last_read_at').eq('user_id', user.id)
+  if (groupMembershipError) throw new Error('Group conversations could not be loaded. Try again.')
   const groupIds = (groupMemberships ?? []).map(membership => membership.conversation_id)
   let groupConversations: Array<{
     id: string; name: string; updatedAt: string; lastMessage: string; unreadCount: number
     members: Array<{ id: string; username: string; displayName: string | null; avatarUrl: string | null; avatarRingStyle: import('@/lib/avatarStyles').MemberRingStyle | null; avatarRingColor: string | null }>
   }> = []
   if (groupIds.length) {
-    const [{ data: groups }, { data: groupMessages }, { data: groupMembers }] = await Promise.all([
+    const [groupsResult, groupMessagesResult, groupMembersResult] = await Promise.all([
       supabase.from('group_conversations').select('id,name,updated_at').in('id', groupIds).order('updated_at', { ascending: false }),
       supabase.from('group_messages').select('id,conversation_id,sender_id,content,created_at,is_deleted').in('conversation_id', groupIds).order('created_at', { ascending: false }).limit(500),
       supabase.from('group_conversation_members').select('conversation_id,user:users!group_conversation_members_user_id_fkey(id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color)').in('conversation_id', groupIds),
     ])
+    if ([groupsResult, groupMessagesResult, groupMembersResult].some(result => result.error)) throw new Error('Group conversations could not be loaded. Try again.')
+    const groups = groupsResult.data, groupMessages = groupMessagesResult.data, groupMembers = groupMembersResult.data
     const readByGroup = new Map((groupMemberships ?? []).map(membership => [membership.conversation_id, membership.last_read_at ? new Date(membership.last_read_at).getTime() : 0]))
     groupConversations = (groups ?? []).map(group => {
       const messages = (groupMessages ?? []).filter(message => message.conversation_id === group.id)

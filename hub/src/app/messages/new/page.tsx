@@ -19,7 +19,8 @@ export default async function NewDMPage({ searchParams }: { searchParams: Promis
     .order('follower_count', { ascending: false })
     .limit(50)
   if (blockedIds.length) usersQuery = usersQuery.not('id', 'in', `(${blockedIds.join(',')})`)
-  const { data: users } = await usersQuery
+  const { data: users, error } = await usersQuery
+  if (error) throw new Error('Members could not be loaded. Try again.')
 
   return (
     <div className="ss-new-message-page">

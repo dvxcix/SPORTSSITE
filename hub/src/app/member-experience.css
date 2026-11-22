@@ -37,8 +37,9 @@ body:has(.ss-context-handoff) .ss-profile-savebar{--profile-resume-offset:76px}
 .ss-member-badge-list{display:grid;gap:14px}
 .ss-member-badge-panel .ss-badge-tooltip{grid-template-columns:64px minmax(0,1fr);min-width:0;gap:10px;max-width:100%}
 .ss-badge-tooltip small{font-size:12px;line-height:1.45;text-wrap:pretty;overflow-wrap:anywhere}
-.ss-member-badge-panel .ss-badge-tooltip-art{width:64px;height:40px;border:1px solid #314253;background:#111c29;border-radius:7px;padding:5px;box-shadow:none}
-.ss-member-badge-panel .ss-badge-tooltip-art img{width:100%;height:100%;filter:none}
+.ss-member-badge-panel .ss-badge-tooltip-art{display:block;box-sizing:border-box;width:64px;height:40px;min-width:0;min-height:0;overflow:hidden;border:1px solid #314253;background:#111c29;border-radius:7px;padding:5px;box-shadow:none}
+.ss-member-badge-panel .ss-badge-tooltip-art img{display:block;width:100%;height:100%;max-width:100%;max-height:100%;min-width:0;min-height:0;object-fit:contain;filter:none}
+.ss-member-badge-panel .ss-badge-tooltip>span:last-child{min-width:0;overflow-wrap:anywhere}
 .ss-profile-stats{display:grid;grid-template-columns:repeat(var(--profile-stat-count,4),minmax(0,1fr));gap:8px;padding-top:16px}
 .ss-profile-stat{min-width:0;padding:12px 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2)}
 .ss-profile-stat p:first-child{font-size:20px;overflow-wrap:anywhere}.ss-profile-stat p:last-child{margin-top:6px;font-size:11px}

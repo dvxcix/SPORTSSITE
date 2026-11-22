@@ -1,0 +1,29 @@
+Social workflow repair — 2026-11-22
+
+Scope: fixed global social shortcuts, compact search, contained badge artwork,
+live rooms, DM recipient discovery, group directory and creation, access/error states.
+Preserve every research destination, tier gates, paid/private membership and existing flags.
+
+Observed defects:
+- Badge image intrinsic size escapes its grid thumbnail; constrain both axes and clip the frame.
+- Research-first navigation buries the member network; pin four compact social shortcuts.
+- Channel history has an ambiguous users join and selects the oldest 80 messages.
+- Channel send relies solely on a realtime echo; append the confirmed server row immediately.
+- Channel reconnects do not recover missing history; refresh on subscribe, online and tab return.
+- DM notification read update is unreachable after the effect's return statement.
+- Recipient search filters only 50 suggestions; search the full permitted member directory.
+- Admin creation entry point is absent although the database explicitly allows admins.
+- Joined groups outside the top 50 public groups disappear from the directory.
+- Some failed reads and failed image saves masquerade as empty/successful states.
+
+Reference used: Circle global header separates compact search, messages and notifications
+from section navigation. https://mobbin.com/screens/b7e81ab9-f974-4887-81da-b30970ced873
+Adapt its hierarchy to existing SlipSurge surfaces; keep the existing visual tokens.
+
+Verification plan:
+- Real component send/reply/edit/retry, recipient search/selection/create and badge dismissal tests.
+- Live database role/grant/RLS checks and rollback-only create/join/chat probes; no delivered test messages.
+- Private real UI flows: directory, public/group channel, inbox, new DM/group, private conversation,
+  group settings/onboarding, member badges and research navigation in four layouts.
+- Live read-only entry, search, history, permissions and badge layout checks after Git main release.
+- Production smoke, checklist integrity, lint, typecheck and build.

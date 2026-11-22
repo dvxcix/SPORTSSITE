@@ -31,15 +31,17 @@ export default async function DMPage({ params }: { params: Promise<{ username: s
     )
   }
 
-  const { data: history } = await supabase
+  const { data: history, error: historyError } = await supabase
     .from('messages')
     .select('id, content, created_at, edited_at, is_deleted, sender_id, reply_to_id, forwarded_from_id, media_urls, reaction_count, sender:users!messages_sender_id_fkey(username, display_name, avatar_url, avatar_ring_style, avatar_ring_color), reply_to:messages!messages_reply_to_id_fkey(id, content, sender_id)')
     .or(
       `and(sender_id.eq.${user.id},dm_recipient_id.eq.${partner.id}),and(sender_id.eq.${partner.id},dm_recipient_id.eq.${user.id})`
     )
     .not('dm_recipient_id', 'is', null)
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false }).order('id', { ascending: false })
     .limit(100)
+  if (historyError) throw new Error('Conversation could not be loaded. Try again.')
+  history?.reverse()
 
   const historyIds = (history ?? []).map(message => message.id)
   const { data: pins } = historyIds.length
