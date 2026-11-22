@@ -7,11 +7,14 @@ import { act, createElement as h } from 'react'
 import { loadChannelHistory } from '../src/lib/channelHistory.ts'
 import { searchMessageRecipients } from '../src/lib/messageRecipients.ts'
 import { attachMessageReplies } from '../src/lib/messageReplies.ts'
+import { loadDmHistory, loadGroupHistory, reconcileMessageHistory } from '../src/lib/conversationHistory.ts'
 
 const require = createRequire(import.meta.url), { JSDOM } = require('jsdom')
 const win = new JSDOM('<!doctype html><html><body></body></html>', { url:'https://slipsurge.invalid/messages/new', pretendToBeVisual:true }).window
 Object.assign(globalThis, {window:win,document:win.document,HTMLElement:win.HTMLElement,Element:win.Element,Node:win.Node,Event:win.Event,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),IS_REACT_ACT_ENVIRONMENT:true})
 const {createRoot} = await import('react-dom/client')
+const channels:any[] = [], reads:Array<{resolve:(r:any)=>void}>=[]
+let holdRead=false, holdUpdate=false
 const calls:any[] = [], pending:Array<{resolve:(result:any)=>void;payload:any}> = [], pushes:string[] = []
 const member = {id:'00000000-0000-4000-8000-000000000002',username:'beyond-the-first-50',display_name:'Directory member'}
 let history:any[] = [], readError:any = null, rpcError:any = null, subscribe:((status:string)=>void)|undefined
@@ -19,11 +22,12 @@ class Query {
   op='read'; payload:any
   constructor(readonly table:string){}
   select(value?:string){calls.push(['select',this.table,value]);return this}eq(...args:any[]){calls.push(['eq',...args]);return this}neq(...args:any[]){calls.push(['neq',...args]);return this}or(...args:any[]){calls.push(['or',...args]);return this}not(...args:any[]){calls.push(['not',...args]);return this}order(...args:any[]){calls.push(['order',...args]);return this}limit(...args:any[]){calls.push(['limit',...args]);return this}range(){return this}single(){return this}
+  abortSignal(){return this}maybeSingle(){return this}
   in(...args:any[]){calls.push(['in',...args]);return this}
   insert(payload:any){this.op='insert';this.payload=payload;return this}update(payload:any){this.op='update';this.payload=payload;return this}upsert(payload:any){this.op='upsert';this.payload=payload;return this}
-  then(done:any,fail:any){calls.push(['execute',this.table,this.op,this.payload]);return (this.op==='insert'?new Promise(resolve=>pending.push({resolve,payload:this.payload})):Promise.resolve({data:this.table==='blocks'?[]:history,error:readError})).then(done,fail)}
+  then(done:any,fail:any){calls.push(['execute',this.table,this.op,this.payload]);return (this.op==='read'&&holdRead&&['messages','group_messages'].includes(this.table)?new Promise(resolve=>reads.push({resolve})):this.op==='insert'||holdUpdate&&this.op==='update'&&['messages','group_messages'].includes(this.table)?new Promise(resolve=>pending.push({resolve,payload:this.payload})):Promise.resolve({data:this.table==='blocks'?[]:history,error:readError})).then(done,fail)}
 }
-const client:any = {from:(table:string)=>new Query(table),rpc:async(name:string,args:any)=>{calls.push(['rpc',name,args]);return{data:'new-group-id',error:rpcError}},channel:()=>{const c:any={on:()=>c,subscribe:(callback:any)=>{subscribe=callback;return c}};return c},removeChannel(){}}
+const client:any = {from:(table:string)=>new Query(table),rpc:async(name:string,args:any)=>{calls.push(['rpc',name,args]);return{data:'new-group-id',error:rpcError}},channel:(name:string)=>{const handlers:any[]=[];const c:any={name,handlers,on:(_kind:any,filter:any,callback:any)=>{handlers.push({filter,callback});return c},subscribe:(callback:any)=>{if(callback)subscribe=callback;c.status=callback;return c}};channels.push(c);return c},removeChannel(){}}
 Object.assign(globalThis,{socialQA:{client,pushes}})
 const stubs:Record<string,string> = {
  'next/navigation':`export const useRouter=()=>({push:url=>globalThis.socialQA.pushes.push(url),refresh(){}})`,
@@ -47,7 +51,7 @@ const stubs:Record<string,string> = {
 }
 const compiled=await build({stdin:{contents:'export {ChatRoom} from "./src/components/chat/ChatRoom"; export {NewDMForm} from "./src/components/chat/NewDMForm"; export {DMRoom} from "./src/components/chat/DMRoom"; export {GroupDMRoom} from "./src/components/chat/GroupDMRoom"',resolveDir:resolve('.'),loader:'tsx'},bundle:true,write:false,platform:'node',format:'cjs',jsx:'automatic',external:['react','react-dom'],plugins:[{name:'private-services',setup(b){b.onResolve({filter:/.*/},args=>stubs[args.path]?{path:args.path,namespace:'qa'}:undefined);b.onLoad({filter:/.*/,namespace:'qa'},args=>({contents:stubs[args.path],loader:'tsx'}))}}]})
 const mod={exports:{} as any};new Function('require','module','exports',compiled.outputFiles[0].text)(require,mod,mod.exports)
-async function mount(element:any){pending.length=0;calls.length=0;history=[];readError=null;rpcError=null;pushes.length=0;const host=document.createElement('div');document.body.append(host);const root=createRoot(host);await act(async()=>root.render(element));return{host,close:async()=>{await act(async()=>root.unmount());host.remove()}}}
+async function mount(element:any){pending.length=0;calls.length=0;history=[...(element.props.initialMessages??[])].reverse();channels.length=0;reads.length=0;holdRead=false;holdUpdate=false;readError=null;rpcError=null;pushes.length=0;const host=document.createElement('div');document.body.append(host);const root=createRoot(host);await act(async()=>root.render(element));return{host,close:async()=>{await act(async()=>root.unmount());host.remove()}}}
 async function enter(field:HTMLInputElement|HTMLTextAreaElement,value:string){await act(async()=>{const proto=field.tagName==='INPUT'?win.HTMLInputElement.prototype:win.HTMLTextAreaElement.prototype;Object.getOwnPropertyDescriptor(proto,'value')!.set!.call(field,value);field.dispatchEvent(new win.Event('input',{bubbles:true}))})}
 async function submit(host:HTMLElement){await act(async()=>host.querySelector('form')!.dispatchEvent(new win.Event('submit',{bubbles:true,cancelable:true})))}
 const room=()=>h(mod.exports.ChatRoom,{channelId:'channel',channelName:'Room',channelSlug:'room',currentUserId:'me',initialMessages:[]})
@@ -107,4 +111,44 @@ test('group chat preserves a failed draft, retries and renders the server-confir
  const field=ui.host.querySelector('textarea')!;await enter(field,'Group draft');await act(async()=>ui.host.querySelector<HTMLButtonElement>('[aria-label="Send message"]')!.click());assert.equal(pending.length,1);await act(async()=>pending[0].resolve({data:null,error:{message:'offline'}}));assert.equal(field.value,'Group draft')
  await act(async()=>ui.host.querySelector<HTMLButtonElement>('[aria-label="Send message"]')!.click());await act(async()=>pending[1].resolve({data:{id:'group-sent',conversation_id:'group',content:'Group draft',sender_id:'me',created_at:new Date().toISOString()},error:null}));assert.equal(field.value,'');assert.match(ui.host.textContent!,/Group draft/)
  }finally{await ui.close()}
+})
+
+const variants=[
+ {name:'channel',make:(rows:any[]=[])=>h(mod.exports.ChatRoom,{channelId:'channel',channelName:'Room',channelSlug:'room',currentUserId:'me',initialMessages:rows}),channel:'chat:channel'},
+ {name:'direct',make:(rows:any[]=[])=>h(mod.exports.DMRoom,{partner:member,currentUserId:'me',initialMessages:rows}),channel:'dm-'+['me',member.id].sort().join('-')},
+ {name:'group',make:(rows:any[]=[])=>h(mod.exports.GroupDMRoom,{conversation:{id:'group',name:'Our room',owner_id:'me'},currentUserId:'me',members:[{user_id:'me',role:'owner',muted:false,user:{id:'me',username:'owner'}}],initialMessages:rows,initialReactions:[]}),channel:'group-dm:group'},
+]
+const sendClick=async(host:HTMLElement)=>act(async()=>host.querySelector<HTMLButtonElement>('[aria-label="Send message"]')!.click())
+const status=async(name:string,value:string)=>act(async()=>channels.find(c=>c.name===name)?.status?.(value))
+const emit=async(name:string,event:string,row:any)=>act(async()=>{const c=channels.find(c=>c.name===name);for(const h of c.handlers)if(h.filter.event===event)await h.callback({new:row,old:row})})
+for(const v of variants){
+ test(v.name+': delayed success preserves the newer composer draft and prevents duplicate sends',async()=>{
+  const ui=await mount(v.make());try{const field=ui.host.querySelector('textarea')!;await enter(field,'First draft');await sendClick(ui.host);await sendClick(ui.host);assert.equal(pending.length,1);assert.equal(ui.host.querySelector<HTMLButtonElement>('[aria-label="Attach image"]')!.disabled,true);await enter(field,'Next draft');await act(async()=>pending[0].resolve({data:{id:'sent',sender_id:'me',content:'First draft',created_at:'2026-11-22T12:00:00Z'},error:null}));assert.equal(field.value,'Next draft');assert.match(ui.host.textContent!,/First draft/)}finally{await ui.close()}
+ })
+ test(v.name+': a failed earlier draft can be recovered without losing newer text',async()=>{
+  const ui=await mount(v.make());try{const field=ui.host.querySelector('textarea')!;await enter(field,'Failed draft');await sendClick(ui.host);await enter(field,'Keep this too');await act(async()=>pending[0].resolve({data:null,error:{code:'offline'}}));assert.equal(field.value,'Keep this too');assert.match(ui.host.querySelector('.ss-unsent-drafts')!.textContent!,/Failed draft/);await act(async()=>ui.host.querySelector<HTMLButtonElement>('.ss-unsent-drafts button')!.click());assert.equal(field.value,'Keep this too\nFailed draft');assert.equal(ui.host.querySelector('.ss-unsent-drafts'),null)}finally{await ui.close()}
+ })
+ test(v.name+': composition Enter never submits a message',async()=>{
+  const ui=await mount(v.make());try{await enter(ui.host.querySelector('textarea')!,'変換中');await act(async()=>ui.host.querySelector('textarea')!.dispatchEvent(new win.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true,isComposing:true})));assert.equal(pending.length,0)}finally{await ui.close()}
+ })
+ test(v.name+': reconnect and returning to the tab recover missed messages; failure keeps the visible history',async()=>{
+  const ui=await mount(v.make());try{history=[{id:'missed',content:'Recovered message',sender_id:member.id,created_at:'2026-11-22T00:00:00Z'}];await status(v.channel,'SUBSCRIBED');assert.match(ui.host.textContent!,/Recovered message/);readError={code:'offline'};await act(async()=>window.dispatchEvent(new win.Event('online')));assert.match(ui.host.textContent!,/Connection interrupted/);assert.match(ui.host.textContent!,/Recovered message/);readError=null;history=[{id:'resumed',content:'After tab resume',sender_id:member.id,created_at:'2026-11-22T00:01:00Z'}];await act(async()=>document.dispatchEvent(new win.Event('visibilitychange')));assert.match(ui.host.textContent!,/After tab resume/);assert.doesNotMatch(ui.host.textContent!,/Connection interrupted/)}finally{await ui.close()}
+ })
+ test(v.name+': realtime insert survives a late history response, including an edit to an existing message',async()=>{
+  const old={id:'old',content:'Old text',sender_id:'me',created_at:'2026-11-22T00:00:00Z'};const ui=await mount(v.make([old]));try{holdRead=true;await status(v.channel,'SUBSCRIBED');assert.equal(reads.length,1);await emit(v.channel,'INSERT',{id:'live',content:'Live during refresh',sender_id:member.id,created_at:'2026-11-22T00:02:00Z'});await emit(v.channel,'UPDATE',{...old,content:'Fresh edit',edited_at:'2026-11-22T00:01:00Z'});await act(async()=>reads[0].resolve({data:[old],error:null}));assert.match(ui.host.textContent!,/Live during refresh/);assert.match(ui.host.textContent!,/Fresh edit/);assert.equal(ui.host.querySelectorAll('#message-live').length,1)}finally{holdRead=false;await ui.close()}
+ })
+ test(v.name+': failed edits restore only their own row and keep messages received during the save',async()=>{
+  const old={id:'old',content:'Original message',sender_id:'me',created_at:'2026-11-22T00:00:00Z'};const ui=await mount(v.make([old]));try{const edit=ui.host.querySelector<HTMLButtonElement>('[aria-label="Edit message"]')??[...ui.host.querySelectorAll<HTMLButtonElement>('button')].find(b=>b.textContent?.trim()==='Edit')!;await act(async()=>edit.click());await enter(ui.host.querySelector('textarea')!,'Changed');holdUpdate=true;await sendClick(ui.host);await emit(v.channel,'INSERT',{id:'live',content:'Incoming during edit',sender_id:member.id,created_at:'2026-11-22T00:02:00Z'});await act(async()=>pending[0].resolve({data:null,error:{code:'offline'}}));assert.match(ui.host.textContent!,/Original message/);assert.match(ui.host.textContent!,/Incoming during edit/);assert.equal(ui.host.querySelector('textarea')!.value,'Changed')}finally{holdUpdate=false;await ui.close()}
+ })
+}
+test('history reconciliation preserves deletions and deterministic order without local clock assumptions',()=>{
+ const removed={id:'removed',created_at:'2026-11-22'},original={id:'old',created_at:'2026-11-20'},updated={...original,content:'Changed'},incoming={id:'live',created_at:'2026-11-21'}
+ assert.deepEqual(reconcileMessageHistory([original,removed],[updated,incoming],[removed,original]).map(r=>r.id),['old','live']);assert.equal(reconcileMessageHistory([original],[updated],[original])[0],updated)
+})
+test('DM and group recovery are bounded, abortable and scoped to the same conversation as navigation',async()=>{
+ const signal=new AbortController().signal;calls.length=0;history=[];await loadDmHistory(client,'me','partner',signal);assert.match(calls.find(c=>c[0]==='or')[1],/sender_id.eq.me,dm_recipient_id.eq.partner/);assert.ok(calls.some(c=>c[0]==='limit'&&c[1]===100));assert.match(calls.find(c=>c[0]==='select')[2],/messages_sender_id_fkey/);calls.length=0;await loadGroupHistory(client,'group',signal);assert.ok(calls.some(c=>c[0]==='eq'&&c[1]==='conversation_id'&&c[2]==='group'));assert.ok(calls.some(c=>c[0]==='limit'&&c[1]===200))
+})
+
+for(const v of variants)test(v.name+': failed deletion keeps concurrent incoming rows',async()=>{
+ const old={id:'old',content:'Keep original',sender_id:'me',created_at:'2026-11-22T00:00:00Z'};const ui=await mount(v.make([old]));try{holdUpdate=true;const button=ui.host.querySelector<HTMLButtonElement>('[aria-label="Delete message"]')??[...ui.host.querySelectorAll<HTMLButtonElement>('button')].find(b=>b.textContent?.trim()==='Delete')!;await act(async()=>button.click());await emit(v.channel,'INSERT',{id:'during-delete',content:'During deletion',sender_id:member.id,created_at:'2026-11-22T00:02:00Z'});await act(async()=>pending[0].resolve({data:null,error:{code:'offline'}}));assert.match(ui.host.textContent!,/Keep original/);assert.match(ui.host.textContent!,/During deletion/)}finally{holdUpdate=false;await ui.close()}
 })

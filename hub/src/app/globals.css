@@ -1002,7 +1002,7 @@ img { max-width: 100%; }
 .ss-mention-profile-stats { display: flex; gap: 14px; margin-top: 10px; color: var(--text-3); font-size: 11px; }
 .ss-mention-profile-stats strong { color: var(--text-1); font-size: 12px; }
 .ss-mention-profile-open { display:flex;min-height:32px;align-items:flex-end;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);color:var(--accent);font:850 9px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.06em;text-transform:uppercase; }
-@media(max-width:620px){.ss-floating-surface.is-mobile-sheet{right:8px!important;bottom:calc(var(--mobile-dock-clearance,76px) + env(safe-area-inset-bottom) + 8px)!important;left:8px!important;top:auto!important;width:auto!important;max-width:none;border-radius:14px}.ss-mention-profile-popover{display:none}}
+@media(max-width:620px){.ss-floating-surface.is-mobile-sheet{right:calc(var(--ss-vp-right,0px) + 8px)!important;bottom:calc(max(var(--ss-vp-bottom,0px),var(--mobile-dock-clearance,76px)) + env(safe-area-inset-bottom) + 8px)!important;left:calc(var(--ss-vp-left,0px) + 8px)!important;top:auto!important;width:auto!important;max-width:none;border-radius:14px}.ss-mention-profile-popover{display:none}}
 @media (max-width: 620px) { .ss-mention-menu { position: fixed; right: 10px; bottom: 10px; left: 10px; top: auto; width: auto; max-height: min(70vh, 520px); overflow-y: auto; } .ss-mention-menu-foot { display: none; } }
 .ss-feed-list { position: relative; display: grid; gap: 16px; }
 .ss-feed-post {
@@ -2139,3 +2139,12 @@ html[data-theme="light"] .ss-member-chip.is-beta { color:#8b2475; border-color:#
 html[data-theme="light"] .ss-member-chip.is-advanced { color:#09617c; border-color:#83b9ca; background:#e4f5fb; }
 html[data-theme="light"] .ss-member-chip.is-basic { color:#2d6521; border-color:#99bd87; background:#eaf5e5; }
 html[data-theme="light"] .ss-member-chip.is-creator { color:#80500a; border-color:#c6a56e; background:#fff2d9; }
+
+/* Keep failed sends recoverable without replacing the next draft. */
+.ss-unsent-drafts{min-width:0;margin:0 0 8px;border:1px solid var(--border-2);border-radius:10px;background:var(--surface);color:var(--text-2);font-size:12px}
+.ss-unsent-drafts>summary{padding:9px 12px;cursor:pointer;font-weight:600}
+.ss-unsent-drafts>summary span{margin-left:5px;color:var(--text-3)}
+.ss-unsent-drafts>div{display:grid;gap:8px;max-height:180px;overflow-y:auto;padding:0 12px 12px}
+.ss-unsent-drafts>div>div{min-width:0;padding-top:8px;border-top:1px solid var(--border)}
+.ss-unsent-drafts p{margin:0 0 8px;white-space:pre-wrap;overflow-wrap:anywhere}
+.ss-unsent-drafts button{min-height:36px;padding:5px 10px;border:1px solid var(--border-2);border-radius:7px;background:var(--surface-2);color:var(--text-1);font:inherit}

@@ -1,0 +1,329 @@
+{
+  "date": "2026-11-22",
+  "sourceBase": "0c853cc0fc46c7bfc0c85d551be443f38292efb7",
+  "scope": [
+    "Channels",
+    "Direct messages",
+    "Group conversations",
+    "Shared popovers",
+    "Feed badge details"
+  ],
+  "status": "Private verification passed; production verification pending",
+  "tests": {
+    "interaction": 58,
+    "shared": 18,
+    "production": 134,
+    "typecheck": "passed",
+    "eslint": "passed",
+    "optimizedBuild": "passed"
+  },
+  "privateChecks": [
+    {
+      "label": "private-DM-desktop-light-GIF",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 907,
+          "inside": true,
+          "label": "Choose a GIF",
+          "left": 1030,
+          "right": 1420,
+          "top": 455
+        }
+      ],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "label": "private-DM-desktop-light-GIF-expanded",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 957,
+          "inside": true,
+          "label": "Choose a GIF",
+          "left": 1030,
+          "right": 1420,
+          "top": 455
+        }
+      ],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "label": "private-DM-desktop-dark-GIF",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 907,
+          "inside": true,
+          "label": "Choose a GIF",
+          "left": 1030,
+          "right": 1420,
+          "top": 405
+        }
+      ],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "label": "private-DM-phone-dark-GIF",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 732.0000457763672,
+          "inside": true,
+          "label": "Choose a GIF",
+          "left": 8,
+          "right": 362,
+          "top": 123.66667175292967
+        }
+      ],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "label": "private-DM-phone-light-GIF",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 732.0000457763672,
+          "inside": true,
+          "label": "Choose a GIF",
+          "left": 8,
+          "right": 362,
+          "top": 123.66667175292967
+        }
+      ],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "label": "private-DM-phone-light-GIF-final",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 732.0000457763672,
+          "inside": true,
+          "label": "Choose a GIF",
+          "left": 8,
+          "right": 372,
+          "top": 123.66667175292967
+        }
+      ],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "label": "private-DM-send-edit-tools-soft-delete",
+      "pass": true
+    },
+    {
+      "label": "private-channel-phone-light",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "label": "private-channel-phone-dark",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "label": "private-channel-desktop-dark",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "label": "private-channel-desktop-light",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "label": "private-channel-send-edit-reply",
+      "pass": true
+    },
+    {
+      "label": "private-group-desktop-light",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "label": "private-group-desktop-dark",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "label": "private-group-phone-dark",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "label": "private-group-phone-light",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "label": "private-group-phone-light-GIF",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 732,
+          "inside": true,
+          "label": "Choose a GIF",
+          "left": 8,
+          "right": 372,
+          "top": 237
+        }
+      ],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "label": "private-group-send-edit-reply-cancel-members",
+      "pass": true
+    },
+    {
+      "label": "private-Feed-phone-light-badges",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 585.3125,
+          "inside": true,
+          "label": "Member badges",
+          "left": 68.29167175292969,
+          "right": 368.2916717529297,
+          "top": 401.1875
+        }
+      ],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "label": "private-Feed-phone-dark-badges",
+      "broken": 0,
+      "connectionError": false,
+      "height": 844,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 585.3125,
+          "inside": true,
+          "label": "Member badges",
+          "left": 68.29167175292969,
+          "right": 368.2916717529297,
+          "top": 401.1875
+        }
+      ],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "label": "private-Feed-desktop-dark-badges",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 706.9791870117188,
+          "inside": true,
+          "label": "Member badges",
+          "left": 340.9583435058594,
+          "right": 640.9583435058594,
+          "top": 522.8541870117188
+        }
+      ],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "label": "private-Feed-desktop-light-badges",
+      "broken": 0,
+      "connectionError": false,
+      "height": 1000,
+      "overflow": false,
+      "panels": [
+        {
+          "bottom": 706.9791870117188,
+          "inside": true,
+          "label": "Member badges",
+          "left": 340.9583435058594,
+          "right": 640.9583435058594,
+          "top": 522.8541870117188
+        }
+      ],
+      "theme": "light",
+      "width": 1440
+    }
+  ],
+  "limits": [
+    "Browser viewports, not physical phone certification.",
+    "Writes and delayed/offline cases use private fixtures; no messages or invitations were sent to real members.",
+    "No production schema, collectors, financial accounts or product alerts changed.",
+    "Existing 240 released surfaces and ten owner approvals preserved."
+  ]
+}

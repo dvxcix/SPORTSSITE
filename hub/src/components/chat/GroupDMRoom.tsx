@@ -2,7 +2,7 @@
 
 import { scrollMessagePane } from "@/lib/messageScroll";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -33,6 +33,10 @@ import { GifPicker } from "@/components/social/GifPicker";
 import { SafeImage } from "@/components/ui/SafeImage";
 import { uploadMedia } from "@/lib/uploadMedia";
 import { notify } from "@/lib/notify";
+import { loadGroupHistory } from "@/lib/conversationHistory";
+import { useMessageDraft } from "@/components/chat/useMessageDraft";
+import { useMessageRecovery } from "@/components/chat/useMessageRecovery";
+import { UnsentDrafts } from "@/components/chat/UnsentDrafts";
 
 type GroupUser = {
   id: string;
@@ -98,7 +102,10 @@ export function GroupDMRoom({
   const [showMembers, setShowMembers] = useState(false);
   const [memberQuery, setMemberQuery] = useState("");
   const [memberResults, setMemberResults] = useState<FoundUser[]>([]);
-  const [text, setText] = useState("");
+  const { text, setText, snapshot, clearSubmitted, retainFailed, unsent, insertUnsent } = useMessageDraft();
+  const sendLock = useRef(false);
+  const load = useCallback((signal: AbortSignal) => loadGroupHistory(supabase, conversation.id, signal), [supabase, conversation.id]);
+  const { connectionError, recover, setConnectionError } = useMessageRecovery({ messages, setMessages, load, scope: conversation.id });
   const [mediaUrl, setMediaUrl] = useState("");
   const [replyingTo, setReplyingTo] = useState<GroupMessage | null>(null);
   const [editing, setEditing] = useState<GroupMessage | null>(null);
@@ -119,6 +126,7 @@ export function GroupDMRoom({
   const isOwner = conversation.owner_id === currentUserId;
 
   useEffect(() => {
+    let active = true;
     const channel = supabase
       .channel(`group-dm:${conversation.id}`)
       .on(
@@ -131,6 +139,8 @@ export function GroupDMRoom({
         },
         async (payload) => {
           const next = payload.new as GroupMessage;
+          if (!active) return;
+          setMessages(current => current.some(message => message.id === next.id) ? current : [...current, next].sort((a,b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)));
           const { data: sender } = await supabase
             .from("users")
             .select(
@@ -138,11 +148,8 @@ export function GroupDMRoom({
             )
             .eq("id", next.sender_id)
             .maybeSingle();
-          setMessages((current) =>
-            current.some((message) => message.id === next.id)
-              ? current
-              : [...current, { ...next, sender } as GroupMessage],
-          );
+          if (!active) return;
+          setMessages(current => current.map(message => message.id === next.id ? { ...message, sender: sender ?? message.sender } : message));
         },
       )
       .on(
@@ -162,11 +169,18 @@ export function GroupDMRoom({
           );
         },
       )
-      .subscribe();
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'group_messages', filter: `conversation_id=eq.${conversation.id}` }, payload => {
+        if (active) setMessages(current => current.filter(message => message.id !== payload.old.id));
+      })
+      .subscribe(status => {
+        if (active && status === 'SUBSCRIBED') void recover();
+        if (active && (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT')) setConnectionError(true);
+      });
     return () => {
+      active = false;
       void supabase.removeChannel(channel);
     };
-  }, [conversation.id, supabase]);
+  }, [conversation.id, supabase, recover, setConnectionError]);
 
   useEffect(() => {
     const channel = supabase
@@ -263,32 +277,32 @@ export function GroupDMRoom({
   }
   async function send() {
     const content = text.trim();
-    if ((!content && !mediaUrl) || sending || uploading) return;
+    if ((!content && !mediaUrl) || sendLock.current || uploading) return;
+    sendLock.current = true;
+    const submitted = snapshot();
+    const draft = text;
     setSending(true);
     setError("");
+    let rollbackEdit = () => {};
     try {
     if (editing) {
-      const before = messages;
-      setMessages((current) =>
-        current.map((message) =>
-          message.id === editing.id
-            ? { ...message, content, edited_at: new Date().toISOString() }
-            : message,
-        ),
-      );
+      const editedAt = new Date().toISOString();
+      const original = messages.find(message => message.id === editing.id) ?? editing;
+      const optimistic = { ...original, content, edited_at: editedAt };
+      setMessages(current => current.map(message => message.id === editing.id ? optimistic : message));
+      rollbackEdit = () => setMessages(current => current.map(message => message === optimistic ? original : message));
       const { error: editError } = await supabase
         .from("group_messages")
-        .update({ content, edited_at: new Date().toISOString() })
+        .update({ content, edited_at: editedAt })
         .eq("id", editing.id)
         .eq("sender_id", currentUserId);
-      setSending(false);
       if (editError) {
-        setMessages(before);
+        rollbackEdit();
         setError("Edit not saved. Try again.");
         return;
       }
-      setText("");
-      setEditing(null);
+      if (clearSubmitted(submitted)) setEditing(null);
+      else setEditing({ ...editing, content, edited_at: editedAt });
       return;
     }
     const { data, error: sendError } = await supabase
@@ -304,8 +318,8 @@ export function GroupDMRoom({
         "id,conversation_id,sender_id,content,media_urls,reply_to_id,edited_at,is_deleted,created_at",
       )
       .single();
-    setSending(false);
     if (sendError || !data) {
+      retainFailed(submitted, draft);
       setError("Message not sent. Try again.");
       return;
     }
@@ -314,7 +328,7 @@ export function GroupDMRoom({
         ? current
         : [...current, data as GroupMessage],
     );
-    setText("");
+    clearSubmitted(submitted);
     setMediaUrl("");
     setReplyingTo(null);
     for (const member of memberList)
@@ -327,23 +341,21 @@ export function GroupDMRoom({
           link: `/messages/group/${conversation.id}`,
           targetId: conversation.id,
           targetType: "group_conversation",
-        });
+        }).catch(() => {});
     } catch {
-      if (editing) setMessages(current => current.map(message => message.id === editing.id ? { ...message, content: editing.content, edited_at: editing.edited_at } : message));
+      if (!editing) retainFailed(submitted, draft);
+      rollbackEdit();
       setError(editing ? "Edit not saved. Try again." : "Message not sent. Try again.");
     } finally {
+      sendLock.current = false;
       setSending(false);
     }
   }
   async function deleteMessage(message: GroupMessage) {
-    const before = messages;
-    setMessages((current) =>
-      current.map((item) =>
-        item.id === message.id
-          ? { ...item, content: "", media_urls: [], is_deleted: true }
-          : item,
-      ),
-    );
+    const original = messages.find(item => item.id === message.id) ?? message;
+    const optimistic = { ...original, content: "", media_urls: [], is_deleted: true };
+    setMessages(current => current.map(item => item.id === message.id ? optimistic : item));
+    try {
     const { error: deleteError } = await supabase
       .from("group_messages")
       .update({
@@ -354,8 +366,9 @@ export function GroupDMRoom({
       })
       .eq("id", message.id)
       .eq("sender_id", currentUserId);
-    if (deleteError) {
-      setMessages(before);
+    if (deleteError) throw deleteError;
+    } catch {
+      setMessages(current => current.map(item => item === optimistic ? original : item));
       setError("Message not deleted. Try again.");
     }
   }
@@ -554,6 +567,7 @@ export function GroupDMRoom({
           </div>
         </section>
       )}
+      {connectionError && <p role="status" className="ss-chat-connection-status">Connection interrupted. <button type="button" onClick={() => void recover()}>Reconnect</button></p>}
       {error && (
         <p className="ss-dm-error" role="alert">
           {error}
@@ -653,6 +667,7 @@ export function GroupDMRoom({
                     <>
                       <button
                         type="button"
+                        disabled={sending}
                         onClick={() => {
                           setEditing(null);
                           setReplyingTo(message);
@@ -666,6 +681,7 @@ export function GroupDMRoom({
                         <>
                           <button
                             type="button"
+                            disabled={sending}
                             onClick={() => {
                               setReplyingTo(null);
                               setEditing(message);
@@ -679,6 +695,7 @@ export function GroupDMRoom({
                           <button
                             type="button"
                             className="is-danger"
+                            disabled={sending}
                             onClick={() => void deleteMessage(message)}
                           >
                             <Trash2 size={10} />
@@ -696,6 +713,7 @@ export function GroupDMRoom({
         <div ref={bottomRef} />
       </div>
       <div className="ss-dm-composer">
+        <UnsentDrafts drafts={unsent} disabled={text.length >= 999} onInsert={insertUnsent}/>
         {editing ? (
           <div className="ss-dm-replying is-editing">
             <Pencil size={12} />
@@ -708,7 +726,7 @@ export function GroupDMRoom({
                 setEditing(null);
                 setText("");
               }}
-              aria-label="Cancel edit"
+              disabled={sending} aria-label="Cancel edit"
             >
               <X size={14} />
             </button>
@@ -723,7 +741,7 @@ export function GroupDMRoom({
             <button
               type="button"
               onClick={() => setReplyingTo(null)}
-              aria-label="Cancel reply"
+              disabled={sending} aria-label="Cancel reply"
             >
               <X size={14} />
             </button>
@@ -735,7 +753,7 @@ export function GroupDMRoom({
             <button
               type="button"
               onClick={() => setMediaUrl("")}
-              aria-label="Remove image"
+              disabled={sending} aria-label="Remove image"
             >
               <X size={13} />
             </button>
@@ -747,7 +765,7 @@ export function GroupDMRoom({
             value={text}
             onChange={(event) => setText(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
+              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
                 event.preventDefault();
                 void send();
               }
@@ -773,13 +791,13 @@ export function GroupDMRoom({
             type="button"
             className="ss-chat-attach"
             onClick={() => fileRef.current?.click()}
-            disabled={uploading}
+            disabled={sending || uploading}
             aria-label="Attach image"
           >
             <ImageIcon size={16} />
           </button>
           <EmojiPicker onSelect={insertAtCursor} />
-          <GifPicker uploadKind="messages" onSelect={setMediaUrl} />
+          <GifPicker uploadKind="messages" disabled={sending || uploading} onSelect={url => { if (!sendLock.current) setMediaUrl(url) }} />
           <button
             type="button"
             className="ss-dm-send"

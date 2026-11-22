@@ -2,7 +2,7 @@
 
 import { scrollMessagePane } from '@/lib/messageScroll'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { ArrowDown, ArrowLeft, Forward, Image as ImageIcon, LockKeyhole, Pencil, Pin, Reply, Search, Send, Sparkles, Trash2, X } from 'lucide-react'
@@ -18,6 +18,10 @@ import { GifPicker } from '@/components/social/GifPicker'
 import { MessageReactionBar } from '@/components/chat/MessageReactionBar'
 import { useMessageInteractionState } from '@/components/chat/useMessageInteractionState'
 import { DMConversationTools, type DMToolMode } from '@/components/chat/DMConversationTools'
+import { loadDmHistory } from '@/lib/conversationHistory'
+import { useMessageDraft } from '@/components/chat/useMessageDraft'
+import { useMessageRecovery } from '@/components/chat/useMessageRecovery'
+import { UnsentDrafts } from '@/components/chat/UnsentDrafts'
 
 interface DMRoomProps {
   partner: { id: string; username: string; display_name?: string; avatar_url?: string; avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle; avatar_ring_color?: string; is_verified?: boolean }
@@ -42,7 +46,8 @@ export type DMMessage = {
 
 export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedMessageIds = [] }: DMRoomProps) {
   const [messages, setMessages] = useState(initialMessages)
-  const [text, setText] = useState('')
+  const { text, setText, snapshot, clearSubmitted, retainFailed, unsent, insertUnsent } = useMessageDraft()
+  const sendLock = useRef(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [replyingTo, setReplyingTo] = useState<DMMessage | null>(null)
@@ -59,6 +64,8 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
   const imageInputRef = useRef<HTMLInputElement>(null)
   const atBottomRef = useRef(true)
   const supabase = useMemo(() => createClient(), [])
+  const load = useCallback((signal: AbortSignal) => loadDmHistory(supabase, currentUserId, partner.id, signal), [supabase, currentUserId, partner.id])
+  const { connectionError, recover, setConnectionError } = useMessageRecovery({ messages, setMessages, load, scope: partner.id })
   const messageIds = useMemo(() => messages.map(message => message.id), [messages])
   const { reactions, typingUsers, partnerLastReadAt, notifyTyping, toggleReaction, markRead } = useMessageInteractionState({
     contextKey: `dm:${[currentUserId, partner.id].sort().join(':')}`,
@@ -97,15 +104,18 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
   }, [currentUserId, partner.id, supabase])
 
   useEffect(() => {
+    let active = true
     const channel = supabase.channel(`dm-${[currentUserId, partner.id].sort().join('-')}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'messages',
         filter: `dm_recipient_id=eq.${currentUserId}`,
       }, async (payload) => {
         const incoming = payload.new as DMMessage
-        if (incoming.sender_id !== partner.id) return
+        if (!active || incoming.sender_id !== partner.id) return
+        setMessages(current => current.some(message => message.id === incoming.id) ? current : [...current, incoming].sort((a,b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)))
         const { data } = await supabase.from('users').select('username, display_name, avatar_url, avatar_ring_style, avatar_ring_color').eq('id', incoming.sender_id).single()
-        setMessages(current => current.some(message => message.id === incoming.id) ? current : [...current, { ...incoming, sender: data }])
+        if (!active) return
+        setMessages(current => current.map(message => message.id === incoming.id ? { ...message, sender: data ?? message.sender } : message))
         if (!atBottomRef.current) setUnseenCount(count => count + 1)
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, payload => {
@@ -117,9 +127,12 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
         const removed = payload.old as Pick<DMMessage, 'id'>
         setMessages(current => current.filter(message => message.id !== removed.id))
       })
-      .subscribe()
-    return () => { void supabase.removeChannel(channel) }
-  }, [currentUserId, partner.id, supabase])
+      .subscribe(status => {
+        if (active && status === 'SUBSCRIBED') void recover()
+        if (active && (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT')) setConnectionError(true)
+      })
+    return () => { active = false; void supabase.removeChannel(channel) }
+  }, [currentUserId, partner.id, supabase, recover, setConnectionError])
 
   function handleScroll() {
     const viewport = scrollRef.current
@@ -166,22 +179,28 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
   }
 
   async function send() {
-    if ((!text.trim() && !imageUrl) || sending || uploadingImage) return
+    if ((!text.trim() && !imageUrl) || sendLock.current || uploadingImage) return
+    sendLock.current = true
+    const submitted = snapshot()
+    const draft = text
     setSending(true)
     setError('')
     const content = text.trim()
+    let rollbackEdit = () => {}
     try {
       if (editingMessage) {
-        const previousContent = editingMessage.content
         const editedAt = new Date().toISOString()
-        setMessages(current => current.map(message => message.id === editingMessage.id ? { ...message, content, edited_at: editedAt } : message))
+        const original = messages.find(message => message.id === editingMessage.id) ?? editingMessage
+        const optimistic = { ...original, content, edited_at: editedAt }
+        setMessages(current => current.map(message => message.id === editingMessage.id ? optimistic : message))
+        rollbackEdit = () => setMessages(current => current.map(message => message === optimistic ? original : message))
         const { error: editError } = await supabase.from('messages').update({ content, edited_at: editedAt }).eq('id', editingMessage.id).eq('sender_id', currentUserId)
         if (editError) {
-          setMessages(current => current.map(message => message.id === editingMessage.id ? { ...message, content: previousContent, edited_at: editingMessage.edited_at } : message))
+          rollbackEdit()
           setError('Edit not saved. Try again.')
         } else {
-          setText('')
-          setEditingMessage(null)
+          if (clearSubmitted(submitted)) setEditingMessage(null)
+          else setEditingMessage({ ...editingMessage, content, edited_at: editedAt })
         }
         return
       }
@@ -190,10 +209,11 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
         .select('id, content, created_at, sender_id, reply_to_id, media_urls')
         .single()
       if (err || !data) {
+        retainFailed(submitted, draft)
         setError(err?.code === '42501' ? "Couldn't send that message — try again in a moment." : 'Message failed to send — please try again.')
         return
       }
-      setText('')
+      clearSubmitted(submitted)
       setImageUrl('')
       setReplyingTo(null)
       setMessages(current => current.some(message => message.id === data.id)
@@ -208,20 +228,23 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
         .then(() => {}, () => {})
       requestAnimationFrame(jumpToLatest)
 
-      const { data: me } = await supabase.from('users').select('username').eq('id', currentUserId).single()
-      void notify(supabase, {
+      void Promise.resolve(supabase.from('users').select('username').eq('id', currentUserId).single()).then(({ data: me }) => notify(supabase, {
         userId: partner.id, actorId: currentUserId, type: 'message',
         message: 'sent you a message', link: me?.username ? `/messages/${me.username}` : null,
         targetId: currentUserId, targetType: 'user',
-      })
+      })).catch(() => {})
     } catch {
-      setError('Message failed to send — please try again.')
+      rollbackEdit()
+      if (!editingMessage) retainFailed(submitted, draft)
+      setError(editingMessage ? 'Edit not saved. Try again.' : 'Message failed to send — please try again.')
     } finally {
+      sendLock.current = false
       setSending(false)
     }
   }
 
   function beginEdit(message: DMMessage) {
+    if (sendLock.current) return
     setReplyingTo(null)
     setImageUrl('')
     setEditingMessage(message)
@@ -231,10 +254,13 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
 
   async function deleteMessage(message: DMMessage) {
     if (message.sender_id !== currentUserId) return
-    const previous = messages
-    setMessages(current => current.map(item => item.id === message.id ? { ...item, content: '', media_urls: [], is_deleted: true } : item))
-    const { error: deleteError } = await supabase.from('messages').update({ content: '', media_urls: [], is_deleted: true, edited_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', currentUserId)
-    if (deleteError) { setMessages(previous); setError('Message not deleted. Try again.') }
+    const original = messages.find(item => item.id === message.id) ?? message
+    const optimistic = { ...original, content: '', media_urls: [], is_deleted: true }
+    setMessages(current => current.map(item => item.id === message.id ? optimistic : item))
+    try {
+      const { error: deleteError } = await supabase.from('messages').update({ content: '', media_urls: [], is_deleted: true, edited_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', currentUserId)
+      if (deleteError) throw deleteError
+    } catch { setMessages(current => current.map(item => item === optimistic ? original : item)); setError('Message not deleted. Try again.') }
   }
 
   async function uploadImage(file: File) {
@@ -275,6 +301,7 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
           variant="button"
         />
       </div>
+      {connectionError && <p role="status" className="ss-chat-connection-status">Connection interrupted. <button type="button" onClick={() => void recover()}>Reconnect</button></p>}
       {error && <p className="ss-dm-error" role="alert">{error}</p>}
 
       {/* Messages */}
@@ -293,7 +320,7 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
                 {m.forwarded_from_id ? <span className="ss-dm-forwarded"><Forward size={10}/> Forwarded</span> : null}<div className={`ss-dm-bubble ${m.is_deleted ? 'is-deleted' : ''}`}>{m.is_deleted ? 'Message deleted' : <><LinkifiedText text={m.content || ''} />{m.edited_at ? <small className="ss-chat-edited">edited</small> : null}</>}</div>
                 {!m.is_deleted && m.media_urls?.[0] && <SafeImage src={m.media_urls[0]} alt="" className="ss-dm-media"/>}
                 <MessageReactionBar reactions={reactions[m.id]} disabled={m.is_deleted} onToggle={emoji => void toggleReaction(m.id, emoji)}/>
-                <div className="ss-dm-message-meta"><time>{new Date(m.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time>{isMe && partnerLastReadAt && new Date(partnerLastReadAt) >= new Date(m.created_at) ? <span className="ss-dm-seen">Seen</span> : null}{!m.is_deleted ? <><button type="button" onClick={() => { setEditingMessage(null); setReplyingTo(m); textInputRef.current?.focus() }} aria-label="Reply to message"><Reply size={11}/> Reply</button><button type="button" onClick={() => void togglePin(m.id)} aria-pressed={pinnedMessageIds.has(m.id)} aria-label={pinnedMessageIds.has(m.id) ? 'Unpin message' : 'Pin message'}><Pin size={10}/> {pinnedMessageIds.has(m.id) ? 'Pinned' : 'Pin'}</button><Link href={`/messages/new?forward=${m.id}`} aria-label="Forward message"><Forward size={10}/> Forward</Link>{isMe ? <><button type="button" onClick={() => beginEdit(m)} aria-label="Edit message"><Pencil size={10}/> Edit</button><button type="button" className="is-danger" onClick={() => void deleteMessage(m)} aria-label="Delete message"><Trash2 size={10}/> Delete</button></> : null}</> : null}</div>
+                <div className="ss-dm-message-meta"><time>{new Date(m.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</time>{isMe && partnerLastReadAt && new Date(partnerLastReadAt) >= new Date(m.created_at) ? <span className="ss-dm-seen">Seen</span> : null}{!m.is_deleted ? <><button type="button" onClick={() => { setEditingMessage(null); setReplyingTo(m); textInputRef.current?.focus() }} disabled={sending} aria-label="Reply to message"><Reply size={11}/> Reply</button><button type="button" onClick={() => void togglePin(m.id)} aria-pressed={pinnedMessageIds.has(m.id)} aria-label={pinnedMessageIds.has(m.id) ? 'Unpin message' : 'Pin message'}><Pin size={10}/> {pinnedMessageIds.has(m.id) ? 'Pinned' : 'Pin'}</button><Link href={`/messages/new?forward=${m.id}`} aria-label="Forward message"><Forward size={10}/> Forward</Link>{isMe ? <><button type="button" onClick={() => beginEdit(m)} disabled={sending} aria-label="Edit message"><Pencil size={10}/> Edit</button><button type="button" className="is-danger" disabled={sending} onClick={() => void deleteMessage(m)} aria-label="Delete message"><Trash2 size={10}/> Delete</button></> : null}</> : null}</div>
               </div>
             </div>
           )
@@ -306,14 +333,15 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
 
       {/* Input */}
       <div className="ss-dm-composer">
-        {editingMessage ? <div className="ss-dm-replying is-editing"><Pencil size={12}/><div><span>Editing message</span><p>Save changes with Enter</p></div><button type="button" onClick={() => { setEditingMessage(null); setText('') }} aria-label="Cancel edit"><X size={14}/></button></div> : replyingTo ? <div className="ss-dm-replying"><Reply size={12}/><div><span>Replying to {replyingTo.sender_id === currentUserId ? 'yourself' : partner.display_name || partner.username}</span><p><EmojiText text={replyingTo.content || ''} /></p></div><button type="button" onClick={() => setReplyingTo(null)} aria-label="Cancel reply"><X size={14}/></button></div> : null}
-        {imageUrl && <div className="ss-chat-media-preview"><SafeImage src={imageUrl} alt="Upload preview"/><button type="button" onClick={() => setImageUrl('')} aria-label="Remove image"><X size={13}/></button></div>}
+        <UnsentDrafts drafts={unsent} disabled={text.length >= 999} onInsert={insertUnsent}/>
+        {editingMessage ? <div className="ss-dm-replying is-editing"><Pencil size={12}/><div><span>Editing message</span><p>Save changes with Enter</p></div><button type="button" onClick={() => { setEditingMessage(null); setText('') }} disabled={sending} aria-label="Cancel edit"><X size={14}/></button></div> : replyingTo ? <div className="ss-dm-replying"><Reply size={12}/><div><span>Replying to {replyingTo.sender_id === currentUserId ? 'yourself' : partner.display_name || partner.username}</span><p><EmojiText text={replyingTo.content || ''} /></p></div><button type="button" onClick={() => setReplyingTo(null)} disabled={sending} aria-label="Cancel reply"><X size={14}/></button></div> : null}
+        {imageUrl && <div className="ss-chat-media-preview"><SafeImage src={imageUrl} alt="Upload preview"/><button type="button" onClick={() => setImageUrl('')} disabled={sending} aria-label="Remove image"><X size={13}/></button></div>}
         <div className="ss-dm-composer-row">
           <textarea
             ref={textInputRef}
             value={text}
             onChange={e => { setText(e.target.value); notifyTyping(); if (error) setError('') }}
-            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
+            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && (e.preventDefault(), send())}
             placeholder={editingMessage ? 'Edit message' : `Message @${partner.username}…`}
             className="ss-dm-input"
             rows={1}
@@ -321,9 +349,9 @@ export function DMRoom({ partner, currentUserId, initialMessages, initialPinnedM
             aria-label={`Message ${partner.display_name || partner.username}`}
           />
           <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void uploadImage(file); event.target.value = '' }}/>
-          <button type="button" className="ss-chat-attach" onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} aria-label="Attach image"><ImageIcon size={16}/></button>
+          <button type="button" className="ss-chat-attach" onClick={() => imageInputRef.current?.click()} disabled={sending || uploadingImage} aria-label="Attach image"><ImageIcon size={16}/></button>
           <EmojiPicker onSelect={insertAtCursor} />
-          <GifPicker uploadKind="messages" onSelect={setImageUrl}/>
+          <GifPicker uploadKind="messages" disabled={sending || uploadingImage} onSelect={url => { if (!sendLock.current) setImageUrl(url) }}/>
           <button type="button" onClick={send} disabled={(!text.trim() && !imageUrl) || sending || uploadingImage}
             className="ss-dm-send" aria-label="Send message">
             <Send size={16} />

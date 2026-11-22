@@ -19,7 +19,7 @@ function usableGifUrl(value: string) {
   } catch { return false }
 }
 
-export function GifPicker({ onSelect, uploadKind = 'posts' }: { onSelect: (url: string) => void; uploadKind?: 'posts' | 'messages' }) {
+export function GifPicker({ onSelect, uploadKind = 'posts', disabled = false }: { onSelect: (url: string) => void; uploadKind?: 'posts' | 'messages'; disabled?: boolean }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<GifResult[]>([])
@@ -61,6 +61,7 @@ export function GifPicker({ onSelect, uploadKind = 'posts' }: { onSelect: (url: 
   }, [open, query, retryNonce])
 
   function choose(value: string, result?: GifResult) {
+    if (disabled) return
     const updated = [value, ...recents.filter(item => item !== value)].slice(0, 8)
     setRecents(updated)
     try { localStorage.setItem(RECENTS_KEY, JSON.stringify(updated)) } catch { /* storage can be unavailable */ }
@@ -102,8 +103,8 @@ export function GifPicker({ onSelect, uploadKind = 'posts' }: { onSelect: (url: 
   }
 
   return <div ref={rootRef} className="ss-gif-picker">
-    <button type="button" className="ss-gif-trigger" onClick={() => setOpen(value => !value)} aria-label="Browse GIFs" aria-expanded={open}>GIF</button>
-    <FloatingSurface open={open} anchorRef={rootRef} onClose={() => setOpen(false)} className="ss-gif-panel" width={390} mobileSheet ariaLabel="Choose a GIF">
+    <button type="button" className="ss-gif-trigger" disabled={disabled} onClick={() => setOpen(value => !value)} aria-label="Browse GIFs" aria-expanded={open}>GIF</button>
+    <FloatingSurface open={open && !disabled} anchorRef={rootRef} onClose={() => setOpen(false)} className="ss-gif-panel" width={390} mobileSheet ariaLabel="Choose a GIF">
       <header><span><Sparkles size={15}/><strong>Choose a GIF</strong></span><button type="button" onClick={() => setOpen(false)} aria-label="Close GIF picker"><X size={16}/></button></header>
       <label className="ss-gif-search"><Search size={15}/><input autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder="Search thousands of GIFs" aria-label="Search GIFs"/>{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear GIF search"><X size={13}/></button>}</label>
       {!query && <div className="ss-gif-discovery" aria-label="GIF categories">{DISCOVERY.map(item => <button type="button" key={item} onClick={() => setQuery(item === 'Trending' ? '' : item)}>{item}</button>)}</div>}

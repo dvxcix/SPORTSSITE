@@ -97,6 +97,7 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(f
       onClick={event => { refreshMention(); onClick?.(event) }}
       onKeyUp={event => { if (!['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab'].includes(event.key)) refreshMention(); onKeyUp?.(event) }}
       onKeyDown={event => {
+        if (event.nativeEvent.isComposing) return
         if (open && results.length) {
           if (event.key === 'ArrowDown') { event.preventDefault(); setActiveIndex(index => (index + 1) % results.length); return }
           if (event.key === 'ArrowUp') { event.preventDefault(); setActiveIndex(index => (index - 1 + results.length) % results.length); return }

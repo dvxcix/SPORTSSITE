@@ -4,7 +4,7 @@ import { scrollMessagePane } from '@/lib/messageScroll'
 import { CHANNEL_MESSAGE_COLUMNS, loadChannelHistory } from '@/lib/channelHistory'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDown, Image as ImageIcon, Pencil, Reply, Send, Trash2, TrendingUp, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Message } from '@/lib/supabase/types'
@@ -20,6 +20,9 @@ import { SafeImage } from '@/components/ui/SafeImage'
 import { GifPicker } from '@/components/social/GifPicker'
 import { MessageReactionBar } from '@/components/chat/MessageReactionBar'
 import { useMessageInteractionState } from '@/components/chat/useMessageInteractionState'
+import { useMessageDraft } from '@/components/chat/useMessageDraft'
+import { useMessageRecovery } from '@/components/chat/useMessageRecovery'
+import { UnsentDrafts } from '@/components/chat/UnsentDrafts'
 
 interface ChatRoomProps {
   channelId: string
@@ -34,10 +37,10 @@ interface ChatRoomProps {
 
 export function ChatRoom({ channelId, channelSlug, channelName, initialMessages, currentUserId, canModerate = false, readOnly = false, contextHref }: ChatRoomProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
-  const [input, setInput] = useState('')
+  const { text: input, setText: setInput, snapshot, clearSubmitted, retainFailed, unsent, insertUnsent } = useMessageDraft()
+  const sendLock = useRef(false)
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
-  const [connectionError, setConnectionError] = useState(false)
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [editingMessage, setEditingMessage] = useState<Message | null>(null)
   const [imageUrl, setImageUrl] = useState('')
@@ -49,8 +52,9 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const atBottomRef = useRef(true)
-  const recoverRef = useRef<() => void>(() => {})
   const supabase = useMemo(() => createClient(), [])
+  const load = useCallback((signal: AbortSignal) => loadChannelHistory(supabase, channelId, 80, signal), [supabase, channelId])
+  const { connectionError, recover, setConnectionError } = useMessageRecovery({ messages, setMessages, load, scope: channelId })
   const messageIds = useMemo(() => messages.map(message => message.id), [messages])
   const { reactions, typingUsers, notifyTyping, toggleReaction, markRead } = useMessageInteractionState({
     contextKey: `channel:${channelId}`,
@@ -73,38 +77,21 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
 
   useEffect(() => {
     let active = true
-    let recovering = false
-    async function recover() {
-      if (recovering || document.visibilityState === 'hidden') return
-      recovering = true
-      const startedAt = Date.now()
-      try {
-        const recent = await loadChannelHistory(supabase, channelId)
-        if (active) {
-          setMessages(current => {
-            const byId = new Map(recent.map(message => [message.id, message]))
-            for (const message of current) if (new Date(message.edited_at || message.created_at).getTime() >= startedAt) byId.set(message.id, message)
-            return [...byId.values()].sort((a,b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
-          })
-          setConnectionError(false)
-        }
-      } catch { if (active) setConnectionError(true) }
-      finally { recovering = false }
-    }
-    recoverRef.current = () => { void recover() }
     const realtimeChannel = supabase
       .channel(`chat:${channelId}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}`,
       }, async (payload) => {
         const newMessage = payload.new as Message
+        if (!active) return
+        setMessages(previous => previous.some(message => message.id === newMessage.id) ? previous : [...previous, newMessage].sort((a,b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)))
         const { data: sender } = await supabase
           .from('users')
           .select('id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,is_verified,account_type')
           .eq('id', newMessage.sender_id)
           .single()
-        const hydrated = { ...newMessage, sender: sender as Message['sender'] ?? undefined }
-        setMessages(previous => previous.some(message => message.id === hydrated.id) ? previous : [...previous, hydrated])
+        if (!active) return
+        setMessages(previous => previous.map(message => message.id === newMessage.id ? { ...message, sender: sender as Message['sender'] ?? message.sender } : message))
         if (!atBottomRef.current && newMessage.sender_id !== currentUserId) setUnseenCount(count => count + 1)
         if (newMessage.sender_id !== currentUserId && document.visibilityState !== 'visible') {
           const senderName = sender?.display_name || sender?.username || 'Someone'
@@ -124,13 +111,11 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
         setMessages(previous => previous.filter(message => message.id !== removed.id))
       })
       .subscribe(status => {
-        if (status === 'SUBSCRIBED') void recover()
+        if (active && status === 'SUBSCRIBED') void recover()
         if (active && (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT')) setConnectionError(true)
       })
-    document.addEventListener('visibilitychange', recover)
-    window.addEventListener('online', recover)
-    return () => { active = false; document.removeEventListener('visibilitychange', recover); window.removeEventListener('online', recover); void supabase.removeChannel(realtimeChannel) }
-  }, [channelId, channelName, currentUserId, supabase])
+    return () => { active = false; void supabase.removeChannel(realtimeChannel) }
+  }, [channelId, channelName, currentUserId, supabase, recover, setConnectionError])
 
   useEffect(() => {
     if (atBottom) scrollMessagePane(scrollRef.current, undefined, 'smooth')
@@ -163,25 +148,30 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
 
   async function sendMessage(event: React.FormEvent) {
     event.preventDefault()
-    if (readOnly || (!input.trim() && !imageUrl) || !currentUserId || sending || uploadingImage) return
+    if (readOnly || (!input.trim() && !imageUrl) || !currentUserId || sendLock.current || uploadingImage) return
+    sendLock.current = true
+    const submitted = snapshot()
+    const draft = input
     const content = input.trim()
     setSendError('')
     setSending(true)
+    let rollbackEdit = () => {}
     try {
     if (editingMessage) {
-      const previousContent = editingMessage.content
       const editedAt = new Date().toISOString()
-      setMessages(previous => previous.map(message => message.id === editingMessage.id ? { ...message, content, edited_at: editedAt } : message))
+      const original = messages.find(message => message.id === editingMessage.id) ?? editingMessage
+      const optimistic = { ...original, content, edited_at: editedAt }
+      setMessages(previous => previous.map(message => message.id === editingMessage.id ? optimistic : message))
+      rollbackEdit = () => setMessages(previous => previous.map(message => message === optimistic ? original : message))
       const { error } = await supabase.from('messages').update({ content, edited_at: editedAt }).eq('id', editingMessage.id).eq('sender_id', currentUserId)
       if (error) {
-        setMessages(previous => previous.map(message => message.id === editingMessage.id ? { ...message, content: previousContent, edited_at: editingMessage.edited_at } : message))
+        rollbackEdit()
         setSendError('Edit not saved. Try again.')
       } else {
-        setInput('')
-        setEditingMessage(null)
+        if (clearSubmitted(submitted)) setEditingMessage(null)
+        else setEditingMessage({ ...editingMessage, content, edited_at: editedAt })
         requestAnimationFrame(() => inputRef.current?.focus())
       }
-      setSending(false)
       return
     }
     const { data, error } = await supabase.from('messages').insert({
@@ -193,22 +183,25 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
     if (!error && data) {
       const sent = data as unknown as Message
       setMessages(previous => previous.some(message => message.id === sent.id) ? previous : [...previous, sent])
-      setInput('')
+      clearSubmitted(submitted)
       setImageUrl('')
       setReplyingTo(null)
       void notifyMentions(supabase, currentUserId, content, contextHref||`/channels/${channelSlug}`, sent.id, 'a channel message').catch(() => {})
       requestAnimationFrame(() => inputRef.current?.focus())
     } else {
+      retainFailed(submitted, draft)
       setSendError('Message not sent. Try again.')
     }
     } catch {
-      if (editingMessage) setMessages(previous => previous.map(message => message.id === editingMessage.id ? { ...message, content: editingMessage.content, edited_at: editingMessage.edited_at } : message))
+      if (!editingMessage) retainFailed(submitted, draft)
+      rollbackEdit()
       setSendError(editingMessage ? 'Edit not saved. Try again.' : 'Message not sent. Try again.')
     }
-    finally { setSending(false) }
+    finally { sendLock.current = false; setSending(false) }
   }
 
   function beginEdit(message: Message) {
+    if (sendLock.current) return
     setReplyingTo(null)
     setImageUrl('')
     setEditingMessage(message)
@@ -221,13 +214,16 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
 
   async function deleteMessage(message: Message) {
     if (!currentUserId || (message.sender_id !== currentUserId && !canModerate)) return
-    const previous = messages
-    setMessages(current => current.map(item => item.id === message.id ? { ...item, content: '', media_urls: [], is_deleted: true } : item))
-    const { error } = message.sender_id === currentUserId
-      ? await supabase.from('messages').update({ content: '', media_urls: [], is_deleted: true, edited_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', currentUserId)
-      : await supabase.rpc('moderate_channel_message', { p_message_id: message.id })
-    if (error) {
-      setMessages(previous)
+    const original = messages.find(item => item.id === message.id) ?? message
+    const optimistic = { ...original, content: '', media_urls: [], is_deleted: true }
+    setMessages(current => current.map(item => item.id === message.id ? optimistic : item))
+    try {
+      const { error } = message.sender_id === currentUserId
+        ? await supabase.from('messages').update({ content: '', media_urls: [], is_deleted: true, edited_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', currentUserId)
+        : await supabase.rpc('moderate_channel_message', { p_message_id: message.id })
+      if (error) throw error
+    } catch {
+      setMessages(current => current.map(item => item === optimistic ? original : item))
       setSendError('Message not deleted. Try again.')
     }
   }
@@ -248,7 +244,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
   }
 
   return <div className="ss-chat-room">
-    {connectionError && <p role="status" className="ss-chat-connection-status">Connection interrupted. Reconnecting… <button type="button" onClick={() => recoverRef.current()}>Reconnect</button></p>}
+    {connectionError && <p role="status" className="ss-chat-connection-status">Connection interrupted. <button type="button" onClick={() => void recover()}>Reconnect</button></p>}
     <div ref={scrollRef} onScroll={handleScroll} className="ss-chat-messages">
       {!messages.length && <div className="ss-chat-empty"><span>#</span><strong>{channelName}</strong><p>Start the conversation.</p></div>}
       {messages.map((message, index) => {
@@ -271,7 +267,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
             <MessageReactionBar reactions={reactions[message.id]} disabled={!currentUserId || message.is_deleted} onToggle={emoji => void toggleReaction(message.id, emoji)}/>
             {!message.is_deleted ? <div className="ss-chat-message-actions">
               {!readOnly ? <button type="button" className="ss-chat-inline-action" onClick={() => { setEditingMessage(null); setReplyingTo(message); inputRef.current?.focus() }} aria-label={`Reply to ${name}`}><Reply size={12}/> Reply</button> : null}
-              {!readOnly && message.sender_id === currentUserId ? <button type="button" className="ss-chat-inline-action" onClick={() => beginEdit(message)} aria-label="Edit message"><Pencil size={11}/> Edit</button> : null}
+              {!readOnly && message.sender_id === currentUserId ? <button type="button" className="ss-chat-inline-action" onClick={() => beginEdit(message)} disabled={sending} aria-label="Edit message"><Pencil size={11}/> Edit</button> : null}
               {(message.sender_id === currentUserId || canModerate) ? <button type="button" className="ss-chat-inline-action is-danger" onClick={() => void deleteMessage(message)} aria-label={message.sender_id === currentUserId ? 'Delete message' : 'Remove message'}><Trash2 size={11}/> {message.sender_id === currentUserId ? 'Delete' : 'Remove'}</button> : null}
             </div> : null}
           </div>
@@ -282,19 +278,20 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
     {typingUsers.length > 0 && <div className="ss-chat-typing" role="status"><i/><i/><i/><span>{typingUsers.length > 1 ? `${typingUsers.length} members are typing` : 'Someone is typing'}</span></div>}
     {!atBottom && <button type="button" className="ss-chat-new" onClick={jumpToLatest}><ArrowDown size={14}/>{unseenCount ? `${unseenCount} new` : 'Latest'}</button>}
     <div className="ss-chat-composer-wrap">
-      {editingMessage ? <div className="ss-chat-replying is-editing"><Pencil size={12}/><div><span>Editing message</span><p>Save changes with Enter</p></div><button type="button" onClick={() => { setEditingMessage(null); setInput('') }} aria-label="Cancel edit"><X size={14}/></button></div> : replyingTo ? <div className="ss-chat-replying"><Reply size={12}/><div><span>Replying to {replyingTo.sender?.display_name || replyingTo.sender?.username || 'member'}</span><p><EmojiText text={replyingTo.content || ''} /></p></div><button type="button" onClick={() => setReplyingTo(null)} aria-label="Cancel reply"><X size={14}/></button></div> : null}
-      {imageUrl && <div className="ss-chat-media-preview"><SafeImage src={imageUrl} alt="Upload preview"/><button type="button" onClick={() => setImageUrl('')} aria-label="Remove image"><X size={13}/></button></div>}
+      {editingMessage ? <div className="ss-chat-replying is-editing"><Pencil size={12}/><div><span>Editing message</span><p>Save changes with Enter</p></div><button type="button" onClick={() => { setEditingMessage(null); setInput('') }} disabled={sending} aria-label="Cancel edit"><X size={14}/></button></div> : replyingTo ? <div className="ss-chat-replying"><Reply size={12}/><div><span>Replying to {replyingTo.sender?.display_name || replyingTo.sender?.username || 'member'}</span><p><EmojiText text={replyingTo.content || ''} /></p></div><button type="button" onClick={() => setReplyingTo(null)} disabled={sending} aria-label="Cancel reply"><X size={14}/></button></div> : null}
+      {imageUrl && <div className="ss-chat-media-preview"><SafeImage src={imageUrl} alt="Upload preview"/><button type="button" onClick={() => setImageUrl('')} disabled={sending} aria-label="Remove image"><X size={13}/></button></div>}
+      <UnsentDrafts drafts={unsent} disabled={input.length >= 999} onInsert={insertUnsent}/>
       {readOnly ? <p className="ss-chat-signin">Only community staff can post in this channel.</p> : !currentUserId ? <p className="ss-chat-signin"><Link href="/auth/login">Sign in</Link> to join the conversation</p> : <form onSubmit={sendMessage} className="ss-chat-composer">
         <MentionInput ref={inputRef} value={input} onValueChange={value => { setInput(value); notifyTyping(); if (sendError) setSendError('') }} currentUserId={currentUserId} onKeyDown={event => {
-          if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() }
+          if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit() }
         }} aria-label={editingMessage ? 'Edit message' : `Message #${channelName}`} placeholder={editingMessage ? 'Edit message' : `Message #${channelName}`} maxLength={1000} rows={1}/>
         <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void uploadImage(file); event.target.value = '' }}/>
-        <button type="button" className="ss-chat-attach" onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} aria-label="Attach image"><ImageIcon size={16}/></button>
+        <button type="button" className="ss-chat-attach" onClick={() => imageInputRef.current?.click()} disabled={sending || uploadingImage} aria-label="Attach image"><ImageIcon size={16}/></button>
         <EmojiPicker onSelect={insertAtCursor}/>
-        <GifPicker uploadKind="messages" onSelect={setImageUrl}/>
+        <GifPicker uploadKind="messages" disabled={sending || uploadingImage} onSelect={url => { if (!sendLock.current) setImageUrl(url) }}/>
         <button type="submit" disabled={(!input.trim() && !imageUrl) || sending || uploadingImage} aria-label="Send message"><Send size={16}/></button>
       </form>}
-      {sendError && <button type="button" className="ss-chat-send-error" onClick={() => inputRef.current?.form?.requestSubmit()}>{sendError}</button>}
+      {sendError && <p role="alert" className="ss-chat-send-error">{sendError}</p>}
     </div>
   </div>
 }

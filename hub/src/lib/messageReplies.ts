@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 type Scope = { channelId: string } | { conversationId: string } | { userId: string; partnerId: string }
 
 /** Read reply context through ordinary RLS, constrained to this conversation. */
-export async function attachMessageReplies<T extends { reply_to_id?: string | null }>(client: SupabaseClient, rows: T[], scope: Scope): Promise<T[]> {
+export async function attachMessageReplies<T extends { reply_to_id?: string | null }>(client: SupabaseClient, rows: T[], scope: Scope, signal?: AbortSignal): Promise<T[]> {
   const ids = [...new Set(rows.flatMap(row => row.reply_to_id ? [row.reply_to_id] : []))]
   if (!ids.length) return rows
   const group = 'conversationId' in scope
@@ -13,7 +13,7 @@ export async function attachMessageReplies<T extends { reply_to_id?: string | nu
   if ('channelId' in scope) request = request.eq('channel_id', scope.channelId)
   else if ('conversationId' in scope) request = request.eq('conversation_id', scope.conversationId)
   else request = request.or(`and(sender_id.eq.${scope.userId},dm_recipient_id.eq.${scope.partnerId}),and(sender_id.eq.${scope.partnerId},dm_recipient_id.eq.${scope.userId})`)
-  const { data, error } = await request
+  const { data, error } = await (signal ? request.abortSignal(signal) : request)
   if (error) throw new Error('Reply context could not be loaded. Try again.')
   const byId = new Map((data ?? []).map(row => [row.id, row]))
   return rows.map(row => ({ ...row, reply_to: row.reply_to_id ? byId.get(row.reply_to_id) ?? null : null }))

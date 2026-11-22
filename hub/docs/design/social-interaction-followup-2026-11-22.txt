@@ -1,0 +1,38 @@
+Social interaction follow-up — 22 November 2026
+
+Changes
+- Channels, direct messages and group conversations recover missed history after
+  reconnect, return to the tab, restoration from history and return online.
+- Scoped reads are bounded and abortable. Late history responses retain messages,
+  edits and deletions received while the read was in flight. A reconnect during
+  a read schedules one further refresh. Failed reads preserve the visible thread.
+- Slow successful sends only clear the draft that was submitted. Failed earlier
+  text stays in an Unsent drafts section when newer text has already been typed.
+  Reinserting text respects the composer limit and retains any remainder.
+- A synchronous lock prevents duplicate sends. Pending attachments/reply/edit
+  context cannot be replaced mid-send. Composition Enter does not send or select
+  a mention. Failed optimistic edits/deletes restore only the affected row.
+- Direct-message notification failures cannot turn an already-saved message into
+  a false failed-send state. Asynchronous sender hydration cannot reinsert a
+  deleted row or overwrite a newer message edit.
+- Shared popovers observe content/anchor resizing, coalesce scroll placement,
+  follow the visual viewport and keep oversized content scrollable. Mobile
+  sheets avoid the keyboard and preserve the dock clearance. Normal scrollbar
+  width is not counted twice. Badge close/Escape/focus behavior remains intact.
+
+Verification
+- 58 focused interaction tests, 18 shared UI tests and 134 production checks pass.
+- TypeScript, changed-source ESLint and optimized private build pass.
+- 22 private browser receipts cover desktop 1440x1000 and phone 390x844,
+  both light/dark. Channel send/edit/reply, direct send/edit/tools/delete,
+  group send/edit/reply cancel/member settings and expanded GIF/badge panels pass.
+- All recorded layouts have no page overflow or broken visible images. Every
+  measured popover fits within the viewport; research/navigation tools retained.
+
+Limits
+PC browser viewports, not a physical phone. Delayed/rejected/offline operations
+are controlled component fixtures; browser writes used the isolated local adapter.
+No real member messages/invitations were sent. No schema, collectors, payments or
+product alerts changed. This follow-up does not declare every live flow bug-free.
+The original inventory remains 240 released surfaces, zero queued, ten existing
+owner approvals. Production verification will be recorded after Ready.
