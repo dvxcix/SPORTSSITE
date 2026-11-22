@@ -1,0 +1,47 @@
+SlipSurge self-service creator communities — 22 November 2026
+
+Scope and owner decision
+Free hosted communities are available to signed-in members. Paid creators begin Whop setup themselves, with no SlipSurge application approval. Whop verification and payment capabilities remain mandatory. The configured 10% creator platform fee is preserved. Existing research plans, main/add-on billing, collected research, member tiers, sports navigation and historical creator applications remain intact.
+
+Implemented
+- Creator Studio is the launch destination for every signed-in member. The old application URL redirects there.
+- A three-step launch panel separates community creation, Whop verification and offer publication. Completion reflects actual state.
+- Subaccounts are linked to the configured SlipSurge Whop parent and stable external user identity. Repeated onboarding resumes the same account. Existing admins keep their role; member research tiers are unchanged.
+- Current, pinned Whop REST contracts are isolated from existing main/add-on billing. Hosted onboarding and the payout portal retain identity checks, balances, payout methods, withdrawals and billing management.
+- Draft offers cannot accept payments. A ready connected account, correctly configured child-event delivery and an owned member community are required to publish. Pausing closes new checkout access and existing Whop links, while preserving current members.
+- Checkout binds the creator, offer and authenticated buyer. Returning from checkout waits for verified membership delivery before unlocking.
+- Membership events re-fetch provider state, validate account/plan/user ownership and apply access atomically. Duplicate payment events do not double-count sales. Stale activations cannot override a newer expiry.
+- Paid groups, channels, posts, comments, polls, votes and social reactions follow current access. Saved group/channel membership does not bypass expiry.
+- Free group owners can draft and schedule content for their own communities. The existing cloud publisher retains the destination. Legacy unbound premium drafts fail closed. No job was replayed or duplicated.
+- Owners keep member preference controls without an automatic member welcome prompt. Entitled buyers can rejoin after leaving. Leaving a group explains that billing is managed separately.
+- Private/paid group composers say Members. Paid settings explain membership access. Community chat, avatar and banner inputs have accessible names.
+- Studio, payouts, marketplace, storefront, offers, groups, settings and access completion use the existing desktop/mobile and light/dark shell. The 320px channel-type picker wraps instead of overflowing.
+
+Verification completed before release
+- 212/212 targeted creator, membership, main/add-on billing and production source regression tests passed, including 23 creator commerce tests.
+- 16 isolated Postgres scenarios passed using the live catalog, existing RLS/grants, existing triggers and real rate-limiter definition. Covers free creation, paid access, expiry, duplicate payment, owner binding, child privacy, protected provider columns, existing chat access and public social content.
+- Two transaction-only live verification runs exercised actual free creation and paid membership lifecycle. The paid run included replies, polls, votes and reactions. Each ended with ROLLBACK; follow-up found zero fixture groups, offers, memberships or account links.
+- 12 creator/community routes reviewed in four layouts (1440×1000 and 390×844, light and dark): no page overflow, broken visible images, unnamed visible buttons, legacy floating utility dock or error boundary. A separate 320px settings overflow was found and repaired; final narrow check is recorded with release evidence.
+- Private browser actions: offer save → selected member-community form → create → publish → pause → republish; community chat send and edit; owner preference behavior and Members audience.
+- The isolated review intentionally blocks operational scheduling and real financial account creation. Scheduling and publication logic were exercised by executable route tests. No real Whop subaccount, charge, purchase, withdrawal or transfer was created for QA.
+- Optimized Next.js build and TypeScript validation passed. Final source lint and release build recorded in the release update.
+
+Database history
+Applied individually, not by replaying the historical migration tree:
+20261122142312_creator_self_service_communities
+20261122143553_creator_group_rate_contract
+20261122150529_creator_community_child_privacy
+
+The initial broad migration submission was rejected by automatic review. Exact live-schema compatibility tests, baseline guards and empty-feature preflight resolved that rejection; the guarded resubmission was approved. The follow-up rate migration preserves the existing five-groups/hour contract. Child privacy adds restrictive policies without widening grants.
+
+Provider connection
+The separate child-event webhook is configured through the authenticated admin Studio panel after the callback is live. Its signing secret stays server-only and encrypted; main/add-on hooks are untouched. The provider-generated account.updated test verifies transport/signatures without creating accounts or moving money. Production connection outcome is appended after rollout.
+
+Design references reviewed
+Buy Me a Coffee: separate payout setup and progress.
+https://mobbin.com/flows/1b2822d6-c807-4522-ad9c-7c7a989a4140?tab=screens&utm_source=chatgpt&utm_medium=ai-assistant&utm_source_platform=mcp
+Kajabi: staged creator launch checklist before secondary analytics.
+https://mobbin.com/flows/bfeccf75-606e-4366-a578-03d75ffdafc9?tab=screens&utm_source=chatgpt&utm_medium=ai-assistant&utm_source_platform=mcp
+
+Current release state
+Implementation and database repairs verified. Production source publication and the signed child-event delivery test are recorded in the follow-up below.

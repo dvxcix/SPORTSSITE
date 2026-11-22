@@ -8,7 +8,7 @@ import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const SPORTS = new Set(['MLB', 'NFL', 'NBA', 'NHL', 'NCAAF', 'NCAAB'])
-const VISIBILITY = new Set(['public', 'followers', 'premium'])
+const VISIBILITY = new Set(['public', 'followers'])
 
 async function creator() {
   const supabase = await createClient()
@@ -16,14 +16,21 @@ async function creator() {
   if (!user) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
   const admin = createAdminClient()
   const { data: profile } = await admin.from('users').select('account_type').eq('id', user.id).single()
-  if (!profile || !await hasApprovedCreatorAccess(supabase, user.id, profile.account_type)) return { error: NextResponse.json({ error: 'Creator access required' }, { status: 403 }) }
+  const { data: ownedGroup } = await supabase.from('groups').select('id').eq('owner_id', user.id).limit(1).maybeSingle()
+  if (!profile || (!ownedGroup && !await hasApprovedCreatorAccess(supabase, user.id, profile.account_type))) return { error: NextResponse.json({ error: 'Creator access required' }, { status: 403 }) }
   return { user, admin, mlbAccess: !MLB_HIBERNATING || profile.account_type === 'admin' }
 }
 
 export async function POST(request: NextRequest) {
   const gate = await creator(); if ('error' in gate) return gate.error
-  const body = await request.json().catch(() => null) as { content?: string; postType?: string; sport?: string; visibility?: string; scheduledFor?: string; draft?: boolean } | null
+  const body = await request.json().catch(() => null) as { content?: string; postType?: string; sport?: string; visibility?: string; scheduledFor?: string; draft?: boolean; groupId?: string | null } | null
   const payload = body ?? {}
+  if (payload.groupId) {
+    if (!UUID.test(payload.groupId)) return NextResponse.json({ error: 'Choose a valid community.' }, { status: 400 })
+    const { data: group } = await gate.admin.from('groups').select('id').eq('id', payload.groupId).eq('owner_id', gate.user.id).maybeSingle()
+    if (!group) return NextResponse.json({ error: 'Choose one of your communities.' }, { status: 403 })
+  }
+  if (payload.visibility === 'premium' && !payload.groupId) return NextResponse.json({ error: 'Choose a paid community for member content.' }, { status: 400 })
   if (!gate.mlbAccess && typeof payload.sport === 'string' && payload.sport.toUpperCase() === 'MLB') return NextResponse.json({ error: 'Sport unavailable.' }, { status: 404 })
   const content = payload.content?.trim() ?? ''
   const scheduledFor = new Date(payload.scheduledFor ?? '')
@@ -33,12 +40,12 @@ export async function POST(request: NextRequest) {
   if (!rate.available) return NextResponse.json({ error: 'Scheduling is temporarily unavailable.' }, { status: 503 })
   if (!rate.allowed) return NextResponse.json({ error: 'Scheduling limit reached. Try again later.' }, { status: 429 })
   const { data, error } = await gate.admin.from('creator_scheduled_posts').insert({
-    creator_id: gate.user.id, content, post_type: payload.postType === 'analysis' ? 'analysis' : 'text',
+    creator_id: gate.user.id, group_id: payload.groupId || null, content, post_type: payload.postType === 'analysis' ? 'analysis' : 'text',
     sport: SPORTS.has(payload.sport ?? '') ? payload.sport : null,
-    visibility: VISIBILITY.has(payload.visibility ?? '') ? payload.visibility : 'public',
+    visibility: payload.groupId ? 'public' : VISIBILITY.has(payload.visibility ?? '') ? payload.visibility : 'public',
     scheduled_for: payload.draft ? new Date(Date.now() + 366 * 86400_000).toISOString() : scheduledFor.toISOString(),
     status: payload.draft ? 'draft' : 'scheduled',
-  }).select('id,content,post_type,sport,visibility,scheduled_for,status,published_post_id,attempts,created_at,updated_at').single()
+  }).select('id,group_id,content,post_type,sport,visibility,scheduled_for,status,published_post_id,attempts,created_at,updated_at').single()
   if (error || !data) return safeApiError('creator-scheduled-post-create', error, 'Could not save scheduled post')
   return NextResponse.json({ post: data }, { status: 201 })
 }
@@ -48,7 +55,7 @@ export async function PATCH(request: NextRequest) {
   const rate = await consumeServerRateLimit(gate.user.id, 'creator_update_scheduled_post', 180, 3600)
   if (!rate.available) return NextResponse.json({ error: 'Scheduling is temporarily unavailable.' }, { status: 503 })
   if (!rate.allowed) return NextResponse.json({ error: 'Update limit reached. Try again later.' }, { status: 429 })
-  const body = await request.json().catch(() => null) as { id?: string; action?: 'cancel' | 'schedule' | 'edit'; scheduledFor?: string; content?: string; postType?: string; sport?: string; visibility?: string; draft?: boolean } | null
+  const body = await request.json().catch(() => null) as { id?: string; action?: 'cancel' | 'schedule' | 'edit'; scheduledFor?: string; content?: string; postType?: string; sport?: string; visibility?: string; draft?: boolean; groupId?: string | null } | null
   if (!body?.id || !UUID.test(body.id) || !['cancel', 'schedule', 'edit'].includes(body.action ?? '')) return NextResponse.json({ error: 'Invalid scheduled-post update.' }, { status: 400 })
   if (!gate.mlbAccess && typeof body.sport === 'string' && body.sport.toUpperCase() === 'MLB') return NextResponse.json({ error: 'Sport unavailable.' }, { status: 404 })
   const updates: Record<string, string | null> = body.action === 'cancel' ? { status: 'canceled' } : { status: body.draft ? 'draft' : 'scheduled' }
@@ -60,14 +67,21 @@ export async function PATCH(request: NextRequest) {
   if (body.action === 'edit') {
     const content = body.content?.trim() ?? ''
     if (!content || content.length > 500) return NextResponse.json({ error: 'Post must be between 1 and 500 characters.' }, { status: 400 })
+    if (body.groupId) {
+      if (!UUID.test(body.groupId)) return NextResponse.json({ error: 'Choose a valid community.' }, { status: 400 })
+      const { data: group } = await gate.admin.from('groups').select('id').eq('id', body.groupId).eq('owner_id', gate.user.id).maybeSingle()
+      if (!group) return NextResponse.json({ error: 'Choose one of your communities.' }, { status: 403 })
+    }
+    if (body.visibility === 'premium' && !body.groupId) return NextResponse.json({ error: 'Choose a paid community for member content.' }, { status: 400 })
+    updates.group_id = body.groupId || null
     updates.content = content
     updates.post_type = body.postType === 'analysis' ? 'analysis' : 'text'
     updates.sport = SPORTS.has(body.sport ?? '') ? body.sport! : null
-    updates.visibility = VISIBILITY.has(body.visibility ?? '') ? body.visibility! : 'public'
+    updates.visibility = body.groupId ? 'public' : VISIBILITY.has(body.visibility ?? '') ? body.visibility! : 'public'
   }
   let query = gate.admin.from('creator_scheduled_posts').update(updates).eq('id', body.id).eq('creator_id', gate.user.id).in('status', ['draft', 'scheduled', 'failed'])
   if (!gate.mlbAccess) query = query.or('sport.is.null,sport.not.ilike.MLB')
-  const { data, error } = await query.select('id,content,post_type,sport,visibility,scheduled_for,status,published_post_id,attempts,created_at,updated_at').maybeSingle()
+  const { data, error } = await query.select('id,group_id,content,post_type,sport,visibility,scheduled_for,status,published_post_id,attempts,created_at,updated_at').maybeSingle()
   if (error) return safeApiError('creator-scheduled-post-update', error, 'Could not update scheduled post')
   if (!data) return NextResponse.json({ error: 'Post unavailable.' }, { status: 404 })
   return NextResponse.json({ post: data })

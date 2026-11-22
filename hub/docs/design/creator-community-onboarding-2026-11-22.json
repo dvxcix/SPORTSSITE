@@ -1,0 +1,101 @@
+{
+  "date": "2026-11-22",
+  "batch": "creator-community-onboarding",
+  "ownerDecision": "Self-service paid setup; no SlipSurge creator approval",
+  "state": "Pre-release verified",
+  "automated": {
+    "combined": {
+      "passed": 212,
+      "failed": 0
+    },
+    "creatorCommerce": {
+      "passed": 23,
+      "failed": 0
+    },
+    "isolatedPostgres": {
+      "passed": 16,
+      "failed": 0
+    },
+    "liveDatabase": {
+      "transactionOnly": true,
+      "rolledBack": true,
+      "fixtureRowsRemaining": 0,
+      "checks": [
+        "free community owner and channel creation",
+        "unpaid blocked",
+        "paid membership unlocks group, posts, chat, comments, polls, votes and reactions",
+        "expiry blocks access again"
+      ]
+    },
+    "build": "optimized Next.js 16.4.6 build and TypeScript passed",
+    "lint": "application source passed; local adapters linted with their existing permissive typing conventions"
+  },
+  "privateBrowser": {
+    "dimensions": [
+      {
+        "name": "desktop-dark",
+        "width": 1440,
+        "height": 1000
+      },
+      {
+        "name": "desktop-light",
+        "width": 1440,
+        "height": 1000
+      },
+      {
+        "name": "phone-dark",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "phone-light",
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "routes": [
+      "/creators/studio",
+      "/creators",
+      "/creators/review-member",
+      "/creators/offers/940ead3a-4e3e-4522-a148-d84602b632c0",
+      "/creators/payouts",
+      "/groups",
+      "/groups/create",
+      "/groups/launch-review-club",
+      "/groups/launch-review-club/settings",
+      "/channels",
+      "/settings/membership",
+      "/creators/access/complete?product=940ead3a-4e3e-4522-a148-d84602b632c0"
+    ],
+    "layoutChecks": 48,
+    "observed": {
+      "pageOverflow": false,
+      "errorBoundary": false,
+      "brokenVisibleImages": 0,
+      "unnamedVisibleButtons": 0,
+      "legacyFloatingUtility": false
+    },
+    "transitions": [
+      "offer draft saved",
+      "selected offer retained in member-community form",
+      "community created with owner access and manual Preferences",
+      "Members audience displayed",
+      "offer published, paused, republished",
+      "community chat sent and edited",
+      "ordinary member sees self-service paid setup and recoverable mocked provider error",
+      "legacy application URL redirects to Studio"
+    ],
+    "narrowFollowUp": "At 320px, Announcements channel type overflowed. Repaired two-column picker; final measured clientWidth=310 and scrollWidth=310 at viewport 320.",
+    "limits": [
+      "Operational scheduling is blocked in the local review adapter; route and publisher tests cover destination ownership and private content.",
+      "No real Whop financial account, charge, withdrawal or transfer was created for QA."
+    ]
+  },
+  "migrations": [
+    "20261122142312_creator_self_service_communities",
+    "20261122143553_creator_group_rate_contract",
+    "20261122150529_creator_community_child_privacy"
+  ],
+  "release": null,
+  "providerConnection": null
+}

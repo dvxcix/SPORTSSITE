@@ -8,6 +8,7 @@ import { CheckCircle2, XCircle, Clock } from 'lucide-react'
 import { SettingsShell } from '@/components/settings/SettingsShell'
 import { createAdminClient } from '@/lib/supabase/admin'
 import styles from './MembershipSettings.module.css'
+import { CreatorMembershipsList } from '@/components/creator/CreatorMembershipsList'
 
 const TIER_LABEL: Record<Tier, string> = { free: 'Free', basic: 'Basic', advanced: 'Advanced', ultimate: 'Ultimate' }
 const DISCORD_ADDON_PLAN_ID = 'plan_Q1Ey6RMgjS9XQ'
@@ -151,6 +152,7 @@ export default async function MembershipSettingsPage({
           )}
         </div>
       )}
+      <CreatorMembershipsList />
     </SettingsShell>
   )
 }

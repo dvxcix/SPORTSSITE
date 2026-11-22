@@ -20,6 +20,8 @@ The inventory still contains 239 released surfaces, zero queued surfaces, and 22
 This pass adds fresh route-boundary checks and explicit NBA/NFL drawer interaction checks. It does not replace previous release receipts with blanket visual approval.
 Published as 375e1532; all nine live drawer sections and shared table sorting checked in desktop/mobile and light/dark. Full production receipts are in the companion detail-pass JSON.
 
+2026-11-22 creator community follow-up: free communities and paid setup are self-service. See creator-community-onboarding-2026-11-22.txt/json for current API, protected membership access and verification. The inventory adds the checkout-completion screen. Historical owner approvals remain unchanged.
+
 [Live] General | About | /about
 [Live] General | Activity | /activity
 [Live] Admin | Admin · Ads | /admin/ads
@@ -93,6 +95,7 @@ Published as 375e1532; all nine live drawer sections and shared table sorting ch
 [Live] Community | Channels | /channels
 [Live] Community | Community | /community
 [Live] Creators & commerce | Creators · Username | /creators/[username]
+[Ready to deploy] Creators & commerce | Creators · Access · Complete | /creators/access/complete
 [Live] Creators & commerce | Creators · Apply | /creators/apply
 [Live] Creators & commerce | Creators · Offers · ProductId | /creators/offers/[productId]
 [Live] Creators & commerce | Creators | /creators

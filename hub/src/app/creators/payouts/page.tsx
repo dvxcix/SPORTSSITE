@@ -1,11 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { PayoutSetupClient } from './PayoutSetupClient'
-import { hasApprovedCreatorAccess } from '@/lib/creator'
-import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { LockKeyhole } from 'lucide-react'
-import styles from './CreatorPayouts.module.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,11 +17,7 @@ export default async function CreatorPayoutsPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || !await hasApprovedCreatorAccess(supabase, user.id, profile.account_type)) {
-    return (
-      <div className={styles.page}><section className={styles.locked}><span className={styles.lockedIcon}><LockKeyhole size={21}/></span><h1>Creator approval required</h1><p>Payout tools unlock after your creator application is approved.</p><Link href="/creators/apply">Apply to become a creator</Link></section></div>
-    )
-  }
+  if (!profile) throw new Error('Your payout account could not be loaded.')
 
   const { data: recentPayouts } = await supabase
     .from('creator_commerce_events')
@@ -36,7 +28,7 @@ export default async function CreatorPayoutsPage() {
 
   return (
     <PayoutSetupClient
-      profile={profile}
+      profile={{ connected: Boolean(profile.whop_connected_company_id) }}
       isTestAccount={(profile.username ?? '').toLowerCase() === 'slipsurge'}
       recentPayouts={recentPayouts ?? []}
     />

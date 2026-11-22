@@ -80,6 +80,15 @@ export function createClient(_url?:any,_key?:any,options?:any):any{
     persistReviewTables();return ok(params.p_join)
    }
    if(name==='create_community_group'){
+    if(typeof document!=='undefined'){
+     return (async()=>{
+     const response=await fetch('/api/review/community',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(params)})
+     const data=await response.json()
+     if(!response.ok)return {data:null,error:{message:data.error||'Fixture community could not be created'}}
+     table('groups').push(data.group);table('channels').push(data.channel);table('group_members').push(data.member)
+     persistReviewTables();return ok([data.result])
+     })()
+    }
     const id=crypto.randomUUID(),channelId=crypto.randomUUID(),channelSlug='group-'+params.p_slug
     table('groups').push({id,slug:params.p_slug,name:params.p_name,description:params.p_description,sport:params.p_sport,emoji:params.p_emoji,is_public:params.p_is_public,owner_id:user?.id,channel_id:channelId,access_type:'free',member_count:1})
     table('channels').push({id:channelId,slug:channelSlug,name:params.p_name,group_id:id,channel_type:'public',owner_id:user?.id,member_count:1})

@@ -3,9 +3,10 @@
 import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { usePathname, useRouter } from 'next/navigation'
+import Link from 'next/link'
 
-export function GroupJoinButton({ groupId, initialMember }: {
-  groupId: string; initialMember: boolean
+export function GroupJoinButton({ groupId, initialMember, paidProductId }: {
+  groupId: string; initialMember: boolean; paidProductId?: string | null
 }) {
   const [member, setMember] = useState(initialMember)
   const [loading, setLoading] = useState(false)
@@ -45,6 +46,7 @@ export function GroupJoinButton({ groupId, initialMember }: {
         }`}>
         {loading ? 'Saving…' : member ? 'Leave Group' : 'Join Group'}
       </button>
+      {paidProductId && <><Link href={`/creators/access/complete?product=${paidProductId}`} className="text-xs font-semibold text-[var(--accent)]">Manage membership</Link><p className="max-w-56 text-right text-xs text-[var(--text-3)]">Leaving the group does not cancel billing.</p></>}
       {error && <p className="max-w-52 text-right text-[12px] text-[var(--red)]" role="alert">{error} Try again.</p>}
     </div>
   )

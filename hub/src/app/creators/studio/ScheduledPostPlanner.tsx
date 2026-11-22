@@ -5,7 +5,7 @@ import { CalendarClock, CalendarDays, Check, Clock3, Edit3, FileText, Loader2, S
 import styles from './ScheduledPostPlanner.module.css'
 import { EmojiText } from '@/components/social/EmojiText'
 
-export type ScheduledPost = { id: string; content: string; post_type: string; sport: string | null; visibility: string; scheduled_for: string; status: string; published_post_id: string | null; attempts: number; created_at: string; updated_at?: string }
+export type ScheduledPost = { group_id?: string | null; id: string; content: string; post_type: string; sport: string | null; visibility: string; scheduled_for: string; status: string; published_post_id: string | null; attempts: number; created_at: string; updated_at?: string }
 
 function localInputDate(offsetMinutes = 30) {
   const date = new Date(Date.now() + offsetMinutes * 60_000)
@@ -24,12 +24,13 @@ function dateKey(value: string | Date) {
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
 }
 
-export function ScheduledPostPlanner({ posts, mlbAccess }: { posts: ScheduledPost[]; mlbAccess: boolean }) {
+export function ScheduledPostPlanner({ posts, mlbAccess, groups = [] }: { posts: ScheduledPost[]; mlbAccess: boolean; groups?: { id: string; name: string; access_type: string }[] }) {
   const [items, setItems] = useState(posts)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [content, setContent] = useState('')
   const [postType, setPostType] = useState('text')
   const [sport, setSport] = useState('')
+  const [groupId, setGroupId] = useState('')
   const [visibility, setVisibility] = useState('public')
   const [scheduledFor, setScheduledFor] = useState(localInputDate())
   const [busy, setBusy] = useState('')
@@ -45,11 +46,11 @@ export function ScheduledPostPlanner({ posts, mlbAccess }: { posts: ScheduledPos
   const scheduled = items.filter(item => item.status === 'scheduled').sort((a, b) => a.scheduled_for.localeCompare(b.scheduled_for))
 
   function resetComposer() {
-    setEditingId(null); setContent(''); setPostType('text'); setSport(''); setVisibility('public'); setScheduledFor(localInputDate())
+    setGroupId(''); setEditingId(null); setContent(''); setPostType('text'); setSport(''); setVisibility('public'); setScheduledFor(localInputDate())
   }
 
   function edit(post: ScheduledPost) {
-    setEditingId(post.id); setContent(post.content); setPostType(post.post_type); setSport(post.sport ?? ''); setVisibility(post.visibility); setScheduledFor(localInputFromIso(post.scheduled_for)); setMessage('')
+    setGroupId(post.group_id || ''); setEditingId(post.id); setContent(post.content); setPostType(post.post_type); setSport(post.sport ?? ''); setVisibility(post.visibility); setScheduledFor(localInputFromIso(post.scheduled_for)); setMessage('')
     requestAnimationFrame(() => { composerRef.current?.focus(); composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) })
   }
 
@@ -65,7 +66,7 @@ export function ScheduledPostPlanner({ posts, mlbAccess }: { posts: ScheduledPos
     const operation = editingId ? 'edit' : draft ? 'draft' : 'schedule'
     setBusy(operation); setMessage('')
     try {
-      const payload = { content, postType, sport, visibility, scheduledFor: new Date(scheduledFor).toISOString(), draft }
+      const payload = { content, postType, sport, visibility, scheduledFor: new Date(scheduledFor).toISOString(), draft, groupId: groupId || null }
       const response = await fetch('/api/creator/scheduled-posts', {
         method: editingId ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify(editingId ? { ...payload, id: editingId, action: 'edit' } : payload), signal: AbortSignal.timeout(15_000),
@@ -100,7 +101,7 @@ export function ScheduledPostPlanner({ posts, mlbAccess }: { posts: ScheduledPos
 
   const row = (post: ScheduledPost) => <div key={post.id} className={styles.queueRow} data-editing={editingId === post.id}>
     <span className={styles[post.status] || ''}>{post.status}</span>
-    <div><strong><EmojiText text={post.content} /></strong><small>{post.sport || 'All sports'} · {post.visibility} · {post.status === 'draft' ? 'Unscheduled' : new Date(post.scheduled_for).toLocaleString()}</small></div>
+    <div><strong><EmojiText text={post.content} /></strong><small>{post.sport || 'All sports'} · {post.group_id ? groups.find(group => group.id === post.group_id)?.name || 'Community members' : post.visibility} · {post.status === 'draft' ? 'Unscheduled' : new Date(post.scheduled_for).toLocaleString()}</small></div>
     <div className={styles.rowActions}>
       <button type="button" onClick={() => edit(post)} disabled={Boolean(busy)} aria-label={'Edit ' + post.content}><Edit3 size={13}/></button>
       {post.status === 'scheduled' ? <button type="button" onClick={() => void cancel(post)} disabled={busy === post.id} aria-label="Cancel scheduled post">{busy === post.id ? <Loader2 className="animate-spin" size={13}/> : <X size={13}/>}</button>
@@ -114,7 +115,8 @@ export function ScheduledPostPlanner({ posts, mlbAccess }: { posts: ScheduledPos
     <div className={styles.composer} data-editing={Boolean(editingId)}>
       <div className={styles.composerTitle}>{editingId ? <><Edit3 size={14}/><strong>Editing scheduled content</strong><button type="button" onClick={resetComposer}>Cancel edit</button></> : <><CalendarDays size={14}/><strong>New calendar post</strong></>}</div>
       <textarea ref={composerRef} value={content} onChange={event => setContent(event.target.value)} maxLength={500} placeholder="Write a take or research update…" aria-label="Scheduled post content"/>
-      <div className={styles.options}><select value={postType} onChange={event => setPostType(event.target.value)} aria-label="Post type"><option value="text">Take</option><option value="analysis">Research</option></select><select value={sport} onChange={event => setSport(event.target.value)} aria-label="Sport"><option value="">Any sport</option>{mlbAccess && <option>MLB</option>}<option>NFL</option><option>NBA</option><option>NHL</option><option>NCAAF</option><option>NCAAB</option></select><select value={visibility} onChange={event => setVisibility(event.target.value)} aria-label="Audience"><option value="public">Public</option><option value="followers">Followers</option><option value="premium">Premium</option></select><label><Clock3 size={13}/><input type="datetime-local" value={scheduledFor} min={localInputDate(1)} onChange={event => setScheduledFor(event.target.value)} aria-label="Publish date and time"/></label></div>
+      <label className={styles.audienceLabel}>Destination<select value={groupId} onChange={event => { setGroupId(event.target.value); setVisibility('public') }} aria-label="Post destination"><option value="">My public feed</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}{group.access_type === 'paid' ? ' · Paid members' : ' · Community'}</option>)}</select></label>
+      <div className={styles.options}><select value={postType} onChange={event => setPostType(event.target.value)} aria-label="Post type"><option value="text">Take</option><option value="analysis">Research</option></select><select value={sport} onChange={event => setSport(event.target.value)} aria-label="Sport"><option value="">Any sport</option>{mlbAccess && <option>MLB</option>}<option>NFL</option><option>NBA</option><option>NHL</option><option>NCAAF</option><option>NCAAB</option></select><select value={visibility} disabled={!!groupId} onChange={event => setVisibility(event.target.value)} aria-label="Audience"><option value="public">{groupId ? 'Community members' : 'Public'}</option>{!groupId && <option value="followers">Followers</option>}{visibility === 'premium' && <option value="premium">Choose a paid community</option>}</select><label><Clock3 size={13}/><input type="datetime-local" value={scheduledFor} min={localInputDate(1)} onChange={event => setScheduledFor(event.target.value)} aria-label="Publish date and time"/></label></div>
       <div className={styles.actions}><span>{content.length}/500</span><button type="button" onClick={() => void save(true)} disabled={!content.trim() || Boolean(busy)}>{busy === 'draft' || busy === 'edit' ? <Loader2 className="animate-spin" size={14}/> : <FileText size={14}/>}Save draft</button><button type="button" onClick={() => void save(false)} disabled={!content.trim() || Boolean(busy)}>{busy === 'schedule' || busy === 'edit' ? <Loader2 className="animate-spin" size={14}/> : editingId ? <Check size={14}/> : <Send size={14}/>} {editingId ? 'Update & schedule' : 'Schedule'}</button></div>
     </div>
     <div className={styles.board}>

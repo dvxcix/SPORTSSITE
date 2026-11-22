@@ -162,6 +162,7 @@ async function webhook({ providerOptions, owner, source = 'main', eventType = 'p
         renewal_period_end: later, metadata: { internal_user_id: metadataUser } })
     }) },
   }
+  imports['@/lib/creatorWebhook'] = { handleCreatorWebhook: async () => false }
   const mod = await compile('../src/lib/whopWebhook.ts', imports, { process: { env: { WHOP_API_KEY: 'secret', ADDON_WHOP_KEY: 'addon-secret' } } })
   const payload = JSON.stringify({ action: eventType, data: { plan_id: eventPlan, membership: eventMembership, metadata: { internal_user_id: metadataUser } } })
   const timestamp = '12345', id = 'evt_test', secret = 'secret-webhook'

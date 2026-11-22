@@ -13,7 +13,19 @@ import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'General']
 
-export function GroupSettingsForm({ group }: { group: any }) {
+type EditableGroup = {
+  id: string
+  name?: string | null
+  description?: string | null
+  rules?: string | null
+  sport?: string | null
+  avatar_url?: string | null
+  banner_url?: string | null
+  is_public?: boolean | null
+  access_type?: string | null
+}
+
+export function GroupSettingsForm({ group }: { group: EditableGroup }) {
   const { profile } = useAuth()
   const showMlb = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const router = useRouter()
@@ -119,22 +131,22 @@ export function GroupSettingsForm({ group }: { group: any }) {
             <label className="relative flex h-32 cursor-pointer items-center justify-center overflow-hidden bg-gradient-to-br from-lime-400/15 via-cyan-400/5 to-transparent">
               {form.banner_url ? <Image src={form.banner_url} alt="Community banner" fill unoptimized className="object-cover" /> : <span className="flex items-center gap-2 text-xs font-bold text-[var(--text-2)]"><ImagePlus size={16} /> Add banner</span>}
               {uploading === 'banner' && <span className="absolute inset-0 grid place-items-center bg-[var(--overlay)]"><Loader2 size={18} className="animate-spin" /></span>}
-              <input className="sr-only" type="file" accept="image/*" onChange={event => selectImage('banner', event.target.files?.[0])} />
+              <input className="sr-only" type="file" aria-label="Change community banner" accept="image/*" onChange={event => selectImage('banner', event.target.files?.[0])} />
             </label>
             <label className="absolute bottom-4 left-5 grid h-20 w-20 cursor-pointer place-items-center overflow-hidden rounded-2xl border-4 border-[var(--surface)] bg-[var(--surface-3)] text-[var(--text-2)] shadow-xl">
               {form.avatar_url ? <Image src={form.avatar_url} alt="Community avatar" fill unoptimized className="object-cover" /> : <Camera size={22} />}
               {uploading === 'avatar' && <span className="absolute inset-0 grid place-items-center bg-[var(--overlay)]"><Loader2 size={18} className="animate-spin" /></span>}
-              <input className="sr-only" type="file" accept="image/*" onChange={event => selectImage('avatar', event.target.files?.[0])} />
+              <input className="sr-only" type="file" aria-label="Change community avatar" accept="image/*" onChange={event => selectImage('avatar', event.target.files?.[0])} />
             </label>
             <div className="h-11" />
           </div>
         </div>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-[var(--text-1)]">Public group</p>
-            <p className="text-xs text-[var(--text-3)]">Anyone can find and join without an invite</p>
+            <p className="text-sm font-medium text-[var(--text-1)]">{group.access_type === 'paid' ? 'Member community' : 'Public group'}</p>
+            <p className="text-xs text-[var(--text-3)]">{group.access_type === 'paid' ? 'Access follows the linked Whop membership.' : 'Anyone can find and join without an invite'}</p>
           </div>
-          <Switch checked={form.is_public} onChange={checked => setForm(f => ({ ...f, is_public: checked }))} ariaLabel="Public group" />
+          {group.access_type !== 'paid' && <Switch checked={form.is_public} onChange={checked => setForm(f => ({ ...f, is_public: checked }))} ariaLabel="Public group" />}
         </div>
       </section>
 

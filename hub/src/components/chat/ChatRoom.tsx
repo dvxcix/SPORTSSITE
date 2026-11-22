@@ -286,7 +286,7 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
       {readOnly ? <p className="ss-chat-signin">Only community staff can post in this channel.</p> : !currentUserId ? <p className="ss-chat-signin"><Link href="/auth/login">Sign in</Link> to join the conversation</p> : <form onSubmit={sendMessage} className="ss-chat-composer">
         <MentionInput ref={inputRef} value={input} onValueChange={value => { setInput(value); notifyTyping(); if (sendError) setSendError('') }} currentUserId={currentUserId} onKeyDown={event => {
           if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() }
-        }} placeholder={editingMessage ? 'Edit message' : `Message #${channelName}`} maxLength={1000} rows={1}/>
+        }} aria-label={editingMessage ? 'Edit message' : `Message #${channelName}`} placeholder={editingMessage ? 'Edit message' : `Message #${channelName}`} maxLength={1000} rows={1}/>
         <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void uploadImage(file); event.target.value = '' }}/>
         <button type="button" className="ss-chat-attach" onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} aria-label="Attach image"><ImageIcon size={16}/></button>
         <EmojiPicker onSelect={insertAtCursor}/>

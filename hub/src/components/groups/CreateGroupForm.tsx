@@ -17,13 +17,13 @@ const EMOJIS = ['👥', '🏆', '🔥', '⚡', '🎯', '💰', '🎲', '🏈', '
 
 type CreatorProduct = { id: string; title: string; price: number; currency: string }
 
-export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[] }) {
+export function CreateGroupForm({ products = [], selectedProductId }: { products?: CreatorProduct[]; selectedProductId?: string }) {
   const { profile } = useAuth()
   const showMlb = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [form, setForm] = useState({ name: '', description: '', sport: '', emoji: '👥', is_public: true })
-  const [creatorProductId, setCreatorProductId] = useState('')
+  const [creatorProductId, setCreatorProductId] = useState(selectedProductId || '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [createdSlug, setCreatedSlug] = useState('')
@@ -55,11 +55,11 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
       p_description: form.description.trim() || null,
       p_sport: form.sport || null,
       p_emoji: form.emoji,
-      p_is_public: form.is_public,
+      p_is_public: creatorProductId ? false : form.is_public,
       p_creator_product_id: creatorProductId || null,
     })
     if (err) {
-      setError(err.code === '23505' ? 'That group name is already taken.' : 'The group could not be created. Try again.')
+      setError(err.code === '23505' ? 'That group name is already taken.' : err.code === '54000' ? 'Community creation limit reached. Try again later.' : 'The group could not be created. Try again.')
       setSubmitting(false)
       return
     }
@@ -86,7 +86,7 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
           p_sport: form.sport || null,
           p_avatar_url: avatar && 'publicUrl' in avatar ? avatar.publicUrl : null,
           p_banner_url: banner && 'publicUrl' in banner ? banner.publicUrl : null,
-          p_is_public: form.is_public,
+          p_is_public: creatorProductId ? false : form.is_public,
         })
         if (imageError) { setError('Your group was created. Its images could not be saved; retry in group settings.'); return }
       }
@@ -168,17 +168,18 @@ export function CreateGroupForm({ products = [] }: { products?: CreatorProduct[]
             <option value="">Free group</option>
             {products.map(product => <option key={product.id} value={product.id}>{product.title} · {product.currency.toUpperCase()} {Number(product.price).toFixed(2)}</option>)}
           </select>
-          <p className="text-xs text-[var(--text-3)] mt-1.5">Paid groups are available only to members with an active entitlement.</p>
+          <p className="text-xs text-[var(--text-3)] mt-1.5">Paid access stays separate from your free community. After creating this group, publish its offer in Creator Studio.</p>
         </div>}
-        <div className="flex items-center justify-between">
+        {!creatorProductId && <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-[var(--text-1)]">Public group</p>
-            <p className="text-xs text-[var(--text-3)]">Anyone can find and join</p>
+            <p className="text-xs text-[var(--text-3)]">{creatorProductId ? 'Members with paid access can discover this group' : 'Anyone can find and join'}</p>
           </div>
           <Switch checked={form.is_public} onChange={checked => setForm(f => ({ ...f, is_public: checked }))} ariaLabel="Public group" />
-        </div>
+        </div>}
       </section>
 
+      <Link href="/creators/studio" className="ss-flow-back">Creator Studio <ArrowRight size={15}/></Link>
       <button type="submit" disabled={submitting || Boolean(createdSlug) || form.name.trim().length < 2}
         className="ss-flow-submit">
         {submitting ? <><Loader2 size={16} className="animate-spin" /> Creating…</> : <>Create group <ArrowRight size={16} /></>}

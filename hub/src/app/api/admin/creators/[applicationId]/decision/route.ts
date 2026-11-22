@@ -21,7 +21,7 @@ export async function POST(request: Request, context: { params: Promise<{ applic
   const { error: applicationError } = await admin.from('creator_applications').update({ status: body.decision, rejection_reason: body.decision === 'rejected' ? String(body.reason || '').slice(0, 500) || null : null, reviewed_at: new Date().toISOString(), reviewed_by: user.id }).eq('id', applicationId).eq('status', 'pending')
   if (applicationError) return safeApiError('admin-creator-application-decision', applicationError)
   if (body.decision === 'approved') {
-    const { error } = await admin.from('users').update({ account_type: 'creator', creator_commerce_status: 'not_started' }).eq('id', application.user_id)
+    const { error } = await admin.from('users').update({ account_type: 'creator' }).eq('id', application.user_id).neq('account_type', 'admin')
     if (error) {
       await admin.from('creator_applications').update({ status: 'pending', reviewed_at: null, reviewed_by: null }).eq('id', applicationId)
       return safeApiError('admin-creator-promote-user', error)

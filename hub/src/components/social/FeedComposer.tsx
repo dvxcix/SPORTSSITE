@@ -26,13 +26,14 @@ const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB']
 interface FeedComposerProps {
   onPost?: () => void
   groupId?: string
+  groupAudience?: 'members' | 'public'
   pageId?: string
   preferredSport?: 'MLB' | 'NFL' | 'NBA'
   initialGameId?: string
   openPickBuilder?: boolean
 }
 
-export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialGameId, openPickBuilder = false }: FeedComposerProps) {
+export function FeedComposer({ onPost, groupId, groupAudience, pageId, preferredSport, initialGameId, openPickBuilder = false }: FeedComposerProps) {
   const { user, profile, loading: authLoading, authUnavailable } = useAuth()
   const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const [content, setContent] = useState('')
@@ -137,7 +138,7 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
           sport: legs[0]?.sport,
           wager: hasWager ? wagerNum : null,
           imageUrl: imageUrl || null,
-          visibility,
+          visibility: groupAudience === 'members' ? 'public' : visibility,
           groupId: groupId ?? null,
           pageId: pageId ?? null,
           isSpoiler,
@@ -175,7 +176,7 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
       pick_data: null,
       poll_data: pollData,
       media_urls: imageUrl ? [imageUrl] : [],
-      visibility,
+      visibility: groupAudience === 'members' ? 'public' : visibility,
       group_id: groupId ?? null,
       page_id: pageId ?? null,
       is_spoiler: isSpoiler,
@@ -261,7 +262,7 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
             </div>
           )}
 
-              <div className="ss-composer-visibility" ref={visibilityMenuRef}>
+              {groupAudience === 'members' ? <span className="ss-composer-visibility-trigger"><Users size={11}/> Members</span> : <div className="ss-composer-visibility" ref={visibilityMenuRef}>
                 <button
                   type="button"
                   onClick={() => setVisibilityOpen(v => !v)}
@@ -290,7 +291,7 @@ export function FeedComposer({ onPost, groupId, pageId, preferredSport, initialG
                       </button>
                     ))}
                 </FloatingSurface>
-              </div>
+              </div>}
           </div>
 
           {/* Structured pick form with same-sport and same-book parlay legs. */}

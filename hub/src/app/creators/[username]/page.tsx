@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export default async function CreatorStorefront({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
   const supabase = await createClient()
-  const { data: creator } = await supabase.from('users').select('id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,banner_url,bio,follower_count').eq('username', username).eq('account_type', 'creator').single()
+  const { data: creator } = await supabase.from('users').select('id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,banner_url,bio,follower_count').eq('username', username).single()
   if (!creator) notFound()
   const [{ data: products }, { data: groups }] = await Promise.all([
     supabase.from('creator_products').select('id,title,description,price,currency,product_type,billing_period_days').eq('creator_id', creator.id).eq('status', 'active').order('price'),
@@ -21,7 +21,7 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
   return <div className={styles.page}>
     <CreatorFunnelSignal creatorId={creator.id} eventType="storefront_view" />
     <Link href="/creators" className={styles.back}><ArrowLeft size={15} /> Creator marketplace</Link>
-    <section className={styles.hero} style={creator.banner_url ? { backgroundImage: `linear-gradient(90deg,rgba(7,10,8,.96),rgba(7,10,8,.68)),url(${creator.banner_url})` } : undefined}>
+    <section className={styles.hero} style={creator.banner_url ? { backgroundImage: `linear-gradient(90deg,var(--surface),color-mix(in srgb,var(--surface) 80%,transparent)),url(${creator.banner_url})` } : undefined}>
       <div className={styles.identity}><MemberAvatar src={creator.avatar_url} name={creator.display_name || creator.username} size={76} tone="creator" ringStyle={creator.avatar_ring_style} ringColor={creator.avatar_ring_color}/><div><span className={styles.verified}><BadgeCheck size={15} /> SlipSurge creator</span><h1>{creator.display_name || creator.username}</h1><p>@{creator.username} · {creator.follower_count ?? 0} followers</p></div></div>
       <p className={styles.bio}>{creator.bio || 'Premium sports content, research, and member community on SlipSurge.'}</p>
       <div className={styles.heroFeatures}><span><BarChart3 size={15} /> Research</span><span><BellRing size={15} /> Member alerts</span><span><MessageSquareText size={15} /> Private channels</span></div>
@@ -32,14 +32,14 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
         <header><span>Memberships</span><h2>Choose your access</h2></header>
         {products?.length ? <div className={styles.tiers}>{products.map(product => <article key={product.id}>
           <div><span>{product.product_type === 'membership' ? 'Recurring membership' : 'One-time access'}</span><h3>{product.title}</h3><p>{product.description || 'Premium creator access and member experiences.'}</p></div>
-          <ul><li><Check size={15} /> Premium creator posts and picks</li><li><Check size={15} /> Included member groups and channels</li><li><Check size={15} /> Eligible SlipSurge tools selected by creator</li><li><Check size={15} /> Automatic access after payment</li></ul>
-          <div className={styles.price}><strong>${Number(product.price).toFixed(2)}</strong><span>{product.product_type === 'membership' ? 'per month' : 'one time'}</span></div>
+          <ul><li><Check size={15} /> Premium creator posts and picks</li><li><Check size={15} /> Included member groups and channels</li><li><Check size={15} /> Creator content; research plans sold separately</li><li><Check size={15} /> Automatic access after payment</li></ul>
+          <div className={styles.price}><strong>${Number(product.price).toFixed(2)}</strong><span>{product.product_type === 'membership' ? 'every 30 days' : 'one time'}</span></div>
           <Link href={`/creators/offers/${product.id}`}>View offer</Link>
         </article>)}</div> : <div className={styles.empty}>This creator is preparing their first membership.</div>}
       </div>
       <aside>
         <section className={styles.safety}><ShieldCheck size={20} /><div><h3>Protected access</h3><p>Your membership access stays connected to your SlipSurge account.</p></div></section>
-        <section className={styles.communities}><span>Communities</span><h3>Member spaces</h3>{groups?.length ? groups.slice(0,4).map(group => <div key={group.id}><i>{group.emoji || '◆'}</i><span><b>{group.name}</b><small>{group.access_type === 'paid' ? 'Membership required' : 'Open community'}</small></span><LockKeyhole size={14} /></div>) : <p>Member groups will appear here when published.</p>}</section>
+        <section className={styles.communities}><span>Communities</span><h3>Member spaces</h3>{groups?.length ? groups.slice(0,4).map(group => <Link href={`/groups/${group.slug}`} key={group.id} style={{ color: 'inherit', textDecoration: 'none', display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0' }}><i>{group.emoji || '◆'}</i><span><b>{group.name}</b><small>{group.access_type === 'paid' ? 'Membership required' : 'Open community'}</small></span><LockKeyhole size={14} /></Link>) : <p>Member groups will appear here when published.</p>}</section>
         <section className={styles.about}><Users size={19} /><h3>One membership home</h3><p>Content, research, alerts, group access, and creator conversations stay connected to your SlipSurge identity.</p></section>
       </aside>
     </section>

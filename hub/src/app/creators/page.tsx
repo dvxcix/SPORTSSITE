@@ -13,8 +13,8 @@ export default async function CreatorsPage() {
   const supabase = await createClient()
   const { data } = await supabase
     .from('users')
-    .select('id,username,display_name,avatar_url,bio,follower_count,creator_products!creator_products_creator_id_fkey(id,title,description,price,product_type)')
-    .eq('account_type', 'creator')
+    .select('id,username,display_name,avatar_url,bio,follower_count,creator_products!creator_products_creator_id_fkey!inner(id,title,description,price,product_type)')
+    .in('account_type', ['creator', 'admin'])
     .eq('creator_products.status', 'active')
     .order('follower_count', { ascending: false })
     .limit(48)
@@ -25,7 +25,7 @@ export default async function CreatorsPage() {
         <span className={styles.eyebrow}><Compass size={15} /> Creator marketplace</span>
         <h1>Find sports creators and memberships</h1>
         <p>Explore creator profiles, compare memberships, and find their research and communities.</p>
-        <div className={styles.actions}><a href="#marketplace">Explore creators <ArrowRight size={16} /></a><Link href="/creators/apply">Build your membership</Link></div>
+        <div className={styles.actions}><a href="#marketplace">Explore creators <ArrowRight size={16} /></a><Link href="/creators/studio">Start your community</Link></div>
       </div>
     </section>
 
@@ -33,7 +33,7 @@ export default async function CreatorsPage() {
       <span><BadgeCheck size={17} /> Creator storefronts</span>
       <span><LockKeyhole size={17} /> Secure member access</span>
       <span><Users size={17} /> Private communities</span>
-      <span><Layers size={17} /> SlipSurge tools included by tier</span>
+      <span><Layers size={17} /> Research plans sold separately</span>
     </section>
 
     <CreatorDirectory creators={creators} />

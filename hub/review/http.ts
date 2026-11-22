@@ -18,6 +18,31 @@ export async function reviewHttp(request:NextRequest){
  const path=request.nextUrl.pathname,q=request.nextUrl.searchParams
  const role=(request.cookies.get('ss_ui_review_role')?.value??'member') as ReviewRole
  const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'no-store','X-SlipSurge-Review':'local-fixtures-only'}})
+ if(path==='/api/review/community'&&request.method==='POST'){
+  const input=await request.json(),user=authUser(role)
+  if(!user)return json({error:'Sign in required'},401)
+  if(table('groups').some(row=>row.slug===input.p_slug))return json({error:'That name is taken.'},409)
+  const id=crypto.randomUUID(),channelId=crypto.randomUUID(),channelSlug='group-'+input.p_slug
+  const group={id,slug:input.p_slug,name:input.p_name,description:input.p_description,sport:input.p_sport,emoji:input.p_emoji,is_public:input.p_is_public,owner_id:user.id,channel_id:channelId,creator_product_id:input.p_creator_product_id||null,access_type:input.p_creator_product_id?'paid':'free',member_count:1}
+  const channel={id:channelId,slug:channelSlug,name:input.p_name,group_id:id,owner_id:user.id,channel_type:input.p_is_public?'public':'members_only',creator_product_id:input.p_creator_product_id||null,member_count:1}
+  const member={group_id:id,user_id:user.id,role:'owner'}
+  table('groups').push(group);table('channels').push(channel);table('group_members').push(member)
+  return json({group,channel,member,result:{group_id:id,group_slug:group.slug,channel_id:channelId,channel_slug:channelSlug}})
+ }
+ if(path==='/api/creator/status')return json({state:role==='member'?'not_connected':'ready',canCharge:role!=='member',canPayout:role!=='member',actions:[]})
+ if(path==='/api/admin/creator-commerce')return json({accountMatches:true,canReadCapabilities:true,deliveryReady:true})
+ if(path==='/api/creator/whop-onboard'||path==='/api/creator/payout-portal')return json({error:'Illustrative review: no external payment account was created.'},503)
+ if(/^\/api\/creator\/products\/[^/]+\/access$/.test(path))return json({active:true,status:'active',destination:'/groups/nba-lounge',name:'NBA Lounge'})
+ if(path==='/api/creator/products'&&request.method==='POST'){
+  const input=await request.json(),rows=table('creator_products')
+  if(!rows.some(row=>row.id===input.requestId))rows.push({id:input.requestId,creator_id:authUser(role)?.id,title:input.title,description:input.description,price:input.price,currency:'usd',product_type:input.productType,status:'draft',whop_plan_id:'plan_review',created_at:new Date().toISOString()})
+  return json({id:input.requestId,status:'draft'})
+ }
+ if(path==='/api/creator/products'&&request.method==='PATCH'){
+  const input=await request.json(),row=table('creator_products').find(item=>item.id===input.productId)
+  if(!row)return json({error:'Offer not found.'},404)
+  row.status=input.status;return json({ok:true,status:input.status})
+ }
  const board=makeBoard(games.find(g=>g.id===Number(q.get('game')))??games[0])
  if(path.startsWith('/api/share-image/'))return new NextResponse('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630"><rect width="1200" height="630" fill="#111820"/><rect x="64" y="64" width="8" height="502" rx="4" fill="#b4ff4d"/><text x="112" y="150" fill="#b4ff4d" font-family="Arial" font-size="42" font-weight="700">SlipSurge</text><text x="112" y="290" fill="#fff" font-family="Arial" font-size="62">25+ points</text><text x="112" y="380" fill="#fff" font-family="Arial" font-size="40">Jayson Tatum · BOS</text><text x="112" y="510" fill="#a3b3c5" font-family="Arial" font-size="28">Illustrative card · private design review</text></svg>',{headers:{'Content-Type':'image/svg+xml','Cache-Control':'no-store','X-SlipSurge-Review':'local-fixtures-only'}})
  if(path==='/api/composer/nba-games')return json({date:REVIEW_DATE,games:games.map(game=>({gameKey:String(game.id),gamePk:String(game.id),gameDate:game.date,homeAbbr:game.home_team.abbreviation,awayAbbr:game.visitor_team.abbreviation,homeTeam:game.home_team.full_name,awayTeam:game.visitor_team.full_name,status:'Preview',players:makeBoard(game).players.map(player=>({player_id:String(player.id),mlb_id:null,name:player.first_name+' '+player.last_name,team:player.team.abbreviation,position:player.position,headshot_url:player.headshot,markets:[{key:'points:milestone',prop_type:'points',label:'Points',line:25,offers:[{vendor:'fanduel',side:'milestone',odds:-110},{vendor:'draftkings',side:'milestone',odds:-108}]}]}))}))})

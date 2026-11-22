@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { hasCreatorAccess } from '@/lib/creator'
+import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import Link from 'next/link'
 import { ArrowRight, Hash, LockKeyhole, MessageSquareText, Plus, Radio, Users } from 'lucide-react'
 import { CommunityNav } from '@/components/community/CommunityNav'
@@ -12,15 +12,16 @@ export const dynamic = 'force-dynamic'
 export default async function ChannelsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const [{ data: profile }, { data: approval }, { data: channels, error }] = await Promise.all([
-    user ? supabase.from('users').select('account_type').eq('id', user.id).single() : Promise.resolve({ data: null }),
-    user ? supabase.from('creator_applications').select('id').eq('user_id', user.id).eq('status', 'approved').maybeSingle() : Promise.resolve({ data: null }),
+  const [{ data: profile }, { data: channels, error }] = await Promise.all([
+    user ? supabase.from('users').select('account_type,tier,beta_access_active,discord_advanced_claimed,admin_granted_tier').eq('id', user.id).single() : Promise.resolve({ data: null }),
     supabase.from('channels').select('*').order('is_pinned', { ascending: false }).order('member_count', { ascending: false }),
   ])
   if (error) throw new Error('Channels could not be loaded. Try again.')
-  const creator = profile?.account_type === 'admin' || hasCreatorAccess(profile?.account_type, Boolean(approval))
-  const owned = (channels ?? []).filter(channel => channel.owner_id === user?.id)
-  const community = (channels ?? []).filter(channel => channel.owner_id !== user?.id)
+  const creator = Boolean(user)
+  const globalRooms = hasFullAccessOverride(profile?.account_type, profile?.beta_access_active) || hasTierAccess(effectiveTier((profile?.tier || 'free') as Tier, profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null), 'basic')
+  const accessible = (channels ?? []).filter(channel => globalRooms || channel.group_id)
+  const owned = accessible.filter(channel => channel.owner_id === user?.id)
+  const community = accessible.filter(channel => channel.owner_id !== user?.id)
 
   return <ProductPageShell>
     <CommunityNav />

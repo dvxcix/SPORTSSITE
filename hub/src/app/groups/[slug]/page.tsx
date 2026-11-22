@@ -21,6 +21,7 @@ import { SafeImage } from '@/components/ui/SafeImage'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { hydrateVisibleAuthorRecords } from '@/lib/visiblePickRecords'
 import styles from './GroupPage.module.css'
+import { hasCurrentCreatorAccess } from '@/lib/creatorCommerce'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,6 +56,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
 
   let isMember = false
   let isOwner = false
+  let hasPaidAccess = false
   let memberRole: 'owner' | 'admin' | 'moderator' | 'analyst' | 'member' | 'subscriber' | null = null
   if (user) {
     const { data: member } = await supabase
@@ -66,6 +68,11 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
     isMember = !!member
     isOwner = member?.role === 'owner'
     memberRole = member?.role as typeof memberRole
+  }
+  if (user && !isMember && group.creator_product_id) {
+    const { data: entitlement, error } = await supabase.from('creator_entitlements').select('status,current_period_end').eq('user_id', user.id).eq('product_id', group.creator_product_id).maybeSingle()
+    if (error) throw new Error('Community access could not be verified.')
+    hasPaidAccess = Boolean(entitlement && hasCurrentCreatorAccess(entitlement))
   }
 
   // A private group has no self-serve join — check for a pending invite
@@ -170,22 +177,26 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
           </div>
           <div className={styles.actions}>
             {isOwner && (
+              <>
               <Link href={`/groups/${slug}/settings`}
                 className={styles.secondaryAction}>
                 <Settings size={13} /> Manage
               </Link>
+              <Link href="/creators/studio" className={styles.secondaryAction}>Creator Studio</Link>
+              </>
             )}
             {user && isMember && !isOwner && (
-              <GroupJoinButton groupId={group.id} initialMember={true} />
+              <GroupJoinButton paidProductId={group.access_type === 'paid' ? group.creator_product_id : null} groupId={group.id} initialMember={true} />
             )}
-            {user && !isMember && group.is_public && (
-              <GroupJoinButton groupId={group.id} initialMember={false} />
+            {user && !isMember && (group.is_public || hasPaidAccess) && (
+              <GroupJoinButton paidProductId={group.access_type === 'paid' ? group.creator_product_id : null} groupId={group.id} initialMember={false} />
             )}
             {user && isMember && canInvite && (
               <GroupInviteModal groupId={group.id} groupSlug={slug} groupName={group.name} currentUserId={user.id} />
             )}
             {user && isMember && (
               <GroupMemberOnboarding
+                triggerLabel={isOwner ? 'Preferences' : undefined}
                 groupId={group.id}
                 groupName={group.name}
                 rules={group.rules}
@@ -197,7 +208,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
                   completed: Boolean(memberPreferences?.onboarding_completed_at),
                   rulesAccepted: Boolean(memberPreferences?.rules_accepted_at),
                 }}
-                autoOpen={setup === 'community' && !memberPreferences?.onboarding_completed_at}
+                autoOpen={!isOwner && setup === 'community' && !memberPreferences?.onboarding_completed_at}
               />
             )}
             {!user && <Link href="/auth/login" className={styles.primaryAction}>Sign in</Link>}
@@ -249,7 +260,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
           postCount={posts.length}
           initialTab={view === 'chat' || Boolean(requestedChannel) ? 'chat' : 'posts'}
           posts={<div className={styles.posts}>
-            {canPost && user && <FeedComposer groupId={group.id} />}
+            {canPost && user && <FeedComposer groupId={group.id} groupAudience={group.access_type === 'paid' || !group.is_public ? 'members' : 'public'} />}
             {(posts?.length ?? 0) === 0 ? (
               <div className={styles.emptyPosts}>
                 <p>💬</p>

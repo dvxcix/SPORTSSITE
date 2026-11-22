@@ -1,155 +1,106 @@
 'use client'
-
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, BadgeDollarSign, BarChart3, BellRing, Building2, Check, Copy, ExternalLink, Eye, Layers3, Loader2, LockKeyhole, MessageSquareText, Pause, Play, Plus, Radio, ShieldCheck, Users } from 'lucide-react'
-import styles from './CreatorStudio.module.css'
-import { isTrustedSlipSurgeUrl, isTrustedWhopUrl } from '@/lib/whopUrl'
+import { ArrowRight, BadgeDollarSign, Copy, ExternalLink, Loader2, MessageSquareText, Pause, Play, Plus, Users } from 'lucide-react'
+import { CreatorPlatformPanel } from './CreatorPlatformPanel'
+import { CreatorLaunchPanel } from './CreatorLaunchPanel'
 import { ScheduledPostPlanner, type ScheduledPost } from './ScheduledPostPlanner'
 import { CreatorAnalyticsDashboard, type CreatorAnalytics } from './CreatorAnalyticsDashboard'
+import type { CreatorPaymentState } from '@/lib/creatorCommerce'
+import styles from './CreatorStudio.module.css'
 
-type Product = { id: string; title: string; description: string | null; price: number; product_type: string; status: string; purchase_url: string | null; created_at: string }
-type CreatorProfile = { username: string; whop_connected_company_id: string | null }
-type CreatorGroup = { id: string; slug: string; emoji: string | null; name: string; access_type: string }
-type Event = { id: string; event_type: string; amount: number | null; currency: string | null; status: string | null; created_at: string }
-
-const BENEFITS = [
-  ['premiumContent', LockKeyhole, 'Premium picks and posts'],
-  ['research', BarChart3, 'Eligible research tools'],
-  ['alerts', BellRing, 'Real-time member alerts'],
-  ['community', MessageSquareText, 'Private groups and channels'],
-] as const
-
-export function CreatorStudioClient({ profile, products, groups, stats, analytics, events, scheduledPosts, mlbAccess, isTestAccount = false }: { profile: CreatorProfile; products: Product[]; groups: CreatorGroup[]; stats: { activeMembers: number; revenue: number; offers: number; communities: number }; analytics: CreatorAnalytics; events: Event[]; scheduledPosts: ScheduledPost[]; mlbAccess: boolean; isTestAccount?: boolean }) {
+type Product = { id: string; title: string; description?: string | null; price: number; product_type: string; status: string; whop_plan_id?: string | null }
+type CreatorGroup = { id: string; slug: string; emoji: string | null; name: string; access_type: string; creator_product_id?: string | null }
+type CommerceEvent = { id: string; event_type: string; amount: number | null; currency: string | null; status: string | null; created_at: string }
+export function CreatorStudioClient({ profile, products, groups, stats, analytics, events, scheduledPosts, mlbAccess, feePercentage, isTestAccount = false }: {
+  profile: { username: string; account_type?: string }; products: Product[]; groups: CreatorGroup[]; stats: { activeMembers: number; revenue: number; offers: number; communities: number };
+  analytics: CreatorAnalytics; events: CommerceEvent[]; scheduledPosts: ScheduledPost[]; mlbAccess: boolean; feePercentage: number; isTestAccount?: boolean
+}) {
   const router = useRouter()
+  const [readiness, setReadiness] = useState<CreatorPaymentState | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [form, setForm] = useState({ title: '', description: '', price: '19.99', productType: 'membership' })
-  const [benefits, setBenefits] = useState<Record<string, boolean>>({ premiumContent: true, research: true, alerts: true, community: true })
-
-  async function onboard() {
-    if (isTestAccount) return setError('Test mode is active. Payment onboarding and money movement are disabled for this account.')
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const res = await fetch('/api/creator/whop-onboard', { method: 'POST', signal: AbortSignal.timeout(20_000) })
-      const data = await res.json().catch(() => null)
-      if (!res.ok) throw new Error('onboarding_failed')
-      if (!isTrustedWhopUrl(data?.url)) throw new Error('Whop returned an invalid onboarding destination')
-      window.location.assign(data.url)
-    } catch {
-      setError('Could not start payment setup. Please try again.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function createProduct() {
-    if (isTestAccount) return setError('Test mode is active. Use this workspace to review the creator experience without publishing a paid offer.')
+  const [requestId, setRequestId] = useState<string | null>(null)
+  const [form, setForm] = useState({ title: '', description: '', price: '', productType: 'membership' })
+  async function saveOffer(event: React.FormEvent) {
+    event.preventDefault()
+    if (busy || isTestAccount || !readiness?.canCharge) return
     const price = Number(form.price)
-    if (!form.title.trim()) return setError('Add an offer name before publishing.')
-    if (!Number.isFinite(price) || price <= 0) return setError('Enter a valid price greater than $0.')
-    setBusy(true); setError(''); setNotice('')
-    const included = BENEFITS.filter(([key]) => benefits[key]).map(([, , label]) => label)
-    const description = [form.description.trim(), included.length ? `Includes: ${included.join(', ')}.` : ''].filter(Boolean).join(' ')
+    if (!Number.isFinite(price) || price < 1 || price > 10_000) { setError('Enter a price from $1 to $10,000.'); return }
+    const id = requestId || crypto.randomUUID()
+    setRequestId(id); setBusy(true); setError(''); setNotice('')
     try {
-      const res = await fetch('/api/creator/products', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...form, description, price }), signal: AbortSignal.timeout(20_000) })
-      if (!res.ok) throw new Error('publish_failed')
-      setForm({ title: '', description: '', price: '19.99', productType: 'membership' })
-      setNotice('Offer published to your storefront.')
-      router.refresh()
-    } catch {
-      setError('Could not publish this offer. Please try again.')
-    } finally {
-      setBusy(false)
-    }
+      const response = await fetch('/api/creator/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, requestId: id, price }), signal: AbortSignal.timeout(55_000) })
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.error || 'Offer could not be saved.')
+      setNotice('Offer saved. Create its member community, then publish it below.')
+      setForm({ title: '', description: '', price: '', productType: 'membership' }); setRequestId(null); router.refresh()
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Retry to resume your draft.') }
+    finally { setBusy(false) }
   }
-
-  async function setProductStatus(productId: string, status: 'active' | 'paused') {
+  async function resumeOffer(product: Product) {
     setBusy(true); setError(''); setNotice('')
     try {
-      const res = await fetch('/api/creator/products', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ productId, status }), signal: AbortSignal.timeout(20_000) })
-      if (!res.ok) throw new Error('update_failed')
-      setNotice(status === 'active' ? 'Offer published.' : 'Offer paused.')
-      router.refresh()
-    } catch {
-      setError('Could not update this offer. Please try again.')
-    } finally {
-      setBusy(false)
-    }
+      const response = await fetch('/api/creator/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId: product.id, title: product.title, description: product.description, price: Number(product.price), productType: product.product_type }), signal: AbortSignal.timeout(55_000) })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Offer setup could not be resumed.')
+      setNotice('Offer saved. Create its member community, then publish.'); router.refresh()
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Try again.') }
+    finally { setBusy(false) }
   }
-
-  async function copyStorefront() {
-    setError('')
-    setNotice('')
+  async function setStatus(productId: string, status: 'active' | 'paused') {
+    setBusy(true); setError(''); setNotice('')
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/creators/${profile.username}`)
-      setNotice('Storefront link copied.')
-    } catch {
-      setError('Could not copy the storefront link. Please try again.')
-    }
+      const response = await fetch('/api/creator/products', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId, status }), signal: AbortSignal.timeout(35_000) })
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.error || 'Offer could not be updated.')
+      setNotice(status === 'active' ? 'Offer published to your storefront.' : 'New purchases paused. Existing members keep their access.')
+      router.refresh()
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Try again.') }
+    finally { setBusy(false) }
   }
-
-  const setupCount = [true, !!profile.whop_connected_company_id, products.length > 0, groups.length > 0].filter(Boolean).length
-
+  async function copyLink() {
+    try { await navigator.clipboard.writeText(`${window.location.origin}/creators/${profile.username}`); setNotice('Storefront link copied.') }
+    catch { setError('The link could not be copied. Open your storefront and copy its address.') }
+  }
   return <div className={styles.page}>
-    <section className={styles.hero}>
-      <div><span className={styles.kicker}><Radio size={13} /> Creator tools</span><h1>Creator Studio</h1><p>Manage memberships, member access, and communities.</p></div>
-      <div className={styles.heroActions}><Link href={`/creators/${profile.username}`}><Eye size={15} /> View storefront</Link><button type="button" onClick={copyStorefront}><Copy size={15} /> Copy link</button></div>
+    <header className={styles.hero}><div><h1>Creator Studio</h1><p>Your communities, content and memberships.</p></div><div className={styles.heroActions}><Link href={`/creators/${profile.username}`}>View storefront <ArrowRight size={15}/></Link><button onClick={copyLink}><Copy size={15}/> Copy link</button></div></header>
+    <CreatorLaunchPanel groupCount={groups.length} liveOffers={stats.offers} testAccount={isTestAccount} onReadiness={setReadiness}/>
+    <div aria-live="polite">{notice && <p className={styles.setupNote}>{notice}</p>}{error && <p role="alert" className={styles.setupError}>{error}</p>}</div>
+    <section className={styles.stats} aria-label="Creator overview">
+      <article><Users size={18}/><span><small>Paid members</small><strong>{stats.activeMembers}</strong></span></article>
+      <article><BadgeDollarSign size={18}/><span><small>Recorded gross sales</small><strong>${stats.revenue.toFixed(2)}</strong></span></article>
+      <article><ExternalLink size={18}/><span><small>Published offers</small><strong>{stats.offers}</strong></span></article>
+      <article><MessageSquareText size={18}/><span><small>Communities</small><strong>{stats.communities}</strong></span></article>
     </section>
-
-    <div aria-live="polite">
-      {notice && <div className={styles.alert}>{notice}</div>}
-      {error && <div className={styles.alert} role="alert">{error}</div>}
-    </div>
-    <section className={styles.stats}>
-      <article><Users size={18} /><span><small>ACTIVE MEMBERS</small><strong>{stats.activeMembers}</strong></span></article>
-      <article><BadgeDollarSign size={18} /><span><small>RECORDED REVENUE</small><strong>${stats.revenue.toFixed(2)}</strong></span></article>
-      <article><Layers3 size={18} /><span><small>LIVE OFFERS</small><strong>{stats.offers}</strong></span></article>
-      <article><MessageSquareText size={18} /><span><small>COMMUNITIES</small><strong>{stats.communities}</strong></span></article>
-    </section>
-
-    <CreatorAnalyticsDashboard analytics={analytics} />
-
     <section className={styles.workspace}>
       <div className={styles.primaryColumn}>
-        <ScheduledPostPlanner posts={scheduledPosts} mlbAccess={mlbAccess}/>
-        <article className={styles.panel}>
-          <header><div><span>MEMBERSHIP BUILDER</span><h2>Package your member experience</h2><p>Create recurring access or a one-time drop. Select what members receive, then publish through Whop.</p></div><Layers3 size={21} /></header>
-          <div className={styles.builder}>
-            <label><span>Offer name</span><input value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} placeholder="Example: All-Access NFL" /></label>
-            <div className={styles.split}><label><span>Price</span><div className={styles.money}><i>$</i><input value={form.price} onChange={event => setForm({ ...form, price: event.target.value })} inputMode="decimal" /></div></label><label><span>Billing</span><select value={form.productType} onChange={event => setForm({ ...form, productType: event.target.value })}><option value="membership">Monthly membership</option><option value="one_time">One-time access</option></select></label></div>
-            <label><span>Member promise</span><textarea value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="Explain what you cover, how often you publish, and what members can expect." /></label>
-            <fieldset><legend>Included with this tier</legend><div className={styles.benefits}>{BENEFITS.map(([key, Icon, label]) => <button aria-pressed={benefits[key]} className={benefits[key] ? styles.selected : ''} onClick={() => setBenefits(current => ({ ...current, [key]: !current[key] }))} type="button" key={key}><Icon size={17} /><span>{label}</span><i>{benefits[key] && <Check size={13} />}</i></button>)}</div></fieldset>
-            <button className={styles.primaryButton} onClick={createProduct} disabled={busy || !profile.whop_connected_company_id || !form.title.trim()}>{busy ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />} Create and publish</button>
-          </div>
-        </article>
-
-        <article className={styles.panel}>
-          <header><div><span>YOUR OFFERS</span><h2>Membership catalog</h2><p>Manage availability and open the customer checkout experience.</p></div><LockKeyhole size={21} /></header>
-          <div className={styles.productList}>{products.length ? products.map(product => <div key={product.id}><div><span className={`${styles.status} ${styles[product.status]}`}>{product.status}</span><h3>{product.title}</h3><p>{product.product_type === 'membership' ? 'Monthly' : 'One time'} · ${Number(product.price).toFixed(2)}</p></div><div className={styles.productActions}>{(isTrustedSlipSurgeUrl(product.purchase_url) || isTrustedWhopUrl(product.purchase_url)) && <a href={product.purchase_url} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Checkout</a>}<button disabled={busy} onClick={() => setProductStatus(product.id, product.status === 'active' ? 'paused' : 'active')}>{product.status === 'active' ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Publish</>}</button></div></div>) : <div className={styles.empty}>Create your first membership above. It will appear on your public storefront immediately after publishing.</div>}</div>
-        </article>
+        <article className={styles.panel}><header><h2>Your communities</h2><Link href="/groups/create" className={styles.textLink}><Plus size={15}/> New</Link></header><div className={styles.groupList}>{groups.length ? groups.map(group => <Link href={`/groups/${group.slug}`} key={group.id}><i>{group.emoji || '◆'}</i><span><b>{group.name}</b><small>{group.access_type === 'paid' ? 'Paid community' : 'Free community'}</small></span><ArrowRight size={15}/></Link>) : <div className={styles.empty}>Create a free community above. Add your picks, posts, research and member conversations.</div>}</div></article>
+        <article className={styles.panel}><header><div><h2>Your offers</h2><p>Save an offer, create its member community, then publish.</p></div></header><div className={styles.productList}>{products.length ? products.map(product => {
+          const linked = groups.some(group => group.creator_product_id === product.id)
+          return <div key={product.id}><div><span className={styles.status}>{product.status === 'draft' ? 'Draft' : product.status === 'active' ? 'Published' : 'Paused'}</span><h3>{product.title}</h3><p>${Number(product.price).toFixed(2)} · {product.product_type === 'membership' ? 'every 30 days' : 'one payment'}</p></div><div className={styles.productActions}>{!product.whop_plan_id && <button disabled={busy || !readiness?.canCharge} onClick={() => void resumeOffer(product)}>Resume setup</button>}{!linked && product.whop_plan_id && <Link href={`/groups/create?offer=${product.id}`}>Create member community</Link>}{product.status === 'active' && <Link href={`/creators/offers/${product.id}`}>View offer</Link>}<button disabled={busy || !product.whop_plan_id || (product.status !== 'active' && (!linked || !readiness?.canCharge))} onClick={() => void setStatus(product.id, product.status === 'active' ? 'paused' : 'active')}>{product.status === 'active' ? <><Pause size={14}/> Pause</> : <><Play size={14}/> Publish</>}</button></div></div>
+        }) : <p className={styles.empty}>Free communities do not need a paid offer.</p>}</div></article>
+        {(groups.length > 0 || ['creator', 'admin'].includes(profile.account_type || '')) && <ScheduledPostPlanner posts={scheduledPosts} mlbAccess={mlbAccess} groups={groups}/>}
       </div>
-
       <aside>
-        <article className={styles.panel}>
-          <header><div><span>LAUNCH READINESS</span><h2>{setupCount}/4 complete</h2></div><ShieldCheck size={21} /></header>
-          <div className={styles.progress}><i style={{ width: `${setupCount * 25}%` }} /></div>
-          <div className={styles.checklist}><span className={styles.done}><Check size={13} /><b>Creator approved</b></span><span className={profile.whop_connected_company_id ? styles.done : ''}>{profile.whop_connected_company_id ? <Check size={13} /> : '2'}<b>Connect payments</b></span><span className={products.length ? styles.done : ''}>{products.length ? <Check size={13} /> : '3'}<b>Publish membership</b></span><span className={groups.length ? styles.done : ''}>{groups.length ? <Check size={13} /> : '4'}<b>Create community</b></span></div>
-          {isTestAccount && <div className={styles.alert}>Test workspace. Payment setup, publishing, withdrawals, and money movement are disabled.</div>}
-          <button className={styles.whopButton} onClick={onboard} disabled={busy || isTestAccount}><Building2 size={15} /> {isTestAccount ? 'Whop connection disabled in test mode' : profile.whop_connected_company_id ? 'Continue Whop setup' : 'Connect with Whop'}</button>
-          <Link className={styles.textLink} href="/creators/payouts">Open payouts <ArrowRight size={14} /></Link>
+        <article className={styles.panel}><header><div><h2>Create a paid offer</h2><p>Sell your content and community access. SlipSurge research plans are purchased separately.</p></div></header>
+          <form className={styles.builder} onSubmit={saveOffer}>
+            {!readiness?.canCharge && <p className={styles.setupNote}>Complete Whop setup above to create a paid offer.</p>}
+            <fieldset disabled={busy || !!requestId} className={styles.offerFields}><label><span>Offer name</span><input required minLength={2} maxLength={80} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Weekend research club"/></label>
+            <div className={styles.split}><label><span>Price (USD)</span><input required type="number" min="1" max="10000" step="0.01" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="0.00" inputMode="decimal"/></label><label><span>Billing</span><select value={form.productType} onChange={e => setForm({ ...form, productType: e.target.value })}><option value="membership">Every 30 days</option><option value="one_time">One-time access</option></select></label></div>
+            <label><span>What members receive</span><textarea required maxLength={1000} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Describe your content, schedule and community."/></label></fieldset>
+            <p className={styles.setupNote}>SlipSurge platform fee: {feePercentage}% per payment. Whop processing fees may also apply.</p>
+            <button className={styles.primaryButton} disabled={busy || !readiness?.canCharge || isTestAccount}>{busy ? <Loader2 size={16} className="animate-spin"/> : <Plus size={16}/>} {requestId ? 'Retry saved draft' : 'Save offer'}</button>
+          {requestId && !busy && <button type="button" className={styles.secondaryButton} onClick={() => { setRequestId(null); setForm({ title: '', description: '', price: '', productType: 'membership' }) }}>Start a different offer</button>}
+          </form>
         </article>
-
-        <article className={`${styles.panel} ${styles.migration}`}><Users size={22} /><span>Bring your audience</span><h2>Set up your storefront</h2><p>Recreate your tiers, invite members, and set up private channels.</p><ol><li>Match your current pricing</li><li>Build the member destination</li><li>Share your storefront link</li><li>Welcome members</li></ol></article>
-
-        <article className={styles.panel}><header><div><span>COMMUNITY</span><h2>Groups and channels</h2></div><MessageSquareText size={21} /></header><div className={styles.quickActions}><Link href="/groups/create"><Plus size={15} /> New group</Link><Link href="/channels"><MessageSquareText size={15} /> Channels</Link></div><div className={styles.groupList}>{groups.length ? groups.map(group => <Link href={`/groups/${group.slug}`} key={group.id}><i>{group.emoji || '◆'}</i><span><b>{group.name}</b><small>{group.access_type === 'paid' ? 'Paid access' : 'Free access'}</small></span></Link>) : <p>No community created yet.</p>}</div></article>
-
-        <article className={styles.panel}><header><div><span>RECENT ACTIVITY</span><h2>Commerce events</h2></div><BadgeDollarSign size={21} /></header><div className={styles.events}>{events.length ? events.slice(0,5).map(event => <div key={event.id}><span><b>{event.event_type.replaceAll('_', ' ')}</b><small>{new Date(event.created_at).toLocaleDateString('en-US', {timeZone:'UTC'})}</small></span><strong>{event.amount ? `$${Number(event.amount).toFixed(2)}` : event.status || 'Recorded'}</strong></div>) : <p>No commerce activity yet.</p>}</div></article>
+        <article className={styles.panel}><header><h2>Balance & payouts</h2></header><p className={styles.setupNote}>Whop manages verification, balances, payout methods and withdrawals.</p><Link className={styles.textLink} href="/creators/payouts">Open payouts <ArrowRight size={14}/></Link></article>
+        <article className={styles.panel}><header><h2>Recent commerce</h2></header><div className={styles.events}>{events.length ? events.slice(0, 5).map(event => <div key={event.id}><span><b>{event.event_type.replaceAll('.', ' ').replaceAll('_', ' ')}</b><small>{new Date(event.created_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}</small></span><strong>{event.amount != null ? `${Number(event.amount).toFixed(2)} ${(event.currency || 'usd').toUpperCase()}` : event.status || 'Recorded'}</strong></div>) : <p>No purchases yet.</p>}</div></article>
       </aside>
     </section>
+    {profile.account_type === 'admin' && <CreatorPlatformPanel/>}
+    <details className={styles.analyticsDisclosure}><summary>Audience & sales analytics</summary><CreatorAnalyticsDashboard analytics={analytics} /></details>
   </div>
 }

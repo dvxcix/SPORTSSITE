@@ -36,6 +36,7 @@ export function GroupMemberOnboarding({
   channels,
   initialPreferences,
   autoOpen = false,
+  triggerLabel,
 }: {
   groupId: string
   groupName: string
@@ -43,6 +44,7 @@ export function GroupMemberOnboarding({
   channels: GroupOnboardingChannel[]
   initialPreferences: GroupOnboardingPreferences
   autoOpen?: boolean
+  triggerLabel?: string
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -107,7 +109,7 @@ export function GroupMemberOnboarding({
         onClick={() => setOpen(true)}
       >
         {completed ? <Settings2 size={14} /> : <Sparkles size={14} />}
-        {completed ? 'Preferences' : 'Finish setup'}
+        {triggerLabel || (completed ? 'Preferences' : 'Finish setup')}
       </button>
 
       {open && (

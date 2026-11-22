@@ -128,7 +128,7 @@ export function AccountMenu({ placement = 'topbar', compact = false, onNavigate 
                   <Link role="menuitem" href="/settings/membership" className="ss-dropdown-item" onClick={navigate}>
                     <CreditCard size={15} /><span>Membership</span><ChevronRight size={13} />
                   </Link>
-                  {(profile?.account_type === 'creator' || profile?.username?.toLowerCase() === 'slipsurge') && (
+                  {Boolean(profile) && (
                     <>
                       <p className="ss-topbar-menu-label">Creator</p>
                       <Link role="menuitem" href="/creators/studio" className="ss-dropdown-item" onClick={navigate}>

@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { hasCreatorAccess } from '@/lib/creator'
 import Link from 'next/link'
 import { ArrowRight, LockKeyhole, MessageSquareText, Plus, Settings2, Users } from 'lucide-react'
 import { SafeImage } from '@/components/ui/SafeImage'
@@ -14,14 +13,13 @@ export const dynamic = 'force-dynamic'
 export default async function GroupsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const [{ data: profile }, { data: approval }, groupResult, membershipResult] = await Promise.all([
+  const [{ data: profile }, groupResult, membershipResult] = await Promise.all([
     user ? supabase.from('users').select('account_type').eq('id', user.id).single() : Promise.resolve({ data: null }),
-    user ? supabase.from('creator_applications').select('id').eq('user_id', user.id).eq('status', 'approved').maybeSingle() : Promise.resolve({ data: null }),
     supabase.from('groups').select('*').order('member_count', { ascending: false }).limit(50),
     user ? supabase.from('group_members').select('group_id,group:groups(*)').eq('user_id', user.id) : Promise.resolve({ data: [], error: null }),
   ])
   if (groupResult.error || membershipResult.error) throw new Error('Groups could not be loaded. Try again.')
-  const creator = profile?.account_type === 'admin' || hasCreatorAccess(profile?.account_type, Boolean(approval))
+  const creator = Boolean(user)
   const showMlb = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const memberships = membershipResult.data ?? []
   const joinedIds = new Set(memberships.map(row => row.group_id))

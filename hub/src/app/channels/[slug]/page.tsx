@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { getChannelMessages, getChannels } from '@/lib/queries'
+import { TierGate } from '@/components/layout/TierGate'
 import { ChatRoom } from '@/components/chat/ChatRoom'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import Link from 'next/link'
@@ -31,7 +32,7 @@ export default async function ChannelPage({ params }: Props) {
     : { data: null, error: null }
   if (permissionError) throw new Error('Channel permissions could not be loaded. Try again.')
 
-  return (
+  const room = (
     <div className="ss-community-room-layout">
       <aside className="ss-desktop-channel-rail">
         <div className="ss-desktop-channel-brand"><Image src="/logo.png" alt="" width={30} height={30} priority /><div><strong>Community</strong><span>SLIPSURGE</span></div></div>
@@ -68,4 +69,5 @@ export default async function ChannelPage({ params }: Props) {
       </section>
     </div>
   )
+  return channel.group_id ? room : <TierGate requiredTier="basic" label="Live rooms">{room}</TierGate>
 }

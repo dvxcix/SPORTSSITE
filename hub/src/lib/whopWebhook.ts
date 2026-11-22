@@ -1,4 +1,5 @@
 import { NextResponse, after } from 'next/server'
+import { handleCreatorWebhook } from '@/lib/creatorWebhook'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WHOP_PLANS, TIER_RANK, effectiveTier, type Tier } from '@slipsurge/core/tiers'
@@ -6,7 +7,7 @@ import { syncTierBadge } from '@/lib/tierBadges'
 import { sendXConversion } from '@/lib/xConversion'
 import { syncDiscordRoleForUser } from '@/lib/discord'
 import { alertPaymentOnCancelingMembership, alertUnexpectedChargeAfterCancel } from '@/lib/billingAlert'
-import { whopCancellationKeepsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
+import { whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 import { resolveRepricedUltimatePlan } from '@/lib/whopRepricedUltimate'
 import { verifyConcurrentUpgrade } from '@/lib/whopConcurrentUpgrade'
 
@@ -75,7 +76,7 @@ const PASSIVE_EVENT_TYPES = new Set([
 export async function handleWhopWebhookRequest(
   req: Request,
   secret: string | undefined,
-  source: 'main' | 'addon' = 'main',
+  source: 'main' | 'addon' | 'creator' = 'main',
 ): Promise<NextResponse> {
   const id = req.headers.get('webhook-id')
   const timestamp = req.headers.get('webhook-timestamp')
@@ -109,7 +110,7 @@ export async function handleWhopWebhookRequest(
     return NextResponse.json({ received: true, duplicate: true })
   }
   if (existingReceipt?.status === 'processing' && Date.now() - new Date(existingReceipt.updated_at).getTime() < 10 * 60_000) {
-    return NextResponse.json({ received: true, processing: true })
+    return NextResponse.json({ received: true, processing: true }, { status: source === 'creator' ? 503 : 200 })
   }
   if (existingReceipt) {
     await supabase.from('provider_webhook_events').update({
@@ -123,25 +124,24 @@ export async function handleWhopWebhookRequest(
     const { error: receiptError } = await supabase.from('provider_webhook_events').insert({
       provider: 'whop', provider_event_id: id, event_type: type ?? null,
     })
-    if (receiptError?.code === '23505') return NextResponse.json({ received: true, duplicate: true })
+    if (receiptError?.code === '23505') return NextResponse.json({ received: true, duplicate: true }, { status: source === 'creator' ? 503 : 200 })
     if (receiptError) return NextResponse.json({ error: 'Webhook receipt could not be recorded' }, { status: 500 })
   }
 
   async function finalizeReceipt(status: 'succeeded' | 'failed' | 'ignored', error?: string) {
-    await supabase.from('provider_webhook_events').update({
+    const { error: receiptError } = await supabase.from('provider_webhook_events').update({
       status,
       last_error: error?.slice(0, 2000) ?? null,
       processed_at: status === 'failed' ? null : new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq('provider', 'whop').eq('provider_event_id', id)
+    if (receiptError && source === 'creator') throw new Error('Creator webhook receipt could not be recorded')
   }
 
   try {
     const data = (event.data && typeof event.data === 'object' ? event.data : event) as Record<string, unknown>
     const metadata = (data.metadata && typeof data.metadata === 'object' ? data.metadata : {}) as Record<string, unknown>
     const internalUserId = stringValue(metadata.internal_user_id)
-    const creatorProductId = stringValue(metadata.slipsurge_product_id)
-    const creatorId = stringValue(metadata.slipsurge_creator_id)
     const planId = stringValue(data.variant_id) ?? stringValue(data.plan_id) ?? objectId(data.plan)
     // Real bug (confirmed via Whop's actual payment.succeeded schema): on a
     // payment event, `data` is the PAYMENT object, and its own real
@@ -162,33 +162,13 @@ export async function handleWhopWebhookRequest(
     // event-type strings this switch matches against (dot-separated,
     // e.g. "membership.activated") were never confirmed against a real
     // payload either. One line, no payload contents, removed once confirmed.
-    if (creatorProductId && creatorId) {
-      await supabase.from('creator_commerce_events').upsert({
-        creator_id: creatorId,
-        product_id: creatorProductId,
-        event_type: type || 'unknown',
-        provider_event_id: id,
-        provider_object_id: data?.id || null,
-        amount: data?.subtotal ?? data?.amount ?? data?.total ?? null,
-        currency: data?.currency || 'usd',
-        status: data?.status || null,
-        metadata: { membership_id: membershipId || null },
-      }, { onConflict: 'provider_event_id' })
-
-      if (internalUserId && ['payment.succeeded', 'membership.activated', 'membership.went_valid'].includes(type || '')) {
-        await supabase.from('creator_entitlements').upsert({ user_id: internalUserId, creator_id: creatorId, product_id: creatorProductId, whop_membership_id: membershipId || null, status: 'active', current_period_end: periodEnd, updated_at: new Date().toISOString() }, { onConflict: 'user_id,product_id' })
-        const { data: entitledGroups } = await supabase.from('groups').select('id,channel_id').eq('creator_product_id', creatorProductId)
-        for (const group of entitledGroups || []) {
-          await supabase.from('group_members').upsert({ group_id: group.id, user_id: internalUserId, role: 'member' }, { onConflict: 'group_id,user_id', ignoreDuplicates: true })
-          if (group.channel_id) await supabase.from('channel_members').upsert({ channel_id: group.channel_id, user_id: internalUserId }, { onConflict: 'channel_id,user_id', ignoreDuplicates: true })
-        }
-      } else if (internalUserId && type === 'membership.deactivated' && whopCancellationKeepsAccess(data)) {
-        await supabase.from('creator_entitlements').update({ status: 'active', current_period_end: periodEnd, updated_at: new Date().toISOString() }).eq('user_id', internalUserId).eq('product_id', creatorProductId)
-      } else if (internalUserId && ['payment.failed', 'membership.deactivated', 'membership.went_invalid'].includes(type || '')) {
-        await supabase.from('creator_entitlements').update({ status: type === 'payment.failed' ? 'past_due' : 'expired', updated_at: new Date().toISOString() }).eq('user_id', internalUserId).eq('product_id', creatorProductId)
-      }
+    if (await handleCreatorWebhook(supabase, id, type, data)) {
       await finalizeReceipt('succeeded')
       return NextResponse.json({ received: true })
+    }
+    if (source === 'creator') {
+      await finalizeReceipt('ignored')
+      return NextResponse.json({ received: true, ignored: true })
     }
 
     if (!type || PASSIVE_EVENT_TYPES.has(type) || !ACTIONABLE_EVENT_TYPES.has(type)) {
