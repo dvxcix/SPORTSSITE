@@ -3,6 +3,7 @@
 body:has([data-saved-research-header]) .ss-utility-dock-toggle,
 body:has([data-saved-research-header]) .ss-utility-dock-items{display:none}
 body:has(.ss-profile-savebar) .ss-utility-dock{--volt-action-offset:88px}
+body:has(.ss-context-handoff) .ss-profile-savebar{--profile-resume-offset:76px}
 
 /* Keep initials behind the image while it loads, and after a failed image request. */
 .ss-member-avatar{filter:none;vertical-align:middle}
@@ -134,7 +135,7 @@ body:has(.ss-profile-savebar) .ss-utility-dock{--volt-action-offset:88px}
 .ss-settings-content table{font-variant-numeric:tabular-nums}
 .ss-profile-ring-colors>button{min-width:36px;min-height:36px}
 .ss-profile-editor-banner{background:radial-gradient(ellipse at 12% 15%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%),var(--surface-2)}
-.ss-profile-savebar{position:sticky;bottom:16px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--border-2);border-radius:12px;background:color-mix(in srgb,var(--surface) 94%,transparent);box-shadow:var(--shadow-card);backdrop-filter:blur(16px)}
+.ss-profile-savebar{position:sticky;bottom:calc(16px + var(--profile-resume-offset,0px));z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--border-2);border-radius:12px;background:color-mix(in srgb,var(--surface) 94%,transparent);box-shadow:var(--shadow-card);backdrop-filter:blur(16px)}
 .ss-profile-savebar>span{color:var(--text-2);font-size:12px;line-height:1.4}.ss-profile-savebar>button{width:auto;min-height:44px;min-width:130px;padding-inline:16px;font-size:13px}
 
 @keyframes ss-member-wave{from{transform:translate3d(-2%,0,0) scale(1.02)}to{transform:translate3d(3%,4%,0) scale(1.09)}}
@@ -160,7 +161,7 @@ body:has(.ss-profile-savebar) .ss-utility-dock{--volt-action-offset:88px}
   .ss-settings-hero p:not(.ss-settings-eyebrow){font-size:12px}.ss-settings-content :is(input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea){font-size:16px}
   .ss-settings-content :is(button,[role=switch]){min-height:44px}.ss-profile-ring-colors>button{min-width:44px;min-height:44px}
   .ss-watchlist-row{padding:14px 12px!important;gap:9px!important}
-  .ss-profile-savebar{bottom:calc(var(--mobile-dock-clearance,88px) + 8px);padding:9px;gap:8px}.ss-profile-savebar>button{min-width:120px}.ss-profile-savebar>span{font-size:11px}
+  .ss-profile-savebar{bottom:calc(var(--mobile-dock-clearance,88px) + 8px + var(--profile-resume-offset,0px));padding:9px;gap:8px}.ss-profile-savebar>button{min-width:120px}.ss-profile-savebar>span{font-size:11px}
 }
 @media(prefers-reduced-motion:reduce){.ss-member-cover::before{animation:none}.ss-hot-pick,.ss-member-profile-tabs>a{transition:none}.ss-hot-pick:hover{transform:none}}
 @media(max-width:360px){.ss-composer-modes>button{min-width:44px}.ss-composer-modes>button>svg{display:none}}
