@@ -36,3 +36,14 @@ No real member messages/invitations were sent. No schema, collectors, payments o
 product alerts changed. This follow-up does not declare every live flow bug-free.
 The original inventory remains 240 released surfaces, zero queued, ten existing
 owner approvals. Production verification will be recorded after Ready.
+
+Live follow-up discovered during production verification
+The Channels directory selected private membership fields through the ordinary
+authenticated client. Column grants correctly deny those fields; the ignored
+profile error made every global room disappear. The page now verifies the
+caller, reads only that caller’s membership through the existing server-only
+account client, and keeps channel rows under the normal authenticated RLS query.
+Missing/failed membership reads show recovery instead of an empty directory.
+Five new directory tests plus three existing visibility tests pass; purchased,
+admin-granted, beta/admin and free/community access rules remain unchanged.
+No grants or policies were broadened.

@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { authVisibilityUnavailable } from '@/lib/blocks'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import Link from 'next/link'
 import { ArrowRight, Hash, LockKeyhole, MessageSquareText, Plus, Radio, Users } from 'lucide-react'
@@ -11,12 +13,16 @@ export const dynamic = 'force-dynamic'
 
 export default async function ChannelsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const [{ data: profile }, { data: channels, error }] = await Promise.all([
-    user ? supabase.from('users').select('account_type,tier,beta_access_active,discord_advanced_claimed,admin_granted_tier').eq('id', user.id).single() : Promise.resolve({ data: null }),
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authVisibilityUnavailable(authError)) throw new Error('Account access could not be verified. Try again.')
+  const [{ data: profile, error: profileError }, { data: channels, error }] = await Promise.all([
+    // Membership overrides are private account fields. As in TierGate, verify
+    // the caller first and read only that account through the server client.
+    user ? createAdminClient().from('users').select('account_type,tier,beta_access_active,discord_advanced_claimed,admin_granted_tier').eq('id', user.id).single() : Promise.resolve({ data: null, error: null }),
     supabase.from('channels').select('*').order('is_pinned', { ascending: false }).order('member_count', { ascending: false }),
   ])
   if (error) throw new Error('Channels could not be loaded. Try again.')
+  if (profileError || (user && !profile)) throw new Error('Membership access could not be loaded. Try again.')
   const creator = Boolean(user)
   const globalRooms = hasFullAccessOverride(profile?.account_type, profile?.beta_access_active) || hasTierAccess(effectiveTier((profile?.tier || 'free') as Tier, profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null), 'basic')
   const accessible = (channels ?? []).filter(channel => globalRooms || channel.group_id)
