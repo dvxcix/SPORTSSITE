@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch, publicWorkspaceHref, currentPublicWorkspace, PUBLIC_WORKSPACE_ACCESS_EVENT } from '@/lib/publicWorkspaceClient'
 import dynamic from 'next/dynamic'
 import { nbaPlayerMarketGroups } from '@/lib/nbaPlayerMarketGroups'
 import { PaintPlayerMarketGroups } from './PaintPlayerMarketGroups'
@@ -219,13 +220,13 @@ export function PaintBoardClient({ initial, games, days, date, initialMode = 'pr
     const query = new URLSearchParams(window.location.search); query.set('view', next)
     window.history.replaceState(null, '', `${window.location.pathname}?${query}`)
   }
-  function go(nextDate: string, nextGame?: number) { const query = new URLSearchParams({ date: nextDate, mode: requestedMode, market, view, side, book:vendor, sort, order:ascending?'asc':'desc' }); query.set('contract',contract);if(targetLine!=null)query.set('target',String(targetLine));if (nextGame) query.set('game', String(nextGame)); startTransition(() => router.push(`/the-paint?${query}`, { scroll: false })) }
+  function go(nextDate: string, nextGame?: number) { if(currentPublicWorkspace()&&(nextDate!==date||nextGame!=null&&nextGame!==gameId)){window.dispatchEvent(new Event(PUBLIC_WORKSPACE_ACCESS_EVENT));return} const query = new URLSearchParams({ date: nextDate, mode: requestedMode, market, view, side, book:vendor, sort, order:ascending?'asc':'desc' }); query.set('contract',contract);if(targetLine!=null)query.set('target',String(targetLine));if (nextGame) query.set('game', String(nextGame)); startTransition(() => router.push(publicWorkspaceHref(`/the-paint?${query}`), { scroll: false })) }
   function changeMode(next: NbaOddsMode) {
     if (next === requestedMode) return
     setRequestedMode(next)
     requestRef.current?.abort()
     const query = new URLSearchParams(window.location.search); query.set('mode', next)
-    startTransition(() => router.push(`/the-paint?${query}`, { scroll: false }))
+    startTransition(() => router.push(publicWorkspaceHref(`/the-paint?${query}`), { scroll: false }))
   }
   function sortBy(key: Sort) { if (sort === key) setAscending(v => !v); else { setSort(key); setAscending(key === 'name') } }
   const player = board?.players.find(p => p.id === detail)

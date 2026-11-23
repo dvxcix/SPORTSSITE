@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch, publicWorkspaceHref, currentPublicWorkspace } from '@/lib/publicWorkspaceClient'
 
 import { ResearchBookFilter, useResearchBooks } from '@/components/research/ResearchBookFilter'
 import { DEFAULT_RESEARCH_PREFERENCES, initialResearchBook, type ResearchPreferences } from '@/lib/researchPreferences'
@@ -1692,6 +1693,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   useEffect(() => {
     let active = true
     const loadMatrices = async () => {
+      if (currentPublicWorkspace()) return
       try {
         const response = await fetch('/api/nfl-matrices', {
           cache: 'no-store',
@@ -2113,7 +2115,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         </button>
         <NflTouchdownTracker
           events={marketStory.touchdowns}
-          onJumpToGame={(gameId) => router.push(`/the-sideline?date=${selected.gameday}&game=${encodeURIComponent(gameId)}`)}
+          onJumpToGame={(gameId) => router.push(publicWorkspaceHref(`/the-sideline?date=${selected.gameday}&game=${encodeURIComponent(gameId)}`))}
         />
       </section>
       {view !== 'odds-board' && <NflLastSeen board={board} />}

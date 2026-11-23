@@ -17,6 +17,7 @@ import { visibleNflObservedOdds, type NflObservedOdds } from '@/lib/nflPausedPro
 import { nflOddsBoardHash, nflOddsBoardSignature, readNflOddsBoardClocks, sharedNflOddsBoardClocks, type NflOddsBoardClock } from '@/lib/nflOddsBoardClock'
 import { nflBoardIdentities,nflBoardIdentityKey,nflBoardImage,type NflBoardIdentity } from '@/lib/nflOddsBoardIdentity'
 import { readNflBoardFinals } from '@/lib/nflOddsBoardResultsServer'
+import { publicWorkspaceGames } from '@/lib/publicWorkspaceScope'
   
 export const dynamic='force-dynamic'
 export const maxDuration=120
@@ -123,9 +124,9 @@ export async function GET(request:NextRequest){
   const params=request.nextUrl.searchParams, input=params.get('date'),requestedMarket=params.get('market')??'receiving_yards',requestedBook=params.get('book')??'fanduel'
   if(!input||!/^\d{4}-\d{2}-\d{2}$/.test(input)||!Number.isFinite(Date.parse(`${input}T00:00:00Z`))||new Date(`${input}T00:00:00Z`).toISOString().slice(0,10)!==input||!/^[a-z0-9_]{1,80}$/.test(requestedMarket)||!/^[a-z0-9_]{1,40}$/.test(requestedBook))return NextResponse.json({error:'Invalid odds board filters'},{status:400})
   try{
-    const {games,date}=await getSidelineGames(input)
+    const schedule=await getSidelineGames(input),date=schedule.date,games=publicWorkspaceGames(schedule.games,'nfl')
     if(date!==input||games.length>24||new Set(games.map(game=>game.id)).size!==games.length)throw new Error('Schedule unavailable')
-    const {clocks}=await sharedNflOddsBoardClocks(date,games)
+    const proof=await sharedNflOddsBoardClocks(date,games),clocks=publicWorkspaceGames(proof.clocks,'nfl')
     const phase=nflOddsBoardSignature(clocks,Date.now())
     const candidate=await nbaSharedCache(`nfl:odds-board-candidate:v15:${date}:${nflOddsBoardHash(phase)}`,300,0,async()=>{
       const admin=createAdminClient(), capturedNow=new Date(Date.now()).toISOString()

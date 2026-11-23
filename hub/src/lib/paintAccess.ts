@@ -3,9 +3,11 @@ import { NextResponse } from 'next/server'
 import { resolveAuthedClient } from '@/lib/requireTier'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hasNbaAccess, NBA_ACCESS_COLUMNS } from '@/lib/nbaAccessPolicy'
+import { publicWorkspaceScope } from './publicWorkspaceScope'
 
 // Re-read trusted account fields for each request, including membership revocation.
 export async function requirePaintAccess() {
+  if (publicWorkspaceScope('nba')) return { userId: '', isAdmin: false, isPublicPreview: true }
   const { userId, error: authError } = await resolveAuthedClient()
   if (authError) return { error: authError }
   if (!userId) return { error: NextResponse.json({ error: 'Sign in required' }, { status: 401 }) }

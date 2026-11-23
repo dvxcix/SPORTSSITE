@@ -20,6 +20,7 @@ import { nbaFullBoardPlayers } from '@/lib/nbaFullBoardPlayers'
 import { nbaBoardCaptureWarnings } from '@/lib/nbaBoardCaptureWarning'
 import { nbaSupplementalQuote } from '@/lib/nbaSupplementalProps'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { publicWorkspaceGames, publicWorkspacePhase } from '@/lib/publicWorkspaceScope'
 
 export const maxDuration = 120
 const phaseKeys=(games:PaintGame[],mode:NbaOddsMode)=>{
@@ -36,7 +37,8 @@ export async function GET(request:NextRequest) {
   if(!date||nbaDate(date)!==date||!PAINT_MARKETS.some(item=>item.key===market)||nbaBinary(market!)||!/^[a-z0-9_]{1,30}$/.test(book))return NextResponse.json({error:'Choose a valid date and market'},{status:400})
   const mode=nbaOddsMode(request.nextUrl.searchParams.get('mode'))
   try {
-    const schedule=await getPaintSchedule(date,true)
+    const fullSchedule=await getPaintSchedule(date,true)
+    const schedule={...fullSchedule,games:publicWorkspaceGames(fullSchedule.games,'nba')}
     if(schedule.date!==date)return NextResponse.json(nbaPackFullBoard({date,games:[],players:[],cells:[],failed:[],unavailable:[],complete:schedule.complete}),{headers:{'Cache-Control':'private, no-store'}})
     if(schedule.games.length>16)throw new Error('NBA slate exceeds capacity')
     // Complete slates share one small phase proof instead of one clock-cache
@@ -45,7 +47,7 @@ export async function GET(request:NextRequest) {
     const readPhase=async()=>{
       const token=await getNbaOddsBoardPhase(date),now=Date.now(),phase=nbaReadOddsBoardPhase(token.header,date,now)
       if(!phase||!Number.isSafeInteger(token.expiresAt)||token.expiresAt<=now)throw new Error('NBA phase unavailable')
-      return phase
+      return publicWorkspacePhase(phase)
     }
     const games=schedule.complete?nbaBoardPhaseGames(schedule.games,await readPhase()):await Promise.all(schedule.games.map(game=>getNbaOddsGame(game)))
     const {boundary,key}=phaseKeys(games,mode)

@@ -7,7 +7,7 @@ import { SafeImage } from '@/components/ui/SafeImage'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { nflOddsBoardMove } from '@/lib/nflOddsBoard'
 import { sportLogoUrl } from '@/lib/sportLogos'
-import { PREVIEW_CONFIG, previewPagePath, previewPricingPath, type PreviewSport, type ResearchPreview } from '@/lib/publicResearchPreview'
+import { PREVIEW_CONFIG, previewPagePath, type PreviewSport, type ResearchPreview } from '@/lib/publicResearchPreview'
 import { PUBLIC_PREVIEW_EXAMPLES } from '@/lib/publicResearchPreviewExamples'
 import { trackProductEvent } from '@/lib/productAnalytics'
 import { DiscoveryLink } from './DiscoveryLink'
@@ -39,9 +39,9 @@ function RecentSpark({player,line}:{player:PreviewIdentityPlayer;line:number}) {
 }
 
 const restrictions={
-  books:{title:'Compare more sportsbooks',body:'This free preview shows FanDuel. Open membership details for the supported sportsbooks and full research boards.'},
-  markets:{title:'Research more markets',body:'This preview includes one market. Membership gives you the supported player markets in The Court and The Sideline.'},
-  tools:{title:'Keep researching the matchup',body:'The full workspaces include player trends, matchup tools and the available market boards. See what is included before choosing a plan.'},
+  books:{title:'Compare more sportsbooks',body:'Open the full one-game preview to compare the available sportsbooks.'},
+  markets:{title:'Research more markets',body:'Open the full one-game preview to switch markets on the actual research board.'},
+  tools:{title:'Keep researching the matchup',body:'Open this matchup in the actual workspace, with its research tabs and player drawers.'},
   save:{title:'Make room for your picks',body:'Create an account to follow people, save picks and join the community. You can keep browsing this preview first.'},
 } as const
 type Restriction=keyof typeof restrictions
@@ -66,7 +66,7 @@ export function ResearchShowcase({previews}:{previews?:Record<PreviewSport,Resea
   const quote=selected?.prices.find(item=>item.line===line)
   const visible=[...players].sort((a,b)=>Number(b.prices.some(item=>item.line===line))-Number(a.prices.some(item=>item.line===line))).slice(0,6)
   const context={sport,game:board.game.id,date:board.game.date,player:selected?.id,line}
-  const fullPreview=previewPagePath(context),pricing=previewPricingPath(context)
+  const fullPreview=previewPagePath(context)
   const registration='/auth/register?next='+encodeURIComponent(fullPreview)
   const recentAvailable=players.some(player=>player.recent?.length)
 
@@ -129,7 +129,7 @@ export function ResearchShowcase({previews}:{previews?:Record<PreviewSport,Resea
       {selected&&<><div className={styles.drawerHeader}><PreviewPlayerIdentity player={selected} sport={sport} size={64}/><button type="button" aria-label="Close player preview" onClick={()=>setDetails(false)}><X size={19} aria-hidden="true"/></button></div><div className={styles.drawerBody}><p className={styles.drawerContext}><PreviewTeamMark sport={sport} team={board.game.away} size={19}/>{board.game.away} at {board.game.home}<PreviewTeamMark sport={sport} team={board.game.home} size={19}/><span>{displayDay(board.game.date)}</span></p><div className={styles.views} role="group" aria-label="Player preview view"><button type="button" aria-pressed={detailView==='overview'} onClick={()=>setDetailView('overview')}>Overview</button><button type="button" aria-pressed={detailView==='odds'} onClick={()=>setDetailView('odds')}>All odds</button></div>{detailView==='overview'?<><div className={styles.contract}><h3>{line}+ {config.title.toLowerCase()}</h3><BookLogo vendor="fanduel" size={22}/></div>{selectionPrices}{!quote&&<p className={styles.unavailable}>No saved price for this milestone. Choose another line.</p>}<PreviewPlayerChart key={selected.id} player={selected} sport={sport} line={line} onLineChange={selectLine}/></>:<div className={styles.drawerOdds}><h3>{board.book} · {config.title}</h3>{selected.prices.map(current=><button type="button" key={current.line} aria-pressed={current.line===line} onClick={()=>{selectLine(current.line);setDetailView('overview')}}><span>{current.line}+</span><BookLogo vendor="fanduel" size={17}/><strong>{odds(current.price)}</strong><small>Open {odds(current.opening)}</small></button>)}</div>}<p className={styles.observation}>{board.example?'Archived example':'Saved pregame board'} · {displayTime(board.capturedAt)}</p></div><div className={styles.drawerFooter}><DiscoveryLink href={fullPreview} destination={sport+'_preview'}>Open the full free preview<ArrowRight size={15} aria-hidden="true"/></DiscoveryLink><button type="button" onClick={()=>{setDetails(false);setRestriction('tools')}}>More research tools<LockKeyhole size={13} aria-hidden="true"/></button></div></>}
     </ModalSurface>
     <ModalSurface open={!!restriction} onClose={()=>setRestriction(null)} label={restriction?restrictions[restriction].title:'More research'} backdropClassName={styles.gateBackdrop} panelClassName={styles.gate}>
-      {restriction&&<><button type="button" className={styles.gateClose} aria-label="Close preview access details" onClick={()=>setRestriction(null)}><X size={19} aria-hidden="true"/></button><h2>{restrictions[restriction].title}</h2><p>{restrictions[restriction].body}</p><DiscoveryLink href={restriction==='save'?registration:pricing} destination={restriction==='save'?'registration':'membership'} className={styles.gatePrimary}>{restriction==='save'?'Create a free account':'View membership'}</DiscoveryLink><button type="button" className={styles.gateContinue} onClick={()=>setRestriction(null)}>Keep browsing</button></>}
+      {restriction&&<><button type="button" className={styles.gateClose} aria-label="Close preview access details" onClick={()=>setRestriction(null)}><X size={19} aria-hidden="true"/></button><h2>{restrictions[restriction].title}</h2><p>{restrictions[restriction].body}</p><DiscoveryLink href={restriction==='save'?registration:fullPreview} destination={restriction==='save'?'registration':sport+'_preview'} className={styles.gatePrimary}>{restriction==='save'?'Create a free account':'Open full game preview'}</DiscoveryLink><button type="button" className={styles.gateContinue} onClick={()=>setRestriction(null)}>Keep browsing</button></>}
     </ModalSurface>
   </div>
 }

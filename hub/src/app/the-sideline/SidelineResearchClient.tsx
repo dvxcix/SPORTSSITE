@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch } from '@/lib/publicWorkspaceClient'
 
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { SafeImage } from '@/components/ui/SafeImage'

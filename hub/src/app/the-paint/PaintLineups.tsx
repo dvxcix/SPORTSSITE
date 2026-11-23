@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch } from '@/lib/publicWorkspaceClient'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'

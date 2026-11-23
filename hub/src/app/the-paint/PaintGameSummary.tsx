@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch } from '@/lib/publicWorkspaceClient'
 
 import { useEffect, useId, useRef, useState, type ReactNode, type CSSProperties } from 'react'
 import { Banknote, ChevronLeft, ChevronRight, Info, Minimize2, Maximize2 } from 'lucide-react'

@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch } from '@/lib/publicWorkspaceClient'
 
 import { useEffect, useMemo, useState } from 'react'
 import { withoutNflCurrentMarkets } from '@/lib/nflAvailability'

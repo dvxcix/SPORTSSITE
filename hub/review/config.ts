@@ -13,7 +13,7 @@ export function withPrivateDesignReview(base:NextConfig):NextConfig {
   logging:{browserToTerminal:false},
   onDemandEntries:{maxInactiveAge:3_600_000,pagesBufferLength:200},
   allowedDevOrigins:['127.0.0.1','localhost'],
-  webpack(config:any,context:any){
+  webpack(config:Parameters<NonNullable<NextConfig['webpack']>>[0],context:Parameters<NonNullable<NextConfig['webpack']>>[1]){
    const result=base.webpack?base.webpack(config,context):config
    if(context.dev)result.devtool=false
    result.resolve.alias={...result.resolve.alias,
@@ -25,6 +25,7 @@ export function withPrivateDesignReview(base:NextConfig):NextConfig {
     '@/lib/nbaPaintData$':path.join(root,'review/nba.ts'),
     '@/lib/nbaResearchResources$':path.join(root,'review/nba-resources.ts'),
     '@/lib/nbaSharedCache$':path.join(root,'review/cache.ts'),
+    '@/lib/publicWorkspaceData$':path.join(root,'review/public-workspace.ts'),
     '@slipsurge/core/espn-api$':path.join(root,'review/scoreboard.ts'),
     '@slipsurge/core':path.join(root,'packages/core/src'),
    }
@@ -35,13 +36,14 @@ export function withPrivateDesignReview(base:NextConfig):NextConfig {
     [path.join(root,'src/lib/nbaPaintData')]:path.join(root,'review/nba.ts'),
     [path.join(root,'src/lib/nbaResearchResources')]:path.join(root,'review/nba-resources.ts'),
     [path.join(root,'src/lib/nbaSharedCache')]:path.join(root,'review/cache.ts'),
+    [path.join(root,'src/lib/publicWorkspaceData')]:path.join(root,'review/public-workspace.ts'),
     [path.join(root,'src/app/the-sideline/data')]:path.join(root,'review/nfl.ts'),
     [path.join(root,'src/lib/nflTouchdownFeed')]:path.join(root,'review/nfl.ts'),
    }
    result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/^@slipsurge\/core\/espn-api$/, (resource:{request:string})=>{
     resource.request=path.join(root,'review/scoreboard.ts')
    }))
-   result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/(?:supabase[/\\]admin|CreatorCheckoutEmbed|CreatorWalletEmbed|nbaPaintData|nbaResearchResources|nbaSharedCache|nflTouchdownFeed|[./]data)(?:\.tsx?)?$/, (resource:any)=>{
+   result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/(?:supabase[/\\]admin|CreatorCheckoutEmbed|CreatorWalletEmbed|nbaPaintData|nbaResearchResources|nbaSharedCache|publicWorkspaceData|nflTouchdownFeed|[./]data)(?:\.tsx?)?$/, (resource:{request:string;context:string})=>{
     const target=(resource.request.startsWith('@/')?path.join(root,'src',resource.request.slice(2)):path.resolve(resource.context,resource.request)).replace(/\.tsx?$/,'')
     if(replacements[target])resource.request=replacements[target]
    }))

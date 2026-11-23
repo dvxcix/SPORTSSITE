@@ -1,4 +1,5 @@
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
+import * as oddsPhase from '../src/lib/nbaOddsBoardPhase.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -13,6 +14,8 @@ async function compiled(file: string, imports: Record<string, unknown>, fallback
   const target = { exports: {} as Record<string, unknown> }
   new Function('require', 'exports', 'module', outputText)((name: string) => {
     if (name === '@/lib/nbaOddsMode' || name === './nbaOddsMode') return oddsMode
+    if (name === '@/lib/nbaOddsBoardPhase') return oddsPhase
+    if (name === './publicWorkspaceScope' || name === '@/lib/publicWorkspaceScope') return {publicWorkspaceScope:()=>undefined,publicWorkspaceGames:(games:unknown)=>games,publicWorkspacePhase:(phase:unknown)=>phase}
     if ((name === './nbaOddsClockData' || name === '@/lib/nbaOddsClockData') && !(name in imports)) return {getNbaOddsGame:async(game:unknown)=>game}
     if (name in imports) return imports[name]
     assert.ok(fallback, name); return fallback(name)
@@ -143,7 +146,8 @@ test('NBA page gates render membership fallback before loading any research; gue
 
 test('NBA member public activity omits provider URLs and internal capture metadata', async () => {
   const snapshot = { gameId: 123, capturedAt: '2026-10-19T20:00:00Z', rows: [{ playerId: 1, market: 'points', picks: 42 }], markets: ['points'], sourceUrl: 'https://app.pikkit.com/event/private', rawPayload: 'private', unmatched: 9, rawCategories: [{ label: 'private source label' }], coverage: { observed: 1, unmatched: 9, unsupported: 1 } }
-  const query: any = { select: () => query, eq: () => query, lte: () => query, gte: () => query, order: () => query, limit: () => query, abortSignal: async () => ({ data: [{ snapshot, captured_at: snapshot.capturedAt }], error: null }) }
+  type Query = Record<'select'|'eq'|'lte'|'gte'|'order'|'limit',()=>Query> & {abortSignal:()=>Promise<{data:Array<{snapshot:typeof snapshot;captured_at:string}>;error:null}>}
+  const query: Query = { select: () => query, eq: () => query, lte: () => query, gte: () => query, order: () => query, limit: () => query, abortSignal: async () => ({ data: [{ snapshot, captured_at: snapshot.capturedAt }], error: null }) }
   const data = await compiled('../src/lib/nbaPublicData.ts', {
     './nbaPublicHistory': await import('../src/lib/nbaPublicHistory.ts'),
     './nbaPaintData': { getPaintGame: async () => ({id:123,datetime:'2026-10-20T23:00:00Z',status:'Scheduled'}) },

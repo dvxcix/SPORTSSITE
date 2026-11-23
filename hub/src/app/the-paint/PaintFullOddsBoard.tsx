@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch } from '@/lib/publicWorkspaceClient'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import Link from 'next/link'

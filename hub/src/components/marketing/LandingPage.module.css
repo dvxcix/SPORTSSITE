@@ -161,6 +161,14 @@
   content: '';
   pointer-events: none;
 }
+.playerCard::before {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.66), transparent 42%);
+  content: '';
+  pointer-events: none;
+}
 
 .cardHeader, .cardInfo {
   position: absolute;
@@ -169,6 +177,7 @@
 }
 
 .cardHeader {
+  color: #fff;
   top: 8px;
   display: flex;
   align-items: center;

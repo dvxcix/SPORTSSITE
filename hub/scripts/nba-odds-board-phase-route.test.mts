@@ -6,6 +6,7 @@ const shared={denied:false,phaseFails:false,phaseCalls:0,boardCalls:0}
 ;(globalThis as typeof globalThis&{phaseRouteFixture:typeof shared}).phaseRouteFixture=shared
 const bundled=await build({stdin:{contents:"export {GET} from './src/app/the-paint/board/route'",resolveDir:resolve('.'),loader:'ts'},bundle:true,write:false,platform:'node',format:'cjs',tsconfig:'tsconfig.json',plugins:[{name:'phase-route',setup(builder){
   const modules:Record<string,string>={
+    '@/lib/publicWorkspaceScope':`export const publicWorkspacePhase=phase=>phase;export const publicWorkspaceScope=()=>undefined`,
     'next/server':`export const NextResponse={json:(data,options)=>Response.json(data,options)}`,
     '@/lib/paintAccess':`export async function requirePaintAccess(){return globalThis.phaseRouteFixture.denied?{error:new Response('denied',{status:403})}:{userId:'fixture'}}`,
     '@/lib/nbaSeasonDisplay':`export const nbaSeasonDisplayBoard=board=>board`,

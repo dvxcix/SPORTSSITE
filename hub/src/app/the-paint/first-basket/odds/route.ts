@@ -6,6 +6,7 @@ import { nbaDate } from '@/lib/nbaPaint'
 import { getNbaFirstOddsForMode,NbaFirstOddsUnavailable } from '@/lib/nbaFirstBasketOddsData'
 import { attachNbaFirstBasketHistory } from '@/lib/nbaFirstBasketHistoryData'
 import { nbaFirstQuoteVisible } from '@/lib/nbaFirstQuoteFreshness'
+import { publicWorkspaceGames } from '@/lib/publicWorkspaceScope'
 export const maxDuration=120
 export async function GET(request:NextRequest){
   const gate=await requirePaintAccess();if(gate.error)return gate.error
@@ -13,7 +14,7 @@ export async function GET(request:NextRequest){
   const date=request.nextUrl.searchParams.get('date')
   if(!date||nbaDate(date)!==date)return NextResponse.json({error:'Choose a valid NBA slate date'},{status:400})
   try{
-    const schedule=await getPaintSchedule(date,true),games=schedule.games.slice(0,16)
+    const fullSchedule=await getPaintSchedule(date,true),schedule={...fullSchedule,games:publicWorkspaceGames(fullSchedule.games,'nba')},games=schedule.games.slice(0,16)
     const results=[]
     for(let offset=0;offset<games.length;offset+=4)results.push(...await Promise.allSettled(games.slice(offset,offset+4).map(async game=>{
       const result=await getNbaFirstOddsForMode(game, mode)

@@ -5,6 +5,7 @@ import { nbaSharedCache } from './nbaSharedCache'
 import { nflMatchupTeam } from './nflMatchupBoard'
 import { nflKickoffAt } from '@/app/the-sideline/kickoff'
 import type { SidelineGame } from '@/app/the-sideline/types'
+import { publicWorkspaceScope } from './publicWorkspaceScope'
 
 export type NflOddsBoardClock={id:string;cutoff:string|null}
 export const nflOddsBoardHash=(value:string)=>createHash('sha256').update(value).digest('hex')
@@ -16,12 +17,15 @@ export function nflOddsBoardClockToken(clocks:NflOddsBoardClock[],now=Date.now()
 export async function readNflOddsBoardClocks(date:string,games:SidelineGame[]):Promise<NflOddsBoardClock[]> {
   const admin=createAdminClient(),ids=games.map(game=>game.id)
   const schedule=await admin.from('nfl_schedule').select('game_id,gameday,gametime,away_team,home_team,away_score,home_score',{count:'exact'}).eq('gameday',date).limit(25).abortSignal(AbortSignal.timeout(10000))
-  if(schedule.error||schedule.count==null||schedule.count!==games.length||schedule.data?.length!==schedule.count||schedule.count>24)throw new Error('Schedule unavailable')
+  if(schedule.error||schedule.count==null||schedule.data?.length!==schedule.count||schedule.count>24)throw new Error('Schedule unavailable')
+  const scope=publicWorkspaceScope('nfl')
+  const rows=scope?schedule.data.filter(row=>row.game_id===scope.game):schedule.data
+  if(rows.length!==games.length)throw new Error('Schedule unavailable')
   if(!ids.length)return []
   const records=await admin.from('nfl_pregame_research').select('game_id,kickoff_at',{count:'exact'}).in('game_id',ids).limit(1000).abortSignal(AbortSignal.timeout(10000))
   if(records.error||records.count==null||records.data?.length!==records.count||records.count>1000)throw new Error('Clock unavailable')
   const archivedIds = new Set(records.data.map(row => row.game_id))
-  const oldFinals = schedule.data.filter(row => !archivedIds.has(row.game_id) && row.away_score != null && row.home_score != null)
+  const oldFinals = rows.filter(row => !archivedIds.has(row.game_id) && row.away_score != null && row.home_score != null)
   const finalClocks = new Map<string, number>()
   if (oldFinals.length) {
     const feeds = await admin.from('nfl_game_feeds')
@@ -43,7 +47,7 @@ export async function readNflOddsBoardClocks(date:string,games:SidelineGame[]):P
     }
   }
   return games.map(game=>{
-    const matches=schedule.data!.filter(row=>row.game_id===game.id)
+    const matches=rows.filter(row=>row.game_id===game.id)
     if(matches.length!==1||matches[0].away_team!==game.away.abbr||matches[0].home_team!==game.home.abbr)throw new Error('Schedule changed')
     const live=nflKickoffAt({gameday:matches[0].gameday,gametime:matches[0].gametime})?.getTime(),original=nflKickoffAt(game)?.getTime()
     const related=records.data!.filter(row=>row.game_id===game.id)

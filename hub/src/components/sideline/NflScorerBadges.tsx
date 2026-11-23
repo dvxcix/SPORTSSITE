@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch } from '@/lib/publicWorkspaceClient'
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'

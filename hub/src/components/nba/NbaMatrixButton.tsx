@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch, currentPublicWorkspace, publicWorkspaceAccessOr } from '@/lib/publicWorkspaceClient'
 import { nbaModeHref } from '@/lib/nbaModeHref'
 import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 
@@ -127,7 +128,7 @@ function MatrixEditor({ initial, onClose, onSaved, gameId }: { initial: NbaMatri
 export function NbaMatrixButton({ gameId, initialOpen = false }: { gameId?: number; initialOpen?: boolean }) {
   const [open, setOpen] = useState(initialOpen)
   useEffect(() => {
-    const show = () => setOpen(true)
+    const show = () => publicWorkspaceAccessOr(() => setOpen(true))
     window.addEventListener('ss:open-nba-matrices', show)
     return () => window.removeEventListener('ss:open-nba-matrices', show)
   }, [])
@@ -141,6 +142,7 @@ export function NbaMatrixButton({ gameId, initialOpen = false }: { gameId?: numb
   const [loadingMatrices, setLoadingMatrices] = useState(true)
   const [loadingCommunity, setLoadingCommunity] = useState(false)
   const refresh = useCallback(async () => {
+    if (currentPublicWorkspace()) { setLoadingMatrices(false); return }
     try { setMatrices((await request<{ matrices: NbaMatrix[] }>('/api/nba-matrices')).matrices) }
     catch { setMessage('NBA Matrices could not load. Try again.') }
     finally { setLoadingMatrices(false) }
@@ -179,7 +181,7 @@ export function NbaMatrixButton({ gameId, initialOpen = false }: { gameId?: numb
   }
   return (
     <>
-      <button type="button" className={extra.inlineButton} onClick={() => setOpen(true)}><Grid3X3 size={15} /> NBA Matrix{matrices.length ? <span>{matrices.length}</span> : null}</button>
+      <button type="button" className={extra.inlineButton} onClick={() => publicWorkspaceAccessOr(() => setOpen(true))}><Grid3X3 size={15} /> NBA Matrix{matrices.length ? <span>{matrices.length}</span> : null}</button>
       <ModalSurface open={open && !editor} onClose={() => setOpen(false)} label="NBA Matrices" backdropClassName={styles.backdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.drawer}>
         <header><div><small>THE COURT</small><h2>NBA Matrices</h2></div><button type="button" aria-label="Close NBA Matrices" onClick={() => setOpen(false)}><X size={18} /></button></header>
         <nav aria-label="NBA Matrix views"><button type="button" aria-pressed={tab === 'mine'} className={tab === 'mine' ? styles.active : ''} onClick={() => setTab('mine')}>My NBA Matrices</button><button type="button" aria-pressed={tab === 'community'} className={tab === 'community' ? styles.active : ''} onClick={() => setTab('community')}>NBA Community</button></nav>

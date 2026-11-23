@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch } from '@/lib/publicWorkspaceClient'
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type WheelEvent } from 'react'
 import { startNflPolling } from '@/lib/nflPolling'

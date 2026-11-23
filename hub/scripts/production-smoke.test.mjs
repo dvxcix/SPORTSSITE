@@ -1611,12 +1611,12 @@ test('application routes expose one top-level main landmark without nested page 
   for (const file of files) if ((await read(file)).includes('<main')) withMain.push(file.replaceAll('\\', '/'))
   assert.deepEqual(withMain.sort(), [
     'src/app/global-error.tsx',
-    'src/app/preview/[sport]/ResearchPreviewClient.tsx',
     'src/components/admin/AdminShell.tsx',
     'src/components/creator/CreatorWorkspaceShell.tsx',
     'src/components/layout/RootLayoutShell.tsx',
     'src/components/layout/VisitorBrowseShell.tsx',
     'src/components/marketing/LandingPage.tsx',
+    'src/components/marketing/PublicWorkspaceFrame.tsx',
   ])
   const shell = await read('src/components/layout/RootLayoutShell.tsx')
   assert.match(shell, /return <>.*<CreatorWorkspaceShell>\{children\}<\/CreatorWorkspaceShell>/)

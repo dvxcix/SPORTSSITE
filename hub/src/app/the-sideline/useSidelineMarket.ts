@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch } from '@/lib/publicWorkspaceClient'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SidelineOddsBoard } from '@/lib/nflOddsTypes'

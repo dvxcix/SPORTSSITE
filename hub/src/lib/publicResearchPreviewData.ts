@@ -136,7 +136,7 @@ async function loadPreview(sport: PreviewSport, date: string): Promise<ResearchP
   const admin = createAdminClient()
   const schedule = (await (sport === 'nba' ? nbaSchedule(admin, date) : nflSchedule(admin, date)))
     .sort((a, b) => (a.start ?? '').localeCompare(b.start ?? '') || a.id.localeCompare(b.id))
-  const candidates = schedule.filter(game => game.start && game.state === 'scheduled').slice(0, 2)
+  const candidates = schedule.filter(game => game.start).slice(0, 1)
   const boards = await Promise.allSettled(candidates.map(game => sport === 'nba' ? nbaBoard(admin, game) : nflBoard(admin, game)))
   for (const result of boards) if (result.status === 'fulfilled' && result.value) return { date, schedule, board: result.value, scheduleAvailable: true }
   return { date, schedule, board: PUBLIC_PREVIEW_EXAMPLES[sport], scheduleAvailable: true }

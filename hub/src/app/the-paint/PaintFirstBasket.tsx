@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch } from '@/lib/publicWorkspaceClient'
 import { nbaModeHref } from '@/lib/nbaModeHref'
 import { nbaResearchRevision } from '@/lib/nbaResearchRevision'
 import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'

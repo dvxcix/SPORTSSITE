@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch, currentPublicWorkspace } from '@/lib/publicWorkspaceClient'
 import { nbaModeHref } from '@/lib/nbaModeHref'
 import { useNbaOddsMode } from '@/components/nba/NbaOddsModeContext'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
@@ -30,7 +31,7 @@ export function NbaMatrixProvider({ board, gameIds, children }: { board: PaintBo
     return () => { stop(); window.removeEventListener('ss:nba-matrices-updated', refresh); window.removeEventListener('nba-matrices-changed', refresh) }
   }, [refresh, refreshScheduled, pollMilliseconds])
   useEffect(() => {
-    if (!scopeKey) return
+    if (!scopeKey || currentPublicWorkspace()) return
     const controller = new AbortController()
     requestRef.current = controller
     const run = async () => {

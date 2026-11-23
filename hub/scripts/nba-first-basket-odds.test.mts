@@ -164,6 +164,7 @@ test('first-basket normalization diagnostics remain admin-only',async()=>{
  for(const isAdmin of [false,true]){
   const compiled={exports:{} as {GET:(r:unknown)=>Promise<Response>}}
   const mocks:Record<string,unknown>={
+   '@/lib/publicWorkspaceScope':{publicWorkspaceGames:<T,>(games:T[])=>games},
    '@/lib/nbaOddsMode':oddsMode,
    '@/lib/nbaFirstQuoteFreshness':firstQuoteFreshness,
    'next/server':{NextResponse:{json:(body:unknown,options?:ResponseInit)=>Response.json(body,options)}},

@@ -228,7 +228,7 @@ test('limited controls explain access and permit dismissal while preserving the 
     const dialog=document.querySelector('[role=dialog][aria-label="Compare more sportsbooks"]')!
     assert.ok(dialog)
     const membership=dialog.querySelector<HTMLAnchorElement>('a')!
-    assert.equal(new URL(membership.href).pathname,'/pricing')
+    assert.equal(new URL(membership.href).pathname,'/preview/nba')
     assert.equal(new URL(membership.href).searchParams.get('game'),'991234')
     await ui.click('Keep browsing')
     assert.equal(document.querySelector('[role=dialog]'),null)

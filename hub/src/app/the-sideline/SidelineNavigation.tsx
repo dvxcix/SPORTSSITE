@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceHref } from '@/lib/publicWorkspaceClient'
 
 import Image from 'next/image'
 import Link from 'next/link'
@@ -34,7 +35,7 @@ export function SidelineNavigation({ games, days, selected, sample, mode }: { ga
   const [pending, startTransition] = useTransition()
   const workspace = !mode && searchParams.get('view') === 'odds-board' ? 'odds-board' : mode
   const href = (section: string, game = selected.id, date = selected.gameday, reference = sample) => `/the-sideline?${new URLSearchParams({ game, date, sample: reference, ...(section === 'odds-board' ? { view: 'odds-board' } : section ? { mode: section } : {}) })}`
-  const change = (url: string) => startTransition(() => router.push(url, { scroll: false }))
+  const change = (url: string) => startTransition(() => router.push(publicWorkspaceHref(url), { scroll: false }))
   const selectedDay = { ...selected, date: selected.gameday }
   const weekKey = scheduleWeekKey(selectedDay)
   const weeks = [...new Map(days.map(day => [scheduleWeekKey(day), day])).values()]

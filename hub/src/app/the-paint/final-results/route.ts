@@ -7,6 +7,7 @@ import { nbaDate, nbaPeriod, PAINT_MARKETS, type PaintStat } from '@/lib/nbaPain
 import { nbaGameFinal } from '@/lib/nbaOddsMode'
 import { nbaFinalOutcomes, nbaFinalStats, nbaVerifiedFinalGame, type NbaStoredFinalGame, type NbaStoredFinalStat } from '@/lib/nbaFinalOutcomes'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { publicWorkspaceGames } from '@/lib/publicWorkspaceScope'
 
 export const maxDuration = 60
 
@@ -17,7 +18,8 @@ export async function GET(request: NextRequest) {
   if(!date||nbaDate(date)!==date||!market||!PAINT_MARKETS.some(item=>item.key===market))return NextResponse.json({error:'Invalid selection'},{status:400})
   if(market.endsWith('_first3min'))return NextResponse.json({date,market,rows:[]},{headers:{'Cache-Control':'private, no-store'}})
   try {
-    const schedule=await getPaintSchedule(date, true)
+    const fullSchedule=await getPaintSchedule(date, true)
+    const schedule={...fullSchedule,games:publicWorkspaceGames(fullSchedule.games,'nba')}
     if(schedule.date!==date)return NextResponse.json({date,market,rows:[]},{headers:{'Cache-Control':'private, no-store'}})
     if(schedule.games.length>16)throw new Error('Slate unavailable')
     const games=schedule.games.filter(game=>game.date===date&&nbaGameFinal(game)),period=nbaPeriod(market)

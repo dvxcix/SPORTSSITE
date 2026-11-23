@@ -9,6 +9,7 @@ const state={game,stat,keys:[] as string[],calls:0,pages:false,error:false,gate:
 ;(globalThis as typeof globalThis&{outcomeFixture:typeof state}).outcomeFixture=state
 const built=await build({stdin:{contents:"export {GET} from './src/app/the-paint/final-results/route'",resolveDir:resolve('.'),loader:'ts'},bundle:true,write:false,platform:'node',format:'cjs',tsconfig:'tsconfig.json',plugins:[{name:'outcome-route',setup(builder){
  const modules:Record<string,string>={
+  '@/lib/publicWorkspaceScope':`export const publicWorkspaceGames=games=>games`,
   'next/server':`export const NextResponse={json:(body,options)=>Response.json(body,options)}`,
   '@/lib/paintAccess':`export async function requirePaintAccess(){return globalThis.outcomeFixture.gate?{error:Response.json({}, {status:403})}:{}}`,
   '@/lib/nbaPaintData':`export async function getPaintSchedule(date){return {date,games:[globalThis.outcomeFixture.game]}}`,

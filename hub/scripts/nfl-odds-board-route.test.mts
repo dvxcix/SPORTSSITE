@@ -23,14 +23,26 @@ const stubs:Record<string,string>={
 }
 stubs['./supabase/admin']=stubs['@/lib/supabase/admin']
 stubs['./nbaSharedCache']=stubs['@/lib/nbaSharedCache']
-const bundled=await build({stdin:{contents:"export {GET} from './src/app/api/the-sideline/odds-board/route'",resolveDir:resolve('.'),loader:'ts'},bundle:true,write:false,outfile:'nfl-board-route.cjs',platform:'node',format:'cjs',tsconfig:'tsconfig.json',plugins:[{name:'route-fixtures',setup(builder){builder.onResolve({filter:/.*/},args=>args.path in stubs?{path:args.path,namespace:'stub'}:undefined);builder.onLoad({filter:/.*/,namespace:'stub'},args=>({contents:stubs[args.path],loader:'js'}))}}]})
-const compiled={exports:{} as {GET:(request:Request&{nextUrl:URL})=>Promise<Response>}}
+const bundled=await build({stdin:{contents:"export {GET} from './src/app/api/the-sideline/odds-board/route'; export {withPublicWorkspace} from './src/lib/publicWorkspaceScope'",resolveDir:resolve('.'),loader:'ts'},bundle:true,write:false,outfile:'nfl-board-route.cjs',platform:'node',format:'cjs',tsconfig:'tsconfig.json',plugins:[{name:'route-fixtures',setup(builder){builder.onResolve({filter:/.*/},args=>args.path in stubs?{path:args.path,namespace:'stub'}:undefined);builder.onLoad({filter:/.*/,namespace:'stub'},args=>({contents:stubs[args.path],loader:'js'}))}}]})
+const compiled={exports:{} as {GET:(request:Request&{nextUrl:URL})=>Promise<Response>;withPublicWorkspace:typeof import('../src/lib/publicWorkspaceScope').withPublicWorkspace}}
 new Function('module','exports','require',bundled.outputFiles[0].text)(compiled,compiled.exports,require)
 const cutoff='2020-11-02T23:00:00.000Z',older='2020-11-02T22:00:00.000Z'
 const sample=(capturedAt:string,updatedAt:string,odds:number,version?:number)=>({captured_at:capturedAt,board:{bdlGameId:7,status:'ready',source:version==null?'live':'snapshot',capturedAt,gameLines:[],...(version==null?{}:{fanduelParserVersion:version}),players:[{id:4,name:'Test',team:'SEA',position:'WR',headshot:'https://static.www.nfl.com/headshot.png',headshotFallbacks:['https://a.espncdn.com/headshot.png'],privateField:'do not expose',markets:[{key:'receiving_yards:25',propType:'receiving_yards',label:'Receiving yards',category:'receiving',line:25,privateField:'do not expose',offers:[{vendor:'fanduel',type:'milestone',line:25,openingLine:25,current:{odds},opening:{odds:300},updatedAt,privateField:'do not expose'}]}]}]}})
 function reset(){state.availability=null;state.denied=false;state.aliasedMatchup=false;state.legacyFinal=false;state.finalFeed=null;state.cutoffs=[cutoff];state.clocks=0;state.schedules=0;state.reads=0;state.truncated=false;state.many=false;state.archiveDelay=false;state.archiveAborted=0;state.archiveActive=0;state.archivePeak=0;state.archive=null;state.capture=null;state.publicPick=null;state.entries.clear();state.baselines.clear();state.tables={nfl_odds_snapshot_history:[sample('2020-11-02T21:30:00.000Z','2020-11-02T21:29:00.000Z',-140),sample('2020-11-02T20:30:00.000Z','2020-11-02T20:29:00.000Z',-110)],nfl_fanduel_capture_history:[]}}
 function request(market='receiving_yards',book='fanduel'){const url=`https://www.slipsurge.com/api/the-sideline/odds-board?date=2020-11-02&market=${market}&book=${book}`;return compiled.exports.GET(Object.assign(new Request(url),{nextUrl:new URL(url)}))}
 test('authorization happens before any cache or database reads',async()=>{reset();state.denied=true;assert.equal((await request()).status,403);assert.equal(state.clocks,0);assert.equal(state.reads,0)})
+
+test('a one-game NFL preview scopes date-wide prices, artwork, picks, results and cache keys',async()=>{
+  reset();state.many=true
+  const response=await compiled.exports.withPublicWorkspace({sport:'nfl',game:'game9',date:'2020-11-02'},()=>request())
+  assert.equal(response.status,200)
+  const board=await response.json()
+  assert.deepEqual(board.games.map((game:{id:string})=>game.id),['game9'])
+  for(const rows of [board.quotes,board.identities,board.teams,board.picks??[]])assert.ok(rows.every((row:unknown[])=>row[0]==='game9'))
+  const scopedKeys=[...state.entries.keys()]
+  reset();state.many=true;assert.equal((await request()).status,200)
+  assert.ok(scopedKeys.every(key=>!state.entries.has(key)),'one-game cache entries cannot replace full-slate entries')
+})
 test('saved Anytime and First Touchdown prices populate separate market selections', async () => {
   reset()
   const history = state.tables.nfl_odds_snapshot_history

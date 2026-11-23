@@ -4,9 +4,11 @@ import { resolveAuthedClient } from '@/lib/requireTier'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hasNflAccess } from '@/lib/nflAccessPolicy'
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
+import { publicWorkspaceScope } from './publicWorkspaceScope'
 
 // Uncached database grants: revocation must not wait for JWT/profile refresh.
 export async function requireNflAccess() {
+  if (publicWorkspaceScope('nfl')) return { userId: '', isAdmin: false, isPublicPreview: true }
   const { supabase, userId, error: authError } = await resolveAuthedClient()
   if (authError) return { error: authError }
   if (!userId) return { error: NextResponse.json({ error: 'Sign in required' }, { status: 401 }) }

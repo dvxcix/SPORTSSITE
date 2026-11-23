@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch } from '@/lib/publicWorkspaceClient'
 
 import { useEffect, useRef, useState } from 'react'
 import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'

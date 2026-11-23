@@ -6,6 +6,8 @@ import { nbaDate } from '@/lib/nbaPaint'
 import { nbaSeasonDisplayBoard } from '@/lib/nbaSeasonDisplay'
 import { getNbaOddsBoardPhase } from '@/lib/nbaOddsBoardPhaseData'
 import { createHash } from 'node:crypto'
+import { publicWorkspacePhase, publicWorkspaceScope } from '@/lib/publicWorkspaceScope'
+import { nbaOddsBoardPhaseHeader, nbaReadOddsBoardPhase } from '@/lib/nbaOddsBoardPhase'
 export const maxDuration = 120
 export async function GET(request: NextRequest) {
   const gate = await requirePaintAccess(); if (gate.error) return gate.error
@@ -18,7 +20,9 @@ export async function GET(request: NextRequest) {
     if(!slateDate)return NextResponse.json({error:'Choose a valid date'},{status:400})
     const phase=await getNbaOddsBoardPhase(slateDate).catch(()=>null)
     if(!phase)return NextResponse.json({error:'Game times unavailable'},{status:503,headers:{'Cache-Control':'private, no-store'}})
-    return new Response(null,{status:204,headers:{'Cache-Control':'private, no-store','X-NBA-Slate-Phase':phase.header,'X-NBA-Slate-Phase-Expires':String(phase.expiresAt)}})
+    const parsed=nbaReadOddsBoardPhase(phase.header,slateDate,Date.now())
+    const header=parsed?nbaOddsBoardPhaseHeader(publicWorkspacePhase(parsed)):publicWorkspaceScope('nba')?'unavailable':phase.header
+    return new Response(null,{status:204,headers:{'Cache-Control':'private, no-store','X-NBA-Slate-Phase':header,'X-NBA-Slate-Phase-Expires':String(phase.expiresAt)}})
   }
   if (!id || !/^\d{1,10}$/.test(id)) return NextResponse.json({ error: 'Choose a matchup' }, { status: 400 })
   try {
@@ -31,7 +35,7 @@ export async function GET(request: NextRequest) {
     // Only the board fetch time is cosmetic; preserve all source quote times.
     const etag='W/"'+createHash('sha256').update(JSON.stringify({...board,fetchedAt:undefined})).digest('hex')+'"'
     const headers:Record<string,string>={'Cache-Control':'private, no-store',ETag:etag,'X-NBA-Fetched-At':board.fetchedAt}
-    if(slateDate){headers['X-NBA-Slate-Phase']=phase?.header??'unavailable';if(phase)headers['X-NBA-Slate-Phase-Expires']=String(phase.expiresAt)}
+    if(slateDate){const parsed=phase&&nbaReadOddsBoardPhase(phase.header,slateDate,Date.now());headers['X-NBA-Slate-Phase']=parsed?nbaOddsBoardPhaseHeader(publicWorkspacePhase(parsed)):publicWorkspaceScope('nba')?'unavailable':phase?.header??'unavailable';if(phase)headers['X-NBA-Slate-Phase-Expires']=String(phase.expiresAt)}
     if(request.headers.get('if-none-match')===etag)return new Response(null,{status:304,headers})
     return NextResponse.json(board,{headers})
   }

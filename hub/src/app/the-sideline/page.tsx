@@ -21,6 +21,8 @@ import { LiveNflScorerProvider } from '@/components/sideline/NflScorerBadges'
 import { readPreviewContext } from '@/lib/publicResearchPreview'
 import { NflLastSeen } from './NflLastSeen'
 import { readResearchPreferences } from '@/lib/researchPreferencesServer'
+import { DEFAULT_RESEARCH_PREFERENCES } from '@/lib/researchPreferences'
+import { publicWorkspaceGames, publicWorkspaceScope } from '@/lib/publicWorkspaceScope'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,7 +47,8 @@ export default async function SidelinePage({ searchParams }: {
   if (gate.error?.status === 503) throw new AuthTemporarilyUnavailableError()
   if (gate.error) notFound()
 
-  const preferencesPromise = readResearchPreferences(gate.userId)
+  const scope = publicWorkspaceScope('nfl')
+  const preferencesPromise = scope ? Promise.resolve({ preferences: DEFAULT_RESEARCH_PREFERENCES }) : readResearchPreferences(gate.userId)
   const params = await searchParams
   const requestedSample = Array.isArray(params.sample) ? params.sample[0] : params.sample
   const requestedGame = Array.isArray(params.game) ? params.game[0] : params.game
@@ -54,14 +57,17 @@ export default async function SidelinePage({ searchParams }: {
   const mode = ['cheatsheets', 'public', 'markets', 'research'].includes(requestedMode ?? '') ? requestedMode ?? '' : ''
   const requestedCaptureValue = Array.isArray(params.at) ? params.at[0] : params.at
   const requestedCapture = requestedCaptureValue && Number.isFinite(Date.parse(requestedCaptureValue)) ? new Date(requestedCaptureValue).toISOString() : null
-  const { games, date, days } = await getSidelineGames(requestedDate, requestedGame)
+  const schedule = await getSidelineGames(requestedDate, requestedGame)
+  const { date } = schedule
+  const games = publicWorkspaceGames(schedule.games, 'nfl')
+  const days = scope ? schedule.days.filter(day => day.date === scope.date) : schedule.days
   if (!games.length) {
     return <ProductPageShell narrow><ProductHero icon={<CalendarOff size={23} />} eyebrow="NFL schedule" title="The Sideline" description="Game-day research boards are organized around scheduled NFL slates." status={date} /><PageState kind="empty" title="No games on this date" message={`There are no NFL games scheduled for ${date}.`} actionLabel="Return to the current NFL slate" actionHref="/the-sideline" /></ProductPageShell>
   }
 
   const selected = games.find(game => game.id === requestedGame) ?? games[0]
   const context = readPreviewContext(params)
-  const preview = context?.sport === 'nfl' && context.game === selected.id && context.date === selected.gameday ? context : null
+  const preview = context?.sport === 'nfl' && context.game === selected.id && context.date === selected.gameday && (context.player != null || context.line != null) ? context : null
   const beganOpen = nflPregameOpen(selected)
   const sample = requestedSample
     ? parseNflSample(requestedSample)
@@ -73,7 +79,7 @@ export default async function SidelinePage({ searchParams }: {
   // Public, Sportsbooks and Matchup Lab tabs should never wait on an archive.
   const [initialMarket, touchdownFeed, initialWeather] = await Promise.all([
     getSidelineOddsBundle(selected),
-    getNflTouchdownFeed(date).catch(() => {
+    getNflTouchdownFeed(date).then(rows => scope ? rows.filter(row => row.gameId === scope.game) : rows).catch(() => {
       console.error('[the-sideline] initial touchdown feed unavailable')
       return null
     }),

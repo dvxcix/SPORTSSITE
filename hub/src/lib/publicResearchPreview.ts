@@ -28,6 +28,9 @@ export function isPreviewSport(value: unknown): value is PreviewSport {
 export function isPublicPreviewPath(path: string) {
   return path === '/preview/nba' || path === '/preview/nfl'
 }
+export function isPublicPreviewDataPath(path: string, method: string) {
+  return (method === 'GET' || method === 'HEAD') && (path === '/preview/nba/data' || path === '/preview/nfl/data')
+}
 
 export function readPreviewContext(input: Record<string, unknown>): PreviewContext | null {
   const { preview: sport, game, date, player, line } = input

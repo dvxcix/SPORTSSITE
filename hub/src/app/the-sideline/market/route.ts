@@ -6,6 +6,7 @@ import { getNflTouchdownFeed } from '@/lib/nflTouchdownFeed'
 import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
 import { nflPregameOpen } from '@/lib/nflPregameResearchData'
 import { nflOddsBoardClockToken, sharedNflOddsBoardClocks } from '@/lib/nflOddsBoardClock'
+import { publicWorkspaceGames, publicWorkspaceScope } from '@/lib/publicWorkspaceScope'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -19,12 +20,13 @@ export async function GET(request: Request) {
   const at = params.get('at')
   if (at && !Number.isFinite(Date.parse(at))) return NextResponse.json({ error: 'Invalid capture' }, { status: 400 })
   try {
-    const { games } = await getSidelineGames(undefined, id)
+    const schedule = await getSidelineGames(undefined, id)
+    const games = publicWorkspaceGames(schedule.games, 'nfl')
     const game = games.find(item => item.id === id)
     if (!game) return NextResponse.json({ error: 'Game not found' }, { status: 404 })
     if (params.get('oddsBoardToken') === 'only' && !at) {
       const proof = await sharedNflOddsBoardClocks(game.gameday, games)
-      return NextResponse.json({ oddsBoardToken: { token: nflOddsBoardClockToken(proof.clocks), observedAt: proof.observedAt }, gameState: storedGameState(game) }, { headers: { 'Cache-Control': 'private, no-store' } })
+      return NextResponse.json({ oddsBoardToken: { token: nflOddsBoardClockToken(publicWorkspaceGames(proof.clocks,'nfl')), observedAt: proof.observedAt }, gameState: storedGameState(game) }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
     const beganOpen = nflPregameOpen(game)
     if (params.get('touchdowns') === '1' && !at) {
@@ -56,11 +58,12 @@ export async function GET(request: Request) {
       params.get('oddsBoardToken')==='1' ? sharedNflOddsBoardClocks(game.gameday,games).catch(()=>null) : Promise.resolve(undefined),
     ])
     const final = beganOpen && !nflPregameOpen(game) ? await getSidelineOddsBundle(game) : bundle
-    const oddsBoardToken=boardClocks===undefined?undefined:boardClocks===null?null:{token:nflOddsBoardClockToken(boardClocks.clocks),observedAt:boardClocks.observedAt}
+    const oddsBoardToken=boardClocks===undefined?undefined:boardClocks===null?null:{token:nflOddsBoardClockToken(publicWorkspaceGames(boardClocks.clocks,'nfl')),observedAt:boardClocks.observedAt}
+    const visibleTouchdowns=publicWorkspaceScope('nfl')?touchdowns.filter(event=>event.gameId===game.id):touchdowns
     return NextResponse.json(
       params.get('packed') === '1'
-        ? { odds: packSidelineBoard(final.odds), gameState: final.gameState, touchdowns, timeline, oddsBoardToken }
-        : { ...final, touchdowns, timeline, oddsBoardToken },
+        ? { odds: packSidelineBoard(final.odds), gameState: final.gameState, touchdowns:visibleTouchdowns, timeline, oddsBoardToken }
+        : { ...final, touchdowns:visibleTouchdowns, timeline, oddsBoardToken },
       { headers: { 'Cache-Control': 'private, no-store' } },
     )
   } catch (error) {

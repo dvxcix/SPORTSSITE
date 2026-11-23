@@ -1,4 +1,5 @@
 'use client'
+import { publicWorkspaceFetch as fetch, currentPublicWorkspace, publicWorkspaceAccessOr } from '@/lib/publicWorkspaceClient'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Check, Clipboard, Copy, Grid3X3, Plus, Share2, SlidersHorizontal, Trash2, X } from 'lucide-react'
@@ -132,7 +133,7 @@ function MatrixEditor({ initial, onClose, onSaved }: { initial: NflMatrix | null
 export function NflMatrixButton() {
   const [open, setOpen] = useState(false)
   useEffect(() => {
-    const show = () => setOpen(true)
+    const show = () => publicWorkspaceAccessOr(() => setOpen(true))
     window.addEventListener('ss:open-nfl-matrices', show)
     return () => window.removeEventListener('ss:open-nfl-matrices', show)
   }, [])
@@ -146,6 +147,7 @@ export function NflMatrixButton() {
   const [loadingMatrices, setLoadingMatrices] = useState(true)
   const [loadingCommunity, setLoadingCommunity] = useState(false)
   const refresh = useCallback(async () => {
+    if (currentPublicWorkspace()) { setLoadingMatrices(false); return }
     try { setMatrices((await request<{ matrices: NflMatrix[] }>('/api/nfl-matrices')).matrices) }
     catch { setMessage('NFL Matrices could not load. Try again.') }
     finally { setLoadingMatrices(false) }
@@ -175,7 +177,7 @@ export function NflMatrixButton() {
   }
   return (
     <>
-      <button type="button" className={`matrix-fab ${styles.fab}`} onClick={() => setOpen(true)}><Grid3X3 size={15} /> NFL Matrix{matrices.length ? <span>{matrices.length}</span> : null}</button>
+      <button type="button" className={`matrix-fab ${styles.fab}`} onClick={() => publicWorkspaceAccessOr(() => setOpen(true))}><Grid3X3 size={15} /> NFL Matrix{matrices.length ? <span>{matrices.length}</span> : null}</button>
       <ModalSurface open={open && !editor} onClose={() => setOpen(false)} label="NFL Matrices" backdropClassName={styles.backdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.drawer}>
         <header><div><small>THE SIDELINE</small><h2>NFL Matrices</h2><p>Saved player filters and community templates.</p></div><button type="button" aria-label="Close NFL Matrices" onClick={() => setOpen(false)}><X size={18} /></button></header>
         <nav aria-label="NFL Matrix views"><button type="button" aria-pressed={tab === 'mine'} className={tab === 'mine' ? styles.active : ''} onClick={() => setTab('mine')}>My NFL Matrices</button><button type="button" aria-pressed={tab === 'community'} className={tab === 'community' ? styles.active : ''} onClick={() => setTab('community')}>NFL Community</button></nav>

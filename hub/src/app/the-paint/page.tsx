@@ -7,6 +7,8 @@ import { nbaSeasonDisplayBoard } from '@/lib/nbaSeasonDisplay'
 import { PaintBoardClient } from './PaintBoardClient'
 import styles from './paint.module.css'
 import { readResearchPreferences } from '@/lib/researchPreferencesServer'
+import { DEFAULT_RESEARCH_PREFERENCES } from '@/lib/researchPreferences'
+import { publicWorkspaceGames, publicWorkspaceScope } from '@/lib/publicWorkspaceScope'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -14,12 +16,14 @@ export const metadata: Metadata = { title: 'The Court • SlipSurge', robots: { 
 export default async function PaintPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const gate = await requirePaintAccess()
   if (gate.error) return <NbaAccessFallback status={gate.error.status} />
-  const preferencesPromise = readResearchPreferences(gate.userId)
+  const scope = publicWorkspaceScope('nba')
+  const preferencesPromise = scope ? Promise.resolve({ preferences: DEFAULT_RESEARCH_PREFERENCES }) : readResearchPreferences(gate.userId)
   const params = await searchParams
   const mode = nbaOddsMode(params.mode)
   const retry=`/the-paint?${new URLSearchParams(Object.entries(params).filter((entry):entry is [string,string]=>typeof entry[1]==='string'))}`
   const data = await (async () => { try {
-    const schedule = await getPaintSchedule(typeof params.date === 'string' ? params.date : undefined,true)
+    const fullSchedule = await getPaintSchedule(typeof params.date === 'string' ? params.date : undefined,true)
+    const schedule = scope ? { ...fullSchedule, games: publicWorkspaceGames(fullSchedule.games, 'nba'), days: [scope.date] } : fullSchedule
     const selected = schedule.games.find(g => String(g.id) === params.game) ?? schedule.games[0]
     // A missing saved matchup must not remove the date and game navigation.
     // Historical research stays unavailable; it is never rebuilt from today.
