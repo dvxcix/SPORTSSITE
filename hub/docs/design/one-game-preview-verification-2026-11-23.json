@@ -1,7 +1,109 @@
 {
-  "source": "9ea84a7644226180dff9c2bbac2326e31755e7b2",
+  "source": "682f1a9455d6ee83deac160ef6b452e3696e9135",
   "stagedDeployment": "dpl_CAJ2g65fDMS34ZqXJEwQRuXY9tkU",
-  "production": "Pending rollout",
+  "production": {
+    "deployment": "dpl_HEHgoUQ1J3uxBhhmNrwBaRissjQL",
+    "status": "READY",
+    "url": "https://www.slipsurge.com",
+    "source": "682f1a9455d6ee83deac160ef6b452e3696e9135",
+    "anonymousSmoke": {
+      "at": "2026-11-23T22:21:18.556Z",
+      "base": "https://www.slipsurge.com",
+      "applicationAuth": "Anonymous: no cookies or authorization header",
+      "checks": [
+        {
+          "path": "/preview/nba/data?resource=%2Fthe-paint%2Fschedule",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "path": "/preview/nba/data?resource=%2Fthe-paint%2Fboard",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "path": "/preview/nba/data?resource=%2Fthe-paint%2Fodds-board&market=points&book=fanduel",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "path": "/preview/nba/data?resource=%2Fthe-paint%2Ffirst-basket%2Fodds",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "path": "/preview/nfl/data?resource=%2Fapi%2Fthe-sideline%2Fodds-board&market=receiving_yards&book=fanduel",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "path": "/preview/nfl/data?resource=%2Fthe-sideline%2Fmarket&summary=1",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "path": "/preview/nba/data?resource=%2Fthe-paint%2Fboard&game=1",
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "path": "/preview/nba/data?resource=%2Fthe-paint%2Fboard&date=2000-01-01",
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "path": "/preview/nfl/data?resource=%2Fapi%2Fnfl-matrices",
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "path": "/the-paint/board?game=21718171",
+          "status": 307,
+          "expected": 307
+        },
+        {
+          "path": "/preview/nba",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "path": "/preview/nfl",
+          "status": 200,
+          "expected": 200
+        }
+      ],
+      "nba": {
+        "game": 21718171,
+        "players": 36,
+        "oddsPlayers": 25,
+        "quotes": 66,
+        "books": [
+          "ballybet",
+          "betmgm",
+          "betparx",
+          "betway",
+          "draftkings",
+          "fanduel"
+        ],
+        "firstBasketRows": 111
+      },
+      "nfl": {
+        "game": "2026_11_CIN_WAS",
+        "players": 41,
+        "quotes": 148,
+        "books": [
+          "draftkings",
+          "fanduel"
+        ]
+      }
+    },
+    "browser": [
+      "One NBA matchup; actual Court research region",
+      "Original Ty Jerome player drawer",
+      "Light/dark mode",
+      "Final guest Save prompts membership; dismissal preserves board"
+    ]
+  },
   "browser": "Codex in-app browser",
   "layoutData": "Isolated fixture data, actual app components",
   "layouts": {
@@ -571,7 +673,7 @@
     "nbaOddsQuotes": 65
   },
   "tests": {
-    "boundary": 86,
+    "boundary": 87,
     "optimizedBuild": "Pass",
     "release": 189,
     "focusedLint": "Pass",

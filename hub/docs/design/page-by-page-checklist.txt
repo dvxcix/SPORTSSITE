@@ -1,3 +1,5 @@
+Published actual one-game previews, 23 November 2026: functional source 682f1a94 / dpl_HEHgoUQ1J3uxBhhmNrwBaRissjQL. Full Preview now uses the actual Court/Sideline pages, boards and player drawers, with one server-selected matchup and scoped read-only requests. Homepage card header contrast corrected. Both sports checked at five widths in both themes; real-data browser flows, 12 anonymous live HTTP checks, 189 release tests and 87 overlapping boundary tests passed. See one-game-preview-release-2026-11-23.txt and one-game-preview-verification-2026-11-23.json. Existing publication history and owner approvals remain intact.
+
 Published mobile repair, 23 November 2026: Git source 08caeb09ca8b22fffef649e0041aa15ac5716ea8; production dpl_fovKeocvphujCtUt7zt6fZAWFbBe. See mobile-complete-production-2026-11-23.json for 67 settled live checks and explicit verification limits.
 
 SlipSurge page-by-page visual review

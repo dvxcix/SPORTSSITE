@@ -37,7 +37,7 @@ PASS optimized private build, TypeScript and 177 generated pages.
 PASS focused lint on changed source/tests and the NFL clock follow-up.
 PASS release suite 189/189, including production source 134/134, normal member
 access, preview isolation, write denial and actual multi-game NFL route scope.
-PASS additional boundary/source tests 86/86: quotes, final results, First Basket,
+PASS additional boundary/source tests 87/87: quotes, final results, First Basket,
 preview data and homepage interactions. These suites overlap; counts are not
 added together.
 
@@ -84,3 +84,16 @@ No blanket certification of every pre-existing tool or physical phone claimed.
 
 Public deployment verification is recorded after rollout in the companion
 verification JSON. The existing published What's New notice is not reset.
+
+Published verification
+Functional source 682f1a9455d6ee83deac160ef6b452e3696e9135 is live via READY
+Git-main deployment dpl_HEHgoUQ1J3uxBhhmNrwBaRissjQL on www.slipsurge.com.
+All 12 anonymous HTTP checks passed with no cookies or application auth headers.
+The live NBA Odds Board had 66 selected quotes when checked; source observations
+continue to refresh normally. Both live HTML pages contain the actual workspaces.
+The live in-app Court has one matchup and the full research board; Ty Jerome's
+original drawer and light/dark switching were checked again after publication.
+The final guest Save action opens membership and dismissal leaves research in
+place. Normal member handlers retain their behavior. Standalone final TypeScript
+and focused save-control lint passed as well. The receipt includes the actual
+anonymous statuses and layout records; source and tests are committed on main.
