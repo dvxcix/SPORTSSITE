@@ -74,7 +74,7 @@
     "test:feed-visibility": "node --import tsx --test scripts/feed-pagination.test.mts scripts/feed-pagination-ui.test.mts scripts/block-visibility.test.mts scripts/search-block-race.test.mts scripts/topbar-block-race.test.mts scripts/social-route-visibility.test.mts",
     "test:member-ui": "node --import tsx --test scripts/member-identity-ui.test.mts scripts/member-badges-recovery.test.mts scripts/feed-pagination-ui.test.mts scripts/profile-metadata-privacy.test.mts scripts/watchlist-player-link.test.mts scripts/research-saved-actions.test.mts scripts/watchlist-post-confirmation.test.mts scripts/watchlist-share-render.test.mts scripts/watchlist-share-pages.test.mts scripts/avatar-decorations.test.mts scripts/avatar-decoration-consumers.test.mts",
     "test:avatar-decorations": "node --import tsx --test scripts/avatar-decorations.test.mts scripts/private-visual-review.test.mts scripts/avatar-decoration-consumers.test.mts",
-    "test:creator-storefront": "node --test scripts/creator-storefront.test.mjs scripts/creator-commerce.test.mjs scripts/creator-business.test.mjs scripts/creator-guided-storefront.test.mjs scripts/creator-wallet.test.mjs scripts/community-unified.test.mjs && node scripts/creator-discord-db.mjs"
+    "test:creator-storefront": "node --test scripts/creator-storefront.test.mjs scripts/creator-commerce.test.mjs scripts/creator-business.test.mjs scripts/creator-guided-storefront.test.mjs scripts/creator-wallet.test.mjs scripts/community-unified.test.mjs scripts/community-channel-entry.test.mjs && node scripts/creator-discord-db.mjs"
   },
   "dependencies": {
     "@browserbasehq/sdk": "^2.16.0",

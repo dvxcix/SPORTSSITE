@@ -78,6 +78,7 @@ export async function getChannels(): Promise<Channel[]> {
   const { data } = await supabase
     .from('channels')
     .select('*')
+    .is('group_id', null)
     .eq('channel_type', 'public')
     .order('is_pinned', { ascending: false })
     .order('member_count', { ascending: false })

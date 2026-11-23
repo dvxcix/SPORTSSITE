@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { authVisibilityUnavailable } from '@/lib/blocks'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import Link from 'next/link'
-import { ArrowRight, Hash, LockKeyhole, MessageSquareText, Plus, Users } from 'lucide-react'
+import { Hash, LockKeyhole, MessageSquareText, Users } from 'lucide-react'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import { ProductAction, ProductPageShell } from '@/components/product/ProductPage'
 
@@ -19,22 +19,16 @@ export default async function ChannelsPage() {
     // Membership overrides are private account fields. As in TierGate, verify
     // the caller first and read only that account through the server client.
     user ? createAdminClient().from('users').select('account_type,tier,beta_access_active,discord_advanced_claimed,admin_granted_tier').eq('id', user.id).single() : Promise.resolve({ data: null, error: null }),
-    supabase.from('channels').select('*').order('is_pinned', { ascending: false }).order('member_count', { ascending: false }),
+    supabase.from('channels').select('*').is('group_id',null).order('is_pinned', { ascending: false }).order('member_count', { ascending: false }),
   ])
   if (error) throw new Error('Channels could not be loaded. Try again.')
   if (profileError || (user && !profile)) throw new Error('Membership access could not be loaded. Try again.')
-  const creator = Boolean(user)
   const globalRooms = hasFullAccessOverride(profile?.account_type, profile?.beta_access_active) || hasTierAccess(effectiveTier((profile?.tier || 'free') as Tier, profile?.discord_advanced_claimed, profile?.admin_granted_tier as Tier | null), 'basic')
-  const accessible = (channels ?? []).filter(channel => globalRooms || channel.group_id)
-  const owned = accessible.filter(channel => channel.owner_id === user?.id)
-  const community = accessible.filter(channel => channel.owner_id !== user?.id)
+  const community = globalRooms ? channels ?? [] : []
 
   return <ProductPageShell>
     <CommunityNav />
-    <header className="ss-community-heading"><h1>Live rooms</h1>{creator ? <ProductAction href="/creators/studio?setup=1"><Plus size={15}/> Create community</ProductAction> : null}</header>
-    {creator && (
-      <ChannelSection title="Your channels" eyebrow="Your communities" channels={owned} empty={<div className="rounded-2xl border border-dashed border-[color-mix(in_srgb,var(--accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--accent)_4%,transparent)] p-6"><h3 className="font-semibold text-[var(--text-1)]">No channels yet</h3><Link href="/groups/create" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent)]">Create a community <ArrowRight size={14}/></Link></div>}/>
-    )}
+    <header className="ss-community-heading"><h1>Live rooms</h1><ProductAction href="/groups">Your communities</ProductAction></header>
     <ChannelSection title="Available channels" eyebrow="Conversations" channels={community} empty={<div className="rounded-2xl border border-[rgba(var(--line-rgb),0.08)] bg-[rgba(var(--contrast-rgb),0.025)] p-10 text-center text-sm text-[var(--text-3)]">No channels are available yet.</div>}/>
   </ProductPageShell>
 }

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { getChannelMessages, getChannels } from '@/lib/queries'
 import { TierGate } from '@/components/layout/TierGate'
 import { ChatRoom } from '@/components/chat/ChatRoom'
@@ -21,6 +21,12 @@ export default async function ChannelPage({ params }: Props) {
     .single()
 
   if (!channel) notFound()
+  if(channel.group_id){
+    const {data:group,error}=await supabase.from('groups').select('slug').eq('id',channel.group_id).maybeSingle()
+    if(error)throw new Error('Community access could not be verified. Try again.')
+    if(!group)notFound()
+    redirect(`/groups/${encodeURIComponent(group.slug)}?view=chat&channel=${encodeURIComponent(channel.slug)}`)
+  }
 
   const [messages, channels, { data: { user } }] = await Promise.all([
     getChannelMessages(channel.id, 80),
@@ -69,5 +75,5 @@ export default async function ChannelPage({ params }: Props) {
       </section>
     </div>
   )
-  return channel.group_id ? room : <TierGate requiredTier="basic" label="Live rooms">{room}</TierGate>
+  return <TierGate requiredTier="basic" label="Live rooms">{room}</TierGate>
 }
