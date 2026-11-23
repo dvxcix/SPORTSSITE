@@ -52,3 +52,24 @@ test('interaction evidence remains separate from route renders and records unfin
   assert.ok(report.limitations.some((value:string)=>value.includes('physical-device')))
   assert.ok(report.limitations.some((value:string)=>value.includes('financial operations')))
 })
+
+test('the published repair has a Git deployment receipt and settled live checks with phone composer clearance',async()=>{
+  const receipt=JSON.parse(await readFile(new URL('../docs/design/mobile-complete-production-2026-11-23.json',import.meta.url),'utf8'))
+  assert.equal(receipt.production.source,'git')
+  assert.equal(receipt.production.state,'READY')
+  assert.equal(receipt.production.url,'https://www.slipsurge.com')
+  assert.match(receipt.production.commit,/^[a-f0-9]{40}$/)
+  assert.match(receipt.production.deploymentId,/^dpl_/)
+  const completed=receipt.checks.filter((row:{assessment:string})=>row.assessment==='Settled production check')
+  assert.equal(completed.length,receipt.summary.settledChecks)
+  assert.ok(completed.length>=67)
+  for(const row of completed){
+    assert.equal(row.overflow,false,row.name)
+    assert.equal(row.routeError,false,row.name)
+    assert.deepEqual(row.loading,[],row.name)
+    assert.ok(row.headings.length,row.name)
+    assert.ok(row.dialogs.every((dialog:{withinViewport:boolean})=>dialog.withinViewport),row.name)
+  }
+  for(const row of receipt.chatComposerChecks){assert.equal(row.aboveDock,true);assert.ok(row.bottom<=row.dockTop)}
+  assert.equal(receipt.privateReviewGuard.fixtureTextVisible,false)
+})

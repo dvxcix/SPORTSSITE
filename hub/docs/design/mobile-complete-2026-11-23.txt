@@ -1,6 +1,6 @@
 SlipSurge complete mobile review · 23 November 2026
 
-Prepared for the authorized release. Production verification is recorded separately.
+Published on www.slipsurge.com. The live deployment, 67 settled browser checks and verification limits are recorded in mobile-complete-production-2026-11-23.json.
 
 Coverage: 157 product routes, 83 workspaces/panels/shared surfaces, 1570 route layout measurements and 291 recorded interaction/state observations.
 Widths include 320, 390, 820, 844 and 1440 pixels, with light/dark and short-height checks.

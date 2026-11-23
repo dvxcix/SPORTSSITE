@@ -4,6 +4,8 @@ import path from 'node:path'
 const evidenceRoot = process.argv[2]
 if (!evidenceRoot) throw new Error('Pass the browser review evidence directory.')
 const batch = 'mobile-complete-2026-11-23'
+const productionReceipt = await fs.readFile('docs/design/mobile-complete-production-2026-11-23.json','utf8').then(JSON.parse).catch(error=>{if(error.code==='ENOENT')return null;throw error})
+const published = productionReceipt?.production?.state === 'READY'
 const inventoryPath = 'src/app/design-review/visual-audit/inventory.json'
 const read = async name => JSON.parse(await fs.readFile(path.join(evidenceRoot, `${name}.json`), 'utf8'))
 const inventory = JSON.parse(await fs.readFile(inventoryPath, 'utf8'))
@@ -95,7 +97,8 @@ const missing=items.filter(item=>!item.methods.length).map(item=>item.id)
 if(missing.length)throw new Error(`No fresh evidence for: ${missing.join(', ')}`)
 const flowReceipts = flows.map(flow => ({case:flow.case,at:flow.at,url:flow.url,width:flow.width,height:flow.height,theme:flow.theme,overflow:flow.overflow,loading:flow.loading,errors:flow.errors,dialogs:flow.dialogs,sendClearance:flow.sendClearance,valid:flow.valid,reason:flow.reason,supersededBy:superseded[flow.case],assessment:superseded[flow.case]?'Earlier observation, superseded by the named final check':flow.loading?.length?'Loading-state observation; not a completed interaction':flow.errors?.some(value=>/disabled in private design review/.test(value))?'Expected private mutation boundary; draft/error handling observed':'Rendered state observation'}))
 const report = {
-  batch,phase:'Prepared for authorized publication; production receipt is recorded separately',reviewedAt:new Date().toISOString(),
+  batch,phase:published?'Published; live browser checks are recorded in mobile-complete-production-2026-11-23.json':'Prepared for authorized publication; production receipt is recorded separately',reviewedAt:new Date().toISOString(),
+  production:productionReceipt?.production,
   scope:{catalogItems:inventory.length,productRoutes:pages.length,standardRouteLayouts:pages.length*4,narrowRouteLayouts:pages.length*6,interactionObservations:flows.filter(currentFlow).length},
   environment:'Actual application components in the Codex in-app browser, isolated local data and blocked external service calls',
   viewports:['1440×1000','390×844','320×740','820×1024','844×390','320×480','320×390'],
@@ -105,7 +108,7 @@ const report = {
 }
 await fs.writeFile(`docs/design/${batch}.json`,JSON.stringify(report,null,2)+'\n')
 const overview = `SlipSurge complete mobile review · 23 November 2026\n\nPrepared for the authorized release. Production verification is recorded separately.\n\nCoverage: ${pages.length} product routes, ${inventory.length-pages.length} workspaces/panels/shared surfaces, ${pages.length*10} route layout measurements and ${report.scope.interactionObservations} recorded interaction/state observations.\nWidths include 320, 390, 820, 844 and 1440 pixels, with light/dark and short-height checks.\n\n${report.fixes.map(text=>'- '+text).join('\n')}\n\nVerification boundaries\n${report.limitations.map(text=>'- '+text).join('\n')}\n\nIndividual checklist\n${items.map(item=>`[Reviewed] ${item.group} | ${item.label} | ${Object.keys(item.layouts).length} own layout receipts | ${item.interactionCases.length} associated interaction/state receipts${item.limitations.length?' | '+item.limitations.join(' '):''}`).join('\n')}\n\nDetailed measurements and interaction IDs: ${batch}.json\n`
-await fs.writeFile(`docs/design/${batch}.txt`,overview)
+await fs.writeFile(`docs/design/${batch}.txt`,published?overview.replace('Prepared for the authorized release. Production verification is recorded separately.','Published on www.slipsurge.com. The live deployment, 67 settled browser checks and verification limits are recorded in mobile-complete-production-2026-11-23.json.'):overview)
 for (const row of inventory) {
   const item = items.find(item=>item.id===row.id)
   row.mobileReview={date:'2026-11-23',batch,methods:item.methods,layoutReceipts:Object.keys(item.layouts).length,interactionReceipts:item.interactionCases.length,limitations:item.limitations}

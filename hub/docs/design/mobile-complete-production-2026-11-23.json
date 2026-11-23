@@ -1,0 +1,1975 @@
+{
+  "batch": "mobile-complete-2026-11-23",
+  "verifiedAt": "2026-11-23T18:26:28.682Z",
+  "production": {
+    "state": "READY",
+    "environment": "production",
+    "url": "https://www.slipsurge.com",
+    "source": "git",
+    "commit": "08caeb09ca8b22fffef649e0041aa15ac5716ea8",
+    "deploymentId": "dpl_fovKeocvphujCtUt7zt6fZAWFbBe",
+    "deploymentUrl": "https://hub-do5wiq7he-slipsurge.vercel.app"
+  },
+  "summary": {
+    "recordedObservations": 72,
+    "settledChecks": 67,
+    "transientObservations": 5
+  },
+  "checks": [
+    {
+      "name": "feed-phone-dark",
+      "at": "2026-11-23T18:19:23.698Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/feed",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "member-badges-phone-dark",
+      "at": "2026-11-23T18:19:31.330Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 238.125,
+          "name": "Member badges",
+          "width": 300,
+          "withinViewport": true,
+          "x": 10,
+          "y": 400.9166870117187
+        }
+      ],
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/feed",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/explore",
+      "at": "2026-11-23T18:19:50.287Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Explore SlipSurge",
+        "Around the slate",
+        "NFL slate",
+        "NBA slate",
+        "Your sports. Your research."
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/explore",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/profile/parlayparty",
+      "at": "2026-11-23T18:19:51.678Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "ParlayParty",
+        "Join ParlayParty",
+        "Badges and achievements",
+        "Favorite teams"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/profile/parlayparty",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/picks",
+      "at": "2026-11-23T18:19:53.268Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/picks",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/settings/profile",
+      "at": "2026-11-23T18:20:34.491Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your profile",
+        "Profile completion"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/settings/profile",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/settings/interests",
+      "at": "2026-11-23T18:20:35.631Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your interests",
+        "Sports",
+        "Teams & players",
+        "Home mix",
+        "Market focus",
+        "Discovery"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/settings/interests",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/settings/research",
+      "at": "2026-11-23T18:20:36.309Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your workspace"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/settings/research",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/groups",
+      "at": "2026-11-23T18:20:37.115Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Communities",
+        "ParlayParty"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/groups",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/creators/studio",
+      "at": "2026-11-23T18:20:38.144Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your business, at a glance",
+        "Pick up where you left off",
+        "Your storefront",
+        "Keep things moving"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/creators/studio",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/creators/payouts",
+      "at": "2026-11-23T18:20:39.574Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Balance & payouts",
+        "Revenue",
+        "Payout history"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/creators/payouts",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/the-paint",
+      "at": "2026-11-23T18:20:48.831Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-paint?date=2026-11-23&mode=pregame&market=points&side=over&book=fanduel&sort=average&order=desc&game=21718171&contract=milestone",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/the-sideline",
+      "at": "2026-11-23T18:20:58.315Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-sideline",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/the-sideline?view=odds-board",
+      "at": "2026-11-23T18:21:03.940Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "NFL Odds Board"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-sideline?view=odds-board",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/messages",
+      "at": "2026-11-23T18:21:04.818Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Messages",
+        "Inbox"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/messages",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/creators/parlayparty",
+      "at": "2026-11-23T18:21:06.020Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "ParlayParty",
+        "Become a member",
+        "Communities",
+        "ParlayParty",
+        "Research & picks"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/creators/parlayparty",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/feed",
+      "at": "2026-11-23T18:21:22.877Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The Feed"
+      ],
+      "height": 740,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/feed",
+      "width": 320,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/explore",
+      "at": "2026-11-23T18:21:24.730Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Explore SlipSurge",
+        "Around the slate",
+        "NFL slate",
+        "NBA slate",
+        "Your sports. Your research."
+      ],
+      "height": 740,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/explore",
+      "width": 320,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/settings/profile",
+      "at": "2026-11-23T18:21:25.809Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your profile",
+        "Profile completion"
+      ],
+      "height": 740,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/settings/profile",
+      "width": 320,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/groups",
+      "at": "2026-11-23T18:21:26.685Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Communities",
+        "ParlayParty"
+      ],
+      "height": 740,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/groups",
+      "width": 320,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/creators/studio",
+      "at": "2026-11-23T18:21:27.315Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your business, at a glance",
+        "Pick up where you left off",
+        "Your storefront",
+        "Keep things moving"
+      ],
+      "height": 740,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/creators/studio",
+      "width": 320,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/feed",
+      "at": "2026-11-23T18:21:36.287Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The Feed"
+      ],
+      "height": 740,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/feed",
+      "width": 320,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "member-badges-small-light",
+      "at": "2026-11-23T18:21:37.182Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 238.125,
+          "name": "Member badges",
+          "width": 290,
+          "withinViewport": true,
+          "x": 10,
+          "y": 348.91668701171875
+        }
+      ],
+      "headings": [
+        "The Feed"
+      ],
+      "height": 740,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/feed",
+      "width": 320,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "watchlist-small-light",
+      "at": "2026-11-23T18:21:38.186Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 740,
+          "name": null,
+          "width": 320,
+          "withinViewport": true,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The Feed"
+      ],
+      "height": 740,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/feed",
+      "width": 320,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/feed",
+      "at": "2026-11-23T18:21:48.858Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The Feed"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/feed",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/explore",
+      "at": "2026-11-23T18:21:50.345Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Explore SlipSurge",
+        "Around the slate",
+        "NFL slate",
+        "NBA slate",
+        "Your sports. Your research."
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/explore",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/profile/parlayparty",
+      "at": "2026-11-23T18:21:51.534Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "ParlayParty",
+        "Join ParlayParty",
+        "Badges and achievements",
+        "Favorite teams"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/profile/parlayparty",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/picks",
+      "at": "2026-11-23T18:21:52.718Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Picks",
+        "Trending picks",
+        "Latest picks"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/picks",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/settings/profile",
+      "at": "2026-11-23T18:21:53.817Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your profile",
+        "Profile completion"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/settings/profile",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/settings/interests",
+      "at": "2026-11-23T18:21:54.542Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your interests",
+        "Sports",
+        "Teams & players",
+        "Home mix",
+        "Market focus",
+        "Discovery"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/settings/interests",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/settings/research",
+      "at": "2026-11-23T18:21:55.123Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your workspace"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/settings/research",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/groups",
+      "at": "2026-11-23T18:21:55.802Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Communities",
+        "ParlayParty"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/groups",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/creators/studio",
+      "at": "2026-11-23T18:21:56.521Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your business, at a glance",
+        "Pick up where you left off",
+        "Your storefront",
+        "Keep things moving"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/creators/studio",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/creators/payouts",
+      "at": "2026-11-23T18:21:57.754Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Balance & payouts",
+        "Revenue",
+        "Payout history"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/creators/payouts",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/the-paint",
+      "at": "2026-11-23T18:22:08.421Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-paint?date=2026-11-23&mode=pregame&market=points&side=over&book=fanduel&sort=average&order=desc&game=21718171&contract=milestone",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/the-sideline",
+      "at": "2026-11-23T18:22:10.553Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-sideline",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/the-sideline?view=odds-board",
+      "at": "2026-11-23T18:22:13.774Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "NFL Odds Board"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-sideline?view=odds-board",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/creators/parlayparty",
+      "at": "2026-11-23T18:22:14.789Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "ParlayParty",
+        "Become a member",
+        "Communities",
+        "ParlayParty",
+        "Research & picks"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/creators/parlayparty",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/feed",
+      "at": "2026-11-23T18:22:16.488Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The Feed"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/feed",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/explore",
+      "at": "2026-11-23T18:22:17.536Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Explore SlipSurge",
+        "Around the slate",
+        "NFL slate",
+        "NBA slate",
+        "Your sports. Your research."
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/explore",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/settings/profile",
+      "at": "2026-11-23T18:22:18.135Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your profile",
+        "Profile completion"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/settings/profile",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/groups",
+      "at": "2026-11-23T18:22:18.847Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Communities",
+        "ParlayParty"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/groups",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/creators/studio",
+      "at": "2026-11-23T18:22:19.433Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your business, at a glance",
+        "Pick up where you left off",
+        "Your storefront",
+        "Keep things moving"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/creators/studio",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/creators/payouts",
+      "at": "2026-11-23T18:22:20.722Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Balance & payouts",
+        "Revenue",
+        "Payout history"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/creators/payouts",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/the-paint",
+      "at": "2026-11-23T18:22:32.508Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-paint?date=2026-11-23&mode=pregame&market=points&side=over&book=fanduel&sort=average&order=desc&game=21718171&contract=milestone",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/the-sideline",
+      "at": "2026-11-23T18:22:35.583Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-sideline",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/settings/profile",
+      "at": "2026-11-23T18:22:36.591Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your profile",
+        "Profile completion"
+      ],
+      "height": 1024,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/settings/profile",
+      "width": 820,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/settings/interests",
+      "at": "2026-11-23T18:22:37.285Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your interests",
+        "Sports",
+        "Teams & players",
+        "Home mix",
+        "Market focus",
+        "Discovery"
+      ],
+      "height": 1024,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/settings/interests",
+      "width": 820,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/settings/profile",
+      "at": "2026-11-23T18:22:38.725Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your profile",
+        "Profile completion"
+      ],
+      "height": 1024,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/settings/profile",
+      "width": 820,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/settings/interests",
+      "at": "2026-11-23T18:22:39.569Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Your interests",
+        "Sports",
+        "Teams & players",
+        "Home mix",
+        "Market focus",
+        "Discovery"
+      ],
+      "height": 1024,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/settings/interests",
+      "width": 820,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/the-paint",
+      "at": "2026-11-23T18:22:43.450Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-paint?date=2026-11-23&mode=pregame&market=points&side=over&book=fanduel&sort=average&order=desc&game=21718171&contract=milestone",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "nba-player-drawer-phone-light",
+      "at": "2026-11-23T18:22:51.069Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 844,
+          "name": "Ty Jerome research",
+          "width": 390,
+          "withinViewport": false,
+          "x": 10.88973617553711,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 844,
+      "loading": [
+        "Loading projection…"
+      ],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-paint?date=2026-11-23&mode=pregame&market=points&side=over&book=fanduel&sort=average&order=desc&game=21718171&contract=milestone&player=666676&panel=trends",
+      "width": 390,
+      "assessment": "Transient loading or entry animation; superseded by settled check"
+    },
+    {
+      "name": "nba-player-drawer-phone-light-settled",
+      "at": "2026-11-23T18:23:01.357Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 844,
+          "name": "Ty Jerome research",
+          "width": 390,
+          "withinViewport": true,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-paint?date=2026-11-23&mode=pregame&market=points&side=over&book=fanduel&sort=average&order=desc&game=21718171&contract=milestone&player=666676&panel=trends",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "nba-player-game-tracking-phone-light",
+      "at": "2026-11-23T18:23:36.889Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 844,
+          "name": "Ty Jerome research",
+          "width": 390,
+          "withinViewport": true,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-paint?date=2026-11-23&mode=pregame&market=points&side=over&book=fanduel&sort=average&order=desc&game=21718171&contract=milestone&player=666676&panel=tracking&metric=usage_percentage",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "nba-player-tracking-desktop-light",
+      "at": "2026-11-23T18:23:52.731Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 1000,
+          "name": "Ty Jerome research",
+          "width": 640,
+          "withinViewport": true,
+          "x": 800,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-paint?date=2026-11-23&mode=pregame&market=points&side=over&book=fanduel&sort=average&order=desc&game=21718171&contract=milestone&player=666676&panel=tracking&metric=usage_percentage",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "nba-player-tracking-desktop-dark",
+      "at": "2026-11-23T18:23:54.453Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 80,
+        "width": 76
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-paint?date=2026-11-23&mode=pregame&market=points&side=over&book=fanduel&sort=average&order=desc&game=21718171&contract=milestone&player=666676&panel=tracking&metric=usage_percentage",
+      "width": 1440,
+      "assessment": "Transient loading or entry animation; superseded by settled check"
+    },
+    {
+      "name": "nba-player-tracking-phone-dark",
+      "at": "2026-11-23T18:23:54.484Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-paint?date=2026-11-23&mode=pregame&market=points&side=over&book=fanduel&sort=average&order=desc&game=21718171&contract=milestone&player=666676&panel=tracking&metric=usage_percentage",
+      "width": 390,
+      "assessment": "Transient loading or entry animation; superseded by settled check"
+    },
+    {
+      "name": "nba-player-tracking-phone-dark-settled",
+      "at": "2026-11-23T18:24:06.072Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 844,
+          "name": "Ty Jerome research",
+          "width": 390,
+          "withinViewport": true,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-paint?date=2026-11-23&mode=pregame&market=points&side=over&book=fanduel&sort=average&order=desc&game=21718171&contract=milestone&player=666676&panel=tracking&metric=usage_percentage",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "nba-player-tracking-desktop-dark-settled",
+      "at": "2026-11-23T18:24:06.132Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 1000,
+          "name": "Ty Jerome research",
+          "width": 640,
+          "withinViewport": true,
+          "x": 800,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-paint?date=2026-11-23&mode=pregame&market=points&side=over&book=fanduel&sort=average&order=desc&game=21718171&contract=milestone&player=666676&panel=tracking&metric=usage_percentage",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/the-sideline",
+      "at": "2026-11-23T18:24:09.758Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-sideline",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "nfl-player-drawer-phone-dark",
+      "at": "2026-11-23T18:24:19.386Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 844,
+          "name": "Chase Brown NFL breakdown",
+          "width": 390,
+          "withinViewport": true,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-sideline",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "nfl-player-drawer-desktop-dark",
+      "at": "2026-11-23T18:24:27.310Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 1000,
+          "name": "Chase Brown NFL breakdown",
+          "width": 680,
+          "withinViewport": false,
+          "x": 788,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-sideline",
+      "width": 1440,
+      "assessment": "Transient loading or entry animation; superseded by settled check"
+    },
+    {
+      "name": "nfl-player-drawer-phone-light",
+      "at": "2026-11-23T18:24:29.855Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 844,
+          "name": "Chase Brown NFL breakdown",
+          "width": 390,
+          "withinViewport": false,
+          "x": 0,
+          "y": 1.9997318983078003
+        }
+      ],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-sideline",
+      "width": 390,
+      "assessment": "Transient loading or entry animation; superseded by settled check"
+    },
+    {
+      "name": "nfl-player-drawer-phone-light-settled",
+      "at": "2026-11-23T18:24:49.103Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 844,
+          "name": "Chase Brown NFL breakdown",
+          "width": 390,
+          "withinViewport": true,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-sideline",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "nfl-player-tracking-phone-light",
+      "at": "2026-11-23T18:24:49.166Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 844,
+          "name": "Chase Brown NFL breakdown",
+          "width": 390,
+          "withinViewport": true,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-sideline",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "nfl-player-sportsbooks-phone-light",
+      "at": "2026-11-23T18:24:49.417Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 844,
+          "name": "Chase Brown NFL breakdown",
+          "width": 390,
+          "withinViewport": true,
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-sideline",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "nfl-player-sportsbooks-desktop-light-settled",
+      "at": "2026-11-23T18:25:05.077Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 1000,
+          "name": "Chase Brown NFL breakdown",
+          "width": 680,
+          "withinViewport": true,
+          "x": 760,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/the-sideline",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "nfl-player-drawer-desktop-dark-settled",
+      "at": "2026-11-23T18:25:13.955Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [
+        {
+          "height": 1000,
+          "name": "Chase Brown NFL breakdown",
+          "width": 680,
+          "withinViewport": true,
+          "x": 760,
+          "y": 0
+        }
+      ],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 1000,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/the-sideline",
+      "width": 1440,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/groups",
+      "at": "2026-11-23T18:25:15.546Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "Communities",
+        "ParlayParty"
+      ],
+      "height": 844,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/groups",
+      "width": 390,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "/groups/parlayparty",
+      "at": "2026-11-23T18:25:26.960Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "ParlayParty"
+      ],
+      "height": 390,
+      "loading": [],
+      "mascot": {
+        "display": "grid",
+        "height": 52,
+        "width": 48
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/groups/parlayparty",
+      "width": 320,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "community-chat-short-phone-dark",
+      "at": "2026-11-23T18:25:41.156Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "ParlayParty"
+      ],
+      "height": 390,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "dark",
+      "url": "/groups/parlayparty?view=chat",
+      "width": 320,
+      "assessment": "Settled production check"
+    },
+    {
+      "name": "community-chat-short-phone-light",
+      "at": "2026-11-23T18:26:02.974Z",
+      "alerts": [],
+      "brokenImageCount": 0,
+      "dialogs": [],
+      "headings": [
+        "ParlayParty"
+      ],
+      "height": 390,
+      "loading": [],
+      "mascot": {
+        "display": "none",
+        "height": 0,
+        "width": 0
+      },
+      "overflow": false,
+      "routeError": false,
+      "theme": "light",
+      "url": "/groups/parlayparty?view=chat",
+      "width": 320,
+      "assessment": "Settled production check"
+    }
+  ],
+  "chatComposerChecks": [
+    {
+      "aboveDock": true,
+      "bottom": 265.34375,
+      "clipping": [],
+      "dockTop": 316,
+      "height": 390,
+      "theme": "dark",
+      "top": 221.34375,
+      "width": 320
+    },
+    {
+      "aboveDock": true,
+      "bottom": 265.34375,
+      "dockTop": 316,
+      "height": 390,
+      "theme": "light",
+      "top": 221.34375,
+      "width": 320
+    }
+  ],
+  "chartCheck": {
+    "name": "Usage % by game",
+    "controlHeight": 44,
+    "action": "End key selected latest observed game",
+    "readout": "2026-11-21 · 33.3%"
+  },
+  "privateReviewGuard": {
+    "route": "/design-review",
+    "notFound": true,
+    "fixtureTextVisible": false
+  },
+  "verification": {
+    "regressions": {
+      "passed": 220,
+      "failed": 0
+    },
+    "productionSource": {
+      "passed": 134,
+      "failed": 0
+    },
+    "finalDialogTests": {
+      "passed": 17,
+      "failed": 0
+    },
+    "checklistContracts": {
+      "passed": 11,
+      "failed": 0
+    },
+    "mobileCommand": {
+      "passed": 48,
+      "failed": 0
+    },
+    "optimizedBuild": "passed",
+    "typecheck": "passed",
+    "productionComponentsAndNewTestsLint": "passed",
+    "legacyLintBoundary": "Broad changed-file lint also encounters existing any/module-variable violations in the private Supabase adapter and older test harnesses; it is not a clean full-repository lint certification."
+  },
+  "limitations": [
+    "The exhaustive inventory review used isolated local application fixtures; the production checks are the explicit representative pages and drawers listed here.",
+    "No production posts, messages, membership changes, payments, withdrawals, KYC, external role grants, collection jobs or historical replays were executed.",
+    "Viewport checks do not certify physical devices or native software keyboards."
+  ],
+  "screenshot": "production-member-badges-320-light.jpg"
+}

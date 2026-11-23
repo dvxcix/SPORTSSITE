@@ -1,7 +1,16 @@
 {
   "batch": "mobile-complete-2026-11-23",
-  "phase": "Prepared for authorized publication; production receipt is recorded separately",
-  "reviewedAt": "2026-11-23T18:17:02.747Z",
+  "phase": "Published; live browser checks are recorded in mobile-complete-production-2026-11-23.json",
+  "reviewedAt": "2026-11-23T18:26:59.498Z",
+  "production": {
+    "state": "READY",
+    "environment": "production",
+    "url": "https://www.slipsurge.com",
+    "source": "git",
+    "commit": "08caeb09ca8b22fffef649e0041aa15ac5716ea8",
+    "deploymentId": "dpl_fovKeocvphujCtUt7zt6fZAWFbBe",
+    "deploymentUrl": "https://hub-do5wiq7he-slipsurge.vercel.app"
+  },
   "scope": {
     "catalogItems": 240,
     "productRoutes": 157,
