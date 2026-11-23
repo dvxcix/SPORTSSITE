@@ -662,7 +662,13 @@
     "eslint": "passed"
   },
   "financialBoundary": "No real checkout payment, KYC submission, payout, role grant or message was executed. Operational membership authorization remains in existing signed webhook and server/RLS paths.",
-  "release": null,
+  "release": {
+    "state": "Live",
+    "commit": "76d71ef1171e6307c2c258b6257061a3d1586672",
+    "deploymentId": "dpl_5mSnYiPtHh61mkVpk5MM1qdCAKZ2",
+    "verifiedAt": "2026-11-23T01:07:33.818Z",
+    "url": "https://www.slipsurge.com"
+  },
   "narrowChecks": [
     {
       "name": "products",
@@ -712,5 +718,377 @@
       "theme": "light",
       "width": 320
     }
+  ],
+  "productionChecks": [
+    {
+      "name": "overview",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Your business, at a glance"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "name": "products",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Products"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "name": "communities",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Communities"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "name": "members",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Members"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "name": "content",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Content"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "name": "analytics",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Analytics"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "name": "settings",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Settings"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "name": "payouts",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Balance & payouts"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "name": "discover",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Find your community."
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "name": "storefront",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "ParlayParty"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "name": "offer",
+      "layout": "desktop-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "test"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "name": "overview",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Your business, at a glance"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "products",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Products"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "communities",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Communities"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "members",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Members"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "content",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Content"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "analytics",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Analytics"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "settings",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Settings"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "payouts",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Balance & payouts"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "discover",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Find your community."
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "storefront",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "ParlayParty"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "offer",
+      "layout": "phone-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "test"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "products",
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Products"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "name": "discover",
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Find your community."
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "name": "storefront",
+      "layout": "desktop-light",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "ParlayParty"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "name": "products",
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Products"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "discover",
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Find your community."
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "storefront",
+      "layout": "phone-dark",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Loading creators"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    }
+  ],
+  "productionInteractions": [
+    "Opened and closed the real New product dialog without submitting",
+    "Opened and closed the real New post dialog with the real paid-community destination visible",
+    "Opened the real Watchlist from the mobile account menu without changing saved picks",
+    "Restored original dark mode and left Creator Studio Products open for the owner"
   ]
 }

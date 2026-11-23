@@ -32,3 +32,12 @@ Release identifiers and production verification are recorded after deployment.
 
 Testing boundary
 Local creator/product/community/profile/post writes use the guarded in-memory review adapter with no production credentials. Checkout preview uses a build-only replacement; production imports the real Whop Elements component. No live membership purchase, financial-account creation, KYC acceptance, payout, role grant or member message was performed for QA. The published checkout and fulfillment contracts are covered by provider-response and database transaction tests; this is not a receipt for a real paid customer transaction.
+
+Verification and publication
+- Code commit 76d71ef1171e6307c2c258b6257061a3d1586672 reached READY on dpl_5mSnYiPtHh61mkVpk5MM1qdCAKZ2; www.slipsurge.com and slipsurge.com point to it.
+- 56 creator/commerce tests, the isolated Postgres transaction checks, 8 Whop Elements tests, 134 production source checks, 4 private-review isolation checks and 4 checklist checks passed. TypeScript and focused ESLint passed.
+- 11 routes/sections x four layouts: desktop dark/light at 1440x1000 and phone dark/light at 390x844. All 44 layout receipts have one main landmark, the requested rendered theme and no page overflow, broken visible images or displayed page errors.
+- Eight extra 320px checks cover Products, Content, Analytics and storefront in both themes.
+- The real production browser checked all 11 pages at desktop dark and phone light, plus Products/discovery/storefront at desktop light and phone dark (28 receipts). All passed the same layout checks. Real New product/New post dialogs and mobile Watchlist were opened and closed without submitting writes.
+- Local content checks cover draft creation, community destination, editing, scheduling, cancellation and disposable draft deletion; a submission error retains the written content and remains visible inside the dialog.
+- This is a dated follow-up to six creator routes, not a new certification of every historical overhaul entry. Existing owner approvals remain unchanged.
