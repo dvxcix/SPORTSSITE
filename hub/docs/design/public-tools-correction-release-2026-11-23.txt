@@ -34,7 +34,10 @@ when recent performance logs are absent. No synthetic plays or price animation.
 Original snapshot/cutoff/availability logic and per-sport caps remain intact.
 Public cache refresh is 60 seconds; this does not promise fresh provider quotes
 or trigger collection. Source date/time and archive labels remain visible.
-No RLS, fees, payments, entitlements, jobs, formulas or member records changed.
+No fees, payments, entitlements, jobs, formulas or member records changed.
+The anonymous production check exposed a pre-existing post-policy permission
+failure. The narrowly reviewed role split below repairs it without granting
+anonymous access to private membership helpers or changing member predicates.
 No additional What's new blast or dismissal reset is part of this correction.
 
 Reference and direction
@@ -147,3 +150,26 @@ Existing login/pricing/member destinations remain real routes; no payment run.
 
 Release follows canonical main, Vercel READY and anonymous live read verification.
 Production receipt is recorded separately after the release completes.
+
+Guest creator production repair
+Live /creators/parlayparty returned a streamed error for anonymous readers while
+the owner browser worked. The live anonymous PostgreSQL SELECT reproduced
+42501 permission denied for private.is_group_member. A CASE branch does not
+avoid PostgreSQL's function permission checks during policy preparation.
+
+Migration 20261123210640_public_creator_guest_post_policy changes only the roles
+on the existing restrictive community-post SELECT policy to authenticated and
+adds the original anonymous branch as a separate restrictive policy:
+  TO anon USING (group_id IS NULL).
+The original authenticated predicate must retain exact reviewed MD5
+e16fed290d16f99191a0538d93f6c483 before and after. Other visibility, private
+account, paid-content, block and off-season policies remain in force. No grants,
+helper functions, row data or unrelated policies change. The migration rejects
+drift and replay; apply only this individually reviewed file, never history.
+
+PASS local PostgreSQL regression tests 3/3: reproduce the real permission error,
+guest public-only visibility after repair, private/group/paid/follower/MLB rows
+stay hidden, helper execution remains revoked, authenticated predicate and
+owner/member/outsider results unchanged, changed preflight is rejected.
+Evidence: review/public-creator-guest-policy-tests.txt. Live application and
+anonymous verification are recorded in the final production receipt.
