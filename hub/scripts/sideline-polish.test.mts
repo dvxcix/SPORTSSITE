@@ -52,7 +52,7 @@ test('comparison separates implied probability from historical payout changes an
   const dialog=document.querySelector('[role="dialog"]')!,geometry=[...dialog.querySelectorAll('small')].find(el=>el.textContent==='Geometry')!.parentElement!
   assert.equal(geometry.querySelector('b')!.textContent,'29','the drawer and comparison use the same sample and metric value')
   await act(async()=>dialog.querySelector<HTMLButtonElement>('button[aria-label="Close player details"]')!.click())
-  await act(async()=>[...panel.querySelectorAll('nav button')].find(button=>button.textContent==='NFL Tracking')!.click())
+  await act(async()=>[...panel.querySelectorAll<HTMLButtonElement>('nav button')].find(button=>button.textContent==='NFL Tracking')!.click())
   for(const label of ['Targets','Receptions','Target share','Carries','Carry share','aDOT','Separation','YACOE','RYOE/A','Explosives','Pass yards','CPOE'])assert.ok(row(label),label)
   await act(async()=>panel.querySelector<HTMLButtonElement>('button[aria-label="Remove James Cook from comparison"]')!.click())
   assert.match(panel.textContent!,/1 of 4 players/)
@@ -73,7 +73,7 @@ test('comparison keeps missing metrics unavailable and opening-only prices out o
   const rows=[...panel.querySelectorAll('tbody tr')]
   assert.equal(rows.find(tr=>tr.querySelector('th')?.textContent==='Geometry')!.querySelector('td')!.textContent,'—')
   for(const row of rows.filter(tr=>['FanDuel odds','Implied probability','Payout vs avg','FTD / ATD ratio'].includes(tr.querySelector('th')?.textContent??'')))assert.equal(row.querySelectorAll('td')[1].textContent,'—')
-  await act(async()=>[...panel.querySelectorAll('nav button')].find(button=>button.textContent==='Sportsbooks')!.click())
+  await act(async()=>[...panel.querySelectorAll<HTMLButtonElement>('nav button')].find(button=>button.textContent==='Sportsbooks')!.click())
   assert.ok(panel.querySelector('select[aria-label="Comparison market"]'))
   assert.match(panel.textContent!,/FanDuel|DraftKings/);assert.match(panel.textContent!,/Open/)
   assert.doesNotMatch(panel.textContent!,/NaN|Infinity|undefined/)
