@@ -6,7 +6,7 @@ class Query {
  filters:Array<(row:any)=>boolean>=[];filterArgs:Array<[string,unknown]>=[];one=false;limitBy=100;offset=0;operation='read';payload:any;sorts:Array<[string,boolean]>=[]
  constructor(public name:string,public role:ReviewRole='member',private rolePromise?:Promise<ReviewRole>,private service=false){}
  select(_columns?:string,options?:any){if(options?.head)this.limitBy=0;return this}
- eq(k:string,v:any){this.filters.push(row=>row[k]===v);this.filterArgs.push([k,v]);return this}
+ eq(k:string,v:any){if(k.includes('.'))return this;this.filters.push(row=>row[k]===v);this.filterArgs.push([k,v]);return this}
  neq(k:string,v:any){this.filters.push(row=>row[k]!==v);return this}
  in(k:string,values:any[]){this.filters.push(row=>values.includes(row[k]));return this}
  is(k:string,v:any){this.filters.push(row=>(row[k]??null)===v);return this}
@@ -46,6 +46,7 @@ class Query {
   if(!this.service&&['posts','channels','group_members'].includes(this.name))all=all.filter(row=>!row.group_id||canView(table('groups').find(group=>group.id===row.group_id)))
   if(this.name==='group_members')all=all.map(row=>({...row,group:table('groups').find(group=>group.id===row.group_id),user:table('users').find(profile=>profile.id===row.user_id)}))
   if(this.name==='creator_products')all=all.map(row=>({...row,creator:row.creator_id===viewer?reviewProfile(this.role):table('users').find(profile=>profile.id===row.creator_id)}))
+  if(this.name==='creator_storefronts')all=all.filter(row=>this.service||row.status==='published'||row.creator_id===viewer).map(row=>({...row,creator:table('users').find(profile=>profile.id===row.creator_id)}))
   if(this.name==='creator_entitlements')all=all.map(row=>({...row,product:table('creator_products').find(product=>product.id===row.product_id),member:table('users').find(profile=>profile.id===row.user_id)}))
   if(this.name==='posts')all=all.map(row=>({...row,author:row.author||table('users').find(profile=>profile.id===row.author_id)}))
   if(this.name==='messages')all=all.map(row=>({...row,sender:row.sender||table('users').find(profile=>profile.id===row.sender_id)}))

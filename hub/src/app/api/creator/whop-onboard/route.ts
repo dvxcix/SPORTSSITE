@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getWhopPlatformCompanyId, PLATFORM_URL } from '@/lib/whopPlatform'
@@ -7,7 +7,9 @@ import { isTrustedWhopUrl } from '@/lib/whopUrl'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { safeApiError } from '@/lib/safeApiError'
 
-export async function POST() {
+export async function POST(request?: NextRequest) {
+  const embedded = request?.nextUrl.searchParams.get('embedded') === '1'
+  if (embedded && request?.headers.get('origin') !== request?.nextUrl.origin) return NextResponse.json({ error: 'Open payment setup from SlipSurge.' }, { status: 403 })
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
@@ -39,7 +41,8 @@ export async function POST() {
       }).eq('id', user.id).is('whop_connected_company_id', null)
       if (saveError) throw new Error('Creator account could not be saved')
     }
-    await getCreatorPaymentState(accountId)
+    const state = await getCreatorPaymentState(accountId)
+    if (embedded) return NextResponse.json({ embedded: true, state }, { headers: { 'Cache-Control': 'private, no-store' } })
     const link = await creatorAccountLink(accountId, 'account_onboarding', `${PLATFORM_URL}/creators/studio?onboarding=return`)
     if (!isTrustedWhopUrl(link.url)) throw new Error('Invalid onboarding destination')
     return NextResponse.json({ url: link.url }, { headers: { 'Cache-Control': 'private, no-store' } })

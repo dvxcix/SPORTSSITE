@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { ArrowLeft, ArrowUpRight, BarChart3, CalendarDays, ChevronRight, LayoutDashboard, Menu, Package, Settings2, Store, UsersRound, Wallet } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, BarChart3, MessageSquareText, Megaphone, ChevronRight, LayoutDashboard, Menu, Package, Settings2, Store, UsersRound, Wallet } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { AccountMenu } from '@/components/layout/AccountMenu'
@@ -17,7 +17,8 @@ const sections = [
   { id: 'products', label: 'Products', icon: Package },
   { id: 'communities', label: 'Communities', icon: Store },
   { id: 'members', label: 'Members', icon: UsersRound },
-  { id: 'content', label: 'Content', icon: CalendarDays },
+  { id: 'content', label: 'Posts & research', icon: MessageSquareText },
+  { id: 'promotion', label: 'Grow', icon: Megaphone },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'payouts', label: 'Balance & payouts', icon: Wallet },
   { id: 'settings', label: 'Settings', icon: Settings2 },

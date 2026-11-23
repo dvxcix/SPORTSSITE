@@ -495,7 +495,8 @@ test('provider-returned navigation remains on trusted Whop destinations', async 
   assert.ok(onboarding.includes('isTrustedWhopUrl(link.url)'))
   assert.ok(globalCheckout.includes('isTrustedWhopUrl(data.purchase_url)'))
   assert.ok(creatorCheckout.includes('isTrustedWhopUrl(checkout.purchase_url)'))
-  assert.ok(creatorStudio.includes('isTrustedWhopUrl(payload.url)'))
+  assert.ok(creatorStudio.includes("router.push(state && state.state !== 'not_connected' ? '/creators/payouts' : '/creators/studio?setup=1')"))
+  assert.ok(!creatorStudio.includes('window.location.assign'))
 })
 
 test('server-side upstream requests are time bounded', async () => {

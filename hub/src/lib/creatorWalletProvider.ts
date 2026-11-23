@@ -20,7 +20,7 @@ export const walletScopes = {
 
 export async function createCreatorWalletSession(accountId: string, intent: 'withdraw' | 'verification', now = Date.now()): Promise<CreatorWalletSession> {
   const state = await getCreatorPaymentState(accountId)
-  if (state.state === 'restricted' || intent === 'withdraw' && !state.canPayout) throw new Error('Account is not ready for this action')
+  if (intent === 'withdraw' && (state.state === 'restricted' || !state.canPayout)) throw new Error('Account is not ready for this action')
   const expiresAt = new Date(now + 600_000).toISOString()
   // Empty/omitted scopes inherit the entire API key. Always pass explicit actions.
   const response = await creatorWhop<{ token: string; expires_at: string }>('/access_tokens', { account_id: accountId, scoped_actions: [...walletScopes[intent]], expires_at: expiresAt })

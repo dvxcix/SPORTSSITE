@@ -1,0 +1,54 @@
+Creator storefront and native payouts — 23 November 2026
+
+Scope: a sports creator sets up a store, previews member access, and manages
+research, memberships, earnings and discovery inside SlipSurge. The owner
+explicitly authorized this release on 23 November. Preserve existing tools,
+Whop fees, member entitlements, sports data and personal profile decorations.
+
+Implemented:
+- Animated, keyboard-contained setup dialog: identity/branding, sports/tags,
+  free or paid membership, embedded Whop verification when paid, and preview.
+- Durable draft and resume. Edits to a published identity remain private
+  until Publish. New member communities stay private until publication.
+- Store name, cover, logo and bio are separate from the member profile.
+  Community summaries respect their shorter limits without losing the bio.
+- Free stores join creator discovery. Sport logos, tags and search expose
+  coverage. SlipSurge admins can feature published stores and set placement;
+  those controls are protected by server authorization, MFA and audit logs.
+- Posts & research opens the existing rich composer for public or private
+  community posts, picks, media and research. Scheduling is a secondary tool.
+- Public storefronts include original research previews and member access.
+- Native balance, gross revenue, payout history, currency/status filters and
+  details. Withdrawals, bank setup and verification use Whop Elements in
+  dialogs on SlipSurge. No new application fee or fee percentage is added.
+
+Security/data migration:
+20261123123549_creator_guided_storefronts is applied to hkldweedwnxartkfhror.
+Public column grants exclude drafts. Authenticated members have no direct
+write privileges. Server handlers derive owner identity from authenticated
+sessions, validate product/community ownership and verify paid readiness.
+No historical migration, payment, payout, KYC submission or role was replayed.
+Security advisors reported no notice for the new storefront table.
+
+Checks before deployment:
+87 creator/wallet/storefront tests, including PGlite RLS and draft privacy;
+creator delivery database fixture scenarios with complete rollback;
+134 production source checks; 8 Whop Elements checks; 8 review/release
+contracts; TypeScript, changed-file lint and optimized private build.
+15 local HTTP flow receipts are separate from browser rendering checks.
+In-app browser used for real rendered desktop/mobile and light/dark review.
+Final live deployment and browser receipts are recorded after promotion.
+
+Design evidence for the setup sequence and preview (structure only):
+Patreon: naming the page, then setup checklist and preview/publish.
+https://mobbin.com/flows/b0ac95d0-7d28-45c4-b231-751b566af6e2
+Buy Me a Coffee: onboarding progress and payout setup as its own step.
+https://mobbin.com/flows/1b2822d6-c807-4522-ad9c-7c7a989a4140
+Kit: creator identity and content preview in the profile editor.
+https://mobbin.com/flows/d5fd3f7b-25c0-4002-b9d4-08a09054a022
+SlipSurge colors, components, sports content and tools are preserved. The
+modal presentation is the owner's explicit request. No conversion claim.
+
+Whop contract:
+https://docs.whop.com/developer/platforms/render-payout-portal
+https://docs.whop.com/developer/guides/auth-scoping

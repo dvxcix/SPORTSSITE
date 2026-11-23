@@ -1,0 +1,15 @@
+'use client'
+import { useState } from 'react'
+import Link from 'next/link'
+import { ArrowRight, FileText, MessageSquareText, Microscope, TrendingUp } from 'lucide-react'
+import { FeedComposer } from '@/components/social/FeedComposer'
+import { SafeImage } from '@/components/ui/SafeImage'
+import { CreatorDialog } from './CreatorDialog'
+import { sportLogoUrl } from '@/lib/sportLogos'
+import styles from '@/app/creators/studio/CreatorStudio.module.css'
+type Group={id:string;name:string;slug:string;access_type:string;is_public?:boolean;avatar_url?:string|null;banner_url?:string|null;sport?:string|null}
+export function CreatorPublishing({groups,children}:{groups:Group[];children?:React.ReactNode}){
+ const [mode,setMode]=useState<'take'|'pick'|'research'|null>(null),[groupId,setGroupId]=useState(groups[0]?.id||''),[notice,setNotice]=useState('')
+ const group=groups.find(item=>item.id===groupId)
+ return <><section className={styles.panel}><header><h2>Share your work</h2><FileText size={18}/></header><p className={styles.setupNote}>Publish to your public feed or one of your member communities.</p><div className={styles.heroActions}><button onClick={()=>setMode('research')}><Microscope size={17}/>Research</button><button onClick={()=>setMode('pick')}><TrendingUp size={17}/>Pick</button><button onClick={()=>setMode('take')}><MessageSquareText size={17}/>Post</button></div>{notice&&<p role="status" className={styles.successNote}>{notice}</p>}</section><section className={styles.communityCards}>{groups.map(item=><article className={styles.communityCard} key={item.id}><div className={styles.communityCover}>{item.banner_url&&<SafeImage src={item.banner_url} alt=""/>}</div><div className={styles.communityBody}><div className={styles.communityIdentity}><span><SafeImage src={item.avatar_url||sportLogoUrl(item.sport)} alt="" fallback="⚡"/></span><div><h2>{item.name}</h2><small>{item.access_type==='paid'?'Members only':'Community'}</small></div></div><div className={styles.heroActions}><button onClick={()=>{setGroupId(item.id);setMode('research')}}>Write research</button><Link href={'/groups/'+item.slug}>Posts & picks <ArrowRight size={14}/></Link></div></div></article>)}</section>{children&&<details className={styles.spacedPanel}><summary>Saved drafts & scheduling</summary>{children}</details>}{mode&&<CreatorDialog title={mode==='research'?'Share research':mode==='pick'?'Share a pick':'Create a post'} description="Your usual SlipSurge composer, with media, player cards and member access." onClose={()=>setMode(null)}><label className={styles.composerDestination}>Publish to<select value={groupId} onChange={event=>setGroupId(event.target.value)}><option value="">My public feed</option>{groups.map(item=><option key={item.id} value={item.id}>{item.name}{item.access_type==='paid'?' · Members only':''}</option>)}</select></label><FeedComposer key={groupId+mode} groupId={group?.id} groupAudience={group?(group.access_type==='paid'||!group.is_public?'members':'public'):undefined} initialMode={mode} onPost={()=>{setMode(null);setNotice('Published. Your post is available in '+(group?.name||'your feed')+'.')}}/></CreatorDialog>}</>
+}

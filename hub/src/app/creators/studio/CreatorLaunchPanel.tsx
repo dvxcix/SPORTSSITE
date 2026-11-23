@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Check, ExternalLink, Loader2, RefreshCw, Users } from 'lucide-react'
 import type { CreatorPaymentState } from '@/lib/creatorCommerce'
-import { isTrustedWhopUrl } from '@/lib/whopUrl'
 import styles from './CreatorStudio.module.css'
 
 const labels = { not_connected: 'Set up payments', onboarding: 'Finish verification', pending: 'Whop is reviewing your account', ready: 'Ready to accept payments', restricted: 'Payments restricted', unavailable: 'Payment status unavailable' }
@@ -39,15 +38,8 @@ export function CreatorLaunchPanel({ groupCount, liveOffers, testAccount, onRead
     return () => { controller.abort(); document.removeEventListener('visibilitychange', visible) }
   }, [refresh, onReadiness])
   async function connect() {
-    if (state && state.state !== 'not_connected') { router.push('/creators/payouts'); return }
     setBusy(true); setError('')
-    try {
-      const response = await fetch('/api/creator/whop-onboard', { method: 'POST', signal: AbortSignal.timeout(55_000) })
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.error || 'Whop setup could not be opened.')
-      if (!isTrustedWhopUrl(payload.url)) throw new Error('Payment setup returned an invalid destination.')
-      window.location.assign(payload.url)
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Try again.') }
+    try { router.push(state && state.state !== 'not_connected' ? '/creators/payouts' : '/creators/studio?setup=1') }
     finally { setBusy(false) }
   }
   return <section className={styles.launch} aria-label="Community setup">

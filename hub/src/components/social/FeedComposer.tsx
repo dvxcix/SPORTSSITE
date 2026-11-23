@@ -25,6 +25,7 @@ import { FloatingSurface } from '@/components/ui/FloatingSurface'
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB']
 
 interface FeedComposerProps {
+  initialMode?: 'take' | 'pick' | 'poll' | 'research'
   onPost?: () => void
   groupId?: string
   groupAudience?: 'members' | 'public'
@@ -34,14 +35,14 @@ interface FeedComposerProps {
   openPickBuilder?: boolean
 }
 
-export function FeedComposer({ onPost, groupId, groupAudience, pageId, preferredSport, initialGameId, openPickBuilder = false }: FeedComposerProps) {
+export function FeedComposer({ onPost, groupId, groupAudience, pageId, preferredSport, initialGameId, openPickBuilder = false, initialMode = 'take' }: FeedComposerProps) {
   const router=useRouter()
   const { user, profile, loading: authLoading, authUnavailable } = useAuth()
   const mlbAccess = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const [content, setContent] = useState('')
-  const [composerMode, setComposerMode] = useState<'take' | 'pick' | 'poll' | 'research'>(openPickBuilder ? 'pick' : 'take')
-  const [showPickForm, setShowPickForm] = useState(openPickBuilder)
-  const [showPollForm, setShowPollForm] = useState(false)
+  const [composerMode, setComposerMode] = useState<'take' | 'pick' | 'poll' | 'research'>(openPickBuilder ? 'pick' : initialMode)
+  const [showPickForm, setShowPickForm] = useState(openPickBuilder || initialMode === 'pick')
+  const [showPollForm, setShowPollForm] = useState(initialMode === 'poll')
   const [selectedSport, setSport] = useState(() => preferredSport === 'MLB' && !mlbAccess ? 'NFL' : preferredSport ?? profile?.favorite_sports?.find((value: string) => SPORTS.includes(value) && (mlbAccess || value !== 'MLB')) ?? 'NFL')
   const sport = selectedSport === 'MLB' && !mlbAccess ? 'NFL' : selectedSport
   const [legs, setLegs] = useState<ComposedPick[]>([])

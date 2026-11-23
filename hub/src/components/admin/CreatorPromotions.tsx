@@ -1,0 +1,13 @@
+'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Loader2, Megaphone } from 'lucide-react'
+import { SafeImage } from '@/components/ui/SafeImage'
+import styles from '@/app/creators/studio/CreatorStudio.module.css'
+type Row={creator_id:string;name:string;logo_url:string|null;status:string;featured:boolean;featured_rank:number;creator:{username:string}|null}
+export function CreatorPromotions({stores}:{stores:Row[]}){
+ const router=useRouter(),[busy,setBusy]=useState(''),[message,setMessage]=useState(''),[ranks,setRanks]=useState<Record<string,string>>({})
+ async function save(row:Row,featured:boolean){setBusy(row.creator_id);setMessage('');try{const response=await fetch('/api/admin/creators/promotions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({creatorId:row.creator_id,featured,rank:Number(ranks[row.creator_id]??row.featured_rank)}),signal:AbortSignal.timeout(15000)}),data=await response.json();if(!response.ok)throw new Error(data.error||'Promotion could not be saved.');setMessage('Marketplace promotion saved.');router.refresh()}catch(cause){setMessage(cause instanceof Error?cause.message:'Try again.')}finally{setBusy('')}}
+ return <section className={styles.panel}><header><h2>Marketplace promotions</h2><Megaphone size={19}/></header><p className={styles.setupNote}>Feature published stores in discovery. Lower placement numbers appear first. This does not change their Whop fees or membership access.</p><div className={styles.promotionList}>{stores.map(row=><div key={row.creator_id}><div className={styles.promotionIdentity}><SafeImage src={row.logo_url} alt="" fallback={row.name[0]}/><span><strong>{row.name}</strong>{row.creator&&<Link href={'/creators/'+row.creator.username}>View store ↗</Link>}</span></div><label>Placement<input type="number" min="0" max="999" aria-label={'Placement for '+row.name} value={ranks[row.creator_id]??row.featured_rank} onChange={event=>setRanks({...ranks,[row.creator_id]:event.target.value})}/></label><button className={styles.secondaryButton} disabled={!!busy||row.status!=='published'} onClick={()=>void save(row,!row.featured)}>{busy===row.creator_id?<Loader2 className="animate-spin" size={14}/>:null}{row.featured?'Remove feature':'Feature store'}</button>{row.featured&&<button className={styles.secondaryButton} disabled={!!busy} onClick={()=>void save(row,true)}>Save placement</button>}</div>)}{!stores.length&&<p className={styles.setupNote}>Published creator stores will appear here.</p>}</div>{message&&<p role="status" className={styles.setupNote}>{message}</p>}</section>
+}

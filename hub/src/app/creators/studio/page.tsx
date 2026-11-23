@@ -5,6 +5,7 @@ import { hasCurrentCreatorAccess } from '@/lib/creatorCommerce'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { CreatorAnalytics } from './CreatorAnalyticsDashboard'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { ownerStore, STORE_OWNER_COLUMNS } from '@/lib/creatorStorefront'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,8 +18,8 @@ export default async function CreatorStudioPage() {
   const admin = createAdminClient()
   const now = requestClock()
   const ninetyDaysAgo = new Date(now - 90 * 86400_000).toISOString()
-  const [{ data: profile }, { data: products }, { data: groups }, { data: entitlements }, { data: events }, { data: scheduledPosts }, { data: funnelEvents }, { data: creatorPosts }] = await Promise.all([
-    admin.from('users').select('id,username,display_name,account_type,whop_connected_company_id,creator_commerce_status,follower_count').eq('id', user.id).single(),
+  const [{ data: profile }, { data: products }, { data: groups }, { data: entitlements }, { data: events }, { data: scheduledPosts }, { data: funnelEvents }, { data: creatorPosts }, storeResult] = await Promise.all([
+    admin.from('users').select('id,username,display_name,bio,avatar_url,banner_url,account_type,whop_connected_company_id,creator_commerce_status,follower_count').eq('id', user.id).single(),
     supabase.from('creator_products').select('id,title,description,price,product_type,status,purchase_url,created_at,whop_plan_id,platform_fee_amount,billing_period_days').eq('creator_id', user.id).order('created_at', { ascending: false }),
     supabase.from('groups').select('id,name,slug,emoji,access_type,creator_product_id,description,sport,avatar_url,banner_url,is_public,rules').eq('owner_id', user.id).order('created_at', { ascending: false }),
     supabase.from('creator_entitlements').select('id,status,created_at,updated_at,current_period_end,product_id').eq('creator_id', user.id),
@@ -26,8 +27,10 @@ export default async function CreatorStudioPage() {
     supabase.from('creator_scheduled_posts').select('id,group_id,content,post_type,sport,visibility,scheduled_for,status,published_post_id,attempts,created_at,updated_at').eq('creator_id', user.id).in('status', ['draft', 'scheduled', 'failed']).order('scheduled_for', { ascending: true }).limit(50),
     supabase.from('creator_funnel_events').select('event_type,product_id,source,created_at').eq('creator_id', user.id).gte('created_at', ninetyDaysAgo).order('created_at', { ascending: false }).limit(5000),
     supabase.from('posts').select('id,post_type,sport,reaction_count,comment_count,repost_count,created_at').eq('author_id', user.id).gte('created_at', ninetyDaysAgo).order('created_at', { ascending: false }).limit(1000),
+    admin.from('creator_storefronts').select(STORE_OWNER_COLUMNS).eq('creator_id',user.id).maybeSingle(),
   ])
   if (!profile) throw new Error('Your creator workspace could not be loaded.')
+  if (storeResult.error) throw new Error('Your storefront setup could not be loaded. Please retry.')
   const entitlementRows = entitlements ?? []
   const commerceRows = events ?? []
   const funnelRows = funnelEvents ?? []
@@ -80,5 +83,5 @@ export default async function CreatorStudioPage() {
       }
     }),
   }
-  return <CreatorStudioClient profile={{ username: profile.username, account_type: profile.account_type }} isTestAccount={profile.username.toLowerCase() === 'slipsurge'} products={products || []} groups={groups || []} stats={{ activeMembers, revenue, offers: products?.filter(item => item.status === 'active').length ?? 0, communities: groups?.length ?? 0 }} analytics={analytics} events={events ?? []} scheduledPosts={(scheduledPosts ?? []).filter(post => !MLB_HIBERNATING || profile.account_type === 'admin' || post.sport?.toUpperCase() !== 'MLB')} mlbAccess={!MLB_HIBERNATING || profile.account_type === 'admin'} />
+  return <CreatorStudioClient profile={{ username: profile.username, account_type: profile.account_type,display_name:profile.display_name,bio:profile.bio,avatar_url:profile.avatar_url,banner_url:profile.banner_url }} store={ownerStore(storeResult.data)} isTestAccount={profile.username.toLowerCase() === 'slipsurge'} products={products || []} groups={groups || []} stats={{ activeMembers, revenue, offers: products?.filter(item => item.status === 'active').length ?? 0, communities: groups?.length ?? 0 }} analytics={analytics} events={events ?? []} scheduledPosts={(scheduledPosts ?? []).filter(post => !MLB_HIBERNATING || profile.account_type === 'admin' || post.sport?.toUpperCase() !== 'MLB')} mlbAccess={!MLB_HIBERNATING || profile.account_type === 'admin'} />
 }

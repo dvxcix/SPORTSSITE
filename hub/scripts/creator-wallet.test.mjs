@@ -90,6 +90,8 @@ test('withdraw token is limited to owned account, explicit wallet permissions an
 test('verification token has no wallet or payout permissions and works before payouts are enabled', async () => {
   const f = provider({ noPayout: true }); await f.module.createCreatorWalletSession('biz_owned', 'verification')
   assert.deepEqual(f.calls.find(row => row.path === '/access_tokens').body.scoped_actions, ['identity:read', 'identity:write'])
+  const remediation = provider({ restricted: true }); await remediation.module.createCreatorWalletSession('biz_owned', 'verification')
+  assert.deepEqual(remediation.calls.find(row => row.path === '/access_tokens').body.scoped_actions, ['identity:read', 'identity:write'])
 })
 test('restricted accounts and unavailable payout capability cannot mint withdrawal tokens', async () => {
   for (const options of [{ restricted: true }, { noPayout: true }]) {
