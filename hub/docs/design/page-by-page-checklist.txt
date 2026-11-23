@@ -1,5 +1,7 @@
 SlipSurge page-by-page visual review
 
+Pending creator payout follow-up, 23 November 2026: creator-native-payouts-2026-11-23.txt records a native balance/revenue/history page and embedded withdrawal/verification dialogs. Automated checks pass (19 wallet, 56 creator, 8 Elements, 134 production source, 8 review/release contracts; TypeScript and lint). Browser control was stopped by physical Escape before visual review. Desktop/mobile and light/dark review, real provider read-only verification and release remain pending. This follow-up is NOT published and does not change previous approvals or publication counts.
+
 Creator workspace follow-up, 23 November 2026: creator-workspace-redesign-2026-11-23.txt/json records the dedicated business shell, focused product/community/profile/post dialogs, branded customer storefront, current Whop Elements checkout and safe return states. 44 private four-layout receipts, eight narrow-phone checks and 28 live receipts passed. Creator tests: 56; Whop Elements: 8; production source: 134. Existing research tools, Whop fees, access rules, release history and ten owner approvals are preserved.
 
 Latest verified production: 76d71ef1 / dpl_5mSnYiPtHh61mkVpk5MM1qdCAKZ2. All 240 previously published surfaces retain their history; six creator routes have fresh dated evidence.

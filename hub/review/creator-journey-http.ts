@@ -5,6 +5,11 @@ import {readFeedCursor} from '../src/lib/feedPagination'
 export async function creatorJourneyHttp(request:NextRequest,role:ReviewRole){
  const path=request.nextUrl.pathname,user=authUser(role),profile=reviewProfile(role)
  const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'no-store','X-SlipSurge-Review':'local-fixtures-only'}})
+ if(path==='/api/creator/wallet'){
+  if(!user)return json({error:'Sign in required.'},401)
+  const after=request.nextUrl.searchParams.has('after')
+  return json({balances:[{currency:'usd',available:1842.75,pending:216,reserved:48},{currency:'eur',available:124.5,pending:24,reserved:0}],payouts:(after?['completed','failed']:['processing','completed','completed','failed']).map((status,index)=>({id:'wdrl_review'+(after?'more':'')+index,amount:String([300,500,240,80][index]||75),net:String([299.5,499.5,239.5,79.5][index]||74.5),fee:'0.25',markup:'0.25',feePaidBy:'self',currency:'usd',status,createdAt:new Date(Date.now()-(index+(after?10:1))*86400000).toISOString(),arrival:status==='processing'?new Date(Date.now()+2*86400000).toISOString():null})),nextCursor:after?null:'review-next',checkedAt:new Date().toISOString(),canPayout:true,state:'ready',balanceError:false,historyError:false})
+ }
  if(path==='/api/creator/members')return json({members:table('creator_entitlements').filter(row=>row.creator_id===user?.id).map(row=>({...row,product:table('creator_products').find(product=>product.id===row.product_id),member:table('users').find(member=>member.id===row.user_id)}))})
  if(path==='/api/creator/scheduled-posts'){
   if(!user)return json({error:'Sign in required.'},401)

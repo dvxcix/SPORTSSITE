@@ -1,0 +1,52 @@
+Creator native payouts — 23 November 2026
+Status: implemented on codex/creator-native-payouts-20261123; NOT published.
+Base: GitHub main 37a255992f12cf7cb4220f328a5c5d024967bb03.
+
+Replaces the primary Whop payout redirect with SlipSurge balance cards,
+currency selection, 30/90-day gross revenue, daily breakdown, payout search,
+status filtering, cursor pagination and payout details. Missing provider
+values remain unavailable; currencies are not converted or mixed. Revenue
+is explicitly gross before fees/refunds and shows its record cap when used.
+Studio settings routes connected creators to their own balance/verification
+page. Existing external endpoint remains for backwards compatibility.
+
+Supported Whop Elements handle withdrawal amounts, payout destinations,
+bank linking, fee review and KYC/KYB inside a focused theme-aware dialog.
+Read-only page loads never mint write tokens. Deliberate dialog opening
+requests ten-minute tokens with explicit account-specific action scopes.
+Withdrawal and identity scopes are separate; no platform-wide token is
+exposed. Tokens live only in component memory and expire out of the form.
+
+Server resolves the authenticated profile's account, checks exact account
+identity and platform parent, enforces configured MFA, same-origin JSON
+actions, strict request shape, test-account restrictions and rate limits.
+Ledger and payout serializers allow-list display fields; KYC, bank details,
+metadata and raw provider failures never reach the dashboard payload.
+Unavailable sources fail independently. No application fee is added.
+
+Validation completed:
+- Wallet behavior and authorization: 19/19.
+- Creator commerce/storefront/business: 56/56 plus transactional database
+  fixture scenarios with complete rollback (no production mutations).
+- Existing Whop Elements contracts: 8/8.
+- Production source contracts: 134/134. Two obsolete hosted-payout/CSS
+  assertions now check the native wallet flow and test-account protection.
+- Private review/release contracts: 8/8.
+- TypeScript and changed-file ESLint: pass.
+- Initial optimized local fixture build compiled successfully; subsequent
+  small lint/handler refinements have TypeScript/source validation only.
+
+Outstanding before release:
+- Desktop/mobile, light/dark visual and interaction review.
+- Authenticated real-provider read-only balances/history verification.
+- Final optimized build and GitHub main/Vercel release verification.
+
+Browser review was stopped by physical Escape. No further computer input
+was issued. Local illustrative wallet/forms are guarded by the existing
+private build adapter; no real token, payout, bank change, KYC submission,
+payment, Discord role or message was created in QA. Production is unchanged.
+
+Provider contracts checked:
+https://docs.whop.com/developer/platforms/render-payout-portal
+https://docs.whop.com/developer/guides/auth-scoping
+https://supabase.com/docs/reference/javascript/auth-mfa-getauthenticatorassurancelevel

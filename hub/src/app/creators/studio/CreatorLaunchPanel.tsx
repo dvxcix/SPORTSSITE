@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowRight, Check, ExternalLink, Loader2, RefreshCw, Users } from 'lucide-react'
 import type { CreatorPaymentState } from '@/lib/creatorCommerce'
 import { isTrustedWhopUrl } from '@/lib/whopUrl'
@@ -8,6 +9,7 @@ import styles from './CreatorStudio.module.css'
 
 const labels = { not_connected: 'Set up payments', onboarding: 'Finish verification', pending: 'Whop is reviewing your account', ready: 'Ready to accept payments', restricted: 'Payments restricted', unavailable: 'Payment status unavailable' }
 export function CreatorLaunchPanel({ groupCount, liveOffers, testAccount, onReadiness, compact=false }: { groupCount: number; liveOffers: number; testAccount: boolean; onReadiness: (state: CreatorPaymentState | null) => void; compact?: boolean }) {
+  const router = useRouter()
   const [state, setState] = useState<CreatorPaymentState | null>(null)
   const [busy, setBusy] = useState(false)
   const [checking, setChecking] = useState(true)
@@ -37,6 +39,7 @@ export function CreatorLaunchPanel({ groupCount, liveOffers, testAccount, onRead
     return () => { controller.abort(); document.removeEventListener('visibilitychange', visible) }
   }, [refresh, onReadiness])
   async function connect() {
+    if (state && state.state !== 'not_connected') { router.push('/creators/payouts'); return }
     setBusy(true); setError('')
     try {
       const response = await fetch('/api/creator/whop-onboard', { method: 'POST', signal: AbortSignal.timeout(55_000) })
@@ -55,7 +58,7 @@ export function CreatorLaunchPanel({ groupCount, liveOffers, testAccount, onRead
       <div><span data-done={liveOffers > 0}>{liveOffers ? <Check size={16}/> : '3'}</span><div><strong>Create an offer and launch</strong><p>Choose your price, create its member community, then publish.</p></div></div>
     </div>}
     {compact&&<p role="status" className={styles.setupNote}>{checking?'Checking payment status…':state?labels[state.state]:'Payment status could not be verified.'}</p>}
-    <div className={styles.launchActions}><button type="button" className={styles.secondaryButton} onClick={connect} disabled={busy || testAccount}>{busy ? <Loader2 className="animate-spin" size={16}/> : <ExternalLink size={15}/>} {state?.canCharge ? 'Manage verification' : state?.state === 'not_connected' ? 'Set up paid access' : 'Continue Whop setup'}</button><button className={styles.secondaryButton} disabled={checking || busy} onClick={() => { setChecking(true); void refresh() }}><RefreshCw size={14}/> Refresh status</button>{state && state.state !== 'not_connected' && <Link href="/creators/payouts">Balance & payouts <ArrowRight size={14}/></Link>}</div>
+    <div className={styles.launchActions}><button type="button" className={styles.secondaryButton} onClick={connect} disabled={busy || testAccount}>{busy ? <Loader2 className="animate-spin" size={16}/> : state && state.state !== 'not_connected' ? <ArrowRight size={15}/> : <ExternalLink size={15}/>} {state && state.state !== 'not_connected' ? 'Balance & verification' : 'Set up paid access'}</button><button className={styles.secondaryButton} disabled={checking || busy} onClick={() => { setChecking(true); void refresh() }}><RefreshCw size={14}/> Refresh status</button></div>
     {testAccount && <p className={styles.setupNote}>Test workspace. Financial actions are disabled.</p>}
     {error && <p role="alert" className={styles.setupError}>{error}</p>}
   </section>
