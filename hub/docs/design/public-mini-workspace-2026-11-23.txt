@@ -1,0 +1,104 @@
+Public research workspace correction
+23 November 2026
+
+Integration receipt, not a production publication claim.
+
+Owner direction
+The homepage must show SlipSurge's real product identity and interactions:
+player portraits, team backgrounds/logos, league marks, sportsbook logos,
+priced rows, proper controls and a player detail view. A text-only odds table
+and brochure split are insufficient. The working mini workspace leads the page.
+Research models, score formulas and private member data stay outside this UI.
+
+Implementation
+- LandingPage now accepts previews?:Record<PreviewSport,ResearchPreview> and
+  showcase?:ReactNode. The centered short intro precedes a full-width workbench.
+  The parent can stream its async current-board component under Suspense.
+- ResearchShowcase consumes actual server props. No featured player IDs,
+  November 8 dates, individual final results or prices are hardcoded in it.
+  Omitted props use the existing explicitly dated public archive for tests.
+- The frame is a condensed SlipSurge workspace: league/workspace navigation,
+  actual game/team strip, market/book toolbar, Players/Ladders views, milestone
+  controls, priced rows, selected-player inspector and player detail drawer.
+- Six visible players at most; rows quoted at the selected rung sort before
+  missing quotes. Player and ladder tables have contained scroll regions.
+- Player clicks open the shared ModalSurface. The drawer has Overview and All
+  odds views, a real observed/market chart and an exact full-preview handoff.
+- Market/book/more-tools controls explain the free scope in a dismissible
+  dialog. Membership links retain approved research context. Save shows the
+  account action instead of pretending that a pick has been saved.
+- No initial account requirement is added. The user can continue free browsing.
+- Current/fallback labels come from board.example. Game dates, saved time,
+  scores and quote values come only from the supplied board.
+
+Shared artwork adapter
+src/components/marketing/PreviewIdentity.tsx exports:
+  PreviewPlayerIdentity({player,sport,size?,compact?})
+  PreviewTeamMark({sport,team,size?})
+  PreviewPlayerChart({player,sport,line:number|null,onLineChange?})
+The chart implementation is in PreviewPlayerChart.tsx and re-exported for the
+full preview page's shared import. PreviewIdentityPlayer extends the public
+player shape with optional portraitUrl, position and chronological recent.
+
+Identity uses the existing sports/PlayerAvatar, SafeImage, nflPlayerPortrait
+and sportTeamLogoUrl helpers. The shared player avatar already supplies the
+approved primary/secondary team background, clipping and exact-ID fallbacks.
+No new portrait/name/team/vendor mapping or generated image was introduced.
+BookLogo and sportLogoUrl supply the same book and league marks as the app.
+
+Chart honesty
+- Recent bars exist only when actual recent values are supplied. Observed zero
+  remains zero. The ordering is oldest to newest, labelled by observation index
+  because this bounded shape does not include dates. No dates are invented.
+- Without recent data, the chart shows only actual offered ladder quotes.
+  The same public American-odds helper used by the existing market UI supplies
+  their visual height. No research model or player score is calculated here.
+- Bars animate their entrance only; no random values, timer, fabricated updates
+  or synthetic results. Selection is explicit and prices remain unchanged.
+- Existing supporting player artwork/story remains separate and dated.
+
+Focused verification
+Command: node --import tsx --test scripts/unified-visitor-experience.test.mts
+  scripts/public-research-preview.test.mts
+Result: 19 passed, 0 failed (14 visitor cases plus 5 existing preview contracts).
+Owned TSX and updated test ESLint: passed.
+Owned-file git diff --check: passed.
+
+Behavior exercised in component tests
+- Board props replace archive names, date, game and prices.
+- Supplied portraits, existing team/league marks and FanDuel logo render.
+- Selected player/rung/full-preview query context stays aligned.
+- Missing quote stays unavailable; no zero price or fabricated movement.
+- Sport switching clears incompatible player/rung state.
+- Player drawer opens, All odds renders, Escape closes and focus returns.
+- Ladder quote action sets the actual inspected player and rung.
+- Limited sportsbook access opens a real, dismissible membership dialog.
+- Save opens a real account action while leaving free browsing available.
+- Real recent zeroes remain selectable; NFL missing logs use real ladder quotes.
+- Both motion stylesheets guard animation with prefers-reduced-motion.
+- Prior public/free community privacy, fallback and navigation tests remain.
+
+Design/gate receipt
+Reading this as a public sports research workspace with SlipSurge's existing
+team/player identity. ENERGY 2 / RHYTHM 2 / MOTION 2.
+Purpose: real artwork identifies the athlete/team/league; book marks identify
+the quoted market; accent identifies selection. The frame demonstrates an
+actual product task instead of decorative browser chrome or fake dashboards.
+Motion: 160–240ms selection/drawer/bar entry, all reduced-motion guarded.
+No unsupported statistics, testimonials, performance claims or private formulas.
+Native buttons/links, named actions, shared ModalSurface focus/Escape behavior.
+Source and component safety gates pass. Browser layout, contrast, font sizing,
+theme, touch and final release gates remain with the coordinating root agent.
+
+Phone legibility correction
+After the coordinator flagged tiny metadata, primary phone odds/player names
+were set to 13px, controls to 12px and supporting/chart labels to 11–12px. The
+secondary Move column collapses on narrow phones; movement remains accessible
+in player details. The two core columns preserve identity, current/open price
+and source information without shrinking to 8–9px. As-of labels may wrap.
+Root still owns actual visual verification across all themes and widths.
+
+Test type correction
+React.createElement prop calls explicitly use ShowcaseProps derived from the
+real component's parameter type. The PostCSS ancestor walk uses Node|undefined,
+preserving the actual reduced-motion assertion while permitting Document nodes.

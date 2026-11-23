@@ -1,0 +1,2471 @@
+{
+  "date": "2026-11-23",
+  "scope": "Public NBA/NFL workbench, full previews, creator identity and community distinction",
+  "environment": "Isolated Next production build, labeled fixtures; Codex in-app browser",
+  "physicalDevicesTested": false,
+  "baseline": [
+    {
+      "id": "route:/",
+      "label": "Public homepage",
+      "stage": "exact-frame-standard-layouts",
+      "at": "2026-11-23T20:46:27.424Z",
+      "layouts": {
+        "desktop-dark": {
+          "url": "/?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Research the game. Share your read.",
+            "The Court",
+            "Two sports.One research desk.",
+            "Find your people.",
+            "NBA Lounge",
+            "Open research room",
+            "Read the Feed",
+            "Meet the creators",
+            "Follow the games",
+            "Check public records",
+            "One membership for both sports",
+            "Free",
+            "Ultimate",
+            "Common questions",
+            "Take a look inside."
+          ],
+          "text": 3648,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points board",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Research the game. Share your read.",
+            "The Court",
+            "Two sports.One research desk.",
+            "Find your people.",
+            "NBA Lounge",
+            "Open research room",
+            "Read the Feed",
+            "Meet the creators",
+            "Follow the games",
+            "Check public records",
+            "One membership for both sports",
+            "Free",
+            "Ultimate",
+            "Common questions",
+            "Take a look inside."
+          ],
+          "text": 3648,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points board",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Research the game. Share your read.",
+            "The Court",
+            "Two sports.One research desk.",
+            "Find your people.",
+            "NBA Lounge",
+            "Open research room",
+            "Read the Feed",
+            "Meet the creators",
+            "Follow the games",
+            "Check public records",
+            "One membership for both sports",
+            "Free",
+            "Ultimate",
+            "Common questions",
+            "Take a look inside."
+          ],
+          "text": 3648,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points board",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Research the game. Share your read.",
+            "The Court",
+            "Two sports.One research desk.",
+            "Find your people.",
+            "NBA Lounge",
+            "Open research room",
+            "Read the Feed",
+            "Meet the creators",
+            "Follow the games",
+            "Check public records",
+            "One membership for both sports",
+            "Free",
+            "Ultimate",
+            "Common questions",
+            "Take a look inside."
+          ],
+          "text": 3648,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points board",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        }
+      }
+    },
+    {
+      "id": "route:/creators",
+      "label": "Creator people directory",
+      "stage": "correction-four-layouts",
+      "at": "2026-11-23T20:49:40.878Z",
+      "layouts": {
+        "desktop-dark": {
+          "url": "/creators?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-light": {
+          "url": "/creators?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/creators?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/creators?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      }
+    },
+    {
+      "id": "route:/creators/[username]",
+      "label": "Creator identity and storefront",
+      "stage": "correction-four-layouts",
+      "at": "2026-11-23T20:49:42.518Z",
+      "layouts": {
+        "desktop-light": {
+          "url": "/creators/jordan-review?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Court Notes",
+            "The weekly research room",
+            "Protected access",
+            "About creator access",
+            "Communities",
+            "Jordan’s research room",
+            "Research & picks"
+          ],
+          "text": 988,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/creators/jordan-review?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Court Notes",
+            "The weekly research room",
+            "Protected access",
+            "About creator access",
+            "Communities",
+            "Jordan’s research room",
+            "Research & picks"
+          ],
+          "text": 988,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/creators/jordan-review?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Court Notes",
+            "The weekly research room",
+            "Protected access",
+            "About creator access",
+            "Communities",
+            "Jordan’s research room",
+            "Research & picks"
+          ],
+          "text": 988,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/creators/jordan-review?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Court Notes",
+            "The weekly research room",
+            "Protected access",
+            "About creator access",
+            "Communities",
+            "Jordan’s research room",
+            "Research & picks"
+          ],
+          "text": 988,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      }
+    },
+    {
+      "id": "route:/groups",
+      "label": "Community directory",
+      "stage": "correction-four-layouts",
+      "at": "2026-11-23T20:49:44.790Z",
+      "layouts": {
+        "desktop-light": {
+          "url": "/groups?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Communities",
+            "NBA Lounge",
+            "The film room"
+          ],
+          "text": 401,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/groups?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Communities",
+            "NBA Lounge",
+            "The film room"
+          ],
+          "text": 401,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/groups?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Communities",
+            "NBA Lounge",
+            "The film room"
+          ],
+          "text": 401,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/groups?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Communities",
+            "NBA Lounge",
+            "The film room"
+          ],
+          "text": 401,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      }
+    },
+    {
+      "id": "route:/preview/[sport]",
+      "label": "Full NBA preview",
+      "stage": "correction-four-layouts",
+      "at": "2026-11-23T20:49:46.567Z",
+      "layouts": {
+        "desktop-light": {
+          "url": "/preview/nba?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Court",
+            "Points",
+            "NBA on Nov 23",
+            "Go deeper",
+            "Take the next matchup further."
+          ],
+          "text": 1729,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points ladder",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/preview/nba?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Court",
+            "Points",
+            "NBA on Nov 23",
+            "Go deeper",
+            "Take the next matchup further."
+          ],
+          "text": 1729,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": true,
+              "label": "Points ladder",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/preview/nba?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "The Court",
+            "Points",
+            "NBA on Nov 23",
+            "Go deeper",
+            "Take the next matchup further."
+          ],
+          "text": 1729,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points ladder",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/preview/nba?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "The Court",
+            "Points",
+            "NBA on Nov 23",
+            "Go deeper",
+            "Take the next matchup further."
+          ],
+          "text": 1729,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": true,
+              "label": "Points ladder",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        }
+      }
+    },
+    {
+      "id": "route:/creators",
+      "label": "Creator people directory",
+      "stage": "creator-interaction-start",
+      "at": "2026-11-23T20:50:53.601Z",
+      "layouts": {
+        "desktop-light": {
+          "url": "/creators?reviewTheme=light&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "desktop-dark": {
+          "url": "/creators?reviewTheme=dark&reviewMatrix=1",
+          "width": 1440,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-light": {
+          "url": "/creators?reviewTheme=light&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "phone-dark": {
+          "url": "/creators?reviewTheme=dark&reviewMatrix=1",
+          "width": 390,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      }
+    }
+  ],
+  "narrow": [
+    {
+      "id": "route:/",
+      "label": "Public mini workspace",
+      "stage": "correction-six-narrow-layouts",
+      "at": "2026-11-23T20:50:07.004Z",
+      "layouts": {
+        "small-light": {
+          "url": "/?reviewTheme=light&reviewMatrix=1",
+          "width": 320,
+          "overflow": false,
+          "headings": [
+            "Research the game. Share your read.",
+            "The Court",
+            "Two sports.One research desk.",
+            "Find your people.",
+            "NBA Lounge",
+            "Open research room",
+            "Read the Feed",
+            "Meet the creators",
+            "Follow the games",
+            "Check public records",
+            "One membership for both sports",
+            "Free",
+            "Ultimate",
+            "Common questions",
+            "Take a look inside."
+          ],
+          "text": 3648,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points board",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "small-dark": {
+          "url": "/?reviewTheme=dark&reviewMatrix=1",
+          "width": 320,
+          "overflow": false,
+          "headings": [
+            "Research the game. Share your read.",
+            "The Court",
+            "Two sports.One research desk.",
+            "Find your people.",
+            "NBA Lounge",
+            "Open research room",
+            "Read the Feed",
+            "Meet the creators",
+            "Follow the games",
+            "Check public records",
+            "One membership for both sports",
+            "Free",
+            "Ultimate",
+            "Common questions",
+            "Take a look inside."
+          ],
+          "text": 3648,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points board",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "tablet-light": {
+          "url": "/?reviewTheme=light&reviewMatrix=1",
+          "width": 820,
+          "overflow": false,
+          "headings": [
+            "Research the game. Share your read.",
+            "The Court",
+            "Two sports.One research desk.",
+            "Find your people.",
+            "NBA Lounge",
+            "Open research room",
+            "Read the Feed",
+            "Meet the creators",
+            "Follow the games",
+            "Check public records",
+            "One membership for both sports",
+            "Free",
+            "Ultimate",
+            "Common questions",
+            "Take a look inside."
+          ],
+          "text": 3648,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points board",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "tablet-dark": {
+          "url": "/?reviewTheme=dark&reviewMatrix=1",
+          "width": 820,
+          "overflow": false,
+          "headings": [
+            "Research the game. Share your read.",
+            "The Court",
+            "Two sports.One research desk.",
+            "Find your people.",
+            "NBA Lounge",
+            "Open research room",
+            "Read the Feed",
+            "Meet the creators",
+            "Follow the games",
+            "Check public records",
+            "One membership for both sports",
+            "Free",
+            "Ultimate",
+            "Common questions",
+            "Take a look inside."
+          ],
+          "text": 3648,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points board",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "landscape-light": {
+          "url": "/?reviewTheme=light&reviewMatrix=1",
+          "width": 844,
+          "overflow": false,
+          "headings": [
+            "Research the game. Share your read.",
+            "The Court",
+            "Two sports.One research desk.",
+            "Find your people.",
+            "NBA Lounge",
+            "Open research room",
+            "Read the Feed",
+            "Meet the creators",
+            "Follow the games",
+            "Check public records",
+            "One membership for both sports",
+            "Free",
+            "Ultimate",
+            "Common questions",
+            "Take a look inside."
+          ],
+          "text": 3648,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points board",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "landscape-dark": {
+          "url": "/?reviewTheme=dark&reviewMatrix=1",
+          "width": 844,
+          "overflow": false,
+          "headings": [
+            "Research the game. Share your read.",
+            "The Court",
+            "Two sports.One research desk.",
+            "Find your people.",
+            "NBA Lounge",
+            "Open research room",
+            "Read the Feed",
+            "Meet the creators",
+            "Follow the games",
+            "Check public records",
+            "One membership for both sports",
+            "Free",
+            "Ultimate",
+            "Common questions",
+            "Take a look inside."
+          ],
+          "text": 3648,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points board",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        }
+      }
+    },
+    {
+      "id": "route:/creators",
+      "label": "Creator people directory",
+      "stage": "correction-six-narrow-layouts",
+      "at": "2026-11-23T20:50:08.978Z",
+      "layouts": {
+        "small-light": {
+          "url": "/creators?reviewTheme=light&reviewMatrix=1",
+          "width": 320,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "small-dark": {
+          "url": "/creators?reviewTheme=dark&reviewMatrix=1",
+          "width": 320,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "tablet-light": {
+          "url": "/creators?reviewTheme=light&reviewMatrix=1",
+          "width": 820,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "tablet-dark": {
+          "url": "/creators?reviewTheme=dark&reviewMatrix=1",
+          "width": 820,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "landscape-light": {
+          "url": "/creators?reviewTheme=light&reviewMatrix=1",
+          "width": 844,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "landscape-dark": {
+          "url": "/creators?reviewTheme=dark&reviewMatrix=1",
+          "width": 844,
+          "overflow": false,
+          "headings": [
+            "Discover sports creators",
+            "Jordan L.",
+            "Maya R."
+          ],
+          "text": 513,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      }
+    },
+    {
+      "id": "route:/creators/[username]",
+      "label": "Creator identity and storefront",
+      "stage": "correction-six-narrow-layouts",
+      "at": "2026-11-23T20:50:10.997Z",
+      "layouts": {
+        "small-light": {
+          "url": "/creators/jordan-review?reviewTheme=light&reviewMatrix=1",
+          "width": 320,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Court Notes",
+            "The weekly research room",
+            "Protected access",
+            "About creator access",
+            "Communities",
+            "Jordan’s research room",
+            "Research & picks"
+          ],
+          "text": 988,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "small-dark": {
+          "url": "/creators/jordan-review?reviewTheme=dark&reviewMatrix=1",
+          "width": 320,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Court Notes",
+            "The weekly research room",
+            "Protected access",
+            "About creator access",
+            "Communities",
+            "Jordan’s research room",
+            "Research & picks"
+          ],
+          "text": 988,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "tablet-light": {
+          "url": "/creators/jordan-review?reviewTheme=light&reviewMatrix=1",
+          "width": 820,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Court Notes",
+            "The weekly research room",
+            "Protected access",
+            "About creator access",
+            "Communities",
+            "Jordan’s research room",
+            "Research & picks"
+          ],
+          "text": 988,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "tablet-dark": {
+          "url": "/creators/jordan-review?reviewTheme=dark&reviewMatrix=1",
+          "width": 820,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Court Notes",
+            "The weekly research room",
+            "Protected access",
+            "About creator access",
+            "Communities",
+            "Jordan’s research room",
+            "Research & picks"
+          ],
+          "text": 988,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "landscape-light": {
+          "url": "/creators/jordan-review?reviewTheme=light&reviewMatrix=1",
+          "width": 844,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Court Notes",
+            "The weekly research room",
+            "Protected access",
+            "About creator access",
+            "Communities",
+            "Jordan’s research room",
+            "Research & picks"
+          ],
+          "text": 988,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "landscape-dark": {
+          "url": "/creators/jordan-review?reviewTheme=dark&reviewMatrix=1",
+          "width": 844,
+          "overflow": false,
+          "headings": [
+            "Jordan L.",
+            "Court Notes",
+            "The weekly research room",
+            "Protected access",
+            "About creator access",
+            "Communities",
+            "Jordan’s research room",
+            "Research & picks"
+          ],
+          "text": 988,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      }
+    },
+    {
+      "id": "route:/groups",
+      "label": "Community directory",
+      "stage": "correction-six-narrow-layouts",
+      "at": "2026-11-23T20:50:14.262Z",
+      "layouts": {
+        "small-light": {
+          "url": "/groups?reviewTheme=light&reviewMatrix=1",
+          "width": 320,
+          "overflow": false,
+          "headings": [
+            "Communities",
+            "NBA Lounge",
+            "The film room"
+          ],
+          "text": 401,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "small-dark": {
+          "url": "/groups?reviewTheme=dark&reviewMatrix=1",
+          "width": 320,
+          "overflow": false,
+          "headings": [
+            "Communities",
+            "NBA Lounge",
+            "The film room"
+          ],
+          "text": 401,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "tablet-light": {
+          "url": "/groups?reviewTheme=light&reviewMatrix=1",
+          "width": 820,
+          "overflow": false,
+          "headings": [
+            "Communities",
+            "NBA Lounge",
+            "The film room"
+          ],
+          "text": 401,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "tablet-dark": {
+          "url": "/groups?reviewTheme=dark&reviewMatrix=1",
+          "width": 820,
+          "overflow": false,
+          "headings": [
+            "Communities",
+            "NBA Lounge",
+            "The film room"
+          ],
+          "text": 401,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "landscape-light": {
+          "url": "/groups?reviewTheme=light&reviewMatrix=1",
+          "width": 844,
+          "overflow": false,
+          "headings": [
+            "Communities",
+            "NBA Lounge",
+            "The film room"
+          ],
+          "text": 401,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        },
+        "landscape-dark": {
+          "url": "/groups?reviewTheme=dark&reviewMatrix=1",
+          "width": 844,
+          "overflow": false,
+          "headings": [
+            "Communities",
+            "NBA Lounge",
+            "The film room"
+          ],
+          "text": 401,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 0,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [],
+          "smallButtons": []
+        }
+      }
+    },
+    {
+      "id": "route:/preview/[sport]",
+      "label": "Full NBA preview",
+      "stage": "correction-six-narrow-layouts",
+      "at": "2026-11-23T20:50:16.858Z",
+      "layouts": {
+        "small-light": {
+          "url": "/preview/nba?reviewTheme=light&reviewMatrix=1",
+          "width": 320,
+          "overflow": false,
+          "headings": [
+            "The Court",
+            "Points",
+            "NBA on Nov 23",
+            "Go deeper",
+            "Take the next matchup further."
+          ],
+          "text": 1729,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": true,
+              "label": "Points ladder",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "small-dark": {
+          "url": "/preview/nba?reviewTheme=dark&reviewMatrix=1",
+          "width": 320,
+          "overflow": false,
+          "headings": [
+            "The Court",
+            "Points",
+            "NBA on Nov 23",
+            "Go deeper",
+            "Take the next matchup further."
+          ],
+          "text": 1729,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": true,
+              "label": "Points ladder",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "tablet-light": {
+          "url": "/preview/nba?reviewTheme=light&reviewMatrix=1",
+          "width": 820,
+          "overflow": false,
+          "headings": [
+            "The Court",
+            "Points",
+            "NBA on Nov 23",
+            "Go deeper",
+            "Take the next matchup further."
+          ],
+          "text": 1729,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points ladder",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "tablet-dark": {
+          "url": "/preview/nba?reviewTheme=dark&reviewMatrix=1",
+          "width": 820,
+          "overflow": false,
+          "headings": [
+            "The Court",
+            "Points",
+            "NBA on Nov 23",
+            "Go deeper",
+            "Take the next matchup further."
+          ],
+          "text": 1729,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points ladder",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "landscape-light": {
+          "url": "/preview/nba?reviewTheme=light&reviewMatrix=1",
+          "width": 844,
+          "overflow": false,
+          "headings": [
+            "The Court",
+            "Points",
+            "NBA on Nov 23",
+            "Go deeper",
+            "Take the next matchup further."
+          ],
+          "text": 1729,
+          "error": false,
+          "theme": "light",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points ladder",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        },
+        "landscape-dark": {
+          "url": "/preview/nba?reviewTheme=dark&reviewMatrix=1",
+          "width": 844,
+          "overflow": false,
+          "headings": [
+            "The Court",
+            "Points",
+            "NBA on Nov 23",
+            "Go deeper",
+            "Take the next matchup further."
+          ],
+          "text": 1729,
+          "error": false,
+          "theme": "dark",
+          "loading": false,
+          "tables": 1,
+          "dialogs": 0,
+          "unnamed": 0,
+          "scrollTables": [
+            {
+              "wide": false,
+              "label": "Points ladder",
+              "keyboard": true,
+              "firstHeader": "Player"
+            }
+          ],
+          "smallButtons": []
+        }
+      }
+    }
+  ],
+  "interactions": [
+    {
+      "case": "phone-dark-nba-drawer",
+      "dialogs": [
+        {
+          "name": "Austin Reaves preview details",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "20+ points"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Austin Reaves"
+        }
+      ],
+      "small": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "case": "phone-light-nba-selected-odds-chart",
+      "dialogs": [
+        {
+          "name": "Cade Cunningham preview details",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "25+ points"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Cade Cunningham"
+        }
+      ],
+      "small": [],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "case": "phone-light-gate-See more markets",
+      "dialogs": [
+        {
+          "name": "Research more markets",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "Research more markets"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [],
+      "small": [
+        "Close preview access details",
+        "Keep browsing"
+      ],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "case": "phone-light-gate-See more sportsbooks",
+      "dialogs": [
+        {
+          "name": "Compare more sportsbooks",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "Compare more sportsbooks"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [],
+      "small": [
+        "Close preview access details",
+        "Keep browsing"
+      ],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "case": "phone-light-gate-More tools",
+      "dialogs": [
+        {
+          "name": "Keep researching the matchup",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "Keep researching the matchup"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [],
+      "small": [],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "case": "phone-light-nfl-odds-chart",
+      "dialogs": [
+        {
+          "name": "Cade Otton preview details",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "40+ receiving yards"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Cade Otton"
+        }
+      ],
+      "small": [],
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "case": "phone-dark-nba-selected-odds-chart",
+      "dialogs": [
+        {
+          "name": "Cade Cunningham preview details",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "25+ points"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Cade Cunningham"
+        }
+      ],
+      "small": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "case": "phone-dark-gate-See more markets",
+      "dialogs": [
+        {
+          "name": "Research more markets",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "Research more markets"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [],
+      "small": [
+        "Close preview access details",
+        "Keep browsing"
+      ],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "case": "phone-dark-gate-See more sportsbooks",
+      "dialogs": [
+        {
+          "name": "Compare more sportsbooks",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "Compare more sportsbooks"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [],
+      "small": [
+        "Close preview access details",
+        "Keep browsing"
+      ],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "case": "phone-dark-gate-More tools",
+      "dialogs": [
+        {
+          "name": "Keep researching the matchup",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "Keep researching the matchup"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [],
+      "small": [
+        "Close preview access details",
+        "Keep browsing"
+      ],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "case": "phone-dark-nfl-odds-chart",
+      "dialogs": [
+        {
+          "name": "Cade Otton preview details",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "40+ receiving yards"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Cade Otton"
+        }
+      ],
+      "small": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "case": "desktop-light-nba-selected-odds-chart",
+      "dialogs": [
+        {
+          "name": "Cade Cunningham preview details",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "25+ points"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Cade Cunningham"
+        }
+      ],
+      "small": [
+        "Overview",
+        "All odds"
+      ],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "case": "desktop-light-gate-See more markets",
+      "dialogs": [
+        {
+          "name": "Research more markets",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "Research more markets"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "portraits": [],
+      "small": [
+        "Close preview access details",
+        "Keep browsing"
+      ],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "case": "desktop-light-gate-See more sportsbooks",
+      "dialogs": [
+        {
+          "name": "Compare more sportsbooks",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "Compare more sportsbooks"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "portraits": [],
+      "small": [
+        "Close preview access details",
+        "Keep browsing"
+      ],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "case": "desktop-light-gate-More tools",
+      "dialogs": [
+        {
+          "name": "Keep researching the matchup",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "Keep researching the matchup"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "portraits": [],
+      "small": [
+        "Close preview access details",
+        "Keep browsing"
+      ],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "case": "desktop-light-nfl-odds-chart",
+      "dialogs": [
+        {
+          "name": "Cade Otton preview details",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "40+ receiving yards"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Cade Otton"
+        }
+      ],
+      "small": [
+        "Overview",
+        "All odds"
+      ],
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "case": "desktop-dark-nba-selected-odds-chart",
+      "dialogs": [
+        {
+          "name": "Cade Cunningham preview details",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "25+ points"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Cade Cunningham"
+        }
+      ],
+      "small": [
+        "Overview",
+        "All odds"
+      ],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "case": "desktop-dark-gate-See more markets",
+      "dialogs": [
+        {
+          "name": "Research more markets",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "Research more markets"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "portraits": [],
+      "small": [
+        "Close preview access details",
+        "Keep browsing"
+      ],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "case": "desktop-dark-gate-See more sportsbooks",
+      "dialogs": [
+        {
+          "name": "Compare more sportsbooks",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "Compare more sportsbooks"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "portraits": [],
+      "small": [
+        "Close preview access details",
+        "Keep browsing"
+      ],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "case": "desktop-dark-gate-More tools",
+      "dialogs": [
+        {
+          "name": "Keep researching the matchup",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "Keep researching the matchup"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "portraits": [],
+      "small": [
+        "Close preview access details",
+        "Keep browsing"
+      ],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "case": "desktop-dark-nfl-odds-chart",
+      "dialogs": [
+        {
+          "name": "Cade Otton preview details",
+          "withinViewport": true
+        }
+      ],
+      "errors": [],
+      "headings": [
+        "40+ receiving yards"
+      ],
+      "height": 1000,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Cade Otton"
+        }
+      ],
+      "small": [
+        "Overview",
+        "All odds"
+      ],
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "case": "phone-nfl-full-preview-handoff",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "The Sideline",
+        "Receiving yards",
+        "NFL on Nov 23",
+        "Go deeper",
+        "Take the next matchup further."
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Cade Otton"
+        },
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Cade Otton"
+        },
+        {
+          "loaded": true,
+          "name": "Chris Godwin Jr."
+        },
+        {
+          "loaded": true,
+          "name": "Ted Hurst III"
+        },
+        {
+          "loaded": true,
+          "name": "D'Andre Swift"
+        },
+        {
+          "loaded": true,
+          "name": "Kalif Raymond"
+        },
+        {
+          "loaded": true,
+          "name": "Colston Loveland"
+        },
+        {
+          "loaded": true,
+          "name": "Luther Burden III"
+        }
+      ],
+      "small": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "case": "full-nfl-small-light",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "The Sideline",
+        "Receiving yards",
+        "NFL on Nov 23",
+        "Go deeper",
+        "Take the next matchup further."
+      ],
+      "height": 740,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Cade Otton"
+        },
+        {
+          "loaded": true,
+          "name": "Chris Godwin Jr."
+        },
+        {
+          "loaded": true,
+          "name": "Ted Hurst III"
+        },
+        {
+          "loaded": true,
+          "name": "D'Andre Swift"
+        },
+        {
+          "loaded": true,
+          "name": "Kalif Raymond"
+        },
+        {
+          "loaded": true,
+          "name": "Colston Loveland"
+        },
+        {
+          "loaded": true,
+          "name": "Luther Burden III"
+        }
+      ],
+      "small": [],
+      "theme": "light",
+      "width": 320
+    },
+    {
+      "case": "full-nfl-small-dark",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "The Sideline",
+        "Receiving yards",
+        "NFL on Nov 23",
+        "Go deeper",
+        "Take the next matchup further."
+      ],
+      "height": 740,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Cade Otton"
+        },
+        {
+          "loaded": true,
+          "name": "Chris Godwin Jr."
+        },
+        {
+          "loaded": true,
+          "name": "Ted Hurst III"
+        },
+        {
+          "loaded": true,
+          "name": "D'Andre Swift"
+        },
+        {
+          "loaded": true,
+          "name": "Kalif Raymond"
+        },
+        {
+          "loaded": true,
+          "name": "Colston Loveland"
+        },
+        {
+          "loaded": true,
+          "name": "Luther Burden III"
+        }
+      ],
+      "small": [],
+      "theme": "dark",
+      "width": 320
+    },
+    {
+      "case": "full-nfl-tablet-light",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "The Sideline",
+        "Receiving yards",
+        "NFL on Nov 23",
+        "Go deeper",
+        "Take the next matchup further."
+      ],
+      "height": 1024,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Cade Otton"
+        },
+        {
+          "loaded": true,
+          "name": "Chris Godwin Jr."
+        },
+        {
+          "loaded": true,
+          "name": "Ted Hurst III"
+        },
+        {
+          "loaded": true,
+          "name": "D'Andre Swift"
+        },
+        {
+          "loaded": true,
+          "name": "Kalif Raymond"
+        },
+        {
+          "loaded": true,
+          "name": "Colston Loveland"
+        },
+        {
+          "loaded": true,
+          "name": "Luther Burden III"
+        }
+      ],
+      "small": [],
+      "theme": "light",
+      "width": 820
+    },
+    {
+      "case": "full-nfl-tablet-dark",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "The Sideline",
+        "Receiving yards",
+        "NFL on Nov 23",
+        "Go deeper",
+        "Take the next matchup further."
+      ],
+      "height": 1024,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Cade Otton"
+        },
+        {
+          "loaded": true,
+          "name": "Chris Godwin Jr."
+        },
+        {
+          "loaded": true,
+          "name": "Ted Hurst III"
+        },
+        {
+          "loaded": true,
+          "name": "D'Andre Swift"
+        },
+        {
+          "loaded": true,
+          "name": "Kalif Raymond"
+        },
+        {
+          "loaded": true,
+          "name": "Colston Loveland"
+        },
+        {
+          "loaded": true,
+          "name": "Luther Burden III"
+        }
+      ],
+      "small": [],
+      "theme": "dark",
+      "width": 820
+    },
+    {
+      "case": "full-nfl-landscape-light",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "The Sideline",
+        "Receiving yards",
+        "NFL on Nov 23",
+        "Go deeper",
+        "Take the next matchup further."
+      ],
+      "height": 390,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Cade Otton"
+        },
+        {
+          "loaded": true,
+          "name": "Chris Godwin Jr."
+        },
+        {
+          "loaded": true,
+          "name": "Ted Hurst III"
+        },
+        {
+          "loaded": true,
+          "name": "D'Andre Swift"
+        },
+        {
+          "loaded": true,
+          "name": "Kalif Raymond"
+        },
+        {
+          "loaded": true,
+          "name": "Colston Loveland"
+        },
+        {
+          "loaded": true,
+          "name": "Luther Burden III"
+        }
+      ],
+      "small": [],
+      "theme": "light",
+      "width": 844
+    },
+    {
+      "case": "full-nfl-landscape-dark",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "The Sideline",
+        "Receiving yards",
+        "NFL on Nov 23",
+        "Go deeper",
+        "Take the next matchup further."
+      ],
+      "height": 390,
+      "overflow": false,
+      "portraits": [
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Bucky Irving"
+        },
+        {
+          "loaded": true,
+          "name": "Cade Otton"
+        },
+        {
+          "loaded": true,
+          "name": "Chris Godwin Jr."
+        },
+        {
+          "loaded": true,
+          "name": "Ted Hurst III"
+        },
+        {
+          "loaded": true,
+          "name": "D'Andre Swift"
+        },
+        {
+          "loaded": true,
+          "name": "Kalif Raymond"
+        },
+        {
+          "loaded": true,
+          "name": "Colston Loveland"
+        },
+        {
+          "loaded": true,
+          "name": "Luther Burden III"
+        }
+      ],
+      "small": [],
+      "theme": "dark",
+      "width": 844
+    },
+    {
+      "case": "creator-store-search-retains-person",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "Discover sports creators",
+        "Jordan L."
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [],
+      "small": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "case": "creator-empty-search-phone-dark",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "Discover sports creators",
+        "No creators match"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [],
+      "small": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "case": "creator-filter-sort-phone-dark",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "Discover sports creators",
+        "Jordan L."
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [],
+      "small": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "case": "creator-person-and-store-distinct-phone-dark",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "Jordan L.",
+        "Court Notes",
+        "The weekly research room",
+        "Protected access",
+        "About creator access",
+        "Communities",
+        "Jordan’s research room",
+        "Research & picks"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [],
+      "small": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "case": "final-single-empty-reset-390-dark",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "Discover sports creators",
+        "No creators match"
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [],
+      "small": [],
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "case": "final-reset-restores-directory-390-dark",
+      "dialogs": [],
+      "errors": [],
+      "headings": [
+        "Discover sports creators",
+        "Jordan L.",
+        "Maya R."
+      ],
+      "height": 844,
+      "overflow": false,
+      "portraits": [],
+      "small": [],
+      "theme": "dark",
+      "width": 390
+    }
+  ],
+  "creator-contrast": {
+    "phone-light": {
+      "bad": [],
+      "checked": 27,
+      "skipped": 0
+    },
+    "phone-dark": {
+      "bad": [],
+      "checked": 27,
+      "skipped": 0
+    },
+    "desktop-light": {
+      "bad": [],
+      "checked": 27,
+      "skipped": 0
+    },
+    "desktop-dark": {
+      "bad": [],
+      "checked": 27,
+      "skipped": 0
+    }
+  },
+  "home-contrast": {
+    "phone-light": {
+      "bad": [],
+      "checked": 130,
+      "skipped": 8
+    },
+    "phone-dark": {
+      "bad": [],
+      "checked": 130,
+      "skipped": 8
+    },
+    "desktop-light": {
+      "bad": [],
+      "checked": 186,
+      "skipped": 8
+    },
+    "desktop-dark": {
+      "bad": [],
+      "checked": 186,
+      "skipped": 8
+    }
+  }
+}

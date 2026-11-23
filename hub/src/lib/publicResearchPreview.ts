@@ -16,7 +16,7 @@ export type PreviewGame = {
   state: 'scheduled' | 'started' | 'final'
 }
 export type PreviewPrice = { line: number; price: number; opening: number | null }
-export type PreviewPlayer = { id: number; name: string; team: string; prices: PreviewPrice[] }
+export type PreviewPlayer = { id: number; name: string; team: string; prices: PreviewPrice[]; portraitUrl?: string | null; position?: string | null; recent?: number[] }
 export type PreviewBoard = { game: PreviewGame; book: 'FanDuel'; capturedAt: string; players: PreviewPlayer[]; example: boolean }
 export type ResearchPreview = { board: PreviewBoard; schedule: PreviewGame[]; date: string; scheduleAvailable: boolean }
 export type PreviewContext = { sport: PreviewSport; game: string; date: string; player?: number; line?: number }
@@ -72,8 +72,25 @@ export function previewWorkspacePath(context: PreviewContext) {
   return PREVIEW_CONFIG[context.sport].path + '?' + query
 }
 
-type SourceQuote = PreviewPrice & { id: number; name: string; team: string }
+type SourceQuote = PreviewPrice & { id: number; name: string; team: string; portraitUrl?: string | null; position?: string | null; recent?: number[] }
 const validOdds = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && Math.abs(value) >= 100 && Math.abs(value) <= 100_000
+
+/** Presentation-only metadata from the same source player, never a model payload. */
+export function publicPreviewPresentation(source: Pick<SourceQuote, 'portraitUrl' | 'position' | 'recent'>) {
+  const metadata: Pick<PreviewPlayer, 'portraitUrl' | 'position' | 'recent'> = {}
+  if (typeof source.portraitUrl === 'string' && source.portraitUrl.length < 600) {
+    try {
+      const url = new URL(source.portraitUrl)
+      const allowed = url.hostname === 'a.espncdn.com' && /^\/i\/headshots\/(nba|nfl)\/players\/full\/\d+\.png$/.test(url.pathname)
+        || url.hostname === 'cdn.nba.com' && /^\/headshots\/nba\/(latest|\d{4})\/\d+x\d+\/\d+\.png$/.test(url.pathname)
+        || url.hostname === 'static.www.nfl.com' && url.pathname.startsWith('/image/upload/')
+      if (allowed && url.protocol === 'https:' && !url.username && !url.password && !url.port && !url.search && !url.hash) metadata.portraitUrl = url.href
+    } catch {}
+  }
+  if (typeof source.position === 'string' && /^[A-Z0-9/-]{1,12}$/.test(source.position)) metadata.position = source.position
+  if (Array.isArray(source.recent) && source.recent.length && source.recent.every(value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1000)) metadata.recent = source.recent.slice(-10)
+  return metadata
+}
 
 /** Project an explicit public shape and cap the free slice on the server. */
 export function selectPreviewPlayers(sport: PreviewSport, game: PreviewGame, quotes: SourceQuote[]): PreviewPlayer[] {
@@ -84,7 +101,7 @@ export function selectPreviewPlayers(sport: PreviewSport, game: PreviewGame, quo
   for (const quote of quotes) {
     if (!Number.isSafeInteger(quote.id) || quote.id < 1 || typeof quote.name !== 'string' || !quote.name.trim()
       || quote.name.length > 80 || ![game.away, game.home].includes(quote.team) || !lines.includes(quote.line) || !validOdds(quote.price)) continue
-    const row = players.get(quote.id) ?? { id: quote.id, name: quote.name, team: quote.team, prices: [] }
+    const row = players.get(quote.id) ?? { id: quote.id, name: quote.name, team: quote.team, prices: [], ...publicPreviewPresentation(quote) }
     if (row.team !== quote.team || row.name !== quote.name) { rejectedPlayers.add(row.id); continue }
     const key = String(quote.id) + ':' + quote.line
     if (seen.has(key)) {

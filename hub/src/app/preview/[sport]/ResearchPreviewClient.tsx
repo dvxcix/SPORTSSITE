@@ -14,6 +14,10 @@ import { trackProductEvent } from '@/lib/productAnalytics'
 import { sportTeamBackground, sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
 import { PREVIEW_CONFIG, previewPagePath, previewPricingPath, previewWorkspacePath, type PreviewContext, type PreviewGame, type PreviewPrice, type PreviewSport, type ResearchPreview } from '@/lib/publicResearchPreview'
 import styles from './preview.module.css'
+import { BookLogo } from '@/components/BookLogo'
+import { SafeImage } from '@/components/ui/SafeImage'
+import { sportLogoUrl } from '@/lib/sportLogos'
+import { PreviewPlayerIdentity, PreviewPlayerChart } from '@/components/marketing/PreviewIdentity'
 
 type Unlock = { title: string; body: string; feature: string }
 const slateUnlock: Unlock = { title: 'Research the full slate', body: 'Compare every matchup side by side, switch sportsbooks, and see the same saved pregame numbers after the game starts.', feature: 'full_slate' }
@@ -110,7 +114,7 @@ export function ResearchPreviewClient({ sport, preview, initial }: { sport: Prev
       {!user && <nav aria-label="Research previews" className={styles.guestSports}><Link href="/preview/nba" aria-current={sport==='nba'?'page':undefined}>NBA</Link><Link href="/preview/nfl" aria-current={sport==='nfl'?'page':undefined}>NFL</Link></nav>}
       <section className={styles.intro} aria-labelledby="preview-title">
         <div className={styles.introCopy}>
-          <div className={styles.eyebrow}><span className={styles.dot} />{config.label} RESEARCH PREVIEW</div>
+          <div className={styles.eyebrow}><SafeImage src={sportLogoUrl(config.label)} alt={config.label} width={20} height={20}/>{config.label} RESEARCH PREVIEW</div>
           <h1 id="preview-title">{config.workspace}</h1>
           <p>See how a real {config.title.toLowerCase()} board moved. Pick a player, change the rung, and compare the saved price with its opening.</p>
           <div className={styles.introMeta}><span><Check size={14} /> Free to explore</span><span><Activity size={14} /> Saved pregame odds</span></div>
@@ -123,7 +127,7 @@ export function ResearchPreviewClient({ sport, preview, initial }: { sport: Prev
               {scoreReady(game) && <span className={styles.matchupScore}>{index ? game.homeScore : game.awayScore}</span>}
             </div>)}
           </div>
-          <div className={styles.matchupBottom}><span><Clock3 size={14} /> <GameMeta game={game} /></span><span>{board.book}</span></div>
+          <div className={styles.matchupBottom}><span><Clock3 size={14} /> <GameMeta game={game} /></span><span className={styles.bookName}><BookLogo vendor="fanduel" size={16}/>{board.book}</span></div>
         </div>
       </section>
 
@@ -143,22 +147,23 @@ export function ResearchPreviewClient({ sport, preview, initial }: { sport: Prev
             <label>Milestone<select value={activeLine ?? ''} onChange={event => { setLine(Number(event.target.value)); explore('rung') }}>
               {config.lines.map(rung => <option key={rung} value={rung}>{rung}+</option>)}
             </select></label>
-            <span className={styles.book}><span>SPORTSBOOK</span>{board.book}</span>
+            <span className={styles.book}><span>SPORTSBOOK</span><span className={styles.bookName}><BookLogo vendor="fanduel" size={20}/>{board.book}</span></span>
           </div>
 
           {selected && <div className={styles.selection} aria-live="polite">
-            <div className={styles.selectionPlayer}><TeamMark sport={sport} team={selected.team} /><div><span>{selected.team} · {activeLine}+</span><strong>{selected.name}</strong></div></div>
+            <div className={styles.selectionPlayer}><PreviewPlayerIdentity player={selected} sport={sport} size={48}/></div>
             <div><span>Last seen</span><strong>{selectedQuote ? priceText(selectedQuote.price) : '—'}</strong></div>
             <div><span>Opening</span><strong>{selectedQuote?.opening != null ? priceText(selectedQuote.opening) : '—'}</strong></div>
             <div><span>Movement</span>{selectedQuote ? <Movement quote={selectedQuote} /> : <span className={styles.noMove}>Price unavailable</span>}</div>
           </div>}
+          {selected && <div className={styles.playerChart}><PreviewPlayerChart player={selected} sport={sport} line={activeLine ?? null} onLineChange={value=>{setLine(value);explore('rung')}}/></div>}
 
           <div className={styles.scroller} role="region" aria-label={config.title + ' ladder'} tabIndex={0}>
             <table className={styles.table}>
               <thead><tr><th scope="col">Player</th>{config.lines.map(rung => <th scope="col" key={rung} className={rung === activeLine ? styles.activeRung : undefined}>{rung}+</th>)}</tr></thead>
               <tbody>{players.map(player => <tr key={player.id} data-selected={player.id === selected?.id ? 'true' : undefined}>
                 <th scope="row"><button className={styles.playerButton} type="button" aria-pressed={selected?.id === player.id} onClick={() => { setPlayer(player.id); setLine(null); explore('player') }}>
-                  <TeamMark sport={sport} team={player.team} /><span><strong>{player.name}</strong><small>{player.team}</small></span>
+                  <PreviewPlayerIdentity player={player} sport={sport} size={36} compact/>
                 </button></th>
                 {config.lines.map(rung => {
                   const quote = player.prices.find(value => value.line === rung)

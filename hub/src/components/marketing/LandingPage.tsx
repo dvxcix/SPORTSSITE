@@ -1,10 +1,10 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { Suspense } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import { ArrowRight, Check, ChevronDown } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
 import { sportTeamBackground, sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
-import { PREVIEW_CONFIG } from '@/lib/publicResearchPreview'
+import { PREVIEW_CONFIG, type PreviewSport, type ResearchPreview } from '@/lib/publicResearchPreview'
 import { ResearchShowcase } from './ResearchShowcase'
 import { PublicSiteHeader } from './PublicSiteHeader'
 import { PublicCommunities, PublicCommunitiesLoading } from './PublicCommunities'
@@ -62,22 +62,17 @@ function PlayerCards() {
   )
 }
 
-export function LandingPage() {
+export function LandingPage({ previews, showcase }: { previews?: Record<PreviewSport,ResearchPreview>; showcase?:ReactNode } = {}) {
   return (
     <div className={styles.page}>
       <PublicSiteHeader />
       <main id="main-content" tabIndex={-1}>
       <section id="research" className={styles.hero} aria-labelledby="landing-title">
         <div className={styles.heroCopy}>
-          <h1 id="landing-title">Research the game.<br />Share your read.</h1>
-          <p className={styles.lede}>Your NBA and NFL research, picks and communities. Take a look around before making an account.</p>
-          <div className={styles.actions}>
-            <DiscoveryLink href="/preview/nba" destination="nba_preview" className={styles.primaryButton}>Open NBA board</DiscoveryLink>
-            <DiscoveryLink href="/preview/nfl" destination="nfl_preview" className={styles.secondaryButton}>Open NFL board</DiscoveryLink>
-          </div>
-          <p className={styles.note}>Free previews. No account needed.</p>
+          <h1 id="landing-title">Research the game. Share your read.</h1>
+          <p className={styles.lede}>Try NBA and NFL research, then find your community. No account needed to look around.</p>
         </div>
-        <div className={styles.heroWorkbench}><ResearchShowcase /></div>
+        <div className={styles.heroWorkbench}>{showcase ?? <ResearchShowcase previews={previews} />}</div>
       </section>
 
       <section className={`${styles.section} ${styles.researchStory}`} aria-labelledby="research-title">
@@ -91,7 +86,7 @@ export function LandingPage() {
             <DiscoveryLink href="/preview/nba" destination="nba_preview"><span><strong>The Court</strong><span>NBA player trends, game logs and odds boards.</span></span><span>NBA <ArrowRight size={16} aria-hidden="true" /></span></DiscoveryLink>
             <DiscoveryLink href="/preview/nfl" destination="nfl_preview"><span><strong>The Sideline</strong><span>NFL usage, matchups and odds boards.</span></span><span>NFL <ArrowRight size={16} aria-hidden="true" /></span></DiscoveryLink>
           </div>
-          <p className={styles.note}>The examples above are dated archives. Open a preview to see its featured matchup and available prices.</p>
+          <p className={styles.note}>Check the board’s date and saved time as you research. Archived examples are labelled.</p>
         </div>
       </section>
 

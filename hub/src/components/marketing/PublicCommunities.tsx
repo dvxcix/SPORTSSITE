@@ -37,7 +37,7 @@ export async function PublicCommunities() {
   </div>
   if (!groups.length) return <div className={styles.communityState}>
       <p>Find a community for your sport.</p>
-      <p>Browse free communities and creator memberships before choosing where to join.</p>
+      <p>Browse communities for picks, research and conversation before choosing where to join.</p>
       <DiscoveryLink href="/groups" destination="communities" className={styles.secondaryButton}>Browse communities</DiscoveryLink>
     </div>
   return <div className={styles.publicCommunities}><CommunityDirectory groups={groups} joinedIds={[]} userId={null} invitations={[]} variant="storefront" headingLevel={3} /></div>

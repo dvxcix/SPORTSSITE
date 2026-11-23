@@ -1,0 +1,149 @@
+SlipSurge public tools and creator identity correction
+23 November 2026
+
+Owner correction
+The anonymous homepage must demonstrate the actual Court/Sideline experience:
+real saved quotes, athlete portraits, team-color backgrounds, league/team/book
+marks, usable ladders and player details. Creator discovery must show people;
+communities must remain communities. The first implementation missed this.
+
+Implemented checklist
+[x] Stream current bounded NBA and NFL public boards into the homepage workbench.
+[x] Preserve explicit dated archive fallback when current source is unavailable.
+[x] Use existing PlayerAvatar, team colors, league/team artwork and BookLogo.
+[x] Players/Ladders views, selected milestones, priced-first rows and inspector.
+[x] Player drawer with Overview/All odds, actual recent observations or quotes.
+[x] Named market/book/tools/save controls open real contextual access dialogs.
+[x] Keep browsing and Escape return to the free tool without an account gate.
+[x] Full-preview links retain the actual game/date/player/rung context.
+[x] Full NBA/NFL preview pages use the same identity and chart components.
+[x] Directory and creator profile retain the real person's avatar/ring/name/bio.
+[x] Store name/logo/cover/bio remain distinctly labeled below the person.
+[x] Published free creators can be found without inventing paid membership.
+[x] Search, sport filters, all four sorts, empty/reset and profile actions work.
+[x] Remove duplicate empty-state reset found during actual phone review.
+[x] Preserve group discovery, member access, provider/checkout and sports gates.
+[x] Production build, type checking, focused tests, lint and browser walkthrough.
+
+Data and boundaries
+The anonymous shape is an explicit allowlist, not a full research payload.
+Portrait URLs are limited to existing HTTPS headshot providers. Positions and
+observed game values are bounded. NBA bars use only prior-date final played
+games; live/today/DNP inputs are excluded. NFL uses real offered quote ladders
+when recent performance logs are absent. No synthetic plays or price animation.
+Original snapshot/cutoff/availability logic and per-sport caps remain intact.
+Public cache refresh is 60 seconds; this does not promise fresh provider quotes
+or trigger collection. Source date/time and archive labels remain visible.
+No RLS, fees, payments, entitlements, jobs, formulas or member records changed.
+No additional What's new blast or dismissal reset is part of this correction.
+
+Reference and direction
+Inspected https://unjuiced.bet/ in the Codex in-app browser: a working compact
+product surface, real marks and click interactions informed the presentation.
+SlipSurge keeps its own tools, content, methods and artwork.
+Skills: antislop during-build, interface-design, sales-funnel-blueprint; owner's
+explicit direction supersedes optional skill approval/direction questionnaires.
+ENERGY 2 / RHYTHM 2 / MOTION 2 for the public workbench; creator identity uses
+MOTION 1. Product controls and real art are the focal point. Lime means selection;
+team gradients identify teams; only overlays have strong elevation. Motion is
+local 160-240ms and guarded by prefers-reduced-motion. No generic hero artwork.
+
+Verification
+PASS 101 targeted public-data, preview-context, visibility and creator tests.
+PASS 134 existing production-source contracts; no previous failures hidden.
+PASS final creator identity tests 8/8 after the reset-only correction.
+PASS changed source ESLint and git diff --check.
+PASS optimized Next production build, TypeScript and static generation.
+Logs: review/public-workbench-complete-tests.txt,
+  public-workbench-production-source.txt, public-workbench-release-build.txt,
+  public-workbench-release-creator-tests.txt, public-workbench-all-lint.txt,
+  public-workbench-release-lint.txt.
+
+In-app browser evidence is in public-tools-correction-browser-2026-11-23.json.
+50 distinct layouts: homepage, creator directory, creator profile, communities,
+full NBA preview at 320/390/820/844/1440 sizes and light/dark. The existing
+isolated iframe harness supplies actual CSS viewport sizes; no physical-device
+certification is claimed. Full NFL also tested at six narrow/theme layouts.
+34 recorded interaction receipts cover board/rung/sport/chart/drawer/access
+actions, exact full-preview handoff, creator search/sorts/reset/profile flow.
+The last compiled reset fix was exercised at 390px dark: exactly one reset,
+no overflow, results restored, no undersized phone buttons.
+All local data is clearly labeled private illustrative fixtures; production
+uses existing real data loaders. No live post, membership or payment executed.
+
+Computed contrast checks: creator directory 27 text nodes per four layouts;
+homepage 130 phone and 186 desktop nodes per theme, no failures on solid or
+composited sRGB backgrounds. Eight homepage gradient/logo-area text nodes were
+excluded from this numeric check and visually reviewed. Original team/league
+marks are artwork, not prose. No browser error logs on the final homepage.
+Earlier screenshots named home-phone/nba-drawer-phone reflected the browser's
+default desktop viewport; they are excluded as phone-size proof. The iframe
+measurements and subsequent receipts are the mobile evidence.
+
+Coordinator delivery gate (scope: this correction)
+R-02 PASS: no new prose em dashes; unavailable odds use semantic numeric marks.
+R-03 PASS: 50 distinct exact layouts plus six NFL narrow layouts contained.
+R-17 PASS: actual supplied prices/observations/counts; no invented headline stats.
+R-18 PASS: no testimonials added; private fixtures clearly labeled.
+R-23 PASS: owner requested real product art/navigation; original assets reused.
+R-24 PASS: existing routes/anchors and exact preview destinations retained.
+R-25 PASS: computed solid/composited text contrast and visual artwork review above.
+R-26 PASS: changed controls have recorded click behavior and named destinations.
+R-27 PASS: streamed skeleton, source fallback, missing quote and creator empty state.
+R-28 PASS: retained product-specific FAQ, no generic filler added.
+R-32 PASS: native controls/focus, shared modal, Escape and focus-return tests.
+R-33 PASS: changes live in source components/styles/helpers, no external CSS patch.
+R-34 PASS: both themes verified in each exact-size surface.
+R-35 PASS: final production build and element-level interaction evidence below.
+R-36 PASS: no unmeasured speed, conversion, security or customer claims.
+R-37 PASS: owner's concrete product direction and dials applied throughout.
+R-38 PASS: real source archives labeled; isolated fixtures never customer proof.
+R-39 PASS: named semantic controls, alt text, visible focus and reduced motion.
+R-40 PASS: original media sizing, reserved loading frame, no blocking script added.
+R-01 PASS: team gradients identify athlete/team; selection accent guides state.
+R-04 PASS: existing icons denote real tools/save/dismiss/navigation actions.
+R-06 PASS: existing Geist/system type and tabular quote values match the app.
+R-07 PASS: no decorative grid or blueprint added.
+R-08 PASS: arrows identify navigation, drawer and external-context actions.
+R-09 PASS: labels express actual archive, source, featured or selected state.
+R-10 PASS: solid workspace and drawer surfaces, no layered glass treatment.
+R-12 PASS: workspace separation and modal elevation, quiet table cells.
+R-13 PASS: original athlete art retained; no blanket glow system added.
+R-14 PASS: workspace/table/inspector/person/store contexts have distinct jobs.
+R-19 PASS: local entry/state motion, no simultaneous auto-demo animation.
+R-22 PASS: real product art replaces generic illustration.
+Liveliness dials PASS: explicit ENERGY/RHYTHM/MOTION above.
+Liveliness consistency PASS: compact working board with restrained local motion.
+Liveliness focal point PASS: playable research board; actual creator person.
+Liveliness whitespace PASS: intro/workbench and person/store separation.
+Liveliness accent PASS: lime selection; original team colors remain data identity.
+Liveliness identity PASS: original athlete tiles, sports marks and actual controls.
+Liveliness Design Read PASS: owner's direction recorded before implementation.
+C-1 PASS: every changed visual element supports research or person discovery.
+C-2 PASS: controls exercised below, payment/provider mutations excluded by scope.
+C-3 PASS: no testimonial/logo wall/filler section introduced.
+C-4 PASS: exact layouts, both themes, missing data and keyboard verified.
+C-5 PASS: sourced odds/logs or visibly unavailable, no fabricated evidence.
+R-05 PASS: working tool leads; content determines composition.
+R-11 PASS: varied workspace/control/table/drawer radii retained.
+R-15 PASS: specific preview, creator profile, store and access action labels.
+R-16 PASS: no new AI marketing claims or buzzwords.
+R-20 PASS: original portraits/team branding and actual SlipSurge markets.
+R-21 PASS: both light and dark, preference controls retained.
+R-29 PASS: semantic palette with team colors for actual identity.
+R-30 PASS: own tools, art and method; reference supplies interaction direction.
+R-31 PASS: each major visual decision has its product purpose stated above.
+
+Element-level click record
+NBA milestone -> selected rung; Ladders -> actual quote matrix; player/rung ->
+correct drawer; All odds -> actual player prices; chart bar -> actual readout.
+Book/market/tools -> contextual access dialog; Keep browsing/Escape -> board.
+Save -> real account action, no pretend save; NFL -> correct sport/player/rungs.
+NFL full preview -> exact Cade Otton 40+ context persisted after navigation.
+Creator search by store -> actual person result; no match -> one reset action;
+reset -> results; NBA filter -> matching creators; all four sorts -> real order;
+person card -> person header; storefront section -> separate business identity.
+Existing login/pricing/member destinations remain real routes; no payment run.
+
+Release follows canonical main, Vercel READY and anonymous live read verification.
+Production receipt is recorded separately after the release completes.

@@ -1,0 +1,50 @@
+SlipSurge creator discovery: people, storefronts and communities
+23 November 2026
+Implementation handoff. Final build and browser verification belong to release integration.
+
+Problem corrected
+The creator directory and public creator page replaced a member's display name, bio, avatar and banner with storefront branding. The directory also discarded their actual avatar ring and led with community/price language. A person and their business became the same entity on screen.
+
+Result
+- /creators is a directory of people. Cards use the actual public member name, username, avatar, ring, banner, bio and verified flag.
+- Published storefront name/logo is a separate, labeled context below the person. It never replaces the person.
+- Creator profile and public posts/record are distinct destinations. The storefront action opens the memberships section of the creator's public page. /groups remains the communities directory.
+- Sports coverage retains the existing real sports logos. Search matches member identity, public coverage/tags, store terms and active membership terms. Featured/follower/name/price sorting remains available, with missing-price entries handled without invented prices.
+- The public creator page uses the member's own header and includes a direct member-profile link. Store cover/logo/bio live in a distinct storefront section. Existing offers, checkout and access actions are unchanged.
+- Published free creators remain discoverable without a paid product. A published free storefront is now valid evidence to display its owner publicly even when no group/product is readable; unpublished ordinary users still hit the existing not-found guard. No creator role or payment eligibility changes.
+- Absent bios/counts/cover images do not become invented member content or statistics. No paid/free membership success was claimed or triggered.
+
+Visibility and operational boundaries
+Directory sources still require published storefront status, active nested offers and the existing creator/admin role requirement on the legacy active-product source. No new account enumeration source was added. Profile blocking, request-scoped queries, product publication, group access, current entitlements, off-season group filtering and checkout behavior are preserved. No RLS, schema, provider, membership, fee, account-role or backend mutations were made.
+
+Design brief
+Human: a visitor choosing whose sports research to follow, before deciding whether to join any community or membership.
+Focal point: the creator's actual face/ring and name; store branding and offers follow as context.
+Domain: people, public posts, records, sports coverage, storefronts, creator memberships, communities.
+Palette: existing light/dark SlipSurge canvas, surface, ink, border and lime selection tokens; real sports marks retain their source colors.
+Signature: member avatars with their own rings beside actual sport coverage, not a store logo masquerading as a person.
+Rejected defaults: storefront as identity; price as the dominant person-card value; invented/filler biography text.
+Density: 20px card padding, 16px content rhythm, 64px person avatars and 44px actions. Three/two/one card columns follow available width. No new motion, font, imagery or dependencies.
+ENERGY 2 / RHYTHM 2 / MOTION 1.
+
+Verification
+PASS: scripts/public-creator-identity.test.mts, 8 tests. Covers person/store identity separation, ring retention, published/free/missing-owner handling, search/filter/sort, rendered directory and creator header, not-found protection and blocking.
+PASS: existing creator-storefront, creator-guided-storefront and creator-commerce suites, 60 tests.
+PASS: focused ESLint for changed TSX files, the helper and the new test.
+The tests use isolated fixtures and real components. Query-preservation assertions are source contracts, not a replacement for backend/RLS verification. No live checkout, membership grant, community join or provider operation was performed.
+
+Parent browser review cases
+1. Open /creators as guest and member at 320/390/820/1440 pixels in light/dark. Names, rings, sports logos and long identity text must stay contained and readable.
+2. Confirm a person whose store has a different name/logo still shows the person as the card/header identity, with the store distinctly labeled below. Confirm both real images are retained in their correct contexts.
+3. Exercise search by real name, username, store name, membership and sport; clear search/filter; exercise all sort modes and zero-result states.
+4. Open the creator profile, public posts/record and storefront actions. Confirm each reaches its named context. Private member posts remain behind existing access.
+5. Inspect an existing published free creator without active products; public identity and storefront context render without claiming a paid offer or granted community membership. Unpublished ordinary users and blocked profiles remain unavailable.
+6. Check public creator page person banner/avatar and separate store cover/logo/bio. Original offer, checkout, owner and active-member controls retain their guards. Do not execute payments to claim UI verification.
+
+Scoped anti-slop/interface gate
+Identity PASS: actual person data is never overwritten by store branding; original rings and sports artwork are preserved.
+Honesty PASS: no invented people, bios, follower counts, prices, testimonials or conversion promises.
+Function/semantics PASS in component tests: actual destinations, meaningful headings, working search/sort/filter/clear and guarded publication paths.
+Privacy/access PASS for source preservation and isolated guards; final live RLS/read-only review belongs to integration.
+Theme/responsiveness IMPLEMENTED with semantic tokens, minmax grids, wrapping names, 44px controls and 16px phone fields; final visual proof is pending parent browser review.
+Delivery gate R-35 PENDING integration: no final build/browser or production certification is claimed by this handoff.

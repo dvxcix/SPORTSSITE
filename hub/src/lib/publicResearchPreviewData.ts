@@ -7,7 +7,7 @@ import { filterNflMarkets, nflMarketExclusions } from './nflAvailability'
 import type { SidelineOddsBoard } from './nflOddsTypes'
 import { nbaFullBoardCells } from './nbaFullOddsBoard'
 import { nbaGameFinal, nbaGameStart, nbaQuoteInMode } from './nbaOddsMode'
-import type { PaintGame, PaintPlayer, PaintProp } from './nbaPaint'
+import { nbaMinutes, type PaintGame, type PaintPlayer, type PaintProp } from './nbaPaint'
 import { nbaMarketUnavailable } from './nbaMarketAvailability'
 import type { NbaQuoteOpeningRow } from './nbaOddsHistory'
 import { PREVIEW_CONFIG, readPreviewContext, selectPreviewPlayers, type PreviewBoard, type PreviewGame, type PreviewSport, type ResearchPreview } from './publicResearchPreview'
@@ -90,7 +90,10 @@ async function nbaBoard(admin: Admin, game: PreviewGame): Promise<PreviewBoard |
     const player = directory.get(cell.playerId)
     const abbreviation = player?.team?.abbreviation
     if (!player?.first_name || !player.last_name || !team(abbreviation) || ![game.away, game.home].includes(abbreviation)) return []
+    const recent = (player.logs ?? []).filter(log => log.game.date.slice(0, 10) < game.date && (log.game.status_state === 'final' || log.game.status === 'Final') && (nbaMinutes(log.min) ?? 0) > 0 && typeof log.pts === 'number' && Number.isFinite(log.pts))
+      .sort((a,b) => b.game.date.localeCompare(a.game.date)).slice(0,10).reverse().map(log => log.pts as number)
     return [{ id: cell.playerId, name: player.first_name + ' ' + player.last_name, team: abbreviation, line: cell.line,
+      portraitUrl: player.headshot, position: player.position, recent,
       price: cell.current.odds, opening: cell.opening?.odds ?? null }]
   }))
 }
@@ -115,9 +118,12 @@ async function nflBoard(admin: Admin, game: PreviewGame): Promise<PreviewBoard |
     board: filterNflMarkets(board, nflMarketExclusions(eligibility, Number(game.id.slice(0, 4)))),
     capturedAt: data.captured_at, typedOpeningSource: board.source === 'live' && !('fanduelParserVersion' in board),
   }]]).filter(quote => quote.market === 'receiving_yards' && quote.vendor === 'fanduel')
-  return savedBoard('nfl', { ...game, start: cutoff }, data.captured_at, quotes.map(quote => ({
-    id: quote.playerId, name: quote.player, team: quote.team, line: quote.line, price: quote.current, opening: quote.opening,
-  })))
+  const directory = new Map(eligibility.map(player => [player.id, player]))
+  return savedBoard('nfl', { ...game, start: cutoff }, data.captured_at, quotes.map(quote => {
+    const player = directory.get(quote.playerId)
+    return { id: quote.playerId, name: quote.player, team: quote.team, line: quote.line, price: quote.current, opening: quote.opening,
+      portraitUrl: player?.headshot, position: player?.position }
+  }))
 }
 
 // A fixed sport/date cache key keeps visitor filters from creating database
@@ -133,7 +139,7 @@ async function loadPreview(sport: PreviewSport, date: string): Promise<ResearchP
   return { date, schedule, board: PUBLIC_PREVIEW_EXAMPLES[sport], scheduleAvailable: true }
 }
 
-const cachedPreview = unstable_cache(loadPreview, ['public-research-preview-v3'], { revalidate: 300 })
+const cachedPreview = unstable_cache(loadPreview, ['public-research-preview-v4'], { revalidate: 60 })
 
 export async function getPublicResearchPreview(sport: PreviewSport): Promise<ResearchPreview> {
   const date = scheduleDate()

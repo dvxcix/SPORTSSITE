@@ -54,13 +54,15 @@
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, .76fr) minmax(0, 1.6fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 40px;
-  padding-block: 40px 56px;
+  gap: 28px;
+  padding-block: 32px 56px;
   scroll-margin-top: 16px;
 }
 .heroCopy, .heroWorkbench { min-width: 0; }
+.heroCopy { text-align: center; }
+.heroWorkbench { width: 100%; }
 
 .kicker {
   margin: 0 0 12px;
@@ -70,9 +72,9 @@
 }
 
 .hero h1 {
-  max-width: 15ch;
-  margin: 0;
-  font-size: clamp(38px, 4.1vw, 58px);
+  max-width: 30ch;
+  margin: 0 auto;
+  font-size: clamp(32px, 3.3vw, 46px);
   font-weight: 640;
   letter-spacing: -.055em;
   line-height: 1.06;
@@ -80,8 +82,8 @@
 }
 
 .lede {
-  max-width: 38ch;
-  margin: 20px 0 0;
+  max-width: 64ch;
+  margin: 12px auto 0;
   color: var(--text-2);
   font-size: 16px;
   line-height: 1.55;
@@ -477,7 +479,7 @@
 
 @media (max-width: 1100px) {
   .hero { grid-template-columns: 1fr; gap: 24px; }
-  .hero h1 { max-width: 24ch; }
+  .hero h1 { max-width: 30ch; }
   .hero .lede { max-width: 60ch; }
   .hero .actions { margin-top: 20px; }
 }
@@ -485,7 +487,7 @@
 @media (max-width: 900px) {
   .page { --landing-gutter: 24px; }
   .hero { padding-block: 32px 44px; }
-  .hero h1 { font-size: clamp(38px, 5.5vw, 52px); }
+  .hero h1 { font-size: clamp(32px, 4.5vw, 42px); }
   .playerStage { min-height: 260px; }
   .researchStory { gap: 32px; }
 }

@@ -2,6 +2,8 @@ import type { PreviewBoard, PreviewSport } from './publicResearchPreview'
 
 // Curated FanDuel pregame slices from the saved November 8 boards.
 // Dates and quote observations are preserved for the labeled offline example.
+// Portraits/positions and NBA point logs are from that matchup's captured roster;
+// the public projection contains no proprietary scores, weights or model inputs.
 export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
   "nba": {
     "game": {
@@ -20,6 +22,9 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 17553995,
         "name": "Austin Reaves",
+        "portraitUrl": "https://a.espncdn.com/i/headshots/nba/players/full/4066457.png",
+        "position": "G",
+        "recent": [23,28,29,26,16,21,19,27,21,25],
         "team": "LAL",
         "prices": [
           { "line": 15, "price": -2000, "opening": -1400 },
@@ -32,6 +37,9 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 413,
         "name": "Collin Sexton",
+        "portraitUrl": "https://a.espncdn.com/i/headshots/nba/players/full/4277811.png",
+        "position": "G",
+        "recent": [5,13,9,21,0,14,6,10,0],
         "team": "LAL",
         "prices": [
           { "line": 10, "price": -210, "opening": -180 },
@@ -43,6 +51,9 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 17895858,
         "name": "Quentin Grimes",
+        "portraitUrl": "https://a.espncdn.com/i/headshots/nba/players/full/4397014.png",
+        "position": "G",
+        "recent": [10,13,3,2,23,3,7,7,6,2],
         "team": "LAL",
         "prices": [
           { "line": 10, "price": -225, "opening": -174 },
@@ -54,6 +65,9 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 38017705,
         "name": "Walker Kessler",
+        "portraitUrl": "https://a.espncdn.com/i/headshots/nba/players/full/4433136.png",
+        "position": "C",
+        "recent": [26,22,2,13,11,10,16,15,15,16],
         "team": "LAL",
         "prices": [
           { "line": 10, "price": -430, "opening": -330 },
@@ -65,6 +79,9 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 17896075,
         "name": "Cade Cunningham",
+        "portraitUrl": "https://a.espncdn.com/i/headshots/nba/players/full/4432166.png",
+        "position": "G-F",
+        "recent": [22,16,26,19,30,20,33,26],
         "team": "DET",
         "prices": [
           { "line": 15, "price": -2500, "opening": -1600 },
@@ -77,6 +94,9 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 397,
         "name": "Duncan Robinson",
+        "portraitUrl": "https://a.espncdn.com/i/headshots/nba/players/full/3157465.png",
+        "position": "F",
+        "recent": [21,17,21,12,13,17,24,27],
         "team": "DET",
         "prices": [
           { "line": 10, "price": -700, "opening": -520 },
@@ -89,6 +109,9 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 101,
         "name": "John Collins",
+        "portraitUrl": "https://a.espncdn.com/i/headshots/nba/players/full/3908845.png",
+        "position": "F-C",
+        "recent": [6,23,16,2,4,4,4,16],
         "team": "DET",
         "prices": [
           { "line": 10, "price": -205, "opening": -186 },
@@ -100,6 +123,9 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 3547270,
         "name": "Paul Reed",
+        "portraitUrl": "https://a.espncdn.com/i/headshots/nba/players/full/4278562.png",
+        "position": "F",
+        "recent": [6,19,8,22,16,12,11,8],
         "team": "DET",
         "prices": [
           { "line": 10, "price": -410, "opening": -390 },
@@ -128,6 +154,8 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 278135,
         "name": "Bucky Irving",
+        "portraitUrl": "https://static.www.nfl.com/image/upload/f_auto,q_auto/league/vkc00rvnix3f2b96vkwo",
+        "position": "RB",
         "team": "TB",
         "prices": [
           { "line": 10, "price": -198, "opening": -192 },
@@ -140,6 +168,8 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 903,
         "name": "Cade Otton",
+        "portraitUrl": "https://static.www.nfl.com/image/upload/f_auto,q_auto/league/yanr6h9aplae3jyzimf7",
+        "position": "TE",
         "team": "TB",
         "prices": [
           { "line": 10, "price": -750, "opening": -900 },
@@ -152,6 +182,8 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 100,
         "name": "Chris Godwin Jr.",
+        "portraitUrl": "https://static.www.nfl.com/image/upload/f_auto,q_auto/league/ilkheljdx4hbjpisulke",
+        "position": "WR",
         "team": "TB",
         "prices": [
           { "line": 10, "price": -1000, "opening": -1100 },
@@ -164,6 +196,8 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 33934479,
         "name": "Ted Hurst III",
+        "portraitUrl": "https://static.www.nfl.com/image/upload/f_auto,q_auto/league/mmf6qmo6a2evw4feupcm",
+        "position": "WR",
         "team": "TB",
         "prices": [
           { "line": 10, "price": -310, "opening": -380 },
@@ -176,6 +210,8 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 465,
         "name": "D'Andre Swift",
+        "portraitUrl": "https://static.www.nfl.com/image/upload/f_auto,q_auto/league/owpmwzoilitcodc6cmxo",
+        "position": "RB",
         "team": "CHI",
         "prices": [
           { "line": 10, "price": -380, "opening": -420 },
@@ -188,6 +224,8 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 598,
         "name": "Kalif Raymond",
+        "portraitUrl": "https://static.www.nfl.com/image/upload/f_auto,q_auto/league/trqs4qje1ctnwxs9shwd",
+        "position": "WR",
         "team": "CHI",
         "prices": [
           { "line": 10, "price": -260, "opening": -220 },
@@ -200,6 +238,8 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 13874670,
         "name": "Colston Loveland",
+        "portraitUrl": "https://static.www.nfl.com/image/upload/f_auto,q_auto/league/tdeidev1typrqjijtb3a",
+        "position": "TE",
         "team": "CHI",
         "prices": [
           { "line": 25, "price": -750, "opening": -800 },
@@ -211,6 +251,8 @@ export const PUBLIC_PREVIEW_EXAMPLES: Record<PreviewSport, PreviewBoard> = {
       {
         "id": 13874242,
         "name": "Luther Burden III",
+        "portraitUrl": "https://static.www.nfl.com/image/upload/f_auto,q_auto/league/iyuwdz7pbowdkwzq2tg5",
+        "position": "WR",
         "team": "CHI",
         "prices": [
           { "line": 25, "price": -1400, "opening": -1800 },
