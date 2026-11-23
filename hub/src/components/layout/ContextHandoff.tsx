@@ -69,9 +69,11 @@ function ContextHandoffContent() {
     const returned = () => { if (document.visibilityState === 'visible') setOfferPath(currentPath) }
     document.addEventListener('visibilitychange', returned)
     window.addEventListener('pageshow', returned)
+    window.addEventListener('focus', returned)
     return () => {
       document.removeEventListener('visibilitychange', returned)
       window.removeEventListener('pageshow', returned)
+      window.removeEventListener('focus', returned)
     }
   }, [currentPath])
 
