@@ -26,6 +26,62 @@ new Function('require','module','exports',bundle.outputFiles[0].text)(require,mo
 async function mount(component:ReactNode){const host=document.createElement('div');document.body.append(host);const root=createRoot(host);await act(async()=>root.render(component));return{host,rerender:async(node:ReactNode)=>act(async()=>root.render(node)),close:async()=>{await act(async()=>root.unmount());host.remove()}}}
 const quote={vendor:'fanduel',line:70,openingLine:70,type:'milestone',current:{odds:150},opening:{odds:200},updatedAt:null}
 
+test('comparison separates implied probability from historical payout changes and shares every drawer metric',async()=>{
+ const old=globalThis.fetch;globalThis.fetch=async()=>Response.json({matrices:[]})
+ const odds=makeNflOdds(),lens=makeLens(),josh=odds.players.find(p=>p.name==='Josh Allen')!
+ for(const [propType,current,averageOdds,deltaPct] of [['first_td',850,2881.36,-.705],['anytime_td',290,906.25,-.68]] as const){
+  const offer=josh.markets.find(m=>m.propType===propType)!.offers.find(o=>o.vendor==='fanduel')!;offer.current={odds:current}
+  josh.tdBaselines??=[];josh.tdBaselines.push({propType,vendor:'fanduel',averageOdds,deltaPct,sampleGames:20,averageProbability:null,currentProbability:null,deltaProbabilityPoints:null,deltaOdds:null,firstSampleDate:null,throughDate:null})
+ }
+ lens.windows.l3.players.find(p=>p.name==='Josh Allen')!.geometry=29
+ const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens,odds,gameState:storedGameState(),touchdowns:[],timeline:[]}))
+ try{
+  for(const name of ['Josh Allen','James Cook'])await act(async()=>ui.host.querySelector<HTMLButtonElement>(`button[aria-label="Compare ${name}"]`)!.click())
+  const panel=ui.host.querySelector<HTMLElement>('[data-player-comparison]')!
+  const row=(name:string)=>[...panel.querySelectorAll('tbody tr')].find(tr=>tr.querySelector('th')?.textContent===name)!
+  for(const label of ['Volume','Geometry','Red zone','Breakaway','Evidence','RZ looks'])assert.ok(row(label),label)
+  assert.doesNotMatch(panel.textContent!,/FTD%|ATD%|FTD PICKS|ATD PICKS/)
+  const probabilities=[...panel.querySelectorAll('tbody tr')].filter(tr=>tr.querySelector('th')?.textContent==='Implied probability')
+  assert.equal(probabilities[0].querySelector('td')!.textContent,'10.5%');assert.equal(probabilities[1].querySelector('td')!.textContent,'25.6%')
+  const references=[...panel.querySelectorAll('tbody tr')].filter(tr=>tr.querySelector('th')?.textContent==='Payout vs avg')
+  assert.match(references[0].querySelector('td')!.textContent!,/-70.5%.*20G avg \+2881/)
+  assert.match(references[1].querySelector('td')!.textContent!,/-68.0%.*20G avg \+906/)
+  await act(async()=>{const select=panel.querySelector<HTMLSelectElement>('select[aria-label="Comparison sample"]')!;select.value='l3';select.dispatchEvent(new win.Event('change',{bubbles:true}))})
+  assert.equal(row('Geometry').querySelector('td b')!.textContent,'29')
+  await act(async()=>panel.querySelector<HTMLButtonElement>('button[aria-label="Open Josh Allen details from comparison"]')!.click())
+  const dialog=document.querySelector('[role="dialog"]')!,geometry=[...dialog.querySelectorAll('small')].find(el=>el.textContent==='Geometry')!.parentElement!
+  assert.equal(geometry.querySelector('b')!.textContent,'29','the drawer and comparison use the same sample and metric value')
+  await act(async()=>dialog.querySelector<HTMLButtonElement>('button[aria-label="Close player details"]')!.click())
+  await act(async()=>[...panel.querySelectorAll('nav button')].find(button=>button.textContent==='NFL Tracking')!.click())
+  for(const label of ['Targets','Receptions','Target share','Carries','Carry share','aDOT','Separation','YACOE','RYOE/A','Explosives','Pass yards','CPOE'])assert.ok(row(label),label)
+  await act(async()=>panel.querySelector<HTMLButtonElement>('button[aria-label="Remove James Cook from comparison"]')!.click())
+  assert.match(panel.textContent!,/1 of 4 players/)
+  await act(async()=>[...panel.querySelectorAll('button')].find(button=>button.textContent==='Clear')!.click())
+  assert.equal(ui.host.querySelector('[data-player-comparison]'),null)
+ }finally{await ui.close();globalThis.fetch=old}
+})
+
+test('comparison keeps missing metrics unavailable and opening-only prices out of the current summary',async()=>{
+ const old=globalThis.fetch;globalThis.fetch=async()=>Response.json({matrices:[]})
+ const odds=makeNflOdds(),lens=makeLens()
+ for(const window of Object.values(lens.windows))window.players.find(p=>p.name==='James Cook')!.unavailableMetrics=['geometry','separation']
+ for(const market of odds.players.find(p=>p.name==='Josh Allen')!.markets)for(const offer of market.offers)if(offer.vendor==='fanduel')offer.isOpeningOnly=true
+ const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens,odds,gameState:storedGameState(),touchdowns:[],timeline:[]}))
+ try{
+  for(const name of ['James Cook','Josh Allen'])await act(async()=>ui.host.querySelector<HTMLButtonElement>(`button[aria-label="Compare ${name}"]`)!.click())
+  const panel=ui.host.querySelector<HTMLElement>('[data-player-comparison]')!
+  const rows=[...panel.querySelectorAll('tbody tr')]
+  assert.equal(rows.find(tr=>tr.querySelector('th')?.textContent==='Geometry')!.querySelector('td')!.textContent,'—')
+  for(const row of rows.filter(tr=>['FanDuel odds','Implied probability','Payout vs avg','FTD / ATD ratio'].includes(tr.querySelector('th')?.textContent??'')))assert.equal(row.querySelectorAll('td')[1].textContent,'—')
+  await act(async()=>[...panel.querySelectorAll('nav button')].find(button=>button.textContent==='Sportsbooks')!.click())
+  assert.ok(panel.querySelector('select[aria-label="Comparison market"]'))
+  assert.match(panel.textContent!,/FanDuel|DraftKings/);assert.match(panel.textContent!,/Open/)
+  assert.doesNotMatch(panel.textContent!,/NaN|Infinity|undefined/)
+  const scroll=panel.querySelector('[aria-label="Player comparison table"]')!
+  assert.equal(scroll.getAttribute('tabindex'),'0');assert.ok(panel.querySelector('caption'));assert.ok(panel.querySelector('th[scope="col"]'))
+ }finally{await ui.close();globalThis.fetch=old}
+})
+
 for(const [name,offer,side,expected] of [
  ['same contract',quote,'odds','Shortened: +6.7 probability points'],
  ['changed threshold',{...quote,openingLine:60},'odds','no comparable observation'],

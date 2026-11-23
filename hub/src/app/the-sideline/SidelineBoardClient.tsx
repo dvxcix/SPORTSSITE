@@ -42,6 +42,7 @@ import type { NflPublicResult } from '@/lib/nflPublicResults'
 import { SidelineDesignation } from './SidelineDesignation'
 import { SidelineFinalLine } from './SidelineFinalLine'
 import { useSidelineFinals } from './useSidelineFinals'
+import { MATCHUP_METRICS, TRACKING_METRICS, playerMetricValue } from './playerMetrics'
 
 const NflSlateEdgeOverlay = dynamic(() => import('./NflSlateEdgeOverlay').then(module => module.NflSlateEdgeOverlay), { ssr: false })
 
@@ -809,8 +810,8 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       },
       {
         id: 'ftdPct',
-        label: 'FTD%',
-        title: "Current FanDuel first-touchdown price versus this player's historical average",
+        label: 'FTD vs avg',
+        title: "FanDuel first-touchdown profit payout change versus this player's historical average; not touchdown probability",
         group: 'touchdowns',
         width: 116,
         value: row => baselineMove(row.market, 'first_td')?.deltaPct ?? null,
@@ -818,8 +819,8 @@ function useColumnDefinitions({ markets, pickMarkets, books, board, game, savedK
       },
       {
         id: 'atdPct',
-        label: 'ATD%',
-        title: "Current FanDuel anytime-touchdown price versus this player's historical average",
+        label: 'ATD vs avg',
+        title: "FanDuel anytime-touchdown profit payout change versus this player's historical average; not touchdown probability",
         group: 'touchdowns',
         width: 116,
         value: row => baselineMove(row.market, 'anytime_td')?.deltaPct ?? null,
@@ -1322,43 +1323,22 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
                 </div>
               </div>
               <div className={styles.metricCards}>
-                {[
-                  ['Volume', 'volume', activePlayer.volume],
-                  ['Geometry', 'geometry', activePlayer.geometry],
-                  ['Red zone', 'redZone', activePlayer.redZone],
-                  ['Breakaway', 'breakaway', activePlayer.breakaway],
-                  ['Evidence', 'evidence', activePlayer.evidence],
-                  ['RZ looks', 'redZoneLooks', activePlayer.redZoneLooks],
-                ].map(([label, field, value]) => (
-                  <div key={label}>
-                    <small>{label}</small>
-                    <b className={field==='redZoneLooks'?undefined:scoreTone(Number(value))}>{activePlayer.hasTracking&&!activePlayer.unavailableMetrics?.includes(String(field))&&typeof value==='number'&&Number.isFinite(value)?value.toLocaleString('en-US',{maximumFractionDigits:1}):'—'}</b>
-                    {label!=='RZ looks'&&activePlayer.hasTracking&&!activePlayer.unavailableMetrics?.includes(String(field))&&typeof value==='number'&&Number.isFinite(value)&&<meter min={0} max={100} value={value} aria-label={`${label} score`}/>}
+                {MATCHUP_METRICS.map(metric => {
+                  const value=playerMetricValue(activePlayer,metric)
+                  return <div key={metric.field}>
+                    <small>{metric.label}</small>
+                    <b className={metric.score&&value!=null?scoreTone(value):undefined}>{value?.toLocaleString('en-US',{maximumFractionDigits:1})??'—'}</b>
+                    {metric.score&&value!=null&&<meter min={0} max={100} value={value} aria-label={`${metric.label} score`}/>}
                   </div>
-                ))}
+                })}
               </div>
             </>
           ) : tab === 'tracking' ? (
             <div className={styles.metricCards}>
-              {[
-                ['Targets', 'targets', activePlayer.targets, ''],
-                ['Receptions', 'receptions', activePlayer.receptions, ''],
-                ['Target share', 'targetShare', activePlayer.targetShare, '%'],
-                ['Carries', 'carries', activePlayer.carries, ''],
-                ['Carry share', 'carryShare', activePlayer.carryShare, '%'],
-                ['aDOT', 'airYards', activePlayer.airYards, ''],
-                ['Separation', 'separation', activePlayer.separation, ''],
-                ['YACOE', 'yacAboveExpected', activePlayer.yacAboveExpected, ''],
-                ['RYOE/A', 'rushOverExpected', activePlayer.rushOverExpected, ''],
-                ['Explosives', 'explosivePlays', activePlayer.explosivePlays, ''],
-                ['Pass yards', 'passingYards', activePlayer.passingYards, ''],
-                ['CPOE', 'cpoe', activePlayer.cpoe, ''],
-              ].map(([label, field, value, suffix]) => (
-                <div key={label}>
-                  <small>{label}</small>
-                  <b>{activePlayer.hasTracking&&!activePlayer.unavailableMetrics?.includes(String(field))&&typeof value==='number'&&Number.isFinite(value)?value.toLocaleString('en-US',{maximumFractionDigits:1})+suffix:'—'}</b>
-                </div>
-              ))}
+              {TRACKING_METRICS.map(metric => {
+                const value=playerMetricValue(activePlayer,metric)
+                return <div key={metric.field}><small>{metric.label}</small><b>{value!=null?value.toLocaleString('en-US',{maximumFractionDigits:1})+(metric.suffix??''):'—'}</b></div>
+              })}
             </div>
           ) : (
             <div className={styles.modalMarkets}>
@@ -1433,127 +1413,80 @@ function ColumnManager({ columns, visibleIds, order, onVisible, onMove, onReset,
   )
 }
 
-function ComparisonPanel({ players, teams, window, board, onRemove, onClear }: { players: PlayerRow[]; teams: SidelineTeam[]; window: SidelineWindow; board: SidelineOddsBoard; onRemove: (id: string) => void; onClear: () => void }) {
+function ComparisonPanel({ players, teams, window, board, gameSeason, finalResults, finished, onWindow, onOpen, onRemove, onClear }: { players: PlayerRow[]; teams: SidelineTeam[]; window: SidelineWindow; board: SidelineOddsBoard; gameSeason:number; finalResults:NflPublicResult|null; finished:boolean; onWindow:(value:SidelineWindow)=>void; onOpen:(player:PlayerRow)=>void; onRemove: (id: string) => void; onClear: () => void }) {
+  const [tab,setTab]=useState<'matchup'|'tracking'|'markets'>('matchup')
+  const [market,setMarket]=useState('first_td')
   if (!players.length) return null
+  const entries=players.map(player=>({player,marketPlayer:findMarketPlayer(board,player)}))
+  const marketOptions=[...new Map(entries.flatMap(({marketPlayer})=>marketPlayer?.markets.map(item=>[item.propType,{value:item.propType,label:item.label}] as const)??[])).values()]
+  const selectedMarket=marketOptions.some(item=>item.value===market)?market:marketOptions[0]?.value??''
+  const books=[...new Set(entries.flatMap(({marketPlayer})=>marketPlayer?.markets.filter(item=>item.propType===selectedMarket).flatMap(item=>item.offers.map(offer=>normalizeVendor(offer.vendor)))??[]))]
+    .sort((a,b)=>(PREFERRED_BOOKS.findIndex(book=>book.id===a)+1||99)-(PREFERRED_BOOKS.findIndex(book=>book.id===b)+1||99)||a.localeCompare(b))
+  const row=(label:ReactNode,values:ReactNode[],key:string)=> <tr key={key}><th scope="row">{label}</th>{values.map((value,index)=><td key={players[index].id}>{value}</td>)}</tr>
+  const group=(label:ReactNode,key:string)=><tr className={styles.compareGroup} key={key}><th colSpan={players.length+1}>{label}</th></tr>
+  const metrics=(tab==='tracking'?TRACKING_METRICS:MATCHUP_METRICS).map(metric=>row(metric.label,players.map(player=>{
+    const value=playerMetricValue(player,metric)
+    return <span key={player.id} className={styles.compareMetric}><b className={metric.score&&value!=null?scoreTone(value):undefined}>{value!=null?value.toLocaleString('en-US',{maximumFractionDigits:1})+(metric.suffix??''):'—'}</b>{metric.score&&value!=null&&<meter min={0} max={100} value={value} aria-label={`${player.name} ${metric.label} score`}/>}</span>
+  }),metric.field))
   return (
-    <section className={styles.comparison}>
+    <section className={styles.comparison} aria-labelledby="sideline-comparison-title" data-player-comparison>
       <header>
         <div>
-          <small>Player comparison</small>
-          <h2>
-            {players.length}/4 selected · {WINDOW_OPTIONS.find(item => item.id === window)?.label}
-          </h2>
+          <h2 id="sideline-comparison-title">Player comparison</h2>
+          <small>{players.length} of 4 players</small>
         </div>
-        <button type="button" onClick={onClear}>
-          Clear
-        </button>
+        <button type="button" onClick={onClear}>Clear</button>
       </header>
-      <div className={styles.comparisonGrid}>
-        {players.map(player => {
-          const team = teams.find(item => normalizedTeam(item.abbr) === normalizedTeam(player.team)) ?? teams[0]
-          const marketPlayer = findMarketPlayer(board, player)
-          const atdMarket = findMarket(marketPlayer, 'anytime_td')
-          const ftdMarket = findMarket(marketPlayer, 'first_td')
-          const atd = findOffer(atdMarket, 'fanduel')
-          const ftd = findOffer(ftdMarket, 'fanduel')
-          const ftdBaseline = baselineMove(marketPlayer, 'first_td')
-          const atdBaseline = baselineMove(marketPlayer, 'anytime_td')
-          const ftdAtd = impliedProbabilityRatio(offerCurrent(ftd), offerCurrent(atd))
-          const comparisonMarkets = ['first_td', 'anytime_td', 'receptions', 'receiving_yards', 'rushing_yards', 'rushing_receiving_yards', 'passing_yards', 'passing_tds'].map(propType => findMarket(marketPlayer, propType)).filter(Boolean) as NflPlayerMarket[]
-          return (
-            <article key={player.id}>
-              <header>
-                <div>
-                  <PlayerAvatar player={player} team={team} />
-                  <span>
-                    <b>{player.name}</b>
-                    <small>
-                      {player.team} · {player.position}
-                    </small>
-                  </span>
-                </div>
-                <button type="button" onClick={() => onRemove(player.id)} aria-label={`Remove ${player.name} from comparison`}>
-                  <X size={14} />
-                </button>
-              </header>
-              <div className={styles.compareScore}>
-                <span>
-                  <small>
-                    <Image src="/brand-bolt.png" alt="" width={9} height={13} /> {player.contextLabel ?? 'ROLE'} SCORE
-                  </small>
-                  <b className={scoreTone(player.index)}>{player.hasTracking && !player.unavailableMetrics?.includes('index') ? player.index : '-'}</b>
-                </span>
-                <span>
-                  <small>
-                    <span className={styles.comparePublicPicks}>$</span> FTD PICKS
-                  </small>
-                  <b>{publicPickCount(marketPlayer, 'first_td')?.toLocaleString() ?? '-'}</b>
-                </span>
-                <span>
-                  <small>
-                    <BookLogo vendor="fanduel" size={13} /> FTD
-                  </small>
-                  <b>{oddsLabel(offerCurrent(ftd))}</b>
-                  <i>{ftdBaseline?.deltaPct == null ? 'FTD% -' : `FTD% ${(ftdBaseline.deltaPct * 100).toFixed(1)}%`}</i>
-                </span>
-                <span>
-                  <small>
-                    <span className={styles.comparePublicPicks}>$</span> ATD PICKS
-                  </small>
-                  <b>{publicPickCount(marketPlayer, 'anytime_td')?.toLocaleString() ?? '-'}</b>
-                </span>
-                <span>
-                  <small>
-                    <BookLogo vendor="fanduel" size={13} /> ATD
-                  </small>
-                  <b>{oddsLabel(offerCurrent(atd))}</b>
-                  <i>{atdBaseline?.deltaPct == null ? 'ATD% -' : `ATD% ${(atdBaseline.deltaPct * 100).toFixed(1)}%`}</i>
-                </span>
-                <span>
-                  <small>FTD:ATD</small>
-                  <b>{ftdAtd?.toFixed(2) ?? '-'}</b>
-                  <i>IMPLIED P</i>
-                </span>
+      <div className={styles.compareControls}>
+        <ResearchSectionNav label="Comparison section" value={tab} onChange={setTab} items={[{value:'matchup',label:'Matchup'},{value:'tracking',label:'NFL Tracking'},{value:'markets',label:'Sportsbooks'}]}/>
+        {tab==='markets'?<label>Market<select aria-label="Comparison market" value={selectedMarket} onChange={event=>setMarket(event.target.value)} disabled={!marketOptions.length}>{marketOptions.length?marketOptions.map(item=><option key={item.value} value={item.value}>{item.label}</option>):<option value="">No markets</option>}</select></label>:<label>Sample<select aria-label="Comparison sample" value={window} onChange={event=>onWindow(event.target.value as SidelineWindow)}>{WINDOW_OPTIONS.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>}
+      </div>
+      <div className={styles.compareScroller} role="region" aria-label="Player comparison table" tabIndex={0}>
+        <table className={styles.compareTable} style={{'--compare-players':players.length} as CSSProperties}>
+          <caption className="sr-only">{players.map(player=>player.name).join(' versus ')} · {WINDOW_OPTIONS.find(item=>item.id===window)?.label} · {tab==='matchup'?'Matchup':tab==='tracking'?'NFL Tracking':'Sportsbooks'}</caption>
+          <colgroup><col className={styles.compareLabelColumn}/>{players.map(player=><col key={player.id}/>)}</colgroup>
+          <thead><tr><th scope="col"><span className={styles.compareCorner}>{tab==='markets'?'Sportsbook':'Metric'}</span></th>{players.map(player=>{
+            const team=teams.find(item=>normalizedTeam(item.abbr)===normalizedTeam(player.team))??teams[0]
+            return <th scope="col" key={player.id}>
+              <div className={styles.compareIdentity}>
+                <div><PlayerAvatar player={player} team={team} rookie={player.rookieSeason===gameSeason}/><button type="button" onClick={()=>onRemove(player.id)} aria-label={`Remove ${player.name} from comparison`}><X size={16}/></button></div>
+                <button className={styles.compareName} type="button" onClick={()=>onOpen(player)} aria-label={`Open ${player.name} details from comparison`}>{player.name}</button>
+                <small>{player.team} · {player.position} <SidelineDesignation label={player.statusLabel??null} injury={player.market?.availability?.injury}/></small>
+                <SidelineFinalLine player={player} result={finalResults} finished={finished}/>
               </div>
-              <div className={styles.compareMetrics}>
-                <span>
-                  <small>Volume</small>
-                  <b>{player.volume}</b>
-                </span>
-                <span>
-                  <small>RZ</small>
-                  <b>{player.redZone}</b>
-                </span>
-                <span>
-                  <small>Tgt%</small>
-                  <b>{player.targetShare}%</b>
-                </span>
-                <span>
-                  <small>RZ looks</small>
-                  <b>{player.redZoneLooks}</b>
-                </span>
-              </div>
-              <div className={styles.compareMarkets}>
-                {comparisonMarkets.map(market => (
-                  <div key={market.key}>
-                    <small>
-                      {market.label}
-                      <PickCount value={publicPickCount(marketPlayer, market.propType)} observed/>
-                    </small>
-                    <span>
-                      {market.offers.map((offer,index) => (
-                        <em key={`${offer.vendor}:${offer.type}:${offer.line}:${index}`}>
-                          <BookLogo vendor={offer.vendor} size={14} />
-                          {(['odds','over','under'] as NflQuoteSide[]).filter(side=>offer.current[side]!=null||offer.opening?.[side]!=null).map(side=><NflQuote key={side} offer={offer} side={side}/>)}
-                        </em>
-                      ))}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </article>
-          )
-        })}
+            </th>
+          })}</tr></thead>
+          <tbody>
+            {tab==='matchup'&&row('SlipSurge Score',players.map(player=><span key={player.id} className={styles.compareScoreValue}><b className={scoreTone(player.index)}>{player.eligible!==false&&player.hasTracking&&!player.unavailableMetrics?.includes('index')?player.index:'—'}</b><small>{player.contextLabel??'Role'}</small></span>),'index')}
+            {tab!=='markets'&&metrics}
+            {tab==='matchup'&&(['first_td','anytime_td'] as const).map(propType=>{
+              const offers=entries.map(({marketPlayer})=>findOffer(nflPrimaryMarket(marketPlayer,propType,'fanduel'),'fanduel'))
+              const prices=offers.map(offer=>offer?.isOpeningOnly?null:offerCurrent(offer))
+              return <Fragment key={propType}>
+                {group(<span><BookLogo vendor="fanduel" size={17}/>{propType==='first_td'?'First touchdown':'Anytime touchdown'}</span>,propType)}
+                {row('FanDuel odds',prices.map((value,index)=>americanImpliedProbability(value)!=null?<b key={players[index].id} className={styles.comparePrice}>{oddsLabel(value)}</b>:'—'),propType+'-price')}
+                {row('Implied probability',prices.map((value,index)=>{const probability=americanImpliedProbability(value);return probability!=null?<b key={players[index].id}>{(probability*100).toFixed(1)}%</b>:'—'}),propType+'-probability')}
+                {row(<abbr title="Relative profit payout versus the player's historical FanDuel average. This is a price change, not a touchdown probability.">Payout vs avg</abbr>,entries.map(({marketPlayer},index)=>{
+                  const reference=baselineMove(marketPlayer,propType), value=reference?.deltaPct
+                  if (!reference||prices[index]==null||value==null||!Number.isFinite(value)||reference.sampleGames<2) return '—'
+                  return <span key={players[index].id} className={styles.compareReference}><b className={value<0?styles.weak:value>0?styles.good:undefined}>{value>0?'+':''}{(value*100).toFixed(1)}%</b><small>{reference.sampleGames}G avg {oddsLabel(Math.round(reference.averageOdds))}</small></span>
+                }),propType+'-baseline')}
+                {row(<span className={styles.comparePicksLabel}><PicksMark/>Observed picks</span>,entries.map(({player,marketPlayer})=><PickCount key={player.id} value={publicPickCount(marketPlayer,propType)} observed/>),propType+'-picks')}
+              </Fragment>
+            })}
+            {tab==='matchup'&&row(<abbr title="First-touchdown implied probability divided by anytime-touchdown implied probability, at FanDuel.">FTD / ATD ratio</abbr>,entries.map(({marketPlayer})=>{
+              const first=findOffer(nflPrimaryMarket(marketPlayer,'first_td','fanduel'),'fanduel'), any=findOffer(nflPrimaryMarket(marketPlayer,'anytime_td','fanduel'),'fanduel')
+              const ratio=first?.isOpeningOnly||any?.isOpeningOnly?null:impliedProbabilityRatio(offerCurrent(first),offerCurrent(any))
+              return ratio!=null?<b>{ratio.toFixed(2)}</b>:'—'
+            }),'ratio')}
+            {tab==='markets'&&row(<span className={styles.comparePicksLabel}><PicksMark/>Observed picks</span>,entries.map(({player,marketPlayer})=><PickCount key={player.id} value={publicPickCount(marketPlayer,selectedMarket)} observed/>),'market-picks')}
+            {tab==='markets'&&books.map(vendor=>row(<span className={styles.compareBook}><BookLogo vendor={vendor} size={19}/>{bookName(vendor)}</span>,entries.map(({marketPlayer})=>{
+              const offers=marketPlayer?.markets.filter(item=>item.propType===selectedMarket).flatMap(item=>item.offers).filter(offer=>normalizeVendor(offer.vendor)===vendor)??[]
+              return offers.length?<div className={styles.compareOffers}>{offers.map((offer,index)=><span key={`${offer.type}:${offer.line}:${index}`}>{(['odds','over','under'] as NflQuoteSide[]).filter(side=>offer.current[side]!=null||offer.opening?.[side]!=null).map(side=><NflQuote key={side} offer={offer} side={side}/>)}</span>)}</div>:'—'
+            }),vendor))}
+            {tab==='markets'&&!books.length&&<tr><td colSpan={players.length+1} className={styles.noData}>No captured quotes for these players.</td></tr>}
+          </tbody>
+        </table>
       </div>
     </section>
   )
@@ -2416,6 +2349,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                                         toggleCompare(player.id)
                                       }}
                                       aria-label={`Compare ${player.name}`}
+                                      aria-pressed={compareActive}
                                     >
                                       {compareActive ? <Minus size={14} /> : <Plus size={14} />}
                                     </button>
@@ -2454,7 +2388,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         ))
       )}
 
-      <ComparisonPanel players={comparePlayers} teams={allTeams} window={windowId} board={board} onRemove={id => setCompareIds(current => current.filter(item => item !== id))} onClear={() => setCompareIds([])} />
+      <ComparisonPanel players={comparePlayers} teams={allTeams} window={windowId} board={board} gameSeason={selected.season} finalResults={finalResults} finished={finished} onWindow={setWindowId} onOpen={setExpanded} onRemove={id => setCompareIds(current => current.filter(item => item !== id))} onClear={() => setCompareIds([])} />
 
       <NflSlateEdgeOverlay open={slateEdgeOpen} date={selected.gameday} sample={sample} onClose={() => setSlateEdgeOpen(false)} />
 
