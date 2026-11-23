@@ -1,0 +1,96 @@
+Sideline player comparison — 24 November 2026
+
+Problem and resulting behavior
+The old FTD% / ATD% labels were relative profit-payout changes against a player's
+historical FanDuel average, not touchdown probabilities. The comparison now labels
+those values Payout vs avg, with the historical sample and average price beside
+them. A separate Implied probability row converts the actual FanDuel quote.
+For the reported Burks capture: +850 is 10.5% implied, +290 is 25.6% implied;
+the separate payout changes remain -70.5% / -68.0%. These are sportsbook-implied
+values, not model predictions. Main-board columns now say FTD vs avg / ATD vs avg.
+No scoring formula, ranking, quote, historical average or pregame input changed.
+
+Comparison redesign
+- One full-width, aligned table replaces a four-slot card grid and independent
+  horizontal scrollers. Player count determines minimum table width. Shared row
+  labels and player headers stay visible while scrolling the table.
+- Matchup: contextual SlipSurge Score, Volume, Geometry, Red zone, Breakaway,
+  Evidence, RZ looks, both TD prices/probabilities/historical references, observed
+  picks and the existing FTD/ATD implied-probability ratio.
+- NFL Tracking: all twelve existing drawer metrics, including aDOT, separation,
+  YACOE, RYOE/A and CPOE. Missing/withheld metrics remain unavailable.
+- Sportsbooks: market selector and one aligned row per captured book. Primary
+  contracts first; All lines exposes every captured alternate, with exact side,
+  threshold, opening quote and same-contract movement. Opening-only observations
+  never become current prices or probabilities in the summary.
+- Sample selector updates the same board window used by player details. Names
+  open the existing drawer. Remove and Clear preserve the four-player workflow.
+  Team portraits, logos, compact availability, rookie ribbons and verified final
+  totals remain visible in comparison identities. Selection buttons expose state.
+
+Design record
+Job: compare selected NFL players and their prices using the same sample and
+metrics as their drawers. Target: ComparisonPanel and its local styles, plus the
+misleading two baseline column labels and shared drawer metric definitions.
+Preserve: team/player/book artwork, product tokens, all original markets/books,
+sample windows, quote semantics, access controls, frozen research and every tool.
+Established direction: ENERGY 2 / RHYTHM 2 / MOTION 2. Team portrait colors anchor
+identity; score colors and meters retain existing meaning. One table supplies
+alignment; grouping separates historical reference from probability. No new
+asset, animation, library, API, operational capture or database mutation.
+
+Reference decisions (structure only; these products' styling/data were not used)
+- Tripadvisor: entities across the top, shared attributes down the left; a detail
+  action remains beside each entity. Example for aligned attribute comparison.
+  https://mobbin.com/screens/33aa82ac-9f83-4313-8a3e-e853be43c5e8
+- X sports standings: compact statistical rows with identities and one set of
+  column labels. Example for aligned numerical comparison in a sports context.
+  https://mobbin.com/screens/9b1f3ea8-e1f6-4a7c-993d-b0162020ec56
+Tab labels and metric names come from SlipSurge's existing player drawer. Exact
+wording and responsive proportions are local judgments, not claims about another
+product's behavior. Unrelated shell, pricing, creator and community work excluded.
+
+Checks
+- 221/221 regression/source tests, including all 134 production source tests.
+- New interaction tests cover probability vs payout labels, same-window metric
+  parity with the real drawer, all six/twelve metrics, unavailable values,
+  opening-only suppression, primary/full alternates, removal and clearing.
+- Focused ESLint passes; TypeScript passes after correcting native button types
+  in two new tests. First preview failed on those test types; corrected preview
+  d4190467 is READY. Latest preview includes compact headers and All lines.
+- Real preview: Burks Last 3 score 22, Geometry 92, Red zone 22, Breakaway 58,
+  Evidence 42 and RZ looks 0 match his drawer exactly. Both historical references
+  and positive implied probabilities confirmed. Four-player and all-book flows
+  checked. Final responsive/live receipts follow below after verification.
+
+Delivery gate
+Shared semantic table/caption, labelled keyboard-scroll region, native selectors
+and buttons, explicit missing states, accessible compact status details and no
+new motion. Product colors/spacing/controls reused. Score definitions shared by
+the drawer and comparison to prevent omitted or differently-labelled metrics.
+No formula explanation, invented probability, unsupported claim or hidden tool.
+Desktop/phone and both themes must pass before main publication. Browser phone
+frames are responsive emulation, not physical-phone certification.
+
+Final verification before release
+- Optimized private review build, including TypeScript and static generation,
+  passes. Final source preview 90ec8e8f is READY at deployment
+  dpl_FnkgJosBoyAbRypE3xppYSc9sVdn. Final source ESLint passes.
+- Actual components checked at 1440, 390, 320, 820 and 844 pixels in both themes.
+  Ten layouts: no document overflow, render error, unnamed visible control or
+  undersized detected button. Compact tables scroll within a labelled region;
+  the metric column stays visible. Two/four-player comparisons verified.
+- Both phone themes: all tracking fields, native section/market/sample selectors,
+  full-line toggle and four-player identities used. Injury drawer retains Knee,
+  full designation/report time, original metrics and final results. Rookie and
+  zero-TD identity fixtures retained.
+- Caught and fixed a real scroll-state defect: switching from a long sportsbook
+  ladder retained an offset that hid the first matchup metrics. Section, market
+  and line-view changes now reset their local table scroll, with regression tests.
+- Responsive receipts and screenshots:
+  C:/Users/devvi/.codex/visualizations/2026/11/20/01a1f69d-5ede-7580-b36c-249bf49bb721/sideline-comparison-20261124
+  four-layout-comparison.json, four-layout-interactions.json,
+  narrow-layout-comparison.json, narrow-comparison.jpg and final-preview-desktop.jpg.
+  Layout captures use source 0a24c540; the subsequent scroll-only correction is
+  checked in the final preview; production verification follows publication.
+  No subsequent layout changes.
