@@ -94,3 +94,19 @@ Final verification before release
   Layout captures use source 0a24c540; the subsequent scroll-only correction is
   checked in the final preview; production verification follows publication.
   No subsequent layout changes.
+
+Published production receipt
+Main release 40e343026826eebc382de249f791de4f926b6e3c, functional source
+90ec8e8f863f0d18fe56674cd4ce959ccb5734bb. Deployment
+dpl_7brKp3bNnF1uPcwRGj4Bz7YeZvvy READY on www.slipsurge.com / slipsurge.com.
+GitHub main retains recovered NFL ancestry; unrelated local work was preserved.
+
+Signed-in production browser: Jefferson/Burks Last 3 score 32/22, Geometry 68/92,
+Red zone 35/22, Breakaway 38/58, Evidence 42/42 and RZ looks 1/0. Burks drawer
+matches these values. FTD odds +850 -> 10.5% implied, payout change -70.5% with
+14G avg +2883. ATD +290 -> 25.6% implied, payout change -68.0%, 20G avg +907.
+All-book primary and full receiving-yard ladders remain usable. Long-table
+scroll returns to the beginning on Matchup. Light and dark production appearance
+checked; original dark preference restored. Screenshots and JSON receipts are in
+the evidence folder above. Final source tests: 221/221, including 23 interactive
+NFL checks. No production database/job/secret/payment mutation was required.
