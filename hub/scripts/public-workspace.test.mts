@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises'
 import { build } from 'esbuild'
 import { publicWorkspaceRequest, PUBLIC_WORKSPACE_RESOURCES } from '../src/lib/publicWorkspacePolicy'
 import { isPublicPreviewDataPath } from '../src/lib/publicResearchPreview'
-import { publicWorkspaceHref, publicWorkspaceFetch } from '../src/lib/publicWorkspaceClient'
+import { publicWorkspaceHref, publicWorkspaceFetch, publicWorkspaceAccessOr } from '../src/lib/publicWorkspaceClient'
 
 const scope={sport:'nba' as const,game:'123',date:'2026-11-23'}
 const input=(resource:string,extra='')=>new URLSearchParams('resource='+encodeURIComponent(resource)+extra)
@@ -93,8 +93,15 @@ test('client transport is unchanged outside previews; preview navigation and rea
     assert.equal(publicWorkspaceHref('https://example.com'),'https://example.com')
     let called=0
     globals.window={location:{pathname:'/preview/nfl'},dispatchEvent:()=>{called++;return true}}
+    let writes=0
+    publicWorkspaceAccessOr(()=>{writes++})
+    assert.equal(writes,0,'saved actions cannot execute while browsing a public workspace')
+    assert.equal(called,1)
     const response=await publicWorkspaceFetch('/api/nfl-matrices',{method:'POST'})
-    assert.equal(response.status,403);assert.equal(called,1)
+    assert.equal(response.status,403);assert.equal(called,2)
+    globals.window={location:{pathname:'/the-sideline'}}
+    publicWorkspaceAccessOr(()=>{writes++})
+    assert.equal(writes,1,'normal member actions retain their handler')
   }finally{if(original===undefined)delete globals.window;else globals.window=original}
 })
 

@@ -1,0 +1,585 @@
+{
+  "source": "9ea84a7644226180dff9c2bbac2326e31755e7b2",
+  "stagedDeployment": "dpl_CAJ2g65fDMS34ZqXJEwQRuXY9tkU",
+  "production": "Pending rollout",
+  "browser": "Codex in-app browser",
+  "layoutData": "Isolated fixture data, actual app components",
+  "layouts": {
+    "nba-compiled-four-layouts": {
+      "desktop-light": {
+        "url": "/preview/nba?reviewTheme=light&reviewMatrix=1&date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+        "width": 1440,
+        "overflow": false,
+        "headings": [
+          "The CourtNBA",
+          "Moneyline",
+          "Spread",
+          "Total"
+        ],
+        "text": 2493,
+        "error": false,
+        "theme": "light",
+        "loading": false,
+        "tables": 1,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": false,
+            "label": "Player research table",
+            "keyboard": true,
+            "firstHeader": "Compare"
+          }
+        ],
+        "smallButtons": []
+      },
+      "desktop-dark": {
+        "url": "/preview/nba?reviewTheme=dark&reviewMatrix=1&date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+        "width": 1440,
+        "overflow": false,
+        "headings": [
+          "The CourtNBA",
+          "Moneyline",
+          "Spread",
+          "Total"
+        ],
+        "text": 2493,
+        "error": false,
+        "theme": "dark",
+        "loading": false,
+        "tables": 1,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": false,
+            "label": "Player research table",
+            "keyboard": true,
+            "firstHeader": "Compare"
+          }
+        ],
+        "smallButtons": []
+      },
+      "phone-dark": {
+        "url": "/preview/nba?reviewTheme=dark&reviewMatrix=1&date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+        "width": 390,
+        "overflow": false,
+        "headings": [
+          "The CourtNBA",
+          "Moneyline",
+          "Spread",
+          "Total"
+        ],
+        "text": 2067,
+        "error": false,
+        "theme": "dark",
+        "loading": false,
+        "tables": 0,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [],
+        "smallButtons": []
+      },
+      "phone-light": {
+        "url": "/preview/nba?reviewTheme=light&reviewMatrix=1&date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+        "width": 390,
+        "overflow": false,
+        "headings": [
+          "The CourtNBA",
+          "Moneyline",
+          "Spread",
+          "Total"
+        ],
+        "text": 2067,
+        "error": false,
+        "theme": "light",
+        "loading": false,
+        "tables": 0,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [],
+        "smallButtons": []
+      }
+    },
+    "nfl-compiled-four-layouts": {
+      "desktop-light": {
+        "url": "/preview/nfl",
+        "width": 1440,
+        "overflow": false,
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "text": 2863,
+        "error": false,
+        "theme": "light",
+        "loading": false,
+        "tables": 2,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Buffalo Bills player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          },
+          {
+            "wide": true,
+            "label": "Kansas City Chiefs player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          }
+        ],
+        "smallButtons": []
+      },
+      "desktop-dark": {
+        "url": "/preview/nfl",
+        "width": 1440,
+        "overflow": false,
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "text": 2863,
+        "error": false,
+        "theme": "dark",
+        "loading": false,
+        "tables": 2,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Buffalo Bills player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          },
+          {
+            "wide": true,
+            "label": "Kansas City Chiefs player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          }
+        ],
+        "smallButtons": []
+      },
+      "phone-dark": {
+        "url": "/preview/nfl",
+        "width": 390,
+        "overflow": false,
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "text": 2870,
+        "error": false,
+        "theme": "dark",
+        "loading": false,
+        "tables": 2,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Buffalo Bills player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          },
+          {
+            "wide": true,
+            "label": "Kansas City Chiefs player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          }
+        ],
+        "smallButtons": []
+      },
+      "phone-light": {
+        "url": "/preview/nfl",
+        "width": 390,
+        "overflow": false,
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "text": 2870,
+        "error": false,
+        "theme": "light",
+        "loading": false,
+        "tables": 2,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Buffalo Bills player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          },
+          {
+            "wide": true,
+            "label": "Kansas City Chiefs player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          }
+        ],
+        "smallButtons": []
+      }
+    },
+    "nba-narrow-layouts": {
+      "tablet-dark": {
+        "url": "/preview/nba?reviewTheme=dark&reviewMatrix=1&date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+        "width": 820,
+        "overflow": false,
+        "headings": [
+          "The CourtNBA",
+          "Moneyline",
+          "Spread",
+          "Total"
+        ],
+        "text": 2493,
+        "error": false,
+        "theme": "dark",
+        "loading": false,
+        "tables": 1,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Player research table",
+            "keyboard": true,
+            "firstHeader": "Compare"
+          }
+        ],
+        "smallButtons": []
+      },
+      "tablet-light": {
+        "url": "/preview/nba?reviewTheme=light&reviewMatrix=1&date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+        "width": 820,
+        "overflow": false,
+        "headings": [
+          "The CourtNBA",
+          "Moneyline",
+          "Spread",
+          "Total"
+        ],
+        "text": 2493,
+        "error": false,
+        "theme": "light",
+        "loading": false,
+        "tables": 1,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Player research table",
+            "keyboard": true,
+            "firstHeader": "Compare"
+          }
+        ],
+        "smallButtons": []
+      },
+      "small-light": {
+        "url": "/preview/nba?reviewTheme=light&reviewMatrix=1&date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+        "width": 320,
+        "overflow": false,
+        "headings": [
+          "The CourtNBA",
+          "Moneyline",
+          "Spread",
+          "Total"
+        ],
+        "text": 2067,
+        "error": false,
+        "theme": "light",
+        "loading": false,
+        "tables": 0,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [],
+        "smallButtons": []
+      },
+      "small-dark": {
+        "url": "/preview/nba?reviewTheme=dark&reviewMatrix=1&date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+        "width": 320,
+        "overflow": false,
+        "headings": [
+          "The CourtNBA",
+          "Moneyline",
+          "Spread",
+          "Total"
+        ],
+        "text": 2067,
+        "error": false,
+        "theme": "dark",
+        "loading": false,
+        "tables": 0,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [],
+        "smallButtons": []
+      },
+      "landscape-light": {
+        "url": "/preview/nba?reviewTheme=light&reviewMatrix=1&date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+        "width": 844,
+        "overflow": false,
+        "headings": [
+          "The CourtNBA",
+          "Moneyline",
+          "Spread",
+          "Total"
+        ],
+        "text": 2493,
+        "error": false,
+        "theme": "light",
+        "loading": false,
+        "tables": 1,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Player research table",
+            "keyboard": true,
+            "firstHeader": "Compare"
+          }
+        ],
+        "smallButtons": []
+      },
+      "landscape-dark": {
+        "url": "/preview/nba?reviewTheme=dark&reviewMatrix=1&date=2030-11-20&mode=pregame&market=points&side=over&book=all&sort=average&order=desc&game=900001&contract=milestone",
+        "width": 844,
+        "overflow": false,
+        "headings": [
+          "The CourtNBA",
+          "Moneyline",
+          "Spread",
+          "Total"
+        ],
+        "text": 2493,
+        "error": false,
+        "theme": "dark",
+        "loading": false,
+        "tables": 1,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Player research table",
+            "keyboard": true,
+            "firstHeader": "Compare"
+          }
+        ],
+        "smallButtons": []
+      }
+    },
+    "nfl-narrow-layouts": {
+      "tablet-dark": {
+        "url": "/preview/nfl",
+        "width": 820,
+        "overflow": false,
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "text": 2870,
+        "error": false,
+        "theme": "dark",
+        "loading": false,
+        "tables": 2,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Buffalo Bills player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          },
+          {
+            "wide": true,
+            "label": "Kansas City Chiefs player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          }
+        ],
+        "smallButtons": []
+      },
+      "tablet-light": {
+        "url": "/preview/nfl",
+        "width": 820,
+        "overflow": false,
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "text": 2870,
+        "error": false,
+        "theme": "light",
+        "loading": false,
+        "tables": 2,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Buffalo Bills player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          },
+          {
+            "wide": true,
+            "label": "Kansas City Chiefs player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          }
+        ],
+        "smallButtons": []
+      },
+      "small-light": {
+        "url": "/preview/nfl",
+        "width": 320,
+        "overflow": false,
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "text": 2870,
+        "error": false,
+        "theme": "light",
+        "loading": false,
+        "tables": 2,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Buffalo Bills player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          },
+          {
+            "wide": true,
+            "label": "Kansas City Chiefs player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          }
+        ],
+        "smallButtons": []
+      },
+      "small-dark": {
+        "url": "/preview/nfl",
+        "width": 320,
+        "overflow": false,
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "text": 2870,
+        "error": false,
+        "theme": "dark",
+        "loading": false,
+        "tables": 2,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Buffalo Bills player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          },
+          {
+            "wide": true,
+            "label": "Kansas City Chiefs player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          }
+        ],
+        "smallButtons": []
+      },
+      "landscape-light": {
+        "url": "/preview/nfl",
+        "width": 844,
+        "overflow": false,
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "text": 2870,
+        "error": false,
+        "theme": "light",
+        "loading": false,
+        "tables": 2,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Buffalo Bills player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          },
+          {
+            "wide": true,
+            "label": "Kansas City Chiefs player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          }
+        ],
+        "smallButtons": []
+      },
+      "landscape-dark": {
+        "url": "/preview/nfl",
+        "width": 844,
+        "overflow": false,
+        "headings": [
+          "The Sideline · NFL research"
+        ],
+        "text": 2870,
+        "error": false,
+        "theme": "dark",
+        "loading": false,
+        "tables": 2,
+        "dialogs": 0,
+        "unnamed": 0,
+        "scrollTables": [
+          {
+            "wide": true,
+            "label": "Buffalo Bills player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          },
+          {
+            "wide": true,
+            "label": "Kansas City Chiefs player statistics",
+            "keyboard": true,
+            "firstHeader": "Player / role"
+          }
+        ],
+        "smallButtons": []
+      }
+    }
+  },
+  "realData": {
+    "nbaGame": 21718171,
+    "firstBasketGames": 1,
+    "nflPlayers": 41,
+    "nflGame": "2026_11_CIN_WAS",
+    "nflOddsQuotes": 148,
+    "nbaOddsGames": 1,
+    "nflOddsGames": 1,
+    "nbaOddsBooks": 6,
+    "nflOddsBooks": 2,
+    "firstBasketRows": 111,
+    "nbaPlayers": 36,
+    "nbaOddsQuotes": 65
+  },
+  "tests": {
+    "boundary": 86,
+    "optimizedBuild": "Pass",
+    "release": 189,
+    "focusedLint": "Pass",
+    "sourceProduction": 134
+  },
+  "limits": [
+    "No physical device certification",
+    "No new collector capture or migration",
+    "No full-slate, account or admin access for guests"
+  ]
+}

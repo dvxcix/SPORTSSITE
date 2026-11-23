@@ -1,0 +1,86 @@
+Actual Court and Sideline guest previews
+23 November 2026
+
+Requested correction
+The homepage player cards now keep white Court/Sideline lettering over a dark
+header shade in both themes. Team colors, athlete art and the lower card fade
+remain the original SlipSurge assets.
+
+The two Full preview destinations now mount the actual Court and Sideline page
+components. The separate ladder-only prototype and its stylesheet are removed.
+Visitors get one server-selected matchup, its actual player board, game lines,
+Odds Board, research controls, player drawers, charts and sportsbook choices.
+The homepage's extra-book/market/tool prompts open this free full-game view.
+
+Access and data
+The server selects the featured matchup, independently of visitor queries.
+Request-local access exists only inside the public page/read dispatcher. It
+does not create an authenticated user, grant admin access, or change member
+tiers. Read resources are explicitly listed; original private endpoints retain
+their gates. Queries for other dates/games and private resources are rejected.
+Historical shots must retain the featured research-game anchor and satisfy the
+original saved-log validation. Private saved tools and full-slate/account tools
+remain visible with a dismissible membership prompt.
+
+Date-wide odds, result, First Basket, lineup and clock responses are scoped
+before cache/load work or output. The NFL clock reader still verifies the full
+source schedule is complete, then validates the featured row. Cache identities
+include the scoped game set. An expired/unparseable NBA phase token cannot
+return a full-slate header through the guest reader.
+
+Original pregame snapshots, earliest start cutoffs, Live mode, quote freshness,
+availability, score formulas and model calculations are reused unchanged.
+No database migration, collector replay, secret change or new release alert.
+
+Verification before public rollout
+PASS optimized private build, TypeScript and 177 generated pages.
+PASS focused lint on changed source/tests and the NFL clock follow-up.
+PASS release suite 189/189, including production source 134/134, normal member
+access, preview isolation, write denial and actual multi-game NFL route scope.
+PASS additional boundary/source tests 86/86: quotes, final results, First Basket,
+preview data and homepage interactions. These suites overlap; counts are not
+added together.
+
+PASS Codex in-app browser, actual components, isolated fixtures:
+NBA and NFL at 320, 390, 820, 844 and 1440 CSS-pixel widths, both themes.
+No page overflow, unnamed buttons, automatic membership dialogs or undersized
+buttons in the measured views. NFL's wide data tables retain named keyboard
+scroll regions. Mobile NBA and NFL drawers fit the 390px viewport. Original
+mobile tab selectors, keyboard Escape, membership dismissal and theme controls
+were exercised. Local fixture service gaps were not counted as live API proof.
+
+PASS staged real-data verification on source 9ea84a7644226180dff9c2bbac2326e31755e7b2:
+Deployment dpl_CAJ2g65fDMS34ZqXJEwQRuXY9tkU, Git branch preview.
+NBA 21718171, MEM at CHA: actual Court has 36 players; Odds Board has one game,
+25 players and 65 selected FanDuel quotes, with six available books. First
+Basket returns one game and 111 rows across books, each retaining real stamps.
+NFL 2026_11_CIN_WAS: actual Sideline has 41 players, eight game-line books;
+selected receiving-yards Odds Board has one game, 148 quotes and two books.
+Real in-app browser: Court, Ty Jerome drawer/projection/logs/ladders, Odds Board,
+Sideline, Joe Burrow drawer and sportsbook ladders all rendered actual data.
+All 56 initially rendered NBA images loaded; no staged browser errors observed.
+
+PASS staged application-guest HTTP checks:
+schedule, NBA board, NBA Odds Board, First Basket, NFL market and NFL Odds Board
+200; other game/date and private tool 403; foreign player 404; original member
+board and POST preview request redirect to authentication (307, no write).
+Existing authenticated Vercel CLI access was used without application cookies.
+No public share link was created. Automatic review rejected creating one;
+verification continued through the existing authenticated access.
+
+Design delivery gate, limited to this correction
+PASS Hard Gate: built and clicked through the replacement; measured responsive
+containment and names; keyboard navigation/dismissal works; shared loading,
+empty and unavailable states remain; no invented prices, proof or artwork.
+PASS Purpose: header shade protects white text over variable team artwork;
+original research UI preserves recognizable workflow. The slim preview notice
+explains the one-game boundary; membership appears on deliberate gated actions.
+PASS Liveliness: ENERGY 2 / RHYTHM 2 / MOTION 2, from the established SlipSurge
+direction. Athlete portraits, team/book marks, lime selection and actual data
+are the focal points. Existing reduced-motion behavior is retained.
+PASS Craftsmanship: shared pages/drawers instead of another visual imitation;
+original theme/type/spacing tokens; actual click, request and data checks above.
+No blanket certification of every pre-existing tool or physical phone claimed.
+
+Public deployment verification is recorded after rollout in the companion
+verification JSON. The existing published What's New notice is not reset.

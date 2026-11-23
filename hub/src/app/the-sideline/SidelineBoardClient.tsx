@@ -1,5 +1,5 @@
 'use client'
-import { publicWorkspaceFetch as fetch, publicWorkspaceHref, currentPublicWorkspace } from '@/lib/publicWorkspaceClient'
+import { publicWorkspaceFetch as fetch, publicWorkspaceHref, currentPublicWorkspace, publicWorkspaceAccessOr } from '@/lib/publicWorkspaceClient'
 
 import { ResearchBookFilter, useResearchBooks } from '@/components/research/ResearchBookFilter'
 import { DEFAULT_RESEARCH_PREFERENCES, initialResearchBook, type ResearchPreferences } from '@/lib/researchPreferences'
@@ -1649,7 +1649,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const savedItems = useMemo(() => watchlistItems.filter(item => item.status === 'pending' && item.sport.toLowerCase() === 'nfl' && item.game_pk === selected.id), [selected.id, watchlistItems])
   const savedKeys = useMemo(() => new Set(savedItems.map(item => `${normalizedTeam(item.team ?? '')}:${normalizedName(item.player_name)}:${item.prop_key.replace(/^nfl:/, '')}:${item.book ?? ''}`)), [savedItems])
   const toggleSavedMarket = useCallback(
-    (player: PlayerRow, marketKey: string, vendor: string) => {
+    (player: PlayerRow, marketKey: string, vendor: string) => publicWorkspaceAccessOr(() => {
       const market = findMarketByKey(player.market, marketKey, vendor)
       const offer = findOffer(market, vendor)
       if (!market || !offer) return
@@ -1671,7 +1671,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         .then(() => setSaveMessage('Saved. Open Watchlist to review and post your pick.'))
         .catch(() => setSaveMessage('Could not save selection. Check that you are signed in and try again.'))
         .finally(() => saveLocks.current.delete(key))
-    },
+    }),
     [addWatchlist, removeWatchlist, savedItems, selected.gameday, selected.id, selected.season],
   )
   const columns = useColumnDefinitions({

@@ -4,6 +4,7 @@ import { Star, Send } from 'lucide-react'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { nflWatchlistPrice, nflWatchlistSelection } from '@/lib/nflWatchlist'
 import { nflMarketExclusion } from '@/lib/nflAvailability'
+import { publicWorkspaceAccessOr } from '@/lib/publicWorkspaceClient'
 import type { NflOddsPlayer, NflPlayerMarket, NflMarketOffer } from '@/lib/nflOddsTypes'
 
 export function NflPropActions({ player, market, offer, side, game }: {
@@ -29,10 +30,10 @@ export function NflPropActions({ player, market, offer, side, game }: {
     finally { lock.current = false; setBusy(false) }
   }
   return <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center', marginTop: 6 }}>
-    <button type="button" disabled={busy} title={existing ? 'Remove from Watchlist' : 'Save to Watchlist'} aria-pressed={!!existing} aria-label={`${existing ? 'Remove' : 'Save'} ${player.name} ${selection.prop_label} ${offer.vendor}`} onClick={event => { event.stopPropagation(); void act(false) }} style={{ width: 44, height: 44, display: 'grid', placeItems: 'center', color: existing ? '#b4ff4d' : undefined }}>
+    <button type="button" disabled={busy} title={existing ? 'Remove from Watchlist' : 'Save to Watchlist'} aria-pressed={!!existing} aria-label={`${existing ? 'Remove' : 'Save'} ${player.name} ${selection.prop_label} ${offer.vendor}`} onClick={event => { event.stopPropagation(); publicWorkspaceAccessOr(() => void act(false)) }} style={{ width: 44, height: 44, display: 'grid', placeItems: 'center', color: existing ? '#b4ff4d' : undefined }}>
       <Star size={16} fill={existing ? 'currentColor' : 'none'} />
     </button>
-    <button type="button" disabled={busy} title="Review and Post Pick" aria-label={`Review ${player.name} ${selection.prop_label} for posting`} onClick={event => { event.stopPropagation(); void act(true) }} style={{ width: 44, height: 44, display: 'grid', placeItems: 'center' }}><Send size={16} /></button>
+    <button type="button" disabled={busy} title="Review and Post Pick" aria-label={`Review ${player.name} ${selection.prop_label} for posting`} onClick={event => { event.stopPropagation(); publicWorkspaceAccessOr(() => void act(true)) }} style={{ width: 44, height: 44, display: 'grid', placeItems: 'center' }}><Send size={16} /></button>
     {error ? <small role="alert">{error}</small> : null}
   </div>
 }

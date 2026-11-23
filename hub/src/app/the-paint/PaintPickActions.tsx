@@ -5,6 +5,7 @@ import { useWatchlist } from '@/context/WatchlistContext'
 import { nbaPrice, nbaTarget, nbaOdds, nbaSelectionKey, PAINT_MARKETS, type PaintGame, type PaintPlayer, type PaintProp } from '@/lib/nbaPaint'
 import styles from './paint.module.css'
 import { nbaFirstLabel } from '@/lib/nbaFirstBasketMarkets'
+import { publicWorkspaceAccessOr } from '@/lib/publicWorkspaceClient'
 export function PaintPickActions({ player, offer, side, game }: { player: Pick<PaintPlayer,'id'|'first_name'|'last_name'|'team'|'position'|'headshot'>; offer: PaintProp; side: 'over' | 'under'; game: PaintGame }) {
   const watchlist = useWatchlist(); const lock = useRef(false); const [busy, setBusy] = useState(false); const [error, setError] = useState('')
   const key = nbaSelectionKey(player.id, offer, side)
@@ -21,5 +22,5 @@ export function PaintPickActions({ player, offer, side, game }: { player: Pick<P
     try { if (existing) await watchlist.remove(existing.id); else await watchlist.add({ sport: 'nba', game_pk: String(game.id), game_date: game.date, mlb_id: null, player_name: `${player.first_name} ${player.last_name}`, team: player.team.abbreviation, position: player.position, headshot_url: player.headshot, prop_key: key, prop_label: label, line: offer.line_value, book: offer.vendor, odds, odds_by_book: { [offer.vendor]: odds } }) }
     catch { setError('Could not save. Try again.') } finally { lock.current = false; setBusy(false) }
   }
-  return <span className={styles.pickActions}><button type="button" aria-label={`${existing ? 'Remove' : 'Save'} ${player.first_name} ${player.last_name}, ${label}, ${offer.vendor}, ${nbaOdds(odds)}`} aria-pressed={!!existing} disabled={busy || odds == null || closed} onClick={save} className={existing ? styles.saved : undefined}><Star size={16} fill={existing ? 'currentColor' : 'none'}/></button>{existing && <button type="button" aria-label="Review saved picks" onClick={() => window.dispatchEvent(new Event('ss:open-watchlist'))}><ArrowUpRight size={16}/></button>}{error && <small role="alert">{error}</small>}</span>
+  return <span className={styles.pickActions}><button type="button" aria-label={`${existing ? 'Remove' : 'Save'} ${player.first_name} ${player.last_name}, ${label}, ${offer.vendor}, ${nbaOdds(odds)}`} aria-pressed={!!existing} disabled={busy || odds == null || closed} onClick={() => publicWorkspaceAccessOr(() => void save())} className={existing ? styles.saved : undefined}><Star size={16} fill={existing ? 'currentColor' : 'none'}/></button>{existing && <button type="button" aria-label="Review saved picks" onClick={() => window.dispatchEvent(new Event('ss:open-watchlist'))}><ArrowUpRight size={16}/></button>}{error && <small role="alert">{error}</small>}</span>
 }
