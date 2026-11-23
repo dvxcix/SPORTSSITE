@@ -33,7 +33,8 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
     supabase.from('creator_storefronts').select(STORE_COLUMNS).eq('creator_id',person.id).eq('status','published').maybeSingle(),
     supabase.from('posts').select(POST_WITH_AUTHOR).eq('author_id',person.id).eq('visibility','public').is('group_id',null).order('created_at',{ascending:false}).limit(6),
   ])
-  if(productResult.error||groupResult.error||storeResult.error||publicPosts.error)throw new Error('Creator communities could not be loaded.')
+  if(productResult.error||groupResult.error||storeResult.error)throw new Error('Creator communities could not be loaded.')
+  const publicPostsUnavailable=Boolean(publicPosts.error)
   if(user&&user.id!==person.id&&await isBlockedEitherWay(supabase,user.id,person.id))notFound()
   const store=storeResult.data as unknown as CreatorStore|null
   const creator={...person,sports:store?.sports||[],tags:store?.tags||[]}
@@ -75,6 +76,6 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
       </aside>
     </section>
     {!!groups.length&&<section id="communities" className={styles.storeCommunities}><h2>Communities</h2><CommunityDirectory variant="storefront" headingLevel={3} groups={groups} joinedIds={(joinedGroups??[]).map(row=>row.group_id)} userId={user?.id??null} invitations={[]}/></section>}
-    <section id="research" className={styles.research}><header><h2>Research & picks</h2><Link href={'/profile/'+creator.username}>All public posts <ArrowUpRight size={14}/></Link></header><p className={styles.researchNote}>A preview of this creator’s public work. Private posts stay in their member communities.</p>{researchPosts.length?researchPosts.filter(post=>showMlb||post.sport!=='MLB').map((post,index)=><PostCardClient key={post.id} post={post as unknown as React.ComponentProps<typeof PostCardClient>['post']} index={index}/>):<p className={styles.empty}>No public research posted yet.</p>}</section>
+    <section id="research" className={styles.research}><header><h2>Research & picks</h2><Link href={'/profile/'+creator.username}>All public posts <ArrowUpRight size={14}/></Link></header><p className={styles.researchNote}>A preview of this creator’s public work. Private posts stay in their member communities.</p>{publicPostsUnavailable?<p role="status" className={styles.empty}>Public posts are temporarily unavailable. You can still browse memberships and communities.</p>:researchPosts.length?researchPosts.filter(post=>showMlb||post.sport!=='MLB').map((post,index)=><PostCardClient key={post.id} post={post as unknown as React.ComponentProps<typeof PostCardClient>['post']} index={index}/>):<p className={styles.empty}>No public research posted yet.</p>}</section>
   </div>
 }

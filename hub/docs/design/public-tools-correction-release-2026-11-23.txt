@@ -173,3 +173,27 @@ stay hidden, helper execution remains revoked, authenticated predicate and
 owner/member/outsider results unchanged, changed preflight is rejected.
 Evidence: review/public-creator-guest-policy-tests.txt. Live application and
 anonymous verification are recorded in the final production receipt.
+
+Final correction clearance
+The owner explicitly approved the exact database repair after automatic review
+required task-specific access-rule authorization. Only that reviewed migration
+was applied. Live anon SELECT now reads 12 public posts, zero rows with a group,
+creator product or non-public visibility. The authenticated predicate hash is
+unchanged; both private helper EXECUTE permissions remain false for anon.
+All 11 anonymous HTTP checks then passed, including the formerly failing profile.
+
+Creator post preview failures now render a local, honest unavailable state while
+retaining the actual person, store and membership controls. A component test
+reproduces the permission error and verifies this does not claim an empty feed.
+FanDuel NBA points read the existing scoped base phase frame directly. Other
+books' contract aggregation was unneeded for this one-book preview and could
+exhaust its bounded read budget. The same cutoffs, quote validation, openings,
+availability filtering and output caps remain. Cache version v5 clears previous
+fallback results. No collector or pricing semantics changed.
+
+PASS final combined tests 105/105, including three real PostgreSQL policy tests.
+PASS production-source suite 134/134 and focused lint.
+PASS final optimized production build including TypeScript and 177 static pages.
+Logs: review/public-tools-certified-tests.txt,
+  public-tools-certified-production.txt, public-tools-final-source-lint.txt,
+  public-tools-final-build.txt. This supersedes earlier integration counts.

@@ -57,10 +57,10 @@ class Query {
   constructor(readonly name:string){}
   select(){return this}eq(key:string,value:unknown){this.filters.push([key,value]);return this}order(){return this}limit(){return this}is(){return this}
   single(){this.one=true;return this}maybeSingle(){this.one=true;return this}
-  then(done:(value:{data:Row[]|Row|null;error:null})=>unknown,fail:(cause:unknown)=>unknown){
+  then(done:(value:{data:Row[]|Row|null;error:unknown})=>unknown,fail:(cause:unknown)=>unknown){
     let rows:Row[]=this.name==='users'?[{...person,account_type:'user'}]:this.name==='creator_storefronts'?[{...store,status:profileFixture.published?'published':'draft'}]:[]
     rows=rows.filter(row=>this.filters.every(([key,value])=>row[key]===value))
-    return Promise.resolve({data:this.one?rows[0]??null:rows,error:null}).then(done,fail)
+    return Promise.resolve({data:this.one?rows[0]??null:rows,error:this.name==='posts'?publicPostFailure:null}).then(done,fail)
   }
 }
 Object.assign(globalThis,{
@@ -120,6 +120,8 @@ test('creator directory search, sports, sort and clear controls update the displ
   }finally{await act(async()=>root.unmount());host.remove()}
 })
 
+let publicPostFailure:unknown=null
+
 test('published free creator profile keeps its person header and separate storefront branding without a paid offer',async()=>{
   profileFixture.published=true;profileFixture.viewer=null;profileFixture.blocked=false
   const markup=renderToStaticMarkup(await compiled.exports.CreatorProfile({params:Promise.resolve({username:person.username})}))
@@ -130,6 +132,20 @@ test('published free creator profile keeps its person header and separate storef
   assert.ok([...host.querySelectorAll('h2')].some(heading=>heading.textContent===store.name))
   assert.ok(host.querySelector('img[src="/store-cover.png"]'));assert.ok(host.querySelector('a[href="/profile/real-person"]'))
   assert.ok(markup.includes(person.bio!));assert.ok(markup.includes(store.bio))
+})
+
+test('failed public-post preview keeps the creator and storefront accessible with an honest unavailable state',async()=>{
+  profileFixture.published=true;profileFixture.viewer=null;profileFixture.blocked=false
+  publicPostFailure={code:'42501',message:'Private helper unavailable'}
+  try{
+    const markup=renderToStaticMarkup(await compiled.exports.CreatorProfile({params:Promise.resolve({username:person.username})}))
+    const host=document.createElement('div');host.innerHTML=markup
+    assert.equal(host.querySelector('h1')!.textContent,person.display_name)
+    assert.ok([...host.querySelectorAll('h2')].some(heading=>heading.textContent===store.name))
+    assert.match(host.querySelector('[role="status"]')!.textContent!,/Public posts are temporarily unavailable/)
+    assert.doesNotMatch(markup,/No public research posted yet|Private helper unavailable/)
+    assert.ok(host.querySelector('a[href="#memberships"]'))
+  }finally{publicPostFailure=null}
 })
 
 test('unpublished ordinary profiles and blocked creator profiles still fail closed',async()=>{

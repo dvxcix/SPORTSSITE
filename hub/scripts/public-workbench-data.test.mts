@@ -50,7 +50,7 @@ test('the current public board retains source art and only played, final, earlie
   const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
   const yesterday=new Date(new Date(date+'T00:00:00Z').getTime()-86400000).toISOString().slice(0,10)
   const player=(id:number,team:string)=>({id,first_name:'Test',last_name:'Player '+id,team:{id,abbreviation:team},position:'G',headshot:'https://a.espncdn.com/i/headshots/nba/players/full/4066457.png',injury:null,logs:[{pts:24,min:'30:00',game:{date:yesterday,status:'Final'}},{pts:99,min:'30:00',game:{date,status:'Final'}},{pts:0,min:'0:00',game:{date:yesterday,status:'Final'}},{pts:90,min:'30:00',game:{date:yesterday,status:'Live'}}],formula:{privateWeight:99}})
-  const fixture={start,captured,date,players:[player(1,'NYK'),player(2,'BOS'),{...player(3,'BOS'),injury:{status:'Out'}}]}
+  const fixture={start,captured,date,requests:[] as string[],players:[player(1,'NYK'),player(2,'BOS'),{...player(3,'BOS'),injury:{status:'Out'}}]}
   const globals=globalThis as typeof globalThis & { publicWorkbenchFixture?:typeof fixture }
   globals.publicWorkbenchFixture=fixture
   const stubs:Record<string,string>={
@@ -64,7 +64,7 @@ test('the current public board retains source art and only played, final, earlie
         const q={select:()=>q,eq:()=>q,lt:()=>q,lte:()=>q,in:()=>q,order:()=>q,limit:()=>q,abortSignal:()=>q,maybeSingle:()=>Promise.resolve(result),then:resolve=>Promise.resolve(result).then(resolve)}
         return q
       },
-      rpc:name=>({abortSignal:()=>Promise.resolve({error:null,data:name==='nba_phase_cutoff'?globalThis.publicWorkbenchFixture.start:[{captured_at:globalThis.publicWorkbenchFixture.captured,quotes:[1,2,3].map(id=>({id,game_id:123,player_id:id,vendor:'fanduel',prop_type:'points',line_value:'20',updated_at:globalThis.publicWorkbenchFixture.captured,market:{type:'milestone',odds:-110}}))}]})})
+      rpc:name=>{globalThis.publicWorkbenchFixture.requests.push(name);return{abortSignal:()=>Promise.resolve(name==='read_nba_book_frames'?{error:{message:'Unneeded aggregate timed out'},data:null}:{error:null,data:name==='nba_phase_cutoff'?globalThis.publicWorkbenchFixture.start:[{captured_at:globalThis.publicWorkbenchFixture.captured,quotes:[1,2,3].map(id=>({id,game_id:123,player_id:id,vendor:'fanduel',prop_type:'points',line_value:'20',updated_at:globalThis.publicWorkbenchFixture.captured,market:{type:'milestone',odds:-110}}))}]})}}
     })`,
   }
   try{
@@ -73,6 +73,8 @@ test('the current public board retains source art and only played, final, earlie
     new Function('module','exports','require',result.outputFiles[0].text)(compiled,compiled.exports,createRequire(import.meta.url))
     const preview=await compiled.exports.getPublicResearchPreview('nba')
     assert.equal(preview.board.example,false)
+    assert.ok(fixture.requests.includes('read_nba_phase_frames_scoped'))
+    assert.ok(!fixture.requests.includes('read_nba_book_frames'),'FanDuel preview avoids unrelated book aggregation')
     assert.equal(preview.board.capturedAt,captured)
     assert.deepEqual(preview.board.players.map(p=>p.id),[1,2])
     assert.deepEqual(preview.board.players[0].recent,[24])

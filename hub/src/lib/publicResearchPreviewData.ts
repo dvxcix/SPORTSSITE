@@ -62,7 +62,10 @@ async function nbaBoard(admin: Admin, game: PreviewGame): Promise<PreviewBoard |
   const clock = await admin.rpc('nba_phase_cutoff', { p_game_id: gameId, p_tipoff: game.start }).abortSignal(readBudget())
   const cutoff = clock.data as string | null, start = Date.parse(cutoff ?? '')
   if (clock.error || !cutoff || !Number.isFinite(start) || start > Date.parse(game.start ?? '')) return null
-  const { data, error } = await admin.rpc('read_nba_book_frames', {
+  // FanDuel points belong to the base phase feed. The book-contract overlay
+  // applies to other prop books; building it here can exhaust the visitor read
+  // budget even though the required saved FanDuel frame is already available.
+  const { data, error } = await admin.rpc('read_nba_phase_frames_scoped', {
     p_game_id: gameId, p_mode: 'pregame', p_feed: 'props', p_tipoff: cutoff,
     p_selection: 'latest', p_market: 'points', p_player_id: null, p_as_of: null,
   }).abortSignal(readBudget())
@@ -139,7 +142,7 @@ async function loadPreview(sport: PreviewSport, date: string): Promise<ResearchP
   return { date, schedule, board: PUBLIC_PREVIEW_EXAMPLES[sport], scheduleAvailable: true }
 }
 
-const cachedPreview = unstable_cache(loadPreview, ['public-research-preview-v4'], { revalidate: 60 })
+const cachedPreview = unstable_cache(loadPreview, ['public-research-preview-v5'], { revalidate: 60 })
 
 export async function getPublicResearchPreview(sport: PreviewSport): Promise<ResearchPreview> {
   const date = scheduleDate()
