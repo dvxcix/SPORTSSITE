@@ -56,3 +56,26 @@ Evidence: review/sideline-identity-certified-tests.txt, focused lint/build logs 
 local sideline-identity-20261123 browser receipts. Browser phone frames are responsive
 emulation, not physical-device certification. This is a focused NFL follow-up, not
 a claim that every unrelated site flow was retested.
+
+Published / live verification
+Functional source 6542197892b8eed3a4298b3492cb034be2987092, release
+a8fe6558ef574ddc530af358887b332be7ac4f6c, Vercel
+dpl_9d12nicVrGSpHS8ToGQ4qF95gWS8 READY with www.slipsurge.com and slipsurge.com.
+GitHub main is canonical and retains the required recovered NFL ancestor.
+
+Signed-in in-app browser, real production data:
+- TEN/DAL: Pollard 110 rush yds / 0 TD; Ward 248 pass yds / 1 scorer TD;
+  Tate 58 rec yds / 1 TD. Tate has the contained rookie ribbon in row and drawer.
+- Spears shows Q; drawer shows Questionable, Knee and Nov 22 12:46 PM ET report.
+  No matching source stat row: Final stat unavailable, not an invented zero/DNP.
+- TD tab: Pollard 0 TD, Tate 1 TD. Props receiving-yard totals: Tate 58, Pollard 0.
+- Player drawer Matchup, NFL Tracking and Sportsbooks remain usable.
+- Thursday IND/HOU: Jones 144 pass yds / 0 scorer TD; Taylor 21 rush yds / 0 TD.
+- Real board light and dark screenshots inspected; no page overflow.
+- Anonymous member-results endpoint returns 401 Sign in required. Public featured
+  scheduled CIN/WAS results returns 200, exact scoped game ID and results:null.
+
+Evidence folder: C:/Users/devvi/.codex/visualizations/2026/11/20/01a1f69d-5ede-7580-b36c-249bf49bb721/sideline-identity-20261123
+Contains four-layouts.json/jpg, narrow-layouts.json, narrow-drawers.json, drawers.jpg,
+production-ten-dal.json, production-ind-hou.json and production-ten-dal-light/dark.jpg.
+No production schema, secrets, memberships, financial actions or capture replays.
