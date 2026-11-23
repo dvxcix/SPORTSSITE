@@ -1,0 +1,58 @@
+Sideline final results and player identity — 23 November 2026
+
+Scope: the NFL Sideline board, Props ladder and player drawer. Existing Odds Board
+settlement remains intact. User requested final totals beneath the player, readable
+compact injury designations and a rookie ribbon within the portrait background.
+
+Implemented
+- Game Day, Usage, Tracking, Team, All and Custom player rows show final role totals;
+  the TD tab shows actual scorer TDs; Props shows the selected market's actual total.
+- Player drawers include the same verified final totals alongside full availability,
+  injury and report-time details. Explicit zero values remain visible.
+- Questionable is Q, Doubtful D, Out OUT, injured reserve IR, with the complete label
+  and injury in accessible text and the hover title. Opening the player keeps the
+  full original injury information available on touch. Role metadata wraps instead
+  of hiding the designation behind an ellipsis.
+- Rookie is a red ribbon above the portrait, contained within its team background.
+  The headshot, team gradient, team badge, watchlist and comparison tools remain.
+
+Data boundary
+Final outcomes are loaded separately from immutable pregame research. The reader
+requires one reconciled final feed matching the exact game, teams, date, season,
+week and final scores before reading player results. Ambiguous/missing data is
+unavailable, never fabricated or zero-filled. Scheduled games do no extra final
+feed query. In-progress games are not labelled Final. Results refresh through the
+existing authenticated/public-scoped read path with cancellation and backoff.
+No model weights, ranking inputs, captures, migrations or account writes changed.
+
+Verification before publication
+- 218/218 release tests: final-reader identity/reconciliation gates, missing/zero
+  stats, status codes, actual rendered board/drawer interaction, Odds Board grading,
+  result parsing, public workspace boundaries and all 134 production source tests.
+- Focused ESLint passes. Optimized Next.js build and TypeScript pass.
+- In-app browser: actual components with explicitly private illustrative fixtures
+  at 1440, 390, 320, 820 and 844 pixels in light/dark. Ten layouts have no page
+  overflow, unnamed visible buttons, render errors or undersized detected controls.
+  Horizontal research tables retain labelled, keyboard-accessible scroll regions.
+- Opened injury and rookie drawers at desktop, 390 and 320 widths; full knee status,
+  report time, actual totals and explicit zero TDs present. Props uses market total.
+- Preview deployment dpl_5cZ14CDRgWy6bJnJfzp3BvfuwXV6 is READY for source 65421978.
+  Real-data featured scheduled-game results endpoint returns 200 and results:null.
+- Read-only source cross-check: TEN/DAL Pollard 110 rush yds/0 scorer TD, Tate
+  58 rec yds/1 TD; IND/HOU Jones 144 pass yds and Taylor 21 rush yds/0 TD.
+  Live member browser confirmation follows production readiness, recorded below.
+
+Design / delivery gate
+Skills: antislop, antislop-layoutmobile and interface-design, within the established
+approved SlipSurge direction (ENERGY 2 / RHYTHM 2 / MOTION 2). Domain: player identity,
+availability, rookie class, completed-game outcomes and market research. Existing
+team-colored portraits remain the visual anchor; compact red designations signal
+attention; neutral tabular final totals sit beneath role metadata. The red rookie
+ribbon directly answers the requested class marker without a new floating badge.
+No new glow, glass, generic illustration, marketing claim, motion or decorative
+icon added. Board/drawer tools retain native controls, labels and focus behavior.
+Light/dark hierarchy, zero/missing states, overflow and narrow layouts checked.
+Evidence: review/sideline-identity-certified-tests.txt, focused lint/build logs and
+local sideline-identity-20261123 browser receipts. Browser phone frames are responsive
+emulation, not physical-device certification. This is a focused NFL follow-up, not
+a claim that every unrelated site flow was retested.
