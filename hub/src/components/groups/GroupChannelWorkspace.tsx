@@ -26,7 +26,7 @@ export function GroupChannelWorkspace({ groupSlug, channels, activeChannel, chil
 }) {
   const ActiveIcon = KIND_ICONS[activeChannel.channel_kind] ?? Hash
   return (
-    <section className={styles.workspace}>
+    <section className={styles.workspace} data-single-channel={channels.length===1||undefined}>
       <aside className={styles.rail} aria-label="Community channels">
         <header><strong>Channels</strong><span>{channels.length}</span></header>
         <nav>

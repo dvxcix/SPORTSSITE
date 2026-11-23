@@ -33,7 +33,7 @@
 .emptyPosts span, .locked span { margin-top: 4px; color: var(--text-2); font-size: 12px; }
 .locked > svg { margin-bottom: 12px; color: var(--text-3); }
 .chatViewport { display: flex; min-height: 440px; height: min(620px, 70dvh); flex-direction: column; overflow: hidden; }
-:global(body.ss-keyboard-open) .chatViewport { min-height: 0; height: calc(var(--ss-visible-height, 100dvh) - var(--topbar-h, 64px) - var(--banner-h, 0px) - var(--review-bar-h, 0px) - 12px); }
+:global(body.ss-keyboard-open) .chatViewport { min-height: 0; height: 100%; }
 .discord{padding:0 18px;border-bottom:1px solid var(--border)}.discord summary{display:flex;align-items:center;min-height:44px;color:var(--text-2);font-size:12px;cursor:pointer}.discord summary:after{content:'+';margin-left:auto;font-size:18px}.discord[open] summary:after{content:'−'}.discord summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 @media (max-width: 600px) {
@@ -46,7 +46,10 @@
   .actions { width:100%;justify-content:flex-start;gap:6px; }
   .secondaryAction, .primaryAction { min-height: 44px; padding-inline: 10px; }
   .posts { padding: 9px; }
-  .chatViewport { min-height: 390px; height: calc(100dvh - 250px); }
+  .chatViewport { min-height: 0; height: 100%; }
 }
 
 .community{border-radius:10px;box-shadow:none}.banner{background:var(--surface-2)}.banner:after{display:none}.banner[data-has-banner=false]{height:100px}.title{font-size:27px;font-weight:600}.primaryAction,.secondaryAction{min-height:44px;border-radius:8px;box-shadow:none}.avatar{box-shadow:none;border-radius:12px}.actions{gap:8px}.identity{padding-top:0}@media(max-width:767px){.banner[data-has-banner=false]{height:84px}.identityRow{flex-wrap:wrap;align-items:flex-end}.actions{flex:1;min-width:160px}.title{font-size:24px}.actions button,.actions a{min-height:44px}}
+@media(max-width:767px),(max-width:1024px) and (any-pointer:coarse){
+  .chatViewport{min-height:0;height:100%}
+}

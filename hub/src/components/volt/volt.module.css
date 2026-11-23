@@ -16,6 +16,8 @@
 .tooltip strong span { color: var(--text-2); font-size: 12px; font-weight: 450; }
 .tooltip p { margin: 9px 0 0; color: var(--accent); font-size: 11px; font-weight: 650; letter-spacing: .12em; line-height: 1.4; }
 :global(body.ss-modal-open) .tooltip, :global(body:has(.ss-mobile-sidebar-backdrop)) .tooltip { display: none; }
+:global(body:has([role='dialog']:not([hidden]):not([aria-hidden='true']))) .trigger,
+:global(body:has([role='dialog']:not([hidden]):not([aria-hidden='true']))) .tooltip { display: none; }
 @keyframes volt-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 @keyframes volt-shadow { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.82); } }
 @keyframes volt-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.025, .975); } }
@@ -23,5 +25,7 @@
 @media(max-width:767px), (max-width:1024px) and (any-pointer:coarse) {
   .trigger, .float { width: 48px; height: 52px; }
   .tooltip { padding: 12px 14px; }
+  :global(body:has(.ss-group-workspace[data-view='chat'], .ss-dm-room, .ss-community-room-layout)) .trigger,
+  :global(body:has(.ss-group-workspace[data-view='chat'], .ss-dm-room, .ss-community-room-layout)) .tooltip { display: none; }
 }
 @media(prefers-reduced-motion:reduce) { .hover, .shadow, .breath, .eyes rect { animation: none; } }

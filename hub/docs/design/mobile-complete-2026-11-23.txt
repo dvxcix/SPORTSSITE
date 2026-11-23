@@ -1,0 +1,267 @@
+SlipSurge complete mobile review · 23 November 2026
+
+Prepared for the authorized release. Production verification is recorded separately.
+
+Coverage: 157 product routes, 83 workspaces/panels/shared surfaces, 1570 route layout measurements and 291 recorded interaction/state observations.
+Widths include 320, 390, 820, 844 and 1440 pixels, with light/dark and short-height checks.
+
+- Explore: height-only lazy-card reservation, shrinkable grid children and wrapping tool links.
+- Community chat: viewport-sized conversation, explicit-entry alignment, single-channel duplication removed, short-screen content minimum and composer clearance.
+- Phone controls: 44px main, dialog, navigation, account, search, notification, creator, forum and workspace actions.
+- Settings: local navigation collapses by available content width; team selection reflows by container width.
+- Creator and shared legacy dialogs: visible-viewport sizing, 16px fields and 44px wizard/payout actions.
+- Charts: 44px native observation scrubber, missing-value handling and accessible readouts.
+- Sharing: HTTP failures cannot download an error body as a PNG; clipboard fallback and native-share errors have clear feedback.
+- Member identity: badge overlays verified and floating VOLT hidden behind dialogs and active phone conversations; small floating mascot retained elsewhere.
+- Search save action has an accessible name; creator promotion avoids a duplicate heading.
+- Review inventory includes launch, saved research preferences and creator checkout-return pages with a valid fixture offer.
+
+Verification boundaries
+- Viewport QA is not physical-device or native-keyboard certification.
+- Layout receipts and individual flow receipts are listed separately. A route render does not certify every operation on that route.
+- Provider financial operations, external OAuth and production job/replay actions were not exercised.
+- Legacy MLB stays hidden/off-season. Existing publication records and ten owner approvals are preserved.
+
+Individual checklist
+[Reviewed] General | About | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] General | Activity | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Admin | Admin · Ads | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Audit | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Badges | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Browserbase | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Changelog | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Contact Recap | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Content · Blogs | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Content · Posts | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Content · Reports | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Content · Stories | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Creators | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Design System | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Discord · Compose | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Discord | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Emojis | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Events | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Fanduel Import | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Forum | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Groups | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Hr Intelligence | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Jobs | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Live | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Market Dna | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Marketplace | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Matrix Backtest | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Mgm Import | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Mlb Archive | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Monetization | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Nfl Access | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Notifications | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Pages | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Pikkit Import | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Pipeline Health | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Product Audit | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Reports | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Settings · Ai | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Settings · Custom Code | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Settings · Email | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Settings · Features | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Settings · General | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Settings · Payments | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Settings · Social Login | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Site Banner | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Social Platforms | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Users · Banned | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Users · Deletions | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Users · Online | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Users | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Users · Verify | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] Admin | Admin · Whop Renewal Shape | 10 own layout receipts | 0 associated interaction/state receipts | Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed.
+[Reviewed] General | Allstar2026 | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Account access | Auth · Desktop · Complete | 10 own layout receipts | 0 associated interaction/state receipts | Local account/access UI only; external OAuth, real credentials and real account creation were not performed.
+[Reviewed] Account access | Auth · Desktop · Start | 10 own layout receipts | 0 associated interaction/state receipts | Local account/access UI only; external OAuth, real credentials and real account creation were not performed.
+[Reviewed] Account access | Auth · Forgot Password | 10 own layout receipts | 1 associated interaction/state receipts | Local account/access UI only; external OAuth, real credentials and real account creation were not performed.
+[Reviewed] Account access | Auth · Login | 10 own layout receipts | 1 associated interaction/state receipts | Local account/access UI only; external OAuth, real credentials and real account creation were not performed.
+[Reviewed] Account access | Auth · Register | 10 own layout receipts | 0 associated interaction/state receipts | Local account/access UI only; external OAuth, real credentials and real account creation were not performed.
+[Reviewed] Account access | Auth · Reset Password | 10 own layout receipts | 0 associated interaction/state receipts | Local account/access UI only; external OAuth, real credentials and real account creation were not performed.
+[Reviewed] Account access | Auth · Whop · Complete | 10 own layout receipts | 0 associated interaction/state receipts | Local account/access UI only; external OAuth, real credentials and real account creation were not performed.
+[Reviewed] MLB · off-season | Batter Cost | 10 own layout receipts | 0 associated interaction/state receipts | Existing off-season/unavailable state only; seasonal data and hidden features were not enabled.
+[Reviewed] Community | Blog · Slug | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Blog · Create · Ai | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Blog · Create | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Blog · Edit · Id | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Blog · My | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Blog | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Bookmarks | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Channels · Slug | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Channels | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Community | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Creators & commerce | Creators · Username | 10 own layout receipts | 24 associated interaction/state receipts | Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed.
+[Reviewed] Creators & commerce | Creators · Access · Complete | 10 own layout receipts | 1 associated interaction/state receipts | Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed.
+[Reviewed] Creators & commerce | Creators · Apply | 10 own layout receipts | 0 associated interaction/state receipts | Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed.
+[Reviewed] Creators & commerce | Creators · Offers · ProductId | 10 own layout receipts | 3 associated interaction/state receipts | Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed.
+[Reviewed] Creators & commerce | Creators | 10 own layout receipts | 0 associated interaction/state receipts | Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed.
+[Reviewed] Creators & commerce | Creators · Payouts | 10 own layout receipts | 3 associated interaction/state receipts | Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed.
+[Reviewed] Creators & commerce | Creators · Studio | 10 own layout receipts | 21 associated interaction/state receipts | Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed.
+[Reviewed] MLB · off-season | Daily Recap | 10 own layout receipts | 0 associated interaction/state receipts | Existing off-season/unavailable state only; seasonal data and hidden features were not enabled.
+[Reviewed] MLB · off-season | Dugout | 10 own layout receipts | 0 associated interaction/state receipts | Existing off-season/unavailable state only; seasonal data and hidden features were not enabled.
+[Reviewed] Community | Events · Id | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Events · Create | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Events | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Explore | 10 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] General | Faq | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Feed | 10 own layout receipts | 12 associated interaction/state receipts
+[Reviewed] Community | Forum · Category | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Forum · New | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Forum | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Forum · Thread · Id | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Groups · Slug | 10 own layout receipts | 14 associated interaction/state receipts
+[Reviewed] Community | Groups · Slug · Settings | 10 own layout receipts | 3 associated interaction/state receipts
+[Reviewed] Community | Groups · Create | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Groups | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Hashtag · Tag | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] General | Launch | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] General | Leaderboard | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Creators & commerce | Marketplace · Id | 10 own layout receipts | 0 associated interaction/state receipts | Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed.
+[Reviewed] Creators & commerce | Marketplace | 10 own layout receipts | 0 associated interaction/state receipts | Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed.
+[Reviewed] Creators & commerce | Marketplace · Sell | 10 own layout receipts | 0 associated interaction/state receipts | Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed.
+[Reviewed] Community | Messages · Username | 10 own layout receipts | 8 associated interaction/state receipts
+[Reviewed] Community | Messages · Group · Id | 10 own layout receipts | 3 associated interaction/state receipts
+[Reviewed] Community | Messages · New | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Messages | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] General | Missions | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] MLB · off-season | Mlb · Teams · Id | 10 own layout receipts | 0 associated interaction/state receipts | Existing off-season/unavailable state only; seasonal data and hidden features were not enabled.
+[Reviewed] NBA | Nba | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | Nba · Players · Id | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | Nba · Teams · Id | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NFL | Nfl · Players · Id | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NFL | Nfl · Teams · Abbr | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Notifications | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] MLB · off-season | Odds Terminal | 10 own layout receipts | 0 associated interaction/state receipts | Existing off-season/unavailable state only; seasonal data and hidden features were not enabled.
+[Reviewed] Account access | Onboarding | 10 own layout receipts | 0 associated interaction/state receipts | Local account/access UI only; external OAuth, real credentials and real account creation were not performed.
+[Reviewed] General | Home | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Pages · Slug | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Pages · Slug · Settings | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Pages · Create | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Pages | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Picks | 10 own layout receipts | 9 associated interaction/state receipts
+[Reviewed] MLB · off-season | Pitcher Report | 10 own layout receipts | 0 associated interaction/state receipts | Existing off-season/unavailable state only; seasonal data and hidden features were not enabled.
+[Reviewed] MLB · off-season | Players · Id | 10 own layout receipts | 0 associated interaction/state receipts | Existing off-season/unavailable state only; seasonal data and hidden features were not enabled.
+[Reviewed] Community | Posts · Id | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] General | Preview · Sport | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Creators & commerce | Pricing | 10 own layout receipts | 0 associated interaction/state receipts | Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed.
+[Reviewed] General | Privacy | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Creators & commerce | Pro | 10 own layout receipts | 0 associated interaction/state receipts | Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed.
+[Reviewed] Community | Profile · Username | 10 own layout receipts | 7 associated interaction/state receipts
+[Reviewed] General | Research | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] General | Responsible Gambling | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] General | Scores | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Community | Search | 10 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] Settings | Settings · Account | 10 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] Settings | Settings · Blocked | 10 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] Settings | Settings · Connections | 10 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] Settings | Settings · Interests | 10 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] Settings | Settings · Membership | 10 own layout receipts | 8 associated interaction/state receipts
+[Reviewed] Settings | Settings · Notifications | 10 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] Settings | Settings | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] Settings | Settings · Privacy | 10 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] Settings | Settings · Profile | 10 own layout receipts | 2 associated interaction/state receipts
+[Reviewed] Settings | Settings · Research | 10 own layout receipts | 4 associated interaction/state receipts
+[Reviewed] Settings | Settings · Security | 10 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] MLB · off-season | Slate Breakdown | 10 own layout receipts | 0 associated interaction/state receipts | Existing off-season/unavailable state only; seasonal data and hidden features were not enabled.
+[Reviewed] General | Sports · Sport · GameId | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] General | Sports | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] MLB · off-season | Spray Charts | 10 own layout receipts | 0 associated interaction/state receipts | Existing off-season/unavailable state only; seasonal data and hidden features were not enabled.
+[Reviewed] Community | Stories · Create | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] General | Support | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] MLB · off-season | Synergy | 10 own layout receipts | 0 associated interaction/state receipts | Existing off-season/unavailable state only; seasonal data and hidden features were not enabled.
+[Reviewed] General | Terms | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | The Paint | 10 own layout receipts | 12 associated interaction/state receipts
+[Reviewed] MLB · off-season | The Public | 10 own layout receipts | 0 associated interaction/state receipts | Existing off-season/unavailable state only; seasonal data and hidden features were not enabled.
+[Reviewed] NFL | The Sideline | 10 own layout receipts | 166 associated interaction/state receipts
+[Reviewed] MLB · off-season | Weather Lab | 10 own layout receipts | 0 associated interaction/state receipts | Existing off-season/unavailable state only; seasonal data and hidden features were not enabled.
+[Reviewed] General | Workspace | 10 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · The Court | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · Odds Board | 4 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] NBA | NBA · Odds comparison | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · Ladders | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · Market Story | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · First basket | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · Cheatsheets | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · SlipSurge Score | 4 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NBA | NBA · Slate Edge | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · ThePublic | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · Cross-market | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · Defense × position | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · Player trends | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · Game tracking | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · Matchup Lab | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · Availability | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | NBA · Game markets | 4 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] NBA | NBA · Game market slider and public activity | 0 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] NFL | NFL · The Sideline | 0 own layout receipts | 166 associated interaction/state receipts
+[Reviewed] NFL | NFL · Odds Board | 0 own layout receipts | 3 associated interaction/state receipts
+[Reviewed] NFL | NFL · Cheatsheets | 0 own layout receipts | 25 associated interaction/state receipts
+[Reviewed] NFL | NFL · The Public | 0 own layout receipts | 2 associated interaction/state receipts
+[Reviewed] NFL | NFL · Sportsbooks | 0 own layout receipts | 4 associated interaction/state receipts
+[Reviewed] NFL | NFL · Matchup Lab | 0 own layout receipts | 40 associated interaction/state receipts
+[Reviewed] NBA | Player drawer · Overview | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | Player drawer · Game tracking | 4 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] NBA | Player drawer · Ladders | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | Player drawer · Market Story | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | Player drawer · Shots | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NBA | Player drawer · All odds | 4 own layout receipts | 0 associated interaction/state receipts
+[Reviewed] NFL | Cheatsheets · Market Edge | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Cheatsheets · Exact-Line Hits | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Cheatsheets · Explosive Plays | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Cheatsheets · Run Gaps | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Cheatsheets · Defense / DvP | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Sideline board · Game Day | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Sideline board · TDs | 0 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] NFL | Sideline board · Props | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Sideline board · Usage | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Sideline board · Tracking | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Sideline board · Team | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Sideline board · All | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Sideline board · Custom | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | NFL player drawer · Matchup | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | NFL player drawer · NFL Tracking | 0 own layout receipts | 4 associated interaction/state receipts
+[Reviewed] NFL | NFL player drawer · Sportsbooks | 0 own layout receipts | 4 associated interaction/state receipts
+[Reviewed] NFL | Matchup Lab · Role command | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Matchup Lab · Score zone | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Matchup Lab · Receiving value | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Matchup Lab · Route leverage | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Matchup Lab · Ground game | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Matchup Lab · QB command | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Matchup Lab · Explosive lanes | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Matchup Lab · Market signal | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Sideline Edge · Slate Rankings | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Sideline Edge · Matchup Lens | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Sideline Edge · Model vs Market | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | Sideline Edge · Signal Lab | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] NFL | NFL · Touchdown tracker | 0 own layout receipts | 3 associated interaction/state receipts
+[Reviewed] NFL | NFL · Matrix library | 0 own layout receipts | 2 associated interaction/state receipts
+[Reviewed] NFL | NFL · Matrix community | 0 own layout receipts | 2 associated interaction/state receipts
+[Reviewed] NFL | NFL · Matrix editor | 0 own layout receipts | 3 associated interaction/state receipts
+[Reviewed] NFL | NFL · Column manager | 0 own layout receipts | 2 associated interaction/state receipts
+[Reviewed] NFL | NFL · Player comparison | 0 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] NFL | NFL · Game lines and capture replay | 0 own layout receipts | 1 associated interaction/state receipts | Single-capture fixture verifies the honest disabled replay state; it does not certify provider capture history.
+[Reviewed] Shared components | NBA score calculation drawer | 0 own layout receipts | 2 associated interaction/state receipts
+[Reviewed] Shared components | NBA game-specific lineup cards | 0 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] Shared components | Saved sportsbook picker and comparison links | 0 own layout receipts | 4 associated interaction/state receipts
+[Reviewed] Shared components | VOLT and Sparks teaser | 0 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] Shared components | Member identity, avatar rings and badges | 0 own layout receipts | 4 associated interaction/state receipts
+[Reviewed] Shared components | Account menu | 0 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] Shared components | Global search | 0 own layout receipts | 2 associated interaction/state receipts
+[Reviewed] Shared components | Notifications panel | 0 own layout receipts | 5 associated interaction/state receipts
+[Reviewed] Shared components | What’s new and release popup | 0 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] Shared components | Saved picks drawer | 0 own layout receipts | 6 associated interaction/state receipts
+[Reviewed] Shared components | NBA Matrix | 0 own layout receipts | 3 associated interaction/state receipts
+[Reviewed] Shared components | NFL Matrix | 0 own layout receipts | 8 associated interaction/state receipts
+[Reviewed] Shared components | Player comparison | 0 own layout receipts | 2 associated interaction/state receipts
+[Reviewed] Shared components | Post composer | 0 own layout receipts | 3 associated interaction/state receipts
+[Reviewed] Shared components | Comments and share | 0 own layout receipts | 7 associated interaction/state receipts
+[Reviewed] Shared components | Image and video viewer | 0 own layout receipts | 2 associated interaction/state receipts
+[Reviewed] Shared components | Confirmation dialogs | 0 own layout receipts | 1 associated interaction/state receipts
+[Reviewed] Shared components | Empty, loading and error states | 0 own layout receipts | 8 associated interaction/state receipts
+
+Detailed measurements and interaction IDs: mobile-complete-2026-11-23.json

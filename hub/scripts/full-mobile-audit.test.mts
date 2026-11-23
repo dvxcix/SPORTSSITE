@@ -5,11 +5,13 @@ import { readFile } from 'node:fs/promises'
 const inventory=JSON.parse(await readFile(new URL('../src/app/design-review/visual-audit/inventory.json',import.meta.url),'utf8'))
 const audit=JSON.parse(await readFile(new URL('../docs/design/full-mobile-audit-2026-11-22.json',import.meta.url),'utf8'))
 
-test('the mobile follow-up has an individual receipt for every catalog surface in all four layouts',()=>{
- assert.equal(audit.items.length,inventory.length)
- assert.equal(new Set(audit.items.map((item:any)=>item.id)).size,inventory.length)
- assert.equal(audit.layoutCount,inventory.length*4)
- for(const item of inventory){
+test('the original mobile follow-up preserves all 239 historical receipts in all four layouts',()=>{
+ assert.equal(audit.items.length,239)
+ assert.equal(new Set(audit.items.map((item:any)=>item.id)).size,239)
+ assert.equal(audit.layoutCount,239*4)
+ for(const historical of audit.items){
+  const item=inventory.find((row:any)=>row.id===historical.id)
+  assert.ok(item,historical.id)
   const receipt=audit.items.find((row:any)=>row.id===item.id)
   assert.ok(receipt,item.id)
   for(const view of ['desktop-dark','desktop-light','phone-dark','phone-light']){

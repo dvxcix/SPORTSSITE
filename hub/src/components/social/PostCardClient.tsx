@@ -1062,7 +1062,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
             {detail && commentTree.length > 0 && (
               <div style={{ display: 'flex', gap: 6 }}>
                 {(['top', 'new'] as const).map(s => (
-                  <button key={s} onClick={() => setCommentSort(s)} style={{
+                  <button key={s} className="ss-touch-control" aria-pressed={commentSort === s} onClick={() => setCommentSort(s)} style={{
                     padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: 'pointer',
                     border: `1px solid ${commentSort === s ? 'var(--accent)' : 'var(--border)'}`,
                     background: commentSort === s ? 'var(--accent-dim)' : 'transparent',

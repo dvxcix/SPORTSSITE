@@ -162,7 +162,9 @@ body:has(.ss-review-ribbon) .ss-site-sidebar,body:has(.ss-review-ribbon) .ss-des
 :root{--surface-overlay:var(--surface);--status-danger:var(--red-fill);--status-success:var(--green-fill);--status-warning:var(--gold-fill);--status-info:var(--blue-fill)}
 @media(max-width:767px){
  .ss-site-main :where(input[type="text"],input[type="search"],input[type="email"],input[type="password"],textarea,select){font-size:16px}
- .ss-site-main :where(button:not([role="switch"]):not([role="checkbox"])){min-height:40px}
+ .ss-site-main :where(button:not([role="switch"]):not([role="checkbox"])),
+ body [role="dialog"] button:not([role="switch"]):not([role="checkbox"]):not([data-line-point]){min-height:44px;min-width:44px}
+ body [role="dialog"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),select,textarea){font-size:16px}
  .ss-public-theme{top:calc(14px + var(--review-bar-h,0px))}
 }
 
@@ -323,6 +325,33 @@ body.ss-keyboard-open :is(.ss-mobile-dock,.ss-utility-dock,.ss-context-handoff){
 body.ss-keyboard-open :is(.ss-dm-room,.ss-community-room-layout){height:calc(var(--ss-visible-height,100dvh) - var(--topbar-h,64px) - var(--banner-h,0px) - var(--review-bar-h,0px));min-height:0}
 body.ss-keyboard-open [data-modal-viewport]{top:var(--ss-visible-top,0px)!important;bottom:auto!important;height:var(--ss-visible-height,100dvh)!important}
 body.ss-keyboard-open [data-modal-viewport]>[aria-modal=true]{max-height:100%!important}
+@media(max-width:767px),(max-width:1024px) and (any-pointer:coarse){
+ .ss-site-topbar :is(.ss-topbar-icon-button,.ss-topbar-profile-trigger){min-width:44px!important;min-height:44px!important}
+ .ss-topbar-heading-actions :is(button,a){min-width:44px;min-height:44px}
+ .ss-topbar-search-results button{min-height:44px}
+ .ss-site-sidebar :is(.nav-item,button){min-height:44px!important}
+ .ss-sidebar-brand>a{display:flex;min-width:44px;min-height:44px;align-items:center;justify-content:center}
+ .ss-account-appearance .ss-theme-switch button{min-height:44px}
+ .ss-group-member-panel>header button{min-height:44px;min-width:44px}
+ .ss-group-workspace[data-view=chat]{display:flex;min-height:0;height:calc(var(--ss-visible-height,100dvh) - var(--topbar-h,64px) - var(--banner-h,0px) - var(--review-bar-h,0px) - var(--mobile-dock-clearance,76px) - 16px);flex-direction:column}
+ .ss-group-workspace[data-view=chat]>.ss-group-tabs{flex-shrink:0;scroll-margin-top:calc(var(--topbar-h,64px) + var(--banner-h,0px) + var(--review-bar-h,0px) + 8px)}
+ .ss-group-workspace[data-view=chat]>[role=tabpanel]:not([hidden]){display:flex;min-height:0;flex:1;flex-direction:column}
+ body.ss-keyboard-open .ss-group-workspace[data-view=chat]{height:calc(var(--ss-visible-height,100dvh) - var(--topbar-h,64px) - var(--banner-h,0px) - var(--review-bar-h,0px) - 16px)}
+}
+@media(max-height:560px) and (max-width:767px),(max-height:560px) and (max-width:1024px) and (any-pointer:coarse){
+ .ss-group-workspace[data-view=chat]{min-height:340px}
+ .ss-group-workspace[data-view=chat]:has([data-single-channel]){min-height:280px}
+ .ss-group-workspace[data-view=chat] .ss-chat-composer{scroll-margin-bottom:12px}
+}
+.ss-settings-shell{container-type:inline-size}
+.ss-settings-hero{flex-wrap:wrap;gap:12px}
+.ss-settings-hero>div:first-child{min-width:0;flex:1 1 280px}
+@container(max-width:740px){
+ .ss-settings-layout{display:block}
+ .ss-settings-nav{display:none}
+ .ss-settings-section-select{display:block;margin:12px 0 0}
+ .ss-settings-section-select select{width:100%;min-height:44px;padding:8px 12px;border:1px solid var(--control-border);border-radius:8px;background:var(--surface);color:var(--text-1);font:inherit;font-size:16px}
+}
 
 @media(max-width:767px){.ss-topbar-search-clear,.ss-sidebar-close{width:44px!important;height:44px!important;min-width:44px;min-height:44px}.ss-topbar-search-clear{right:0}.ss-topbar-search-input{min-height:44px;padding-right:12px!important}.ss-topbar-search[data-has-query=true] .ss-topbar-search-input{padding-right:46px!important}.ss-topbar-notification-tabs [role=tab]{min-width:44px}.ss-site-main button[aria-label='Clear player comparison'],.ss-site-main button[aria-label='Delete workspace']{min-width:44px;min-height:44px}}
 

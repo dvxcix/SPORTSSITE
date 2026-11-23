@@ -73,6 +73,30 @@ test('touching the chart area selects the nearest observed point and keeps its d
  }finally{await ui.close()}
 })
 
+test('the touch scrubber visits known observations, skips missing values and survives a shorter sample',async()=>{
+ const points=[{label:'Nov 1',value:0},{label:'Nov 2',value:null},{label:'Nov 3',value:3}]
+ const ui=await mount(h(module.exports.ResearchLineChart,{label:'Observed usage',points}))
+ try{
+  const slider=ui.host.querySelector<HTMLInputElement>('input[type="range"]')!
+  assert.equal(slider.max,'1','missing observations must not become selectable zeroes')
+  assert.equal(slider.getAttribute('aria-label'),'Observation in Observed usage')
+  assert.equal(slider.getAttribute('aria-describedby'),ui.host.querySelector('output')!.id)
+  await act(async()=>{
+   Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype,'value')!.set!.call(slider,'1')
+   slider.dispatchEvent(new win.Event('input',{bubbles:true}))
+  })
+  assert.match(ui.host.querySelector('output')!.textContent!,/Nov 3 · 3.0/)
+  await act(async()=>{
+   Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype,'value')!.set!.call(slider,'0')
+   slider.dispatchEvent(new win.Event('input',{bubbles:true}))
+  })
+  assert.match(ui.host.querySelector('output')!.textContent!,/Nov 1 · 0.0/)
+  await ui.render(h(module.exports.ResearchLineChart,{label:'Observed usage',points:points.slice(0,1)}))
+  assert.equal(ui.host.querySelector('input[type="range"]'),null)
+  assert.match(ui.host.querySelector('output')!.textContent!,/Nov 1 · 0.0/)
+ }finally{await ui.close()}
+})
+
 test('result bars distinguish an observed zero from an unavailable value and keep exact grades',async()=>{
   const logs=[0,null,10].map((pts,id)=>({id:id+1,pts,min:'30',game:{date:`2026-11-${18-id}`,season:2026},team:{id:2}}))
   const ui=await mount(h(module.exports.TrendBars,{logs,market:'points',line:5,side:'over',tall:true}))

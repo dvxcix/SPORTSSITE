@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useRef, useTransition, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useTransition, type ReactNode } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { MessagesSquare, Rows3, TrendingUp } from 'lucide-react'
 
@@ -14,16 +14,27 @@ type GroupWorkspaceTabsProps = {
 export function GroupWorkspaceTabs({ posts, chat, postCount, initialTab = 'posts' }: GroupWorkspaceTabsProps) {
   const router=useRouter(),pathname=usePathname(),search=useSearchParams(),id=useId(),[pending,startTransition]=useTransition()
   const tabs=useRef<HTMLDivElement>(null)
+  const alignChat=useRef(false)
   const requested=search.get('view')||initialTab
   const active=requested==='picks'?'picks':requested==='chat'&&chat?'chat':'posts'
+  useEffect(()=>{
+    if(active!=='chat'||pending||!alignChat.current)return
+    alignChat.current=false
+    if(window.matchMedia('(max-width:767px), (max-width:1024px) and (any-pointer:coarse)').matches){
+      const short=(window.visualViewport?.height??window.innerHeight)<560
+      const composer=tabs.current?.parentElement?.querySelector<HTMLElement>('.ss-chat-composer')
+      ;(short?composer??tabs.current:tabs.current)?.scrollIntoView({block:short?'end':'start',behavior:'auto'})
+    }
+  },[active,pending])
   function select(value:'posts'|'picks'|'chat'){
+    alignChat.current=value==='chat'
     const query=new URLSearchParams(search.toString());query.set('view',value)
     if(value!=='chat')query.delete('channel')
     startTransition(()=>router.replace(`${pathname}?${query}`,{scroll:false}))
   }
 
   return (
-    <section className="ss-group-workspace">
+    <section className="ss-group-workspace" data-view={active}>
       <div ref={tabs} className="ss-group-tabs" role="tablist" aria-label="Group sections" onKeyDown={event=>{
         if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return
         const buttons=[...tabs.current!.querySelectorAll<HTMLButtonElement>('[role="tab"]')],index=buttons.findIndex(button=>button===document.activeElement)

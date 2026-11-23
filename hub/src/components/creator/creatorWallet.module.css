@@ -2,3 +2,20 @@
 @media(max-width:1000px){.page{padding:32px 24px 100px}.stat{padding:20px}.stat>strong{font-size:28px}.table :is(th,td){padding-left:18px;padding-right:18px}}
 @media(max-width:600px){.page{padding:26px 18px 100px}.heading{align-items:start;flex-direction:column;gap:20px;margin-bottom:22px}.heading h1{font-size:26px}.heading>.actions{width:100%}.heading>.actions>.primary{flex:1}.primary,.secondary{min-height:44px}.toolbar{gap:10px;align-items:start}.checked{font-size:10px;line-height:1.6;max-width:155px}.currency{gap:6px}.currency select,.filters select{font-size:13px;min-height:44px}.stats{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}.stat{padding:18px 16px}.stat:first-child{grid-column:1/-1}.stat:first-child>strong{font-size:38px;margin-top:16px}.stat>strong{font-size:25px;overflow-wrap:anywhere}.stat>span{font-size:11px}.stat>p{font-size:10px}.panelHeader{padding:20px 18px 0;gap:10px}.panelHeader h2{font-size:13px}.panelHeader p{max-width:200px;font-size:10px}.segments button{padding:6px 9px;min-height:36px}.revenueTotal{padding:18px 18px 0}.revenueTotal strong{font-size:26px}.chart{padding:16px 18px 0}.chart svg{height:150px}.chartFooter{padding:14px 18px;align-items:start;gap:10px}.chartFooter span{max-width:170px;line-height:1.6}.chartFooter a{white-space:nowrap;font-size:10px}.filters{padding:18px;gap:8px}.search input{font-size:16px;min-height:44px}.filters select{max-width:145px}.table :is(th,td){padding:14px 18px}.table th:nth-child(4),.table td:nth-child(4){display:none}.table td:first-child button{gap:7px}.table td:first-child button>svg{display:none}.table td:first-child span{font-size:11px}.table :is(th,td):nth-child(2){padding-left:5px;padding-right:10px}.table :is(th,td):nth-child(3){padding-left:5px;padding-right:18px}.status{font-size:9px;padding:5px 6px}.pageFooter{align-items:start;flex-direction:column;gap:2px}.notice{padding:14px}.notice>span{min-width:150px}.daily{padding:0 18px 14px}.verificationKind select{font-size:16px;min-height:44px}.details>div{font-size:12px;gap:18px}.details dd{max-width:65%}}
 @media(prefers-reduced-motion:no-preference){.primary,.secondary,.quiet{transition:background .15s,border-color .15s}.stat:first-child:before{animation:walletIn .5s ease-out}@keyframes walletIn{from{opacity:0}to{opacity:1}}}
+@media (max-width: 700px) {
+  .page button,
+  .page .segments button,
+  .page .table .quiet {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .page .table td:first-child button {
+    min-height: 44px;
+  }
+
+  .page .verificationKind select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}

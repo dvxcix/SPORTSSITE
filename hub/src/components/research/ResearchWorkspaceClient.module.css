@@ -91,3 +91,9 @@
 .noteTop button,.remove{min-width:44px;min-height:44px}
 .message{box-shadow:none;border-radius:8px}
 @media(max-width:800px){.libraryPanel .panelHeader{flex-direction:row;flex-wrap:wrap;align-items:center}.libraryPanel .panelHeader .search{flex-basis:100%}.workspaceList:has(>.emptyMini:only-child){padding-block:4px}.notesPanel{scroll-margin-top:80px}}
+@media (max-width: 800px) {
+  .workspaceList .workspaceButton,
+  .workspaceList .workspaceActive {
+    min-height: 44px;
+  }
+}

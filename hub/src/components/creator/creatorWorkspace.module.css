@@ -2,3 +2,13 @@
 .marketHeader .topbarActions :global(.ss-theme-switch){display:flex}@media(max-width:600px){.marketHeader{gap:12px;flex-wrap:wrap}.marketHeader .topbarActions{gap:8px}.marketHeader .topbarActions :global(.ss-theme-switch button){width:36px;min-height:36px;padding:8px}.marketHeader .topbarActions :global(.ss-theme-switch span){display:none}.marketHeader>nav{flex:0 0 auto}.marketBrand strong{font-size:16px}.marketBrand img{width:25px;height:25px}}@media(max-width:360px){.marketHeader{gap:8px;padding-left:12px;padding-right:12px}.marketHeader .topbarActions :global(.ss-theme-switch button){width:32px;min-height:34px;padding:6px}.marketHeader>nav>a{font-size:11px}}
 .mobileAccount{display:none}@media(max-width:800px){.mobileAccount{display:block}.topbarActions>a{font-size:11px}.topbar{gap:10px}.topbarActions{gap:8px}}
 @media(max-width:600px){.dialogHeader>button[aria-label]{width:44px;height:44px}}
+:global(body.ss-keyboard-open) .dialog {
+  min-height: 0;
+  max-height: 100%;
+  height: 100%;
+}
+@media(max-width:800px){
+  .topbarActions>a,
+  .marketHeader .topbarActions :global(.ss-theme-switch button){min-height:44px}
+  .marketHeader .topbarActions :global(.ss-theme-switch button){width:44px}
+}

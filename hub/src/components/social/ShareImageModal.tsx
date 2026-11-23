@@ -20,6 +20,8 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
   const [imgErrored, setImgErrored] = useState(false)
   const [copied, setCopied] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null)
+  const [manualCopy, setManualCopy] = useState(false)
 
   const imgUrl = `/api/share-image/${postId}`
   const postUrl = typeof window !== 'undefined' ? `${window.location.origin}/posts/${postId}` : ''
@@ -27,8 +29,10 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
 
   async function download() {
     setBusy('download')
+    setFeedback(null)
     try {
       const res = await fetch(imgUrl)
+      if (!res.ok) throw new Error('Share image unavailable')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -38,6 +42,9 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
       a.click()
       a.remove()
       URL.revokeObjectURL(url)
+      setFeedback({ text: 'Image downloaded.', error: false })
+    } catch {
+      setFeedback({ text: 'Could not download the image. Try again or copy the link.', error: true })
     } finally {
       setBusy(null)
     }
@@ -58,24 +65,37 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
   }
 
   async function copyLink() {
-    await navigator.clipboard.writeText(postUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    setFeedback(null)
+    try {
+      await navigator.clipboard.writeText(postUrl)
+      setCopied(true)
+      setManualCopy(false)
+      setFeedback({ text: 'Link copied.', error: false })
+    } catch {
+      setCopied(false)
+      setManualCopy(true)
+      setFeedback({ text: 'Select the post link to copy it.', error: true })
+    }
   }
 
   async function nativeShare() {
+    if (!navigator.share) { await copyLink(); return }
     setBusy('native')
+    setFeedback(null)
     try {
       const res = await fetch(imgUrl)
+      if (!res.ok) throw new Error('Share image unavailable')
       const blob = await res.blob()
       const file = new File([blob], 'slipsurge-pick.png', { type: 'image/png' })
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: 'My pick on SlipSurge' })
       } else {
-        await navigator.share?.({ url: postUrl, title: 'My pick on SlipSurge' })
+        await navigator.share({ url: postUrl, title: 'My pick on SlipSurge' })
       }
-    } catch {
-      // user dismissed the native sheet — nothing to do
+    } catch (cause) {
+      if (!(cause instanceof DOMException && cause.name === 'AbortError')) {
+        setFeedback({ text: 'Could not share. Copy the link or download the image.', error: true })
+      }
     } finally {
       setBusy(null)
     }
@@ -122,7 +142,7 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
           <ShareOptionBtn label="Download" onClick={download} busy={busy === 'download'}
             icon={<Download size={18} />} bg="var(--surface-2)" fg="var(--text-1)" />
-          <ShareOptionBtn label="Copy Link" onClick={copyLink}
+          <ShareOptionBtn label={copied ? 'Copied' : 'Copy Link'} onClick={copyLink}
             icon={copied ? <Check size={18} /> : <Link2 size={18} />} bg="var(--surface-2)" fg={copied ? 'var(--green)' : 'var(--text-1)'} />
           <ShareOptionBtn label="X" onClick={shareToX}
             icon={<span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>𝕏</span>} bg="#000" fg="#fff" />
@@ -133,6 +153,8 @@ export function ShareImageModal({ postId, onClose }: { postId: string; onClose: 
           <ShareOptionBtn label="More" onClick={nativeShare} busy={busy === 'native'}
             icon={<Share size={18} />} bg="var(--surface-2)" fg="var(--text-1)" />
         </div>
+        {feedback && <p role={feedback.error ? 'alert' : 'status'} className="mt-3 text-sm leading-6" style={{ color: feedback.error ? 'var(--red)' : 'var(--text-2)' }}>{feedback.text}</p>}
+        {manualCopy && <label className="mt-2 block text-sm text-[var(--text-2)]">Post link<input readOnly value={postUrl} onFocus={event => event.currentTarget.select()} className="ss-input mt-1" style={{ fontSize: 16, minHeight: 44 }} /></label>}
     </ModalSurface>
   )
 }

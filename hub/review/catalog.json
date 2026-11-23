@@ -1,5 +1,23 @@
 [
   {
+    "name": "Launch page",
+    "href": "/launch",
+    "group": "Account & preferences",
+    "source": "src/app/launch/page.tsx"
+  },
+  {
+    "name": "Research preferences",
+    "href": "/settings/research",
+    "group": "Account & preferences",
+    "source": "src/app/settings/research/page.tsx"
+  },
+  {
+    "name": "Creator access confirmation",
+    "href": "/creators/access/complete?product=00000000-0000-4000-8000-000000000611",
+    "group": "Creators & commerce",
+    "source": "src/app/creators/access/complete/page.tsx"
+  },
+  {
     "name": "Settings",
     "href": "/settings",
     "group": "Account & preferences",
@@ -607,7 +625,7 @@
   },
   {
     "name": "Creators / Offers / Review Offer",
-    "href": "/creators/offers/review-offer",
+    "href": "/creators/offers/00000000-0000-4000-8000-000000000611",
     "group": "Creators & marketplace",
     "source": "src/app/creators/offers/[productId]/page.tsx"
   },

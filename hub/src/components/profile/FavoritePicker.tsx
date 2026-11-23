@@ -7,6 +7,7 @@ import { SafeImage } from '@/components/ui/SafeImage'
 import { FAVORITE_PLAYERS_PER_SPORT, MLB_FAVORITE_TEAMS, favoritePlayerImages, favoritePlayerKey, favoritePlayerSport, favoriteSearchPlayers, favoriteTeamSelected, toggleFavoriteTeam, type FavoritePlayer, type FavoriteSport, type FavoriteTeam } from '@/lib/sportFavorites'
 import { useAuth } from '@/context/AuthContext'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import styles from './FavoritePicker.module.css'
 
 export function FavoritePicker({ teams, players, sports = [], allowNba = true, onTeamsChange, onPlayersChange }: {
   teams: string[]; players?: FavoritePlayer[]; sports?: string[]; allowNba?: boolean
@@ -54,13 +55,13 @@ export function FavoritePicker({ teams, players, sports = [], allowNba = true, o
     if (!(players ?? []).some(item => favoritePlayerKey(item) === favoritePlayerKey(player))) onPlayersChange([...(players ?? []), player])
     changeQuery('')
   }
-  return <div className="space-y-5">
+  return <div className={`${styles.picker} space-y-5`}>
     <div className="flex flex-wrap gap-2" role="group" aria-label="Favorite league">
       {([...(mlbAccess ? ['mlb'] : []), 'nfl', ...(allowNba ? ['nba'] : [])] as FavoriteSport[]).map(league => <button key={league} type="button" aria-pressed={sport === league} onClick={() => changeSport(league)} className={`min-h-10 rounded-xl border px-4 text-xs font-bold transition ${sport === league ? 'border-[color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent)]' : 'border-[rgba(var(--line-rgb),0.1)] text-[var(--text-2)] hover:bg-[rgba(var(--contrast-rgb),0.05)]'}`}>{league.toUpperCase()}</button>)}
     </div>
     <section aria-label={`Favorite ${sport.toUpperCase()} teams`}>
       <h3 className="mb-3 text-xs font-bold text-[var(--text-2)]">Favorite teams</h3>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className={styles.teams}>
         {visibleCatalog.filter(team => team.sport === sport).map(team => {
           const selected = favoriteTeamSelected(team, teams, visibleCatalog, sports)
           return <button key={team.key} type="button" aria-pressed={selected} onClick={() => onTeamsChange(toggleFavoriteTeam(team, teams, visibleCatalog, sports))} className={`flex min-h-12 items-center gap-2 rounded-xl border p-2 text-left text-[12px] font-semibold transition ${selected ? 'border-[color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent)]' : 'border-[rgba(var(--line-rgb),0.07)] bg-[rgba(var(--contrast-rgb),0.02)] text-[var(--text-2)] hover:border-[rgba(var(--line-rgb),0.2)]'}`}><SafeImage src={team.logo} alt="" className="size-7 shrink-0 object-contain"/><span className="min-w-0 flex-1 leading-4">{team.name}</span>{selected && <Check size={13} className="shrink-0"/>}</button>

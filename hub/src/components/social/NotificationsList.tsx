@@ -152,7 +152,7 @@ export function NotificationsList({ userId, initialNotifications }: { userId: st
           <div key={label}>
             <div className="ss-activity-date-row">
               <p className="ss-activity-date">{label}</p>
-              {entries.flat().some(notification => !notification.read) && <button type="button" onClick={() => markRead(entries.flat().map(notification => notification.id))}>Mark section read</button>}
+              {entries.flat().some(notification => !notification.read) && <button type="button" className="ss-touch-control" onClick={() => markRead(entries.flat().map(notification => notification.id))}>Mark section read</button>}
             </div>
             <div className="ss-activity-rows">
               {entries.map(entry => Array.isArray(entry)

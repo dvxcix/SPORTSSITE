@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import styles from './ResearchLineChart.module.css'
 
 export type ResearchPoint = { label:string; value:number|null; x?:number }
@@ -13,6 +13,7 @@ export function ResearchLineChart({ points, label, formatValue = value=>value.to
   const [focus,setFocus] = useState<number|null>(null)
   const [touch,setTouch] = useState<number|null>(null)
   const [tabStop,setTabStop] = useState(0)
+  const readoutId = useId()
   const known = points.flatMap((point,index)=>point.value!=null&&Number.isFinite(point.value)?[{...point,value:point.value,index}]:[])
   if (!known.length) return <p className={styles.empty} role="status">No observations available.</p>
   const minimum = Math.min(...known.map(point=>point.value)), maximum = Math.max(...known.map(point=>point.value))
@@ -53,6 +54,13 @@ export function ResearchLineChart({ points, label, formatValue = value=>value.to
       </div>
     </div>
     <div className={styles.dates} aria-hidden="true"><span>{points[0]?.label}</span><span>{points.at(-1)?.label}</span></div>
-    <figcaption><output aria-live="polite">{selected?`${selected.label} · ${formatValue(selected.value)}`:`${known.length}/${points.length} observations`}</output></figcaption>
+    {known.length>1&&<div className={styles.scrubber}>
+      <input type="range" aria-label={`Observation in ${label}`} aria-describedby={readoutId}
+        min={0} max={known.length-1} step={1}
+        value={Math.max(0,known.findIndex(point=>point.index===(active??focusable)))}
+        aria-valuetext={selected?`${selected.label} · ${formatValue(selected.value)}`:undefined}
+        onChange={event=>{setHover(null);setFocus(null);setTouch(known[Number(event.target.value)].index)}}/>
+    </div>}
+    <figcaption><output id={readoutId} aria-live="polite">{selected?`${selected.label} · ${formatValue(selected.value)}`:`${known.length}/${points.length} observations`}</output></figcaption>
   </figure>
 }

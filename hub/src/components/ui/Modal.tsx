@@ -20,9 +20,10 @@ export function Modal({ onClose, children, maxWidth = 420, zIndex, label = 'Dial
     <Dialog.Root open onOpenChange={(open) => { if (!open) onClose() }}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-[var(--overlay)] backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out" style={{ zIndex: zIndex ?? 'var(--layer-modal)' }} />
+        <div data-modal-viewport className="pointer-events-none fixed inset-0 flex items-center justify-center p-3" style={{ zIndex: zIndex ?? 'var(--layer-modal)' }}>
         <Dialog.Content
           aria-label={label}
-          className="fixed left-1/2 top-1/2 max-h-[min(88dvh,780px)] w-[calc(100vw-24px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[22px] border border-[var(--border-2)] bg-[var(--surface)] shadow-[var(--shadow-overlay)] backdrop-blur-3xl focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95"
+          className="pointer-events-auto relative max-h-[min(88dvh,780px)] w-full overflow-y-auto rounded-[22px] border border-[var(--border-2)] bg-[var(--surface)] shadow-[var(--shadow-overlay)] backdrop-blur-3xl focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95"
           style={{ maxWidth, zIndex: zIndex ?? 'var(--layer-modal)', background: 'var(--surface)', borderRadius: 16, color: 'var(--text-1)' }}
         >
           <Dialog.Title className="sr-only">{label}</Dialog.Title>
@@ -33,6 +34,7 @@ export function Modal({ onClose, children, maxWidth = 420, zIndex, label = 'Dial
           ) : null}
           {children}
         </Dialog.Content>
+        </div>
       </Dialog.Portal>
     </Dialog.Root>
   )

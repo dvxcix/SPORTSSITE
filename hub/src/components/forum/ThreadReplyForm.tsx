@@ -60,7 +60,7 @@ export function ThreadReplyForm({ userId, threadId, threadAuthorId, parentReplyI
       <div className="flex items-center justify-between">
         <div className="ss-flow-media-tools"><EmojiPicker onSelect={insertAtCursor} /><GifPicker onSelect={url => insertAtCursor(` ${url} `)} /></div>
         <div className="flex items-center gap-2">{onCancel ? <button type="button" className="ss-flow-secondary" onClick={onCancel}>Cancel</button> : null}<button type="submit" disabled={submitting || !content.trim()}
-          className="ss-flow-submit !w-auto !min-h-10 !px-4">
+          className="ss-flow-submit !w-auto !min-h-11 !px-4">
           <Send size={13} /> {submitting ? 'Posting…' : 'Post reply'}
         </button></div>
       </div>

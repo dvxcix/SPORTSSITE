@@ -148,9 +148,9 @@ export function EmojiUploadForm({ userId, initialEmojis, initialCategories }: {
           <input aria-label="New emoji category name" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addCategory()}
             placeholder="New category name (e.g. MLB, NBA)…"
-            className="flex-1 bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
+            className="min-w-0 flex-1 bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
           <button type="button" onClick={addCategory} disabled={addingCategory || !newCategoryName.trim()}
-            className="flex items-center gap-1 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] disabled:opacity-40 text-[var(--text-1)] text-xs font-bold px-3 rounded-lg transition-colors">
+            className="flex shrink-0 items-center gap-1 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] disabled:opacity-40 text-[var(--text-1)] text-xs font-bold px-3 rounded-lg transition-colors">
             <Plus size={13} /> Add
           </button>
         </div>

@@ -280,7 +280,7 @@ export function SearchClient() {
           placeholder="Search players, teams, picks, users…"
           className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl pl-10 pr-24 py-3 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] focus:ring-1 ring-green-500/20 transition-all"
         />
-        {currentUserId && q.trim() ? <button type="button" className="ss-search-save" disabled={savingSearch} onClick={saveSearch}>{savingSearch || loading ? <span aria-label={savingSearch ? 'Saving search' : 'Searching'} role="status" className="h-3.5 w-3.5 rounded-full border-2 border-[var(--border-2)] border-t-green-400 animate-spin"/> : savedSearches.some(item => item.query.toLowerCase() === q.trim().toLowerCase() && item.result_tab === tab) ? <BookmarkCheck size={14}/> : <Bookmark size={14}/>}<span>Save</span></button> : loading ? <div aria-label="Searching" role="status" className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[var(--border-2)] border-t-green-400 rounded-full animate-spin"/> : null}
+        {currentUserId && q.trim() ? <button type="button" className="ss-search-save" aria-label="Save search" disabled={savingSearch} onClick={saveSearch}>{savingSearch || loading ? <span aria-label={savingSearch ? 'Saving search' : 'Searching'} role="status" className="h-3.5 w-3.5 rounded-full border-2 border-[var(--border-2)] border-t-green-400 animate-spin"/> : savedSearches.some(item => item.query.toLowerCase() === q.trim().toLowerCase() && item.result_tab === tab) ? <BookmarkCheck size={14}/> : <Bookmark size={14}/>}<span>Save</span></button> : loading ? <div aria-label="Searching" role="status" className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[var(--border-2)] border-t-green-400 rounded-full animate-spin"/> : null}
       </div>
       {saveError && <p role="alert" className="-mt-3 mb-4 text-xs font-semibold text-[var(--red)]">{saveError}</p>}
 
@@ -297,7 +297,7 @@ export function SearchClient() {
             </div>
             <div className="flex flex-wrap gap-2">
               {recentSearches.map(item => <span key={item} className="inline-flex items-center overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface)]">
-                <button type="button" onClick={() => setQ(item)} className="px-3 py-1.5 text-sm text-[var(--text-2)] transition hover:text-[var(--text-1)]">{item}</button>
+                <button type="button" onClick={() => setQ(item)} className="ss-touch-control px-3 py-1.5 text-sm text-[var(--text-2)] transition hover:text-[var(--text-1)]">{item}</button>
                 <button type="button" aria-label={`Remove ${item} from recent searches`} onClick={() => {
                   const next = recentSearches.filter(value => value !== item)
                   setRecentSearches(next)
@@ -313,7 +313,7 @@ export function SearchClient() {
           <div className="flex flex-wrap gap-2">
             {TRENDING_TAGS.map(tag => (
               <button key={tag} onClick={() => setQ(tag)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-full text-sm text-[var(--text-2)] hover:border-[color-mix(in_srgb,var(--green)_50%,transparent)] hover:text-[var(--text-1)] transition-all">
+                className="ss-touch-control flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-full text-sm text-[var(--text-2)] hover:border-[color-mix(in_srgb,var(--green)_50%,transparent)] hover:text-[var(--text-1)] transition-all">
                 <Hash size={12} className="text-[var(--green)]" /> {tag}
               </button>
             ))}

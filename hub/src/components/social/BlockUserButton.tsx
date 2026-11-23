@@ -59,7 +59,7 @@ export function BlockUserButton({ currentUserId, targetUserId, targetUsername, i
   if (variant === 'button') {
     return (
       <button onClick={toggle} disabled={loading}
-        className={`flex items-center gap-1.5 h-9 px-4 text-sm rounded-xl font-semibold transition-all disabled:opacity-60 ${
+        className={`ss-touch-control flex items-center gap-1.5 px-4 text-sm rounded-xl font-semibold transition-all disabled:opacity-60 ${
           blocked
             ? 'border border-[var(--border-2)] text-[var(--text-2)] hover:border-[color-mix(in_srgb,var(--green)_50%,transparent)] hover:text-[var(--green)]'
             : 'border border-[color-mix(in_srgb,var(--red)_30%,transparent)] text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)]'

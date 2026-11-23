@@ -9,7 +9,9 @@ export function createAdminClient() {
     ...client,
     // Only application access depends on the request's review persona. Shared
     // scoreboards and leaderboards use this adapter inside unstable_cache.
-    from: (name: string) => name === 'creator_applications' || name === 'users'
+    from: (name: string) => name === 'users'
+      ? createClient(undefined, undefined, { scopedRole: () => cookies().then(reviewRole),service:true }).from(name)
+      : name === 'creator_applications'
       ? createClient(undefined, undefined, { rolePromise: cookies().then(reviewRole),service:true }).from(name)
       : client.from(name),
   }

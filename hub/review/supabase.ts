@@ -1,10 +1,10 @@
-import {authUser,reviewProfile,reviewRole,table,tables,persistReviewTables,type ReviewRole} from './database'
+import {authUser,reviewProfile,reviewRole,table,tables,persistReviewTables,REVIEW_USER_ID,type ReviewRole} from './database'
 import {seedReviewSports} from './seed-sports'
 seedReviewSports()
 /* Query-compatible in-memory adapter. No URL, API key or network client exists. */
 class Query {
  filters:Array<(row:any)=>boolean>=[];filterArgs:Array<[string,unknown]>=[];one=false;limitBy=100;offset=0;operation='read';payload:any;sorts:Array<[string,boolean]>=[]
- constructor(public name:string,public role:ReviewRole='member',private rolePromise?:Promise<ReviewRole>,private service=false){}
+ constructor(public name:string,public role:ReviewRole='member',private rolePromise?:Promise<ReviewRole>,private service=false,private scopedRole?:()=>Promise<ReviewRole>){}
  select(_columns?:string,options?:any){if(options?.head)this.limitBy=0;return this}
  eq(k:string,v:any){if(k.includes('.'))return this;this.filters.push(row=>row[k]===v);this.filterArgs.push([k,v]);return this}
  neq(k:string,v:any){this.filters.push(row=>row[k]!==v);return this}
@@ -37,6 +37,7 @@ class Query {
  delete(){this.operation='delete';return this}
  async result(){
   if(this.rolePromise)this.role=await this.rolePromise
+  if(this.scopedRole&&this.filterArgs.some(([key,value])=>key==='id'&&value===REVIEW_USER_ID))this.role=await this.scopedRole()
   let all=table(this.name)
   if(this.name==='creator_applications'&&!this.service&&this.role!=='creator')all=[]
   if(this.name==='users')all=all.map(row=>row.id===authUser(this.role)?.id?{...row,...reviewProfile(this.role)}:row)
@@ -79,10 +80,25 @@ export function createClient(_url?:any,_key?:any,options?:any):any{
  const role=reviewRole(options?.cookies),user=authUser(role),session=user?{user,access_token:'design-review-not-a-credential',refresh_token:'design-review-not-a-credential',expires_in:3600,token_type:'bearer'}:null
  const ok=(data:any={})=>Promise.resolve({data,error:null})
  const client:any={
-  from:(name:string)=>new Query(name,role,options?.rolePromise,options?.service===true),
+  from:(name:string)=>new Query(name,role,options?.rolePromise,options?.service===true,options?.scopedRole),
   rpc:(name:string,params?:any)=>{
    if(name==='get_my_channel_permissions')return ok({view:true,send:true,moderate:role==='admin'||role==='creator'})
    if(name==='get_my_community_permissions')return ok({view:true,send:true,create_invites:true,manage_channels:role==='admin'||role==='creator'})
+   if(name==='create_community_role'){
+    const row={id:crypto.randomUUID(),group_id:params.p_group_id,name:params.p_name,color:params.p_color,position:table('community_roles').length,is_default:false,permissions:{view_channels:true,send_messages:true,manage_messages:false,manage_channels:false,manage_roles:false,manage_members:false,create_invites:false}}
+    table('community_roles').push(row);persistReviewTables();return ok(row)
+   }
+   if(name==='update_community_role'){
+    const row=table('community_roles').find(item=>item.id===params.p_role_id)
+    if(!row)return Promise.resolve({data:null,error:{message:'Local review role unavailable.'}})
+    Object.assign(row,{name:params.p_name,color:params.p_color,permissions:params.p_permissions});persistReviewTables();return ok(row)
+   }
+   if(name==='set_channel_role_override'){
+    const row={channel_id:params.p_channel_id,role_id:params.p_role_id,can_view:params.p_can_view,can_send:params.p_can_send,can_manage_messages:params.p_can_manage_messages}
+    const rows=table('channel_role_overrides'),existing=rows.find(item=>item.channel_id===row.channel_id&&item.role_id===row.role_id)
+    if(existing)Object.assign(existing,row);else rows.push(row)
+    persistReviewTables();return ok(row)
+   }
    if(name==='create_group_conversation'){
     const id=crypto.randomUUID(),at=new Date().toISOString()
     table('group_conversations').push({id,name:params.conversation_name,owner_id:user?.id,updated_at:at})
