@@ -42,4 +42,16 @@ Broader test baseline (not full certification)
   cron's 503 condition. Main also correctly includes baseline-refresh failures.
   The assertion now checks that existing stronger condition; runtime unchanged.
 
-Build, browser and publication receipts will follow after verified rollout.
+Release qualification
+- 213 release tests pass, including 134 production-source contracts; four
+  focused closed/cross-kickoff/archive-boundary tests also pass. Focused lint,
+  complete TypeScript checking and optimized Git-preview build pass.
+- Functional source: 72b6ca1703715fe5892d5e0102e174346d8724ec.
+- Git preview dpl_EbHEk8omSNQ2L9JPcXVuugQLSSXX is READY.
+- Real CIN/WAS source in the ChatGPT in-app browser: Burrow ATD score 57 -> 41,
+  context volume 96 -> 11, personal RZ looks remain 12; source tracking remains
+  24 carries, 12.2% carry share, zero targets and 2,795 passing yards. Comparison
+  and drawer agree on 41 / 11 in both light and dark. Preview console has no
+  errors. No sportsbook prices or observation dates were changed by this fix.
+
+Production publication receipt will follow after live verification.
