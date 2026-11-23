@@ -7,6 +7,7 @@ import { getNflPublicResults } from '@/lib/nflPublicResultsServer'
 import { nflPregameOpen } from '@/lib/nflPregameResearchData'
 import { nflOddsBoardClockToken, sharedNflOddsBoardClocks } from '@/lib/nflOddsBoardClock'
 import { publicWorkspaceGames, publicWorkspaceScope } from '@/lib/publicWorkspaceScope'
+import { readNflVerifiedPlayerResults } from '@/lib/nflSidelineFinalsServer'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -24,6 +25,9 @@ export async function GET(request: Request) {
     const games = publicWorkspaceGames(schedule.games, 'nfl')
     const game = games.find(item => item.id === id)
     if (!game) return NextResponse.json({ error: 'Game not found' }, { status: 404 })
+    if (params.get('results') === 'only') {
+      return NextResponse.json({ gameId:game.id, results:await readNflVerifiedPlayerResults(game) }, { headers:{ 'Cache-Control':'private, no-store' } })
+    }
     if (params.get('oddsBoardToken') === 'only' && !at) {
       const proof = await sharedNflOddsBoardClocks(game.gameday, games)
       return NextResponse.json({ oddsBoardToken: { token: nflOddsBoardClockToken(publicWorkspaceGames(proof.clocks,'nfl')), observedAt: proof.observedAt }, gameState: storedGameState(game) }, { headers: { 'Cache-Control': 'private, no-store' } })

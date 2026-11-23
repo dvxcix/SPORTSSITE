@@ -38,6 +38,10 @@ import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
 import { NflScorerBadges, NflScorerProvider } from '@/components/sideline/NflScorerBadges'
 import type { SidelineGame, SidelineGameState, SidelineLens, SidelinePlayer, SidelineTeam, SidelineTeamProfile, SidelineWindow } from './types'
 import styles from './sidelineBoard.module.css'
+import type { NflPublicResult } from '@/lib/nflPublicResults'
+import { SidelineDesignation } from './SidelineDesignation'
+import { SidelineFinalLine } from './SidelineFinalLine'
+import { useSidelineFinals } from './useSidelineFinals'
 
 const NflSlateEdgeOverlay = dynamic(() => import('./NflSlateEdgeOverlay').then(module => module.NflSlateEdgeOverlay), { ssr: false })
 
@@ -1217,7 +1221,7 @@ function GameLines({ game, board, preferredBooks = [] }: { game: SidelineGame; b
   )
 }
 
-function PlayerModal({ player, players, team, lens, board, game, initialWindow, onSelect, onClose, gameSeason }: { player: PlayerRow; players: PlayerRow[]; team: SidelineTeam; lens: SidelineLens; board: SidelineOddsBoard; game: SidelineGame; initialWindow: SidelineWindow; gameSeason: number; onSelect: (player: PlayerRow) => void; onClose: () => void }) {
+function PlayerModal({ player, players, team, lens, board, game, initialWindow, onSelect, onClose, gameSeason, finalResults=null, finished=false }: { player: PlayerRow; players: PlayerRow[]; team: SidelineTeam; lens: SidelineLens; board: SidelineOddsBoard; game: SidelineGame; initialWindow: SidelineWindow; gameSeason: number; onSelect: (player: PlayerRow) => void; onClose: () => void; finalResults?:NflPublicResult|null; finished?:boolean }) {
   const [tab, setTab] = useState<'matchup' | 'tracking' | 'markets'>('matchup')
   const bodyRef = useRef<HTMLDivElement>(null)
   const changeSection = (next: typeof tab) => {
@@ -1260,13 +1264,14 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
     <ModalSurface open onClose={onClose} label={`${player.name} NFL breakdown`} backdropClassName={styles.modalTheme + ' ' + styles.modalBackdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.playerModal}>
         <header>
           <div className={styles.modalPlayer} style={{'--player-primary':team.color} as CSSProperties}>
-            <PlayerAvatar player={player} team={team} />
+            <PlayerAvatar player={player} team={team} rookie={player.rookieSeason===gameSeason} />
             <div>
               <small>
                 {team.abbr} · {player.position}
                 {player.jersey!=null ? ` · #${player.jersey}` : ''}
               </small>
               <h2>{player.name}</h2>
+              <SidelineFinalLine player={player} result={finalResults} finished={finished} />
               <div className={styles.playerGameStatus}>
                 <span>{player.statusLabel ?? 'No game designation'}</span>
                 {player.market?.availability?.injury ? <span>{player.market.availability.injury}</span> : null}
@@ -1602,7 +1607,7 @@ function availabilityLabel(player: PlayerRow) {
   return null
 }
 
-export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gameState, touchdowns, timeline, initialCapture, initialPreview, initialView = 'core', initialPreferences = DEFAULT_RESEARCH_PREFERENCES, initialBook }: { games: SidelineGame[]; selectedId: string; sample: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; touchdowns: NflTouchdownEvent[] | null; timeline: string[]; initialCapture?: string | null; initialPreview?: { player?: number; line?: number } | null; initialView?: string; initialPreferences?: ResearchPreferences; initialBook?: string }) {
+export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gameState, touchdowns, timeline, initialCapture, initialPreview, initialView = 'core', initialPreferences = DEFAULT_RESEARCH_PREFERENCES, initialBook, initialFinalResults=null }: { games: SidelineGame[]; selectedId: string; sample: string; lens: SidelineLens; odds: SidelineOddsBoard | PackedOdds; gameState: SidelineGameState | null; touchdowns: NflTouchdownEvent[] | null; timeline: string[]; initialCapture?: string | null; initialPreview?: { player?: number; line?: number } | null; initialView?: string; initialPreferences?: ResearchPreferences; initialBook?: string; initialFinalResults?:NflPublicResult|null }) {
   const router = useRouter()
   const { items: watchlistItems, add: addWatchlist, remove: removeWatchlist } = useWatchlist()
   const selected = games.find(game => game.id === selectedId) ?? games[0]
@@ -1614,6 +1619,8 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
   const [activeBook, setActiveBook] = useState(()=>initialResearchBook(initialBook,initialPreferences,'fanduel'))
   const initialOdds = useMemo(() => unpackSidelineBoard(odds), [odds])
   const marketStory = useSidelineMarket(selectedId, initialOdds, gameState, touchdowns, timeline, initialCapture, view === 'odds-board')
+  const finished = initialFinalResults?.status==='final' || marketStory.gameState?.statusState==='final' || !marketStory.gameState && selected.awayScore!=null && selected.homeScore!=null
+  const finalResults = useSidelineFinals(selectedId, finished, initialFinalResults)
   const { index: frameIndex, select: setFrameIndex, timeline: history } = marketStory
   const [sorts, setSorts] = useState<SortEntry[]>([{ id: 'index', direction: 'desc' }])
   const [stickySort, setStickySort] = useState(false)
@@ -2258,6 +2265,8 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           onVendor={setActiveBook}
           scores={ladderScores}
           game={selected}
+          finalResults={finalResults}
+          finished={finished}
           initialPreview={initialPreview}
           matrixMatches={new Map(rows.flatMap(row => row.market ? [[row.market.id, matrixMatches.get(row.id) ?? []] as const] : []))}
           onPlayer={id => {
@@ -2381,7 +2390,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                                 {column.id === 'player' ? (
                                   <div className={styles.playerCell}>
                                     <span className={styles.depth}>{player.eligible === false ? '—' : index + 1}</span>
-                                    <PlayerAvatar player={player} team={section.team} />
+                                    <PlayerAvatar player={player} team={section.team} rookie={player.rookieSeason===selected.season} />
                                     <button
                                       type="button"
                                       className={styles.playerName}
@@ -2391,17 +2400,12 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                                       }}
                                     >
                                       <b>{player.name}<NflScorerBadges player={player.market ?? player} /></b>
-                                      <small>
-                                        {player.position}
-                                        {player.jersey!=null ? ` · #${player.jersey}` : ''}
-                                        {player.rookieSeason === selected.season ? ' · ROOKIE' : ''}
-                                        {player.sampleTeam && normalizedTeam(player.sampleTeam) !== normalizedTeam(player.team) ? ` · ${player.sampleTeam} SAMPLE` : ''}
-                                        {availabilityLabel(player) ? (
-                                          <mark className={styles.availabilityBadge} data-status={player.availabilityEligible === false ? 'out' : 'available'} title={[availabilityLabel(player), player.market?.availability?.injury].filter(Boolean).join(' · ')}>
-                                            {availabilityLabel(player)}
-                                          </mark>
-                                        ) : null}
+                                      <small className={styles.playerRole}>
+                                        <span>{player.position}{player.jersey!=null ? ` · #${player.jersey}` : ''}</span>
+                                        <SidelineDesignation label={availabilityLabel(player)} injury={player.market?.availability?.injury}/>
                                       </small>
+                                      {player.sampleTeam && normalizedTeam(player.sampleTeam)!==normalizedTeam(player.team) ? <span className={styles.sampleTeam}>{player.sampleTeam} sample</span> : null}
+                                      <SidelineFinalLine player={player} result={finalResults} finished={finished} market={view==='touchdowns'?'anytime_td':undefined} />
                                       {matches.length ? <span className={styles.matrixNames}>{matches.map(matrix => <span key={matrix.id} style={{ color: matrix.color }}>{matrix.name}</span>)}</span> : null}
                                     </button>
                                     <button
@@ -2469,6 +2473,8 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                   board={board}
                   game={selected}
                   gameSeason={selected.season}
+                  finalResults={finalResults}
+                  finished={finished}
                   initialWindow={windowId}
                   onSelect={setExpanded}
                   onClose={() => setExpanded(null)}

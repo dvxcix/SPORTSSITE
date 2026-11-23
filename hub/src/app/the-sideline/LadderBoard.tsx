@@ -14,12 +14,15 @@ import styles from './ladderBoard.module.css'
 import { buildBoardHeat } from './boardHeat'
 import { NflPropActions } from '@/components/sideline/NflPropActions'
 import { compareLadderValues, ladderHeatBackground, type LadderSort, type LadderSortKey } from './ladderPresentation'
+import type { NflPublicResult } from '@/lib/nflPublicResults'
+import { SidelineFinalLine } from './SidelineFinalLine'
+import { SidelineDesignation } from './SidelineDesignation'
 const price = (n: number | null) => (n == null ? '—' : n > 0 ? '+' + n : String(n))
 const marketLabel = (key: string) => ({ anytime_td: 'Anytime Touchdown', first_td: 'First Touchdown', passing_tds: 'Passing Touchdowns', passing_completions: 'Pass Completions' }[key] ?? key.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/\bTds?\b/g, 'Touchdowns'))
 const bookLabel = (key: string) => ({ fanduel: 'FanDuel', draftkings: 'DraftKings', betmgm: 'BetMGM', caesars: 'Caesars', betrivers: 'BetRivers', fanatics: 'Fanatics', espnbet: 'ESPN BET', hardrockbet: 'Hard Rock Bet' }[normalizeVendor(key)] ?? marketLabel(key))
 const marketGroup = (key: string) => key.startsWith('passing') || key === 'completions' ? 'Passing' : key.includes('rushing_receiving') || key.includes('scrimmage') ? 'Combined' : key.includes('receiv') || key.includes('reception') ? 'Receiving' : key.includes('rush') ? 'Rushing' : key.includes('td') || key.includes('touchdown') ? 'Touchdowns' : 'Other Markets'
 type ContextScore = { score: number; mm: number | null; label: string }
-export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, scores, game, teams, matrixMatches, initialPreview }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; vendor: string; onVendor: (vendor: string) => void; scores: Map<number, ContextScore>; game?: { id: string; gameday: string }; teams?: SidelineTeam[]; matrixMatches?: Map<number, Array<{ id: string; name: string; color: string }>>; initialPreview?: { player?: number; line?: number } | null }) {
+export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, scores, game, teams, matrixMatches, initialPreview, finalResults=null, finished=false }: { board: SidelineOddsBoard; onPlayer: (id: number) => void; prop: string; onProp: (prop: string) => void; vendor: string; onVendor: (vendor: string) => void; scores: Map<number, ContextScore>; game?: { id: string; gameday: string; season?:number }; teams?: SidelineTeam[]; matrixMatches?: Map<number, Array<{ id: string; name: string; color: string }>>; initialPreview?: { player?: number; line?: number } | null; finalResults?:NflPublicResult|null; finished?:boolean }) {
   const statusFor = (player: SidelineOddsBoard['players'][number]) => nflAvailability(player, game?.gameday)
   const [side, setSide] = useState<LadderSide>('over'),
     [kind, setKind] = useState<'milestone' | 'over_under'>('milestone')
@@ -211,13 +214,14 @@ export function LadderBoard({ board, onPlayer, prop, onProp, vendor, onVendor, s
               <tr key={row.player.id} data-preview-player={row.player.id === initialPreview?.player ? 'true' : undefined} className={!statusFor(row.player).eligible ? styles.unavailableRow : undefined}>
                 <td>
                   <button className={styles.player} onClick={() => onPlayer(row.player.id)}>
-                    <SidelinePlayerAvatar player={row.player} team={teams?.find(team=>team.abbr===row.player.team)??{abbr:row.player.team,name:row.player.team,color:'var(--surface-3)',color2:'var(--surface-2)',logo:''}}/>
+                    <SidelinePlayerAvatar player={row.player} rookie={game?.season!=null&&row.player.rookieSeason===game.season} team={teams?.find(team=>team.abbr===row.player.team)??{abbr:row.player.team,name:row.player.team,color:'var(--surface-3)',color2:'var(--surface-2)',logo:''}}/>
                     <span>
                       <b>{row.player.name}<NflScorerBadges player={row.player} /></b>
                       <small>
                         {row.player.team} · {row.player.position}
-                        {statusFor(row.player).label ? ` · ${statusFor(row.player).label}` : ''}
+                        {' '}<SidelineDesignation label={statusFor(row.player).label} injury={row.player.availability?.injury}/>
                       </small>
+                      <SidelineFinalLine player={row.player} result={finalResults} finished={finished} market={prop}/>
                     </span>
                   </button>
                   {matrixMatches?.get(row.player.id)?.map(matrix => <small key={matrix.id} style={{ color: matrix.color, borderLeft: `3px solid ${matrix.color}`, paddingLeft: 6 }}>{matrix.name}</small>)}

@@ -23,6 +23,7 @@ import { NflLastSeen } from './NflLastSeen'
 import { readResearchPreferences } from '@/lib/researchPreferencesServer'
 import { DEFAULT_RESEARCH_PREFERENCES } from '@/lib/researchPreferences'
 import { publicWorkspaceGames, publicWorkspaceScope } from '@/lib/publicWorkspaceScope'
+import { readNflVerifiedPlayerResults } from '@/lib/nflSidelineFinalsServer'
 
 export const dynamic = 'force-dynamic'
 
@@ -77,13 +78,14 @@ export default async function SidelinePage({ searchParams }: {
   // Only the board needs Market Story. Its lightweight timestamp index is
   // fetched by the client after the useful first screen has rendered. The
   // Public, Sportsbooks and Matchup Lab tabs should never wait on an archive.
-  const [initialMarket, touchdownFeed, initialWeather] = await Promise.all([
+  const [initialMarket, touchdownFeed, initialWeather, finalResults] = await Promise.all([
     getSidelineOddsBundle(selected),
     getNflTouchdownFeed(date).then(rows => scope ? rows.filter(row => row.gameId === scope.game) : rows).catch(() => {
       console.error('[the-sideline] initial touchdown feed unavailable')
       return null
     }),
     mode === '' ? getSidelinePregameWeather(selected) : Promise.resolve(undefined),
+    readNflVerifiedPlayerResults(selected).catch(() => null),
   ])
   const { preferences } = await preferencesPromise
   let market = initialMarket
@@ -115,5 +117,5 @@ export default async function SidelinePage({ searchParams }: {
     getSidelineOddsBundle(selected), getCachedSidelineBoardLens(selected, roster, sample), mode === '' ? getSidelinePregameWeather(selected) : Promise.resolve(undefined),
   ])
   if (mode === 'research') return <>{navigation}<NflLastSeen board={market.odds} /><PregameResearchNotice lens={lens} /><SidelineMatchupLab gameId={selected.id} key={selected.id + sample} lens={lens} board={market.odds} /></>
-  return <>{navigation}<PregameResearchNotice lens={lens} /><SidelineBoardClient initialPreferences={preferences} initialBook={typeof params.book==='string'?params.book:undefined} key={selected.id + sample + (preview ? ':preview:' + (preview.player ?? '') + ':' + (preview.line ?? '') : '') + ':' + (typeof params.view==='string'?params.view:'core')+':'+(typeof params.book==='string'?params.book:'default')} games={games.map(game => game.id === selected.id ? { ...game, weatherSummary } : game)} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialView={typeof params.view==='string'?params.view:'core'} initialCapture={requestedCapture} initialPreview={preview} /></>
+  return <>{navigation}<PregameResearchNotice lens={lens} /><SidelineBoardClient initialFinalResults={finalResults} initialPreferences={preferences} initialBook={typeof params.book==='string'?params.book:undefined} key={selected.id + sample + (preview ? ':preview:' + (preview.player ?? '') + ':' + (preview.line ?? '') : '') + ':' + (typeof params.view==='string'?params.view:'core')+':'+(typeof params.book==='string'?params.book:'default')} games={games.map(game => game.id === selected.id ? { ...game, weatherSummary } : game)} selectedId={selected.id} sample={sample} lens={lens} odds={packSidelineBoard(market.odds)} gameState={market.gameState} touchdowns={touchdownFeed} timeline={[]} initialView={typeof params.view==='string'?params.view:'core'} initialCapture={requestedCapture} initialPreview={preview} /></>
 }

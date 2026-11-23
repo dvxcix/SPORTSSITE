@@ -1172,6 +1172,27 @@
 .secondaryPlayers button > span { color: var(--muted); font-variant-numeric: tabular-nums; }
 .secondaryPlayers small { position: sticky; left: 12px; display: block; width: fit-content; max-width: calc(100vw - 64px); color: var(--muted); font-size: 11px; }
 .availabilityBadge[data-status='available'] { color: var(--muted); border-color: var(--line); background: var(--panel-2); }
+.playerName small.playerRole { display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; overflow:visible; white-space:normal; text-overflow:clip; }
+.playerRole>span { flex-shrink:0; }
+.playerRole .availabilityBadge { flex-shrink:0; margin:0; white-space:nowrap; text-decoration:none; font-weight:700; }
+.availabilityBadge[data-status='attention'] { color:var(--red); border-color:color-mix(in srgb,var(--red) 35%,transparent); background:color-mix(in srgb,var(--red) 10%,var(--surface)); }
+.page[data-nfl-workspace] .playerName>b { white-space:normal; overflow-wrap:anywhere; text-overflow:clip; }
+.sampleTeam { font-size:10px; color:var(--text-2); }
+.playerFinal { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 6px; max-width:100%; color:var(--text-2); font-size:11px; line-height:1.5; font-variant-numeric:tabular-nums; white-space:normal; }
+.playerFinal>span:first-child { font-weight:500; }
+.playerFinal>strong { display:inline; color:var(--text-1); font-size:inherit; font-weight:650; white-space:nowrap; }
+.playerFinal>strong>span { color:var(--text-2); font-weight:400; }
+.avatar[data-rookie='true'] { box-sizing:border-box; height:56px; padding-top:12px; }
+.page[data-nfl-workspace] .playerCell .avatar[data-rookie='true'] { height:56px; }
+.rookieRibbon { position:absolute; inset:0 0 auto; display:grid; place-items:center; height:12px; border-radius:inherit; border-bottom-left-radius:0; border-bottom-right-radius:0; background:#931f34; color:#fff; font-size:9px; font-weight:750; line-height:1; text-transform:uppercase; letter-spacing:.02em; z-index:2; }
+.modalPlayer .avatar[data-rookie='true'] { height:108px; padding-top:16px; }
+.modalPlayer .rookieRibbon { height:16px; font-size:10px; }
+@media(max-width:1050px) {
+ .page[data-nfl-workspace] .boardTable .playerCell { grid-template-columns:12px 40px minmax(0,1fr) 44px; grid-template-rows:minmax(44px,auto) minmax(44px,auto); }
+ .page[data-nfl-workspace] .boardTable .playerCell .avatar { width:40px; height:44px; }
+ .page[data-nfl-workspace] .boardTable .playerCell .avatar[data-rookie='true'] { height:56px; }
+ .playerFinal { font-size:10px; gap:1px 5px; }
+}
 .playerGameStatus { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; max-width: 100%; margin-top: 5px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .playerGameStatus > span:first-child { color: var(--ink); font-weight: 650; }
 .playerGameStatus time { flex-basis: 100%; }

@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from 'next/server'
 import {authUser,reviewProfile,table,REVIEW_DATE,type ReviewRole} from './database'
 import {makeBoard,games,getPaintScouting,getPaintProfile,observedAt} from './nba'
 import * as resources from './nba-resources'
-import {makeNflOdds,makeLens,nflGames,storedGameState,makeNflSlateEdge,getNflTouchdownFeed,nflReviewTimeline} from './nfl'
+import {makeNflOdds,makeLens,nflGames,storedGameState,makeNflSlateEdge,getNflTouchdownFeed,nflReviewTimeline,readNflVerifiedPlayerResults} from './nfl'
 import {nbaSlateRows} from '../src/lib/nbaSlate'
 import {nbaSlipSurgeScore,nbaPosition,nbaGamePace,nbaScoreDetails} from '../src/lib/nbaIntelligence'
 import {nbaScoreWorkloads} from '../src/lib/nbaScoreWorkload'
@@ -127,6 +127,7 @@ export async function reviewHttp(request:NextRequest){
  if(path==='/api/the-sideline/slate-edge')return json(makeNflSlateEdge())
  if(path==='/the-sideline/market'){
   const game=nflGames.find(g=>g.id===q.get('game'))??nflGames[0],odds=makeNflOdds(game)
+  if(q.get('results')==='only')return json({gameId:game.id,results:await readNflVerifiedPlayerResults(game)})
   return json({odds,board:odds,frame:q.has('at')?{capturedAt:q.get('at')!,board:{...odds,capturedAt:q.get('at')!}}:null,timeline:nflReviewTimeline,gameState:storedGameState(game),touchdowns:await getNflTouchdownFeed(),results:null})
  }
  if(path==='/api/nfl-matrices')return json({matrices:[{id:'illustrative-matrix',name:'Illustrative red-zone role',color:'#35d7ff',priority:0,enabled:false,matrix_type:'classic',match_mode:'all',match_any_count:null,pipeline_scope:null,definition:{factors:[{id:'review-factor',category:'score',field:'redZone',operator:'gte',value:70,window:'season',vendor:null,propType:null,marketValue:null}]},element_code:'NFL-REVIEW01'}]})

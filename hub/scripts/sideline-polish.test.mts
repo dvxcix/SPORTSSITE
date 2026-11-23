@@ -178,3 +178,22 @@ test('Both Teams DvP contains only the selected matchup, while single-team filte
  const ui=await mount(h(module.exports.SidelineCheatsheets,{lens,board:makeNflOdds()}))
  try{await act(async()=>[...ui.host.querySelectorAll<HTMLButtonElement>('nav button')].find(el=>el.textContent==='Defense / DvP')!.click());const rows=()=>ui.host.querySelectorAll('[aria-label="Defense / DvP table"] tbody tr');assert.equal(rows().length,8);assert.equal(lens.dvp.length,9,'the league comparison pool stays unchanged');const team=ui.host.querySelector<HTMLSelectElement>('[aria-label="Cheatsheet controls"] select')!;await act(async()=>{team.value='KC';team.dispatchEvent(new win.Event('change',{bubbles:true}))});assert.equal(rows().length,4);await act(async()=>{team.value='all';team.dispatchEvent(new win.Event('change',{bubbles:true}))});assert.equal(rows().length,8)}finally{await ui.close()}
 })
+
+test('Sideline final totals, compact injury marks and rookie portrait ribbons reach the board and player drawer',async()=>{
+ const game={...nflGames[0],awayScore:21,homeScore:24},board=makeNflOdds(game)
+ board.players[2].rookieSeason=2030
+ board.players[3].availability={gameStatus:'questionable',active:null,injury:'Knee',starter:null,didNotPlay:null,updatedAt:'2030-11-20T12:00:00Z'}
+ const results={status:'final',updatedAt:'2030-11-20T23:00:00Z',firstTd:null,firstTdKnown:true,players:board.players.map((p,i)=>({id:p.id,gsisId:p.gsisId,name:p.name,team:p.team,stats:{receiving_yards:76,rushing_yards:84,passing_yards:264,anytime_td:i===2?0:1}}))}
+ const ui=await mount(h(module.exports.SidelineBoardClient,{games:[game],selectedId:game.id,sample:'regular',lens:makeLens(game),odds:board,gameState:{...storedGameState(),status:'Final',statusState:'final'},touchdowns:[],timeline:[],initialFinalResults:results}))
+ try{
+  const mark=ui.host.querySelector('abbr[aria-label="Questionable · Knee"]')
+  assert.equal(mark?.textContent,'Q');assert.equal(mark?.getAttribute('title'),'Questionable · Knee')
+  assert.ok(ui.host.querySelector('[data-rookie="true"]')?.textContent?.includes('Rookie'))
+  assert.equal(ui.host.querySelectorAll('[data-nfl-final]').length,board.players.length)
+  assert.match(ui.host.querySelector('[data-nfl-final][aria-label^="Travis Kelce"]')?.textContent??'',/Final76 rec yds0 TD/)
+  await act(async()=>ui.host.querySelector<HTMLButtonElement>('button[aria-label="Open James Cook"]')!.click())
+  const dialog=document.querySelector('[role="dialog"]')!
+  assert.match(dialog.textContent!,/QuestionableKnee/)
+  assert.match(dialog.querySelector('[data-nfl-final]')?.textContent??'',/Final84 rush yds1 TD/)
+ }finally{await ui.close()}
+})

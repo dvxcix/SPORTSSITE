@@ -26,6 +26,7 @@ export function withPrivateDesignReview(base:NextConfig):NextConfig {
     '@/lib/nbaResearchResources$':path.join(root,'review/nba-resources.ts'),
     '@/lib/nbaSharedCache$':path.join(root,'review/cache.ts'),
     '@/lib/publicWorkspaceData$':path.join(root,'review/public-workspace.ts'),
+    '@/lib/nflSidelineFinalsServer$':path.join(root,'review/nfl.ts'),
     '@slipsurge/core/espn-api$':path.join(root,'review/scoreboard.ts'),
     '@slipsurge/core':path.join(root,'packages/core/src'),
    }
@@ -37,13 +38,14 @@ export function withPrivateDesignReview(base:NextConfig):NextConfig {
     [path.join(root,'src/lib/nbaResearchResources')]:path.join(root,'review/nba-resources.ts'),
     [path.join(root,'src/lib/nbaSharedCache')]:path.join(root,'review/cache.ts'),
     [path.join(root,'src/lib/publicWorkspaceData')]:path.join(root,'review/public-workspace.ts'),
+    [path.join(root,'src/lib/nflSidelineFinalsServer')]:path.join(root,'review/nfl.ts'),
     [path.join(root,'src/app/the-sideline/data')]:path.join(root,'review/nfl.ts'),
     [path.join(root,'src/lib/nflTouchdownFeed')]:path.join(root,'review/nfl.ts'),
    }
    result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/^@slipsurge\/core\/espn-api$/, (resource:{request:string})=>{
     resource.request=path.join(root,'review/scoreboard.ts')
    }))
-   result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/(?:supabase[/\\]admin|CreatorCheckoutEmbed|CreatorWalletEmbed|nbaPaintData|nbaResearchResources|nbaSharedCache|publicWorkspaceData|nflTouchdownFeed|[./]data)(?:\.tsx?)?$/, (resource:{request:string;context:string})=>{
+   result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/(?:supabase[/\\]admin|CreatorCheckoutEmbed|CreatorWalletEmbed|nbaPaintData|nbaResearchResources|nbaSharedCache|publicWorkspaceData|nflSidelineFinalsServer|nflTouchdownFeed|[./]data)(?:\.tsx?)?$/, (resource:{request:string;context:string})=>{
     const target=(resource.request.startsWith('@/')?path.join(root,'src',resource.request.slice(2)):path.resolve(resource.context,resource.request)).replace(/\.tsx?$/,'')
     if(replacements[target])resource.request=replacements[target]
    }))

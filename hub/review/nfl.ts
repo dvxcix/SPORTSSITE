@@ -1,5 +1,6 @@
 import type {SidelineGame,SidelineGameState,SidelineLens,SidelinePlayer,SidelineTeam} from '../src/app/the-sideline/types'
 import type {SidelineOddsBoard} from '../src/lib/nflOddsTypes'
+import type {NflPublicResult} from '../src/lib/nflPublicResults'
 import {filterNflMarkets,nflMarketExclusions} from '../src/lib/nflAvailability'
 import {REVIEW_DATE} from './database'
 import {observedAt} from './nba'
@@ -19,6 +20,11 @@ function makeBaseNflOdds(game=nflGames[0]):SidelineOddsBoard{
 }
 export function makeNflOdds(game=nflGames[0]):SidelineOddsBoard{
  const board=makeBaseNflOdds(game)
+ if(process.env.SLIPSURGE_NFL_IDENTITY_REVIEW==='1'){
+  board.players.forEach(player=>{player.availability={gameStatus:null,active:true,injury:null,starter:null,didNotPlay:null,updatedAt:observedAt}})
+  if(board.players[2])board.players[2].rookieSeason=game.season
+  if(board.players[3])board.players[3].availability={gameStatus:'questionable',active:null,injury:'Knee',starter:null,didNotPlay:null,updatedAt:observedAt}
+ }
  board.picksCapturedAt=observedAt
  board.players.forEach((player,i)=>{
   player.publicPicks=player.markets.map(m=>({propType:m.propType,label:m.label,rawMarket:m.propType,picks:120-i*11,capturedAt:observedAt,line:m.line,side:'over',kind:m.category==='touchdowns'?'milestone':'over_under'}))
@@ -36,7 +42,11 @@ export function makeNflOdds(game=nflGames[0]):SidelineOddsBoard{
  }
  return board
 }
-export const storedGameState=(_game?:SidelineGame):SidelineGameState=>({status:'Scheduled',statusState:'scheduled',awayScore:null,homeScore:null,awayByPeriod:[],homeByPeriod:[],summary:null})
+export const storedGameState=(_game?:SidelineGame):SidelineGameState=>process.env.SLIPSURGE_NFL_IDENTITY_REVIEW==='1'?{status:'Final',statusState:'final',awayScore:21,homeScore:24,awayByPeriod:[0,7,7,7],homeByPeriod:[7,7,7,3],summary:'Illustrative final'}:{status:'Scheduled',statusState:'scheduled',awayScore:null,homeScore:null,awayByPeriod:[],homeByPeriod:[],summary:null}
+export async function readNflVerifiedPlayerResults(game=nflGames[0]):Promise<NflPublicResult|null>{
+ if(process.env.SLIPSURGE_NFL_IDENTITY_REVIEW!=='1')return null
+ return {status:'final',updatedAt:observedAt,firstTd:null,firstTdKnown:true,players:makeNflOdds(game).players.map((p,i)=>({id:p.id,gsisId:p.gsisId,name:p.name,team:p.team,stats:{passing_yards:p.position==='QB'?264+i*8:0,rushing_yards:p.position==='RB'?84:p.position==='QB'?24:0,receiving_yards:p.position==='QB'?0:76,receptions:p.position==='QB'?0:5,anytime_td:i===2?0:1}}))}
+}
 export async function getSidelineGames(){return {games:nflGames,date:REVIEW_DATE,days:[{date:REVIEW_DATE,season:2030,week:12,gameType:'REG'}]}}
 export async function getSidelineOddsBundle(game=nflGames[0]){return {odds:makeNflOdds(game),gameState:storedGameState(game)}}
 export async function getCachedSidelineBoardLens(game=nflGames[0]){return makeLens(game)}
