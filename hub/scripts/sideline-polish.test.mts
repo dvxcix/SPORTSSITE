@@ -82,6 +82,25 @@ test('comparison keeps missing metrics unavailable and opening-only prices out o
  }finally{await ui.close();globalThis.fetch=old}
 })
 
+test('comparison primary lines stay compact while every alternate contract remains available',async()=>{
+ const old=globalThis.fetch;globalThis.fetch=async()=>Response.json({matrices:[]})
+ const odds=makeNflOdds(),player=odds.players.find(p=>p.name==='James Cook')!
+ const primary=player.markets.find(m=>m.propType==='receiving_yards')!
+ player.markets.push({...primary,key:'receiving_yards:150',line:150,offers:[{vendor:'fanduel',type:'milestone',line:150,openingLine:150,current:{odds:7500},opening:{odds:8000},updatedAt:null}]})
+ const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens:makeLens(),odds,gameState:storedGameState(),touchdowns:[],timeline:[]}))
+ try{
+  await act(async()=>ui.host.querySelector<HTMLButtonElement>('button[aria-label="Compare James Cook"]')!.click())
+  const panel=ui.host.querySelector<HTMLElement>('[data-player-comparison]')!
+  await act(async()=>[...panel.querySelectorAll<HTMLButtonElement>('nav button')].find(button=>button.textContent==='Sportsbooks')!.click())
+  await act(async()=>{const select=panel.querySelector<HTMLSelectElement>('select[aria-label="Comparison market"]')!;select.value='receiving_yards';select.dispatchEvent(new win.Event('change',{bubbles:true}))})
+  assert.doesNotMatch(panel.querySelector('tbody')!.textContent!,/7500/)
+  const toggle=[...panel.querySelectorAll('button')].find(button=>button.textContent==='All lines')!
+  assert.equal(toggle.getAttribute('aria-pressed'),'false');await act(async()=>toggle.click())
+  assert.equal(toggle.getAttribute('aria-pressed'),'true');assert.match(panel.querySelector('tbody')!.textContent!,/150\+.*\+7500.*Open \+8000/)
+  await act(async()=>toggle.click());assert.doesNotMatch(panel.querySelector('tbody')!.textContent!,/7500/)
+ }finally{await ui.close();globalThis.fetch=old}
+})
+
 for(const [name,offer,side,expected] of [
  ['same contract',quote,'odds','Shortened: +6.7 probability points'],
  ['changed threshold',{...quote,openingLine:60},'odds','no comparable observation'],

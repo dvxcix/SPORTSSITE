@@ -1416,6 +1416,7 @@ function ColumnManager({ columns, visibleIds, order, onVisible, onMove, onReset,
 function ComparisonPanel({ players, teams, window, board, gameSeason, finalResults, finished, onWindow, onOpen, onRemove, onClear }: { players: PlayerRow[]; teams: SidelineTeam[]; window: SidelineWindow; board: SidelineOddsBoard; gameSeason:number; finalResults:NflPublicResult|null; finished:boolean; onWindow:(value:SidelineWindow)=>void; onOpen:(player:PlayerRow)=>void; onRemove: (id: string) => void; onClear: () => void }) {
   const [tab,setTab]=useState<'matchup'|'tracking'|'markets'>('matchup')
   const [market,setMarket]=useState('first_td')
+  const [allLines,setAllLines]=useState(false)
   if (!players.length) return null
   const entries=players.map(player=>({player,marketPlayer:findMarketPlayer(board,player)}))
   const marketOptions=[...new Map(entries.flatMap(({marketPlayer})=>marketPlayer?.markets.map(item=>[item.propType,{value:item.propType,label:item.label}] as const)??[])).values()]
@@ -1439,6 +1440,7 @@ function ComparisonPanel({ players, teams, window, board, gameSeason, finalResul
       </header>
       <div className={styles.compareControls}>
         <ResearchSectionNav label="Comparison section" value={tab} onChange={setTab} items={[{value:'matchup',label:'Matchup'},{value:'tracking',label:'NFL Tracking'},{value:'markets',label:'Sportsbooks'}]}/>
+        {tab==='markets'&&<button type="button" className={styles.compareAllLines} aria-pressed={allLines} onClick={()=>setAllLines(value=>!value)}>All lines</button>}
         {tab==='markets'?<label>Market<select aria-label="Comparison market" value={selectedMarket} onChange={event=>setMarket(event.target.value)} disabled={!marketOptions.length}>{marketOptions.length?marketOptions.map(item=><option key={item.value} value={item.value}>{item.label}</option>):<option value="">No markets</option>}</select></label>:<label>Sample<select aria-label="Comparison sample" value={window} onChange={event=>onWindow(event.target.value as SidelineWindow)}>{WINDOW_OPTIONS.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>}
       </div>
       <div className={styles.compareScroller} role="region" aria-label="Player comparison table" tabIndex={0}>
@@ -1481,7 +1483,8 @@ function ComparisonPanel({ players, teams, window, board, gameSeason, finalResul
             }),'ratio')}
             {tab==='markets'&&row(<span className={styles.comparePicksLabel}><PicksMark/>Observed picks</span>,entries.map(({player,marketPlayer})=><PickCount key={player.id} value={publicPickCount(marketPlayer,selectedMarket)} observed/>),'market-picks')}
             {tab==='markets'&&books.map(vendor=>row(<span className={styles.compareBook}><BookLogo vendor={vendor} size={19}/>{bookName(vendor)}</span>,entries.map(({marketPlayer})=>{
-              const offers=marketPlayer?.markets.filter(item=>item.propType===selectedMarket).flatMap(item=>item.offers).filter(offer=>normalizeVendor(offer.vendor)===vendor)??[]
+              const markets=allLines?marketPlayer?.markets.filter(item=>item.propType===selectedMarket)??[]:[nflPrimaryMarket(marketPlayer,selectedMarket,vendor)].filter((item):item is NflPlayerMarket=>item!=null)
+              const offers=markets.flatMap(item=>item.offers).filter(offer=>normalizeVendor(offer.vendor)===vendor)
               return offers.length?<div className={styles.compareOffers}>{offers.map((offer,index)=><span key={`${offer.type}:${offer.line}:${index}`}>{(['odds','over','under'] as NflQuoteSide[]).filter(side=>offer.current[side]!=null||offer.opening?.[side]!=null).map(side=><NflQuote key={side} offer={offer} side={side}/>)}</span>)}</div>:'—'
             }),vendor))}
             {tab==='markets'&&!books.length&&<tr><td colSpan={players.length+1} className={styles.noData}>No captured quotes for these players.</td></tr>}
