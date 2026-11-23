@@ -75,3 +75,14 @@ one animation frame without causing React renders; cleanup is tested.
 PASS Purpose/Liveliness/Quality: the owner retained the floating mascot; compact
 reading space, real team/member identity and established transitions supply
 the stated direction. Each layout change has a concrete reason listed above.
+
+Published source: 8710b6db plus 31e74aed6a7f3b9a97caeafed1e24a909022539b.
+Production dpl_GGfGZMmsAcNRadakcSkZopjpN8GW is READY.
+56 real production checks passed; all nine NBA/NFL player drawer sections
+were exercised in mobile Light and Dark. The production console query returned
+no errors. 85 private checks and 11 interaction flows are retained in the JSON
+receipt, along with 32 mobile, 162 source/member, 45 creator, 22 NFL and eight
+release-contract tests. TypeScript and lint passed; optimized build passed.
+Window focus and visibility both refresh the mobile cross-device resume offer.
+The owner explicitly retained a smaller floating VOLT. No membership, fee,
+payment, actual member post/chat or database schema was changed.

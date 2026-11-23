@@ -1,6 +1,6 @@
 {
   "date": "2026-11-23",
-  "state": "Private verification complete",
+  "state": "Live",
   "scope": "Shared mobile chrome and member/research/creator journey follow-up",
   "physicalDeviceTested": false,
   "fieldPerformanceMeasured": false,
@@ -2944,5 +2944,1831 @@
       "result": "Studio and storefront fit light/dark; creator navigation opens and Escape closes"
     }
   ],
-  "release": null
+  "release": {
+    "state": "Live",
+    "commit": "31e74aed6a7f3b9a97caeafed1e24a909022539b",
+    "deploymentId": "dpl_GGfGZMmsAcNRadakcSkZopjpN8GW",
+    "verifiedAt": "2026-11-23T15:14:41.805Z",
+    "url": "https://www.slipsurge.com"
+  },
+  "sourceCommits": [
+    "8710b6db4dad76f9b2ea0c2ddb677899521144f2",
+    "31e74aed6a7f3b9a97caeafed1e24a909022539b"
+  ],
+  "liveLayouts": [
+    {
+      "environment": "live",
+      "key": "feed",
+      "path": "/feed",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "groups",
+      "path": "/groups",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "Communities"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "group",
+      "path": "/groups/parlayparty",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "ParlayParty"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "group-chat",
+      "path": "/groups/parlayparty?view=chat",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "ParlayParty"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "messages",
+      "path": "/messages",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "Messages"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "new-message",
+      "path": "/messages/new",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "Who do you want to message?"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "profile",
+      "path": "/profile/parlayparty",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "ParlayParty"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "picks",
+      "path": "/picks",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "Picks"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "settings",
+      "path": "/settings",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "Settings"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "profile-settings",
+      "path": "/settings/profile",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "Your profile"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "research-settings",
+      "path": "/settings/research",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "Your workspace"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "court",
+      "path": "/the-paint",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "nba-odds",
+      "path": "/the-paint?view=odds-board",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "sideline",
+      "path": "/the-sideline",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "nfl-odds",
+      "path": "/the-sideline?view=odds-board",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "NFL Odds Board"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "channels",
+      "path": "/channels",
+      "layout": "phone-light",
+      "errors": [],
+      "headings": [
+        "Live rooms"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "feed",
+      "path": "/feed",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "The Feed"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "groups",
+      "path": "/groups",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "Communities"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "group",
+      "path": "/groups/parlayparty",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "ParlayParty"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "group-chat",
+      "path": "/groups/parlayparty?view=chat",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "ParlayParty"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "messages",
+      "path": "/messages",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "Messages"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "new-message",
+      "path": "/messages/new",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "Who do you want to message?"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "profile",
+      "path": "/profile/parlayparty",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "ParlayParty"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "picks",
+      "path": "/picks",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "Picks"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "settings",
+      "path": "/settings",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "Settings"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "profile-settings",
+      "path": "/settings/profile",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "Your profile"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "research-settings",
+      "path": "/settings/research",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "Your workspace"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "court",
+      "path": "/the-paint",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "nba-odds",
+      "path": "/the-paint?view=odds-board",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "The CourtNBA"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "sideline",
+      "path": "/the-sideline",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "nfl-odds",
+      "path": "/the-sideline?view=odds-board",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "NFL Odds Board"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "channels",
+      "path": "/channels",
+      "layout": "phone-dark",
+      "errors": [],
+      "headings": [
+        "Live rooms"
+      ],
+      "height": 844,
+      "nav": [
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        },
+        {
+          "scrollWidth": 69,
+          "width": 69
+        }
+      ],
+      "pageWidth": 380,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 390
+    },
+    {
+      "key": "nba-overview",
+      "layout": "phone-dark",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 844,
+      "panelWidth": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "nba-game-tracking",
+      "layout": "phone-dark",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 844,
+      "panelWidth": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "nba-ladders",
+      "layout": "phone-dark",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 844,
+      "panelWidth": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "nba-market-story",
+      "layout": "phone-dark",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 844,
+      "panelWidth": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "nba-shots",
+      "layout": "phone-dark",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 844,
+      "panelWidth": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "nba-all-odds",
+      "layout": "phone-dark",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 844,
+      "panelWidth": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "nba-overview",
+      "layout": "phone-light",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 844,
+      "panelWidth": 390,
+      "scrollWidth": 390,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "nba-game-tracking",
+      "layout": "phone-light",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 844,
+      "panelWidth": 390,
+      "scrollWidth": 390,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "nba-ladders",
+      "layout": "phone-light",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 844,
+      "panelWidth": 390,
+      "scrollWidth": 390,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "nba-market-story",
+      "layout": "phone-light",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 844,
+      "panelWidth": 390,
+      "scrollWidth": 390,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "nba-shots",
+      "layout": "phone-light",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 844,
+      "panelWidth": 390,
+      "scrollWidth": 390,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "nba-all-odds",
+      "layout": "phone-light",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 844,
+      "panelWidth": 390,
+      "scrollWidth": 390,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "nfl-matchup",
+      "layout": "phone-light",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 843,
+      "panelWidth": 389,
+      "scrollWidth": 389,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "nfl-nfl-tracking",
+      "layout": "phone-light",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 843,
+      "panelWidth": 389,
+      "scrollWidth": 389,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "nfl-sportsbooks",
+      "layout": "phone-light",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 843,
+      "panelWidth": 389,
+      "scrollWidth": 389,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "nfl-matchup",
+      "layout": "phone-dark",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 843,
+      "panelWidth": 389,
+      "scrollWidth": 389,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "nfl-nfl-tracking",
+      "layout": "phone-dark",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 843,
+      "panelWidth": 389,
+      "scrollWidth": 389,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "nfl-sportsbooks",
+      "layout": "phone-dark",
+      "environment": "live",
+      "kind": "drawer",
+      "height": 844,
+      "panelHeight": 843,
+      "panelWidth": 389,
+      "scrollWidth": 389,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "environment": "live",
+      "key": "groups",
+      "path": "/groups",
+      "layout": "narrow-dark",
+      "errors": [],
+      "headings": [
+        "Communities"
+      ],
+      "height": 640,
+      "nav": [
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        }
+      ],
+      "pageWidth": 310,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 320
+    },
+    {
+      "environment": "live",
+      "key": "sideline",
+      "path": "/the-sideline",
+      "layout": "narrow-dark",
+      "errors": [],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 640,
+      "nav": [
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        }
+      ],
+      "pageWidth": 310,
+      "theme": "dark",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 320
+    },
+    {
+      "environment": "live",
+      "key": "groups",
+      "path": "/groups",
+      "layout": "narrow-light",
+      "errors": [],
+      "headings": [
+        "Communities"
+      ],
+      "height": 640,
+      "nav": [
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        }
+      ],
+      "pageWidth": 310,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 320
+    },
+    {
+      "environment": "live",
+      "key": "sideline",
+      "path": "/the-sideline",
+      "layout": "narrow-light",
+      "errors": [],
+      "headings": [
+        "The Sideline · NFL research"
+      ],
+      "height": 640,
+      "nav": [
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        },
+        {
+          "scrollWidth": 55,
+          "width": 55
+        }
+      ],
+      "pageWidth": 310,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 52,
+          "width": 48
+        }
+      ],
+      "width": 320
+    },
+    {
+      "environment": "live",
+      "key": "feed",
+      "path": "/feed",
+      "layout": "desktop-light",
+      "errors": [],
+      "headings": [
+        "The Feed"
+      ],
+      "height": 800,
+      "nav": [
+        {
+          "scrollWidth": 0,
+          "width": 0
+        },
+        {
+          "scrollWidth": 0,
+          "width": 0
+        },
+        {
+          "scrollWidth": 0,
+          "width": 0
+        },
+        {
+          "scrollWidth": 0,
+          "width": 0
+        },
+        {
+          "scrollWidth": 0,
+          "width": 0
+        }
+      ],
+      "pageWidth": 1270,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 80,
+          "width": 76
+        }
+      ],
+      "width": 1280
+    },
+    {
+      "environment": "live",
+      "key": "groups",
+      "path": "/groups",
+      "layout": "desktop-light",
+      "errors": [],
+      "headings": [
+        "Communities"
+      ],
+      "height": 800,
+      "nav": [
+        {
+          "scrollWidth": 0,
+          "width": 0
+        },
+        {
+          "scrollWidth": 0,
+          "width": 0
+        },
+        {
+          "scrollWidth": 0,
+          "width": 0
+        },
+        {
+          "scrollWidth": 0,
+          "width": 0
+        },
+        {
+          "scrollWidth": 0,
+          "width": 0
+        }
+      ],
+      "pageWidth": 1280,
+      "theme": "light",
+      "volt": [
+        {
+          "height": 80,
+          "width": 76
+        }
+      ],
+      "width": 1280
+    }
+  ],
+  "productionConsoleErrors": [],
+  "checklistContracts": 8
 }
