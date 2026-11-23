@@ -1,0 +1,45 @@
+NFL personal touchdown research audit — 24 November 2026
+
+Request: verify that QB anytime/first touchdown research, red-zone looks and
+results count the player scoring, never the player throwing a touchdown.
+
+Confirmed production behavior
+- NGS receiving/rushing TDs and PBP scorer events populate personal touchdowns.
+  Passing TDs populate their separate field. RZ/goal-line looks belong to the
+  targeted receiver or rusher, including a QB catching or rushing a touchdown.
+- Stored box-score result parsing, period results and final grading distinguish
+  personal scorer TDs from passing TDs. Three passing TDs and zero personal TDs
+  cannot win the QB anytime-TD contract.
+
+Corrections
+- QB scorer matchup input now uses rushing TD defense data, rather than passing
+  TD defense data. No new weights or generic model replacement were introduced.
+- Scorer volume uses the established personal carry/target share definition,
+  including QB and trick-play passers. Dropbacks do not provide scorer volume.
+- Board and player drawer apply the same context volume; comparison inherits
+  the board's sample. Other market contexts retain their tracking volume.
+- Slate scores call the same corrected scoring function. The open-game cache
+  version advances; frozen per-game entries/pools and observation times retain
+  their original captured values. No archived model outputs were backfilled or
+  replayed, no live data substituted, and no database migration/job was run.
+
+Verification
+- Counterfactual score tests vary passing TDs, attempts, yards, passing matchup,
+  dropback volume, geometry and evidence without changing scorer score.
+- Personal TDs, carry share and rushing-TD matchup still affect scorer score.
+- Actual PBP builder checks three thrown TDs, own rushing TD and own receiving TD.
+- Actual stored-result parser checks all four passing/scorer TD combinations.
+- Actual slate loader checks passing-only invariance. Mounted UI checks season
+  and L3 scorer volume agreement between comparison and player drawer.
+- Passing-TD-specific score remains responsive to passing TD production.
+
+Broader test baseline (not full certification)
+- The legacy nfl-pregame-freeze.test.mts suite returns 12 pass / 17 fail both on
+  unchanged GitHub main e5101f97 and on this source. Its stale mock boundaries
+  include a missing nflHasCurrentMarket export; no new failures were introduced.
+  Evidence: review/qb-freeze-baseline-20261124.txt and qb-scorer-tests-20261124.txt.
+- One existing storage source assertion expected only capture failures in the
+  cron's 503 condition. Main also correctly includes baseline-refresh failures.
+  The assertion now checks that existing stronger condition; runtime unchanged.
+
+Build, browser and publication receipts will follow after verified rollout.

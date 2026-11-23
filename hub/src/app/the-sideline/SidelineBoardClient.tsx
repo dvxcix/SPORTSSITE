@@ -30,7 +30,7 @@ import { SidelinePlayerAvatar as PlayerAvatar } from './SidelinePlayerAvatar'
 import { useWatchlist } from '@/context/WatchlistContext'
 import { nflWatchlistSelection } from '@/lib/nflWatchlist'
 import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMarketMath'
-import { contextualNflScore } from '@/lib/nflContextScore'
+import { contextualNflScore, nflContextVolume } from '@/lib/nflContextScore'
 import { nflUnverifiedScoreInputs } from '@/lib/nflScoreIntegrity'
 import { evaluateNflMatrix, type NflMatrix, type NflMatrixFactor } from '@/lib/nflMatrix'
 import type { NflMarketOffer, NflOddsPlayer, NflPlayerMarket, SidelineOddsBoard } from '@/lib/nflOddsTypes'
@@ -1254,6 +1254,7 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
     const result = contextualNflScore(merged, player.contextProp ?? 'role', americanImpliedProbability(moneyline ?? null), gameLine?.total ?? null)
     return {
       ...merged,
+      volume: nflContextVolume(merged, player.contextProp ?? 'role'),
       index: result.score,
       contextLabel: result.context.label,
       contextProp: result.context.propType,
@@ -1783,6 +1784,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         const marketAvailable = nflHasCurrentMarket(row.market, result.context.propType)
         return {
           ...row,
+          volume: nflContextVolume(row, scoreProp),
           eligible: status.eligible && marketAvailable,
           availabilityEligible: status.eligible,
           marketAvailable,

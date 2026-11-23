@@ -203,11 +203,9 @@ export function contextualNflScore(
 
   if (context.family === 'touchdown') {
     const tdStat =
-      player.position === 'QB'
-        ? 'passing_tds'
-        : player.position === 'RB' || player.position === 'FB'
-          ? 'rushing_tds'
-          : 'receiving_tds'
+      ['QB', 'RB', 'FB'].includes(player.position)
+        ? 'rushing_tds'
+        : 'receiving_tds'
     return {
       context,
       score: blend(
@@ -215,7 +213,7 @@ export function contextualNflScore(
         [scale(perGame(player.redZoneLooks, games), 5), 0.14],
         [scale(perGame(player.goalLineLooks, games), 2), 0.13],
         [scale(perGame(player.touchdowns, games), 1), 0.14],
-        [player.volume, 0.1],
+        [nflContextVolume(player, requestedProp), 0.1],
         [player.breakaway, 0.07],
         [matchup(player, tdStat), 0.1],
         [player.teamProfile?.redZoneTdRate ?? 50, 0.06],
@@ -330,4 +328,16 @@ export function contextualNflScore(
     context,
     score: blend([player.volume, 0.4], [player.evidence, 0.3], [env, 0.3]),
   }
+}
+
+/** Scorer markets use personal carries/targets, including QB and trick-play
+ * receivers. Reuse the established non-passer volume definition; a dropback
+ * gives the passer no personal touchdown opportunity. Keep raw tracking intact. */
+export function nflContextVolume(
+  player: Pick<NflContextPlayer, 'position' | 'volume' | 'targetShare' | 'carryShare'>,
+  requestedProp: string,
+) {
+  return nflScoreContext(requestedProp === 'role' ? '' : requestedProp, player.position).family === 'touchdown'
+    ? Math.round(clamp(player.targetShare * 1.5 + player.carryShare * 0.9))
+    : player.volume
 }

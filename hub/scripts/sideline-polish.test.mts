@@ -33,13 +33,17 @@ test('comparison separates implied probability from historical payout changes an
   const offer=josh.markets.find(m=>m.propType===propType)!.offers.find(o=>o.vendor==='fanduel')!;offer.current={odds:current}
   josh.tdBaselines??=[];josh.tdBaselines.push({propType,vendor:'fanduel',averageOdds,deltaPct,sampleGames:20,averageProbability:null,currentProbability:null,deltaProbabilityPoints:null,deltaOdds:null,firstSampleDate:null,throughDate:null})
  }
+ lens.windows.season.players=lens.windows.season.players.map(player=>({...player}))
+ lens.windows.l3.players=lens.windows.l3.players.map(player=>({...player}))
  lens.windows.l3.players.find(p=>p.name==='Josh Allen')!.geometry=29
+ for(const [sample,share] of [['season',20],['l3',10]] as const){const qb=lens.windows[sample].players.find(p=>p.name==='Josh Allen')!;qb.volume=100;qb.targetShare=0;qb.carryShare=share}
  const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens,odds,gameState:storedGameState(),touchdowns:[],timeline:[]}))
  try{
   for(const name of ['Josh Allen','James Cook'])await act(async()=>ui.host.querySelector<HTMLButtonElement>(`button[aria-label="Compare ${name}"]`)!.click())
   const panel=ui.host.querySelector<HTMLElement>('[data-player-comparison]')!
   const row=(name:string)=>[...panel.querySelectorAll('tbody tr')].find(tr=>tr.querySelector('th')?.textContent===name)!
   for(const label of ['Volume','Geometry','Red zone','Breakaway','Evidence','RZ looks'])assert.ok(row(label),label)
+  assert.equal(row('Volume').querySelector('td b')!.textContent,'18','ATD volume excludes QB dropbacks')
   assert.doesNotMatch(panel.textContent!,/FTD%|ATD%|FTD PICKS|ATD PICKS/)
   const probabilities=[...panel.querySelectorAll('tbody tr')].filter(tr=>tr.querySelector('th')?.textContent==='Implied probability')
   assert.equal(probabilities[0].querySelector('td')!.textContent,'10.5%');assert.equal(probabilities[1].querySelector('td')!.textContent,'25.6%')
@@ -48,9 +52,12 @@ test('comparison separates implied probability from historical payout changes an
   assert.match(references[1].querySelector('td')!.textContent!,/-68.0%.*20G avg \+906/)
   await act(async()=>{const select=panel.querySelector<HTMLSelectElement>('select[aria-label="Comparison sample"]')!;select.value='l3';select.dispatchEvent(new win.Event('change',{bubbles:true}))})
   assert.equal(row('Geometry').querySelector('td b')!.textContent,'29')
+  assert.equal(row('Volume').querySelector('td b')!.textContent,'9','changing the comparison sample recomputes personal scorer volume')
   await act(async()=>panel.querySelector<HTMLButtonElement>('button[aria-label="Open Josh Allen details from comparison"]')!.click())
   const dialog=document.querySelector('[role="dialog"]')!,geometry=[...dialog.querySelectorAll('small')].find(el=>el.textContent==='Geometry')!.parentElement!
   assert.equal(geometry.querySelector('b')!.textContent,'29','the drawer and comparison use the same sample and metric value')
+  const volume=[...dialog.querySelectorAll('small')].find(el=>el.textContent==='Volume')!.parentElement!
+  assert.equal(volume.querySelector('b')!.textContent,'9','the drawer keeps scorer volume instead of restoring raw passing volume')
   await act(async()=>dialog.querySelector<HTMLButtonElement>('button[aria-label="Close player details"]')!.click())
   await act(async()=>[...panel.querySelectorAll<HTMLButtonElement>('nav button')].find(button=>button.textContent==='NFL Tracking')!.click())
   for(const label of ['Targets','Receptions','Target share','Carries','Carry share','aDOT','Separation','YACOE','RYOE/A','Explosives','Pass yards','CPOE'])assert.ok(row(label),label)
@@ -149,7 +156,9 @@ test('team highlight cards retain player identity, use an observed alternate boo
  const odds=makeNflOdds()
  const player=odds.players.find(p=>p.name==='Josh Allen')!
  for(const market of player.markets){market.offers=market.offers.filter(o=>o.vendor!=='fanduel');if(market.propType==='anytime_td')market.offers.forEach(o=>{o.current={odds:200}})}
- const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens:makeLens(),odds,gameState:storedGameState(),touchdowns:[],timeline:[]}))
+ const lens=makeLens(),scorer=lens.windows.season.players.find(p=>p.name==='Josh Allen')!
+ Object.assign(scorer,{redZone:100,redZoneLooks:50,goalLineLooks:20,touchdowns:10})
+ const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens,odds,gameState:storedGameState(),touchdowns:[],timeline:[]}))
  try{
   const rail=ui.host.querySelector('[aria-label="Buffalo Bills player highlights"]')!
   const card=rail.querySelector<HTMLButtonElement>('button[data-signal="score"]')!

@@ -83,6 +83,31 @@ test('red-zone carries and targets have separate team denominators', () => {
   assert.equal(find(rows, 'runner').redZoneTargets, 0)
 })
 
+test('QB throws credit the receiver; only the QB own carry/target creates scorer TDs and RZ looks', () => {
+  const throws = Array.from({ length: 3 }, () => play({ yardline_100: 3, pass_touchdown: true, td_player_id: 'receiver' }))
+  const thrown = build(throws), qb = find(thrown, 'qb')
+  assert.equal(qb.passingTouchdowns, 3)
+  assert.equal(qb.touchdowns, 0)
+  assert.equal(qb.redZoneLooks, 0)
+  assert.equal(qb.goalLineLooks, 0)
+  assert.equal(find(thrown).touchdowns, 3)
+  assert.equal(find(thrown).redZoneTargets, 3)
+  const rush = play({ play_type: 'run', pass_attempt: false, rush_attempt: true, passer_player_id: null,
+    receiver_player_id: null, rusher_player_id: 'qb', rusher_player_name: 'Quarterback',
+    yardline_100: 3, rushing_yards: 3, rush_touchdown: true, td_player_id: 'qb' })
+  const own = find(build([...throws, rush]), 'qb')
+  assert.equal(own.passingTouchdowns, 3)
+  assert.equal(own.touchdowns, 1)
+  assert.equal(own.redZoneLooks, 1)
+  assert.equal(own.redZoneCarries, 1)
+  assert.equal(own.goalLineLooks, 1)
+  const caught = find(build([...throws, play({ passer_player_id: 'receiver', receiver_player_id: 'qb', receiver_player_name: 'Quarterback', yardline_100: 3, pass_touchdown: true, td_player_id: 'qb' })]), 'qb')
+  assert.equal(caught.passingTouchdowns, 3)
+  assert.equal(caught.touchdowns, 1, 'a QB catching a touchdown is a scorer')
+  assert.equal(caught.redZoneTargets, 1)
+  assert.equal(caught.goalLineLooks, 1)
+})
+
 test('recorded receiver yardage excludes penalty yards; lateral yardage belongs to lateral receiver', () => {
   const rows = build([
     play({ yards_gained: 30, receiving_yards: 15, passing_yards: 15 }),

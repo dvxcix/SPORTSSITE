@@ -148,7 +148,7 @@ const loadGameEntries = unstable_cache(async (game: SidelineGame, sample: NflSam
       })
 
     return { value: { complete: true as const, entries, ...(NFL_PAUSED_PROJECTION_ENFORCE_ENABLED ? { verified: true as const } : {}), unavailableMarkets }, observedAt: new Date().toISOString() }
-}, ['nfl-slate-entries-v3-available'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-data'] })
+}, ['nfl-slate-entries-v4-scorer-volume'], { revalidate: 30, tags: ['sideline:nfl-odds', 'sideline:nfl-picks', 'sideline:nfl-data'] })
 export function rankNflSlateEntries(entries: NflSlateEdgeEntry[], unavailableMarkets = new Set<NflSlateEdgeMarketKey>()) {
   for (const market of NFL_SLATE_EDGE_MARKETS) {
     if (unavailableMarkets.has(market.key)) { entries.forEach(entry => { entry.mm[market.key] = null }); continue }

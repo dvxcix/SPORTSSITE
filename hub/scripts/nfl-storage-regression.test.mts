@@ -35,8 +35,25 @@ test('stored results preserve timestamp, distinguish no TD evidence and avoid fa
  assert.equal(result.firstTdKnown,false)
  assert.equal(result.players[0].stats.anytime_td,null)
 })
+test('stored QB results separate thrown touchdowns from personal scorer totals',async()=>{
+ const source=ts.transpileModule(read('src/lib/nflPublicResultsServer.ts'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+ for(const passing of [0,3])for(const rushing of [0,1]){
+  const saved={payload:{game:{id:7,status_state:'in_progress'},stats:[{game:{id:7},player:{id:10,first_name:'Test',last_name:'Quarterback'},team:{abbreviation:'BUF'},passing_touchdowns:passing,rushing_touchdowns:rushing,receiving_touchdowns:0}],plays:[]},reconciled:false,fetched_at:'2026-11-24T02:00:00Z'}
+  const api:any={},chain:any={select:()=>chain,eq:()=>chain,maybeSingle:async()=>({data:saved,error:null})}
+  runInNewContext(source,{exports:api,require:(id:string)=>{
+   if(id==='next/cache')return {unstable_cache:(fn:any)=>fn}
+   if(id.includes('supabase/admin'))return {createAdminClient:()=>({from:()=>chain})}
+   if(id.includes('nflTouchdownFeed'))return {getNflTouchdownFeed:async()=>[]}
+   if(id.includes('nflPeriodResults'))return {attachNflBdlPeriodResults:()=>{},attachNflPeriodResults:()=>{}}
+   return {}
+  },console})
+  const result=await api.getNflPublicResults({id:'g',gameday:'2026-11-24'},7)
+  assert.equal(result.players[0].stats.passing_tds,passing)
+  assert.equal(result.players[0].stats.anytime_td,rushing)
+ }
+})
 test('failed capture batches cannot be reported as healthy',()=>{
- assert.match(read('src/app/api/cron/nfl-bdl-odds/route.ts'),/status: failed \? 503 : 200/)
+ assert.match(read('src/app/api/cron/nfl-bdl-odds/route.ts'),/status: failed \|\| baselineStatus === 'failed' \? 503 : 200/)
 })
 
 test('baseline reads page beyond the API default row limit in both user and ingestion paths',()=>{

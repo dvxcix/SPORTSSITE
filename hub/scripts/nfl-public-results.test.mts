@@ -28,6 +28,15 @@ test('passing TDs are not anytime scores; missing stats and period data never be
   assert.equal(gradeNflPublicProp({ ...result('final'), players: [] }, player, yards(40)).state, 'unavailable')
   assert.equal(gradeNflPublicProp(result('final'), player, { propType: 'receiving_yards' }).state, 'unavailable')
 })
+test('a QB with three passing TDs and no personal TD loses ATD but wins his passing-TD ladder', () => {
+  const qb = { ...player, position: 'QB' }
+  const final = { ...result('final'), players: [{ ...result().players[0], stats: { passing_tds: 3, anytime_td: 0, anytime_td_1h: 0 } }] }
+  assert.equal(gradeNflPublicProp(final, qb, { propType: 'anytime_td' }).state, 'miss')
+  assert.equal(gradeNflPublicProp(final, qb, { propType: 'anytime_td_1h' }).state, 'miss')
+  assert.equal(gradeNflPublicProp(final, qb, { propType: 'passing_tds', line: 3, kind: 'milestone' }).state, 'hit')
+  final.players[0].stats.anytime_td = 1
+  assert.equal(gradeNflPublicProp(final, qb, { propType: 'anytime_td' }).state, 'hit')
+})
 test('first TD settles once known, unlike other scorers anytime TD; failed feed is not no-TD evidence', () => {
   const td = { propType: 'first_td' }
   assert.equal(gradeNflPublicProp(result('final'), player, td).state, 'pending')
