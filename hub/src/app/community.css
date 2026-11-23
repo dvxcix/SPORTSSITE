@@ -43,6 +43,7 @@
 @media(max-width:767px){.ss-community-nav{top:calc(var(--topbar-h,64px) + var(--banner-h,0px));margin-inline:-2px;width:calc(100% + 4px);border-radius:12px}.ss-community-nav a{min-width:74px;flex:0 0 auto}.ss-chat-inline-action{color:var(--text-4)}.ss-dm-message-meta>button{color:var(--text-4)}.ss-profile-post-list{margin-inline:-12px}}
 
 /* Messaging media is intentionally native to the conversation surface. */
+.ss-group-tabs{position:relative;top:auto;gap:20px;padding:0 16px;background:var(--surface);backdrop-filter:none}.ss-group-tabs button{min-height:48px;padding:0 2px;border:0;border-bottom:2px solid transparent;border-radius:0;font-weight:550;color:var(--text-2)}.ss-group-tabs button.is-active{border-bottom-color:var(--accent);color:var(--text-1);background:transparent}.ss-group-tabs button:hover{background:transparent;color:var(--text-1)}.ss-group-tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}@media(max-width:767px){.ss-group-tabs{top:auto;gap:12px;padding-inline:12px}.ss-group-tabs button{min-height:48px}}
 .ss-chat-composer{grid-template-columns:minmax(0,1fr) auto auto auto}
 .ss-chat-attach{display:grid;width:34px;height:34px;flex:0 0 34px;place-items:center;border:0;border-radius:10px;color:var(--text-3);background:transparent;transition:color .14s ease,background .14s ease}
 .ss-chat-attach:hover,.ss-chat-attach:focus-visible{color:var(--accent);background:rgba(163,230,53,.09)}

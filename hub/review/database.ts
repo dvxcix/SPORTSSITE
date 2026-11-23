@@ -102,3 +102,10 @@ for(const profile of table('users'))if(profile.account_type==='creator'){profile
 if(!table('creator_products').some(row=>row.creator_id===REVIEW_USER_ID))table('creator_products').push({id:'00000000-0000-4000-8000-000000000612',creator_id:REVIEW_USER_ID,title:'Weekend research club',description:'Weekly matchup notes, game-day picks and community chat.',price:24,platform_fee_amount:0,currency:'usd',product_type:'membership',billing_period_days:30,status:'draft',whop_plan_id:'plan_review_owner',created_at:now,updated_at:now})
 for(const group of table('groups'))group.access_type??='free'
 if(!table('creator_discord_integrations').length)table('creator_discord_integrations').push({id:'00000000-0000-4000-8000-000000000891',group_id:groups[0].id,creator_id:REVIEW_USER_ID,guild_id:'123456789012345678',guild_name:'NBA Lounge',role_id:'123456789012345679',role_name:'Court members',invite_url:'https://discord.gg/review-only',enabled:true})
+
+/* Group chat fixtures use their own channels, as atomic creation does in production. */
+for(const group of table('groups'))if(!table('channels').some(channel=>channel.group_id===group.id)){
+ const channelId=group.channel_id||group.id.replace(/.{12}$/,String(100000+Number(group.id.slice(-6))).padStart(12,'0'))
+ group.channel_id=channelId
+ table('channels').push({id:channelId,slug:'group-'+group.slug,name:'Member chat',description:'Community conversation.',group_id:group.id,channel_kind:'text',channel_type:'private',sort_order:0,created_at:now})
+}

@@ -29,7 +29,7 @@ export const productAreaMeta: Record<ProductArea, { label: string; eyebrow: stri
 export const primaryNavigation: ProductNavItem[] = [
   { href: '/launch', label: 'Home', icon: Home, matches: ['/feed', '/explore', '/search', '/hashtag', '/post', '/profile', '/notifications'] },
   { href: '/dugout', label: 'Research', icon: FlaskConical, matches: ['/dugout', '/the-sideline', '/the-paint', '/nba', '/workspace', '/sports', '/batter-cost', '/odds-terminal', '/slate-breakdown', '/pitcher-report', '/weather-lab', '/synergy', '/daily-recap', '/spray-charts', '/the-public', '/nfl'] },
-  { href: '/community', label: 'Community', icon: MessagesSquare, badge: 'LIVE', matches: ['/community', '/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog'] },
+  { href: '/groups', label: 'Communities', icon: MessagesSquare, badge: 'LIVE', matches: ['/community', '/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog'] },
   { href: '/picks', label: 'Picks', icon: TrendingUp, matches: ['/picks', '/bookmarks', '/missions', '/activity'] },
 ]
 
@@ -89,7 +89,7 @@ export const areaNavigation: Record<ProductArea, ProductNavItem[]> = {
     { href: '/community', label: 'Community Home', icon: LayoutGrid },
     { href: '/channels', label: 'Live Channels', icon: Zap, badge: 'LIVE' },
     { href: '/messages', label: 'Direct Messages', icon: MessageCircle },
-    { href: '/groups', label: 'Groups', icon: Users },
+    { href: '/groups', label: 'Communities', icon: Users },
     { href: '/forum', label: 'Discussions', icon: Hash },
     { href: '/pages', label: 'Pages', icon: LayoutGrid },
     { href: '/events', label: 'Events', icon: Activity },

@@ -31,7 +31,7 @@ const NOTIF_ICONS: Record<string, any> = {
 
 const socialDestinations = [
   { href: '/feed', label: 'Feed', icon: Home },
-  { href: '/groups', label: 'Groups', icon: Users },
+  { href: '/groups', label: 'Communities', icon: Users },
   { href: '/channels', label: 'Live rooms', icon: MessagesSquare },
   { href: '/messages', label: 'Messages', icon: MessageCircle },
 ]

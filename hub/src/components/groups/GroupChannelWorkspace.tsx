@@ -42,7 +42,7 @@ export function GroupChannelWorkspace({ groupSlug, channels, activeChannel, chil
                 scroll={false}
               >
                 <span>{channel.icon || <Icon size={14} />}</span>
-                <span><strong>{channel.name}</strong><small>{channel.channel_kind}</small></span>
+                <span><strong>{channel.name}</strong></span>
               </Link>
             )
           })}

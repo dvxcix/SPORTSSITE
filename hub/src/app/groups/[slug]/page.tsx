@@ -10,7 +10,7 @@ import { GroupJoinButton } from '@/components/groups/GroupJoinButton'
 import { GroupInviteModal } from '@/components/groups/GroupInviteModal'
 import { GroupInviteResponse } from '@/components/groups/GroupInviteResponse'
 import { ChatRoom } from '@/components/chat/ChatRoom'
-import { Users, Lock, Globe, Settings } from 'lucide-react'
+import { Users, Lock, Globe, Settings, Crown, ShieldCheck } from 'lucide-react'
 import { sportLogoUrl } from '@/lib/sportLogos'
 import type { Metadata } from 'next'
 import { CommunityNav } from '@/components/community/CommunityNav'
@@ -181,7 +181,6 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
                 className={styles.secondaryAction}>
                 <Settings size={13} /> Manage
               </Link>
-              <Link href="/creators/studio" className={styles.secondaryAction}>Creator Studio</Link>
               </>
             )}
             {user && isMember && !isOwner && (
@@ -230,7 +229,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
             {memberPreviews.slice(0, 6).map(m => (
               <Link key={m.user.id} href={`/profile/${m.user.username}`} aria-label={`${m.user.display_name || m.user.username}, ${m.role}`} data-role={m.role}>
                 <MemberAvatar src={m.user.avatar_url} ringStyle={m.user.avatar_ring_style} ringColor={m.user.avatar_ring_color} name={m.user.display_name || m.user.username} size={28} />
-                {['owner', 'admin', 'moderator'].includes(m.role) && <span className={styles.roleMark}>{m.role === 'owner' ? 'O' : m.role === 'admin' ? 'A' : 'M'}</span>}
+                {['owner', 'admin', 'moderator'].includes(m.role) && <span className={styles.roleMark} title={m.role}>{m.role === 'owner' ? <Crown size={10}/> : <ShieldCheck size={10}/>}</span>}
               </Link>
             ))}
             {(group.member_count ?? 0) > 6 && <span>+{(group.member_count ?? 0) - 6} more</span>}
@@ -248,7 +247,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
       </div>
 
       <div className={styles.divider} />
-      {isMember&&discordAccess&&<CreatorDiscordClaim groupId={group.id} slug={group.slug} guildName={discordAccess.guild_name} roleName={discordAccess.role_name} inviteUrl={discordAccess.invite_url}/>}
+      {isMember&&discordAccess&&<details className={styles.discord}><summary>Discord access</summary><CreatorDiscordClaim groupId={group.id} slug={group.slug} guildName={discordAccess.guild_name} roleName={discordAccess.role_name} inviteUrl={discordAccess.invite_url}/></details>}
 
       {!canViewContent ? (
         <div className={styles.locked}>
@@ -266,7 +265,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
             {!isMember&&group.is_public&&<p className="px-5 py-3 text-sm text-[var(--text-2)]">Join this community to post and chat.</p>}
             <GroupPostFeed key={`${group.id}:${view==='picks'?'picks':'posts'}:${postPage.posts[0]?.id||'empty'}`} groupId={group.id} picks={view==='picks'} initialPosts={postPage.posts} initialCursor={postPage.nextCursor} initialHasMore={postPage.hasMore}/>
           </div>}
-          chat={activeChannel && isMember ? (
+          chat={isMember ? activeChannel ? (
             <GroupChannelWorkspace groupSlug={slug} channels={workspaceChannels} activeChannel={activeChannel}>
               <div className={styles.chatViewport}>
                 <ChatRoom
@@ -282,7 +281,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
                 />
               </div>
             </GroupChannelWorkspace>
-          ) : undefined}
+          ) : <div className={styles.locked}><p>Chat is not set up yet</p><span>{isOwner?'Add a channel in community settings.':'Your creator has not opened a chat channel yet.'}</span>{isOwner&&<Link href={`/groups/${slug}/settings`} className={styles.secondaryAction}>Manage channels</Link>}</div> : undefined}
         />
       )}
       </div>

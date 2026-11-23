@@ -23,7 +23,7 @@
 .memberStack > a { position: relative; margin-left: -5px; border: 2px solid var(--surface); border-radius: 50%; }
 .memberStack > a:first-child { margin-left: 0; }
 .memberStack > span { margin-left: 8px; color: var(--text-2); font-size: 12px; }
-.roleMark { position: absolute; right: -3px; bottom: -3px; display: grid; width: 13px; height: 13px; place-items: center; border: 2px solid var(--surface); border-radius: 50%; color: var(--accent-fg); background: var(--accent-fill); font-size: 12px; font-weight: 700; line-height: 1; }
+.roleMark { position: absolute; right: -2px; bottom: -2px; display: grid; width: 17px; height: 17px; place-items: center; border: 2px solid var(--surface); border-radius: 50%; color: var(--accent-fg); background: var(--accent-fill); line-height: 1; }
 .inviteResponse { margin-top: 16px; }
 .divider { height: 1px; background: var(--border); }
 .posts { display: grid; gap: 12px; padding: 16px; }
@@ -33,15 +33,16 @@
 .emptyPosts span, .locked span { margin-top: 4px; color: var(--text-2); font-size: 12px; }
 .locked > svg { margin-bottom: 12px; color: var(--text-3); }
 .chatViewport { display: flex; min-height: 440px; height: min(620px, 70dvh); flex-direction: column; overflow: hidden; }
+.discord{padding:0 18px;border-bottom:1px solid var(--border)}.discord summary{display:flex;align-items:center;min-height:44px;color:var(--text-2);font-size:12px;cursor:pointer}.discord summary:after{content:'+';margin-left:auto;font-size:18px}.discord[open] summary:after{content:'−'}.discord summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 @media (max-width: 600px) {
   .page { padding: 10px 7px 30px; }
   .community { margin-top: 10px; border-radius: 19px; }
   .banner { height: 124px; }
   .identity { padding-inline: 13px; }
-  .identityRow { margin-top: -30px; align-items: flex-end; }
+  .identityRow { display:grid;grid-template-columns:minmax(0,1fr);margin-top:-30px;gap:10px;align-items:start; }
   .avatar { width: 64px; height: 64px; flex-basis: 64px; border-radius: 14px; }
-  .actions { gap: 6px; }
+  .actions { width:100%;justify-content:flex-start;gap:6px; }
   .secondaryAction, .primaryAction { min-height: 44px; padding-inline: 10px; }
   .posts { padding: 9px; }
   .chatViewport { min-height: 390px; height: calc(100dvh - 250px); }

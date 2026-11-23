@@ -12,7 +12,7 @@ const req=(body,origin='https://www.slipsurge.com')=>new NextRequest('https://ww
 function db(resolve){const calls=[];return{calls,from(table){const call={table,filters:[]};calls.push(call);const query=new Proxy({},{get:(_,key)=>key==='then'?(yes,no)=>Promise.resolve(resolve(call)).then(yes,no):(...args)=>{if(['insert','update','upsert'].includes(key)){call.operation=key;call.values=args[0]}else if(key==='select')call.columns=args[0];else call.filters.push([key,...args]);return query}});return query}}}
 function setup(options={}){
  const store={...draft,creator_id:owner,status:'draft',community_id:groupId,featured:true,featured_rank:2,...options.store},rpc=[],provider=[]
- const admin=db(call=>{if(call.operation)return {data:{...store,...call.values},error:null};if(call.table==='creator_storefronts')return {data:options.noStore?null:store,error:null};if(call.table==='groups')return {data:options.badGroup?null:{id:groupId,creator_product_id:options.paid?productId:null,access_type:options.paid?'paid':'free'},error:null};if(call.table==='creator_products')return{data:options.badProduct?null:{id:productId},error:null};throw Error('Unexpected table')})
+ const admin=db(call=>{if(call.operation)return {data:{...store,...call.values},error:null};if(call.table==='creator_storefronts')return {data:options.noStore?null:store,error:null};if(call.table==='groups')return {data:options.badGroup?null:{id:groupId,slug:options.privateGroup?'private-film-room':'club-'+owner.replaceAll('-',''),is_public:!options.privateGroup,creator_product_id:options.paid?productId:null,access_type:options.paid?'paid':'free'},error:null};if(call.table==='creator_products')return{data:options.badProduct?null:{id:productId},error:null};throw Error('Unexpected table')})
  const module=compile('src/app/api/creator/storefront/route.ts',{'next/server':{NextRequest,NextResponse},'@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:options.anonymous?null:{id:owner}}})},rpc:async(name,args)=>{rpc.push({name,args});return{error:options.brandError?{code:'failed'}:null}}})},'@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/creatorStorefront':domain,'@/lib/creatorOfferStatus':{setCreatorOfferStatus:async(...args)=>{provider.push(args.slice(1));if(options.providerError)throw Error('Provider failure')}},'@/lib/serverRateLimit':{consumeServerRateLimit:async()=>({allowed:!options.limited,available:true})}})
  return {run:body=>module.POST(req(body)),module,admin,rpc,provider,store}
 }
@@ -35,9 +35,20 @@ test('editing a published store saves a private draft without changing its publi
  const write=f.admin.calls.find(call=>call.operation);assert.equal(write.values.draft.name,'New name');assert.equal(Object.hasOwn(write.values,'name'),false);assert.equal(Object.hasOwn(write.values,'status'),false)
  assert.equal((await response.json()).store.has_draft,true)
 })
+
+test('an unpublished access change detaches only the draft pointer so a matching existing space can be selected',async()=>{
+ const f=setup(),response=await f.run({...draft,access_mode:'paid',product_id:productId,action:'save'});assert.equal(response.status,200)
+ const write=f.admin.calls.find(call=>call.operation);assert.equal(write.values.community_id,null);assert.equal(write.values.product_id,productId);assert.equal(f.rpc.length,0)
+})
+test('published access cannot change through store draft edits',async()=>{
+ const f=setup({store:{status:'published'}});assert.equal((await f.run({...draft,access_mode:'paid',product_id:productId,action:'save'})).status,409);assert.equal(f.admin.calls.some(call=>call.operation),false)
+})
 test('free store publication never calls Whop or adds application fees',async()=>{
  const f=setup(),response=await f.run({...draft,action:'publish'});assert.equal(response.status,200);assert.equal(f.provider.length,0)
  assert.equal(f.rpc[0].args.p_is_public,true);assert.equal(f.admin.calls.find(call=>call.operation).values.status,'published')
+})
+test('reusing an existing private free space never publishes its private content',async()=>{
+ const f=setup({privateGroup:true});assert.equal((await f.run({...draft,action:'publish'})).status,200);assert.equal(f.rpc[0].args.p_is_public,false)
 })
 test('paid publication verifies exact owned community/product and uses the established offer gate',async()=>{
  const input={...draft,access_mode:'paid',product_id:productId,action:'publish'},f=setup({paid:true,store:{access_mode:'paid',product_id:productId}})
@@ -54,8 +65,8 @@ test('anonymous, forged and rate-limited saves produce no store or provider muta
 })
 test('member-created setup communities start private and are resumable without making duplicates',async()=>{
  let created=0;const calls=[];let existing=null
- const admin=db(call=>call.table==='creator_storefronts'?call.operation?{data:null,error:null}:{data:{...draft,creator_id:owner,status:'draft',community_id:null},error:null}:{data:existing,error:null})
- const module=compile('src/app/api/creator/storefront/community/route.ts',{'next/server':{NextRequest,NextResponse},'@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:owner}}})},rpc:async(name,args)=>{calls.push({name,args});if(name==='create_community_group'){created++;existing={id:groupId,slug:args.p_slug,creator_product_id:null};return{data:[{group_id:groupId,group_slug:args.p_slug}],error:null}}return{error:null}}})},'@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/creatorStorefront':domain,'@/lib/serverRateLimit':{consumeServerRateLimit:async()=>({allowed:true,available:true})}})
+ const admin=db(call=>call.table==='creator_storefronts'?call.operation?{data:null,error:null}:{data:{...draft,creator_id:owner,status:'draft',community_id:null},error:null}:{data:existing?[existing]:[],error:null})
+ const module=compile('src/app/api/creator/storefront/community/route.ts',{'next/server':{NextRequest,NextResponse},'@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:owner}}})},rpc:async(name,args)=>{calls.push({name,args});if(name==='create_community_group'){created++;existing={id:groupId,slug:args.p_slug,creator_product_id:null,access_type:'free'};return{data:[{group_id:groupId,group_slug:args.p_slug}],error:null}}return{error:null}}})},'@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/creatorStorefront':domain,'@/lib/serverRateLimit':{consumeServerRateLimit:async()=>({allowed:true,available:true})}})
  assert.equal((await module.POST(req({}))).status,200);assert.equal((await module.POST(req({}))).status,200);assert.equal(created,1)
  assert.equal(calls.find(row=>row.name==='create_community_group').args.p_is_public,false)
  assert.ok(calls.filter(row=>row.name==='update_community_group').every(row=>row.args.p_is_public===false))

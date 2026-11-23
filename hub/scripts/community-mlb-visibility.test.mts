@@ -52,12 +52,14 @@ async function loadPage(hibernating: boolean) {
     'server-only': '',
     'next/link': 'import React from "react";export default ({children,...props})=>React.createElement("a",props,children)',
     '@/lib/supabase/server': 'export const createClient=async()=>globalThis.communityFixture.client',
-    '@/components/community/CommunityNav': 'export const CommunityNav=()=>null',
+    '@/components/community/CommunityNav': 'export const CommunityNav=()=>null;export const CommunityMore=()=>null',
+    '@/lib/creatorCommunityDirectory': 'export const publishedPaidCommunities=async()=>[];export const invitedCommunityEntries=async()=>[]',
+    '@/components/groups/CommunityDirectory': 'import React from "react";export const CommunityDirectory=({groups})=>React.createElement("div",null,groups.map(g=>React.createElement("span",{key:g.id},g.name)))',
     '@/components/ui/SafeImage': 'export const SafeImage=()=>null',
-    '@/components/product/ProductPage': 'import React from "react";export const ProductHero=()=>null;export const ProductSectionHeader=()=>null;export const ProductPanel=({children})=>React.createElement("div",null,children);export const ProductPageShell=({children})=>React.createElement("main",null,children)',
+    '@/components/product/ProductPage': 'import React from "react";export const ProductAction=({children})=>React.createElement("span",null,children);export const ProductHero=()=>null;export const ProductSectionHeader=()=>null;export const ProductPanel=({children})=>React.createElement("div",null,children);export const ProductPageShell=({children})=>React.createElement("main",null,children)',
   }
   const result = await build({
-    entryPoints: ['src/app/community/page.tsx'], bundle: true, write: false, platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react', 'react-dom'], tsconfig: 'tsconfig.json',
+    entryPoints: ['src/app/groups/page.tsx'], bundle: true, write: false, platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react', 'react-dom'], tsconfig: 'tsconfig.json',
     plugins: [{ name: 'community-fixture', setup(builder) {
       builder.onResolve({ filter: /.*/ }, args => {
         if (args.path === './mlbOffseason' && args.importer.endsWith('mlbViewerAccess.ts')) return { path: 'mlbOffseason', namespace: 'fixture' }
@@ -77,21 +79,21 @@ function reset() {
   Object.assign(fixture, { userId: 'viewer', accountType: 'user', authError: false, authThrows: false, accountError: false, accountThrows: false, accountReads: 0, groupSelect: '', groupLimit: 0 })
 }
 
-test('regular member excludes case and whitespace MLB variants before taking four, keeping neutral and other sports', async () => {
+test('regular member excludes case and whitespace MLB variants in the canonical directory, keeping neutral and other sports', async () => {
   reset()
   const html = renderToStaticMarkup(await duringOffseason())
-  for (const name of ['Baseball A', 'Baseball B', 'Baseball C', 'Fifth Group']) assert.ok(!html.includes(name), name)
+  for (const name of ['Baseball A', 'Baseball B', 'Baseball C']) assert.ok(!html.includes(name), name)
   for (const name of ['Neutral Group', 'Basketball Group', 'Football Group', 'General Group']) assert.ok(html.includes(name), name)
   assert.ok(fixture.groupSelect.split(',').includes('sport'))
-  assert.equal(fixture.groupLimit, 50)
+  assert.equal(fixture.groupLimit, 200)
   assert.equal(fixture.accountReads, 1)
 })
 
-test('authenticated admin retains the original order and four-item preview', async () => {
+test('authenticated admin retains all baseball communities', async () => {
   reset(); fixture.accountType = 'admin'
   const html = renderToStaticMarkup(await duringOffseason())
   for (const name of ['Baseball A', 'Baseball B', 'Baseball C', 'Neutral Group']) assert.ok(html.includes(name), name)
-  assert.ok(!html.includes('Basketball Group'))
+  assert.ok(html.includes('Basketball Group'))
 })
 
 test('failed account lookup and failed authentication both hide MLB even if a stale admin value is present', async () => {

@@ -1,10 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { MessageCircle, Plus, ShieldCheck } from 'lucide-react'
+import { Plus, ShieldCheck } from 'lucide-react'
 import { authVisibilityUnavailable, getBlockedEitherWayIds } from '@/lib/blocks'
 import { MessageInbox } from '@/components/social/MessageInbox'
 import { CommunityNav } from '@/components/community/CommunityNav'
-import { ProductAction, ProductHero, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
+import { ProductAction, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
 import { GroupConversationInbox } from '@/components/chat/GroupConversationInbox'
 import styles from './messages.module.css'
 
@@ -120,7 +120,7 @@ export default async function MessagesPage() {
   return (
     <ProductPageShell narrow className={`ss-messages-page ${styles.page}`}>
       <CommunityNav />
-      <ProductHero icon={<MessageCircle size={21}/>} eyebrow="Member network" title="Messages" description="Private conversations with people across SlipSurge." actions={<ProductAction href="/messages/new"><Plus size={15}/> New message</ProductAction>}/>
+      <header className="ss-community-heading"><h1>Messages</h1><ProductAction href="/messages/new"><Plus size={15}/> New message</ProductAction></header>
 
       {groupConversations.length > 0 && <><ProductSectionHeader title="Group conversations" meta={`${groupConversations.length} group${groupConversations.length === 1 ? '' : 's'}`}/><ProductPanel className="ss-messages-inbox-shell"><GroupConversationInbox conversations={groupConversations}/></ProductPanel></>}
 

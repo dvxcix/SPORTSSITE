@@ -1,0 +1,48 @@
+Community membership and social navigation, 23 November 2026
+
+Scope: one place for a member to find and open each creator's community,
+then reach posts, picks and member chat. Retain the SlipSurge theme, sports
+tools, existing memberships, content, separate access levels and all routes.
+The owner requested consolidation of duplicate creator/group entries and
+removal of the eleven-item social bar. This is a targeted repository change.
+
+The baseline showed two ParlayParty cards. The store wizard automatically
+created a free draft space although the creator already owned a paid space.
+They have different access rules; combining their membership data would be
+incorrect. No group, post, chat message or entitlement is deleted or merged.
+
+Changes:
+1. One creator card contains its accessible spaces. Joined creators appear
+   once; unjoined access levels remain reachable inside that same card.
+   Filters choose a matching space and open its actual destination. Member
+   totals are not summed across spaces, since people can belong to both.
+2. Your communities and Discover are separate local views, with compact
+   search/filter controls and a direct member-chat shortcut. Invitations stay
+   reachable within their creator's entry and do not imply membership.
+3. Feed, Communities, Live rooms and Messages remain the core navigation.
+   Desktop uses the existing top bar. Mobile has a compact local row. Saved,
+   Activity and the less-used sections move to More, with anchored placement
+   and Escape dismissal. Community redirects to Groups, so there is one hub.
+4. Store setup can reuse owned communities with exactly matching membership
+   access. Ambiguous choices require selection. Published access cannot be
+   switched in a branding draft; unpublished free/paid drafts can change
+   without deleting the previously created space. Linking does not mutate an
+   existing group's brand, content, privacy or memberships. Publication is
+   still the deliberate branding/access action. Legacy create links open
+   Creator Studio and retain a validated owned product context.
+5. Group Posts/Picks/Chat tabs use the same spacing and button treatment.
+   Channel names no longer repeat internal type labels. A missing chat has
+   an explicit unavailable state and an owner settings link, rather than
+   silently selecting Posts. Owner/moderator avatar marks fit their circles.
+
+Design references (structure only):
+Meetup: compact membership entries and a separate exploration destination.
+https://mobbin.com/screens/fa71773b-df3e-4f48-a613-c5f270dd55d6
+Threads: one community feed with local content tabs and a secondary More area.
+https://mobbin.com/screens/db33e0a3-12df-4632-975b-e769101be469
+The creator/access grouping, exact wording and access protections are
+SlipSurge-specific implementation decisions requested by the owner.
+
+Verification and release receipts follow in the companion JSON. Real payment,
+bank, Discord-role and member-notification actions are outside this QA pass.
+No database migration, fee change or production content write is required.

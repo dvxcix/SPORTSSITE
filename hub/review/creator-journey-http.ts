@@ -13,14 +13,18 @@ export async function creatorJourneyHttp(request:NextRequest,role:ReviewRole){
   let row=table('creator_storefronts').find(row=>row.creator_id===user.id)
   if(body.action==='publish'){const issue=storePublishIssue({...draft,community_id:row?.community_id||null});if(issue)return json({error:issue},409)}
   if(!row){row={creator_id:user.id,...draft,status:'draft',community_id:null,featured:false,featured_rank:100,draft:null,updated_at:new Date().toISOString()};table('creator_storefronts').push(row)}
-  if(row.status==='published'&&body.action!=='publish')row.draft=draft;else Object.assign(row,draft,{draft:null,status:body.action==='publish'?'published':'draft'})
+  if(row.status==='published'&&body.action!=='publish')row.draft=draft;else {if(row.access_mode!==draft.access_mode||row.product_id!==draft.product_id)row.community_id=null;Object.assign(row,draft,{draft:null,status:body.action==='publish'?'published':'draft'})}
   if(body.action==='publish'){const group=table('groups').find(group=>group.id===row.community_id);if(group)Object.assign(group,{is_public:row.access_mode==='free',name:row.name,avatar_url:row.logo_url,banner_url:row.cover_url});const product=table('creator_products').find(product=>product.id===row.product_id);if(product)product.status='active'}
   return json({store:ownerStore(row)})
  }
  if(path==='/api/creator/storefront/community'){
   const store=table('creator_storefronts').find(row=>row.creator_id===user?.id);if(!user||!store)return json({error:'Save your store first.'},409)
-  let group=table('groups').find(group=>group.id===store.community_id&&group.owner_id===user.id)
+  const body=await request.json().catch(()=>({})),owned=table('groups').filter(group=>group.owner_id===user.id&&group.access_type===store.access_mode&&(group.creator_product_id??null)===(store.access_mode==='paid'?store.product_id:null))
+  let group=owned.find(group=>group.id===(body.communityId&&body.communityId!=='new'?body.communityId:store.community_id))
+  if(!group&&!body.communityId&&owned.length===1)group=owned[0]
+  if(!group&&body.communityId&&body.communityId!=='new')return json({error:'Choose an owned matching community.'},403)
   if(!group){group={id:crypto.randomUUID(),slug:'club-'+user.id.replaceAll('-',''),owner_id:user.id,name:store.name,description:store.bio,sport:store.sports[0],is_public:false,access_type:store.access_mode,creator_product_id:store.product_id,avatar_url:store.logo_url,banner_url:store.cover_url,member_count:1,created_at:new Date().toISOString()};table('groups').push(group);table('group_members').push({group_id:group.id,user_id:user.id,role:'owner'});store.community_id=group.id}
+  store.community_id=group.id
   return json({group})
  }
  if(path==='/api/creator/whop-onboard'&&request.nextUrl.searchParams.get('embedded')==='1')return json({embedded:true,state:{state:'ready',canCharge:true,canPayout:true,actions:[]}})

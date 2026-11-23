@@ -1,47 +1,33 @@
 'use client'
-
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useLayoutEffect, useRef } from 'react'
-import { Bell, Bookmark, CalendarDays, Hash, Home, LayoutGrid, MessageCircle, MessagesSquare, Newspaper, Sparkles, Users } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { ArrowLeft, Bell, Bookmark, CalendarDays, Hash, Home, LayoutGrid, MessageCircle, MessagesSquare, MoreHorizontal, Newspaper, Users } from 'lucide-react'
+import { FloatingSurface } from '@/components/ui/FloatingSurface'
+import styles from './CommunityNav.module.css'
 
 const destinations = [
-  { href: '/community', label: 'Community', icon: Sparkles },
   { href: '/feed', label: 'Feed', icon: Home },
-  { href: '/groups', label: 'Groups', icon: Users },
+  { href: '/groups', label: 'Communities', icon: Users },
   { href: '/channels', label: 'Live rooms', icon: MessagesSquare },
+  { href: '/messages', label: 'Messages', icon: MessageCircle },
+]
+const secondary = [
+  { href: '/bookmarks', label: 'Saved posts', icon: Bookmark },
+  { href: '/notifications', label: 'Activity', icon: Bell },
   { href: '/forum', label: 'Discussions', icon: Hash },
   { href: '/pages', label: 'Pages', icon: LayoutGrid },
   { href: '/events', label: 'Events', icon: CalendarDays },
-  { href: '/messages', label: 'Messages', icon: MessageCircle },
-  { href: '/notifications', label: 'Activity', icon: Bell },
-  { href: '/bookmarks', label: 'Saved', icon: Bookmark },
   { href: '/blog', label: 'Articles', icon: Newspaper },
 ]
-
+export function CommunityMore() {
+  const [open, setOpen] = useState(false), anchor = useRef<HTMLButtonElement>(null)
+  return <><button ref={anchor} type="button" className={styles.more} aria-label="More community options" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(!open)}><MoreHorizontal size={18} /><span>More</span></button><FloatingSurface open={open} anchorRef={anchor} onClose={() => setOpen(false)} width={240} align="end" ariaLabel="More community options"><nav className={styles.menu} aria-label="More community options">{secondary.map(({ href, label, icon: Icon }) => <Link href={href} key={href} onClick={() => setOpen(false)}><Icon size={16} />{label}</Link>)}</nav></FloatingSurface></>
+}
+/** Desktop already has these destinations in its top bar. Mobile gets one compact row. */
 export function CommunityNav() {
   const pathname = usePathname()
-  const nav = useRef<HTMLElement>(null)
-  useLayoutEffect(() => {
-    const container = nav.current
-    if (!container) return
-    const reveal = () => {
-      const active = container.querySelector<HTMLElement>('[aria-current="page"]')
-      if (!active) return
-      const item = active.getBoundingClientRect(), rail = container.getBoundingClientRect()
-      if (item.left < rail.left + 4 || item.right > rail.right - 4) container.scrollLeft += item.left - rail.left - 8
-    }
-    reveal()
-    const observer = new ResizeObserver(reveal)
-    observer.observe(container)
-    return () => observer.disconnect()
-  }, [pathname])
-  return <nav ref={nav} className="ss-community-nav" aria-label="Community">
-    {destinations.map(({ href, label, icon: Icon }) => {
-      const active = pathname === href || pathname.startsWith(`${href}/`)
-      return <Link key={href} href={href} className={active ? 'is-active' : undefined} aria-current={active ? 'page' : undefined}>
-        <Icon size={15} aria-hidden="true" /><span>{label}</span>
-      </Link>
-    })}
-  </nav>
+  const root = destinations.some(item => pathname === item.href) || pathname === '/community'
+  if (!root) return <nav className={styles.context} aria-label="Community"><Link href="/groups"><ArrowLeft size={15} />Communities</Link><CommunityMore /></nav>
+  return <nav className={styles.mobile} aria-label="Community">{destinations.map(({ href, label, icon: Icon }) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={17} /><span>{label}</span></Link>)}</nav>
 }

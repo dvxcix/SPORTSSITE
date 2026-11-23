@@ -3,9 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { authVisibilityUnavailable } from '@/lib/blocks'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import Link from 'next/link'
-import { ArrowRight, Hash, LockKeyhole, MessageSquareText, Plus, Radio, Users } from 'lucide-react'
+import { ArrowRight, Hash, LockKeyhole, MessageSquareText, Plus, Users } from 'lucide-react'
 import { CommunityNav } from '@/components/community/CommunityNav'
-import { ProductAction, ProductHero, ProductPageShell } from '@/components/product/ProductPage'
+import { ProductAction, ProductPageShell } from '@/components/product/ProductPage'
 
 type ChannelCardData = { id: string; slug: string; name: string; description?: string | null; icon?: string | null; channel_type?: string | null; member_count?: number | null }
 
@@ -31,7 +31,7 @@ export default async function ChannelsPage() {
 
   return <ProductPageShell>
     <CommunityNav />
-    <ProductHero icon={<Radio size={21}/>} eyebrow="Live community" title="Channels" description="Talk picks, games, and every live swing." actions={creator ? <ProductAction href="/groups/create"><Plus size={15}/> New community</ProductAction> : undefined}/>
+    <header className="ss-community-heading"><h1>Live rooms</h1>{creator ? <ProductAction href="/creators/studio?setup=1"><Plus size={15}/> Create community</ProductAction> : null}</header>
     {creator && (
       <ChannelSection title="Your channels" eyebrow="Your communities" channels={owned} empty={<div className="rounded-2xl border border-dashed border-[color-mix(in_srgb,var(--accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--accent)_4%,transparent)] p-6"><h3 className="font-semibold text-[var(--text-1)]">No channels yet</h3><Link href="/groups/create" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent)]">Create a community <ArrowRight size={14}/></Link></div>}/>
     )}

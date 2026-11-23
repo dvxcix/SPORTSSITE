@@ -43,7 +43,7 @@ const SIDEBAR_W = 220
 const SIDEBAR_W_COLLAPSED = 64
 const socialShortcuts = [
   { href: '/feed', label: 'Feed', icon: Home },
-  { href: '/community', label: 'Community', icon: Users },
+  { href: '/groups', label: 'Communities', icon: Users },
   { href: '/messages', label: 'Messages', icon: MessageCircle },
   { href: '/picks', label: 'Picks', icon: TrendingUp },
 ]
@@ -92,7 +92,7 @@ const nav: NavItem[] = [
   null,
   { section: 'Connect' },
   { href: '/sports',      icon: Activity,      label: 'Live Scores', badge: 'LIVE' },
-  { href: '/community',   icon: Users,         label: 'Community' },
+  { href: '/groups',   icon: Users,         label: 'Communities' },
   { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
   { href: '/events',      icon: Calendar,      label: 'Events', flagKey: 'feature_events' },
   { href: '/blog',        icon: BookOpen,      label: 'Blog', flagKey: 'feature_blog' },
