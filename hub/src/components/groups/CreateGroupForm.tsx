@@ -17,7 +17,7 @@ const EMOJIS = ['👥', '🏆', '🔥', '⚡', '🎯', '💰', '🎲', '🏈', '
 
 type CreatorProduct = { id: string; title: string; price: number; currency: string }
 
-export function CreateGroupForm({ products = [], selectedProductId }: { products?: CreatorProduct[]; selectedProductId?: string }) {
+export function CreateGroupForm({ products = [], selectedProductId, onCreated, onSubmittingChange }: { products?: CreatorProduct[]; selectedProductId?: string; onCreated?: (group: { id: string; slug: string }) => void; onSubmittingChange?: (busy: boolean) => void }) {
   const { profile } = useAuth()
   const showMlb = !MLB_HIBERNATING || profile?.account_type === 'admin'
   const router = useRouter()
@@ -45,6 +45,7 @@ export function CreateGroupForm({ products = [], selectedProductId }: { products
     if (submitting || createdSlug) return
     if (!form.name.trim()) { setError('Group name is required'); return }
     setSubmitting(true)
+    onSubmittingChange?.(true)
     setError('')
     try {
     const groupSlug = slug(form.name.trim())
@@ -91,10 +92,11 @@ export function CreateGroupForm({ products = [], selectedProductId }: { products
         if (imageError) { setError('Your group was created. Its images could not be saved; retry in group settings.'); return }
       }
     }
-    router.push(`/groups/${created.group_slug}?setup=community`)
+    if (onCreated) onCreated({ id: created.group_id, slug: created.group_slug })
+    else router.push(`/groups/${created.group_slug}?setup=community`)
     router.refresh()
     } catch { setError('The request was interrupted. Check your groups before trying again.') }
-    finally { setSubmitting(false) }
+    finally { setSubmitting(false); onSubmittingChange?.(false) }
   }
 
   return (

@@ -16,6 +16,7 @@ import { ContextHandoff } from './ContextHandoff'
 import { ProductTelemetry } from './ProductTelemetry'
 import { isPublicPreviewPath } from '@/lib/publicResearchPreview'
 import { getProductArea } from './navigationConfig'
+import { CreatorMarketShell, CreatorWorkspaceShell } from '@/components/creator/CreatorWorkspaceShell'
 
 const WatchlistButton=dynamic(()=>import('@/components/dugout/WatchlistPanel').then(module=>module.WatchlistButton),{ssr:false})
 const MyPicksButton=dynamic(()=>import('@/components/dugout/MyPicksPanel').then(module=>module.MyPicksButton),{ssr:false})
@@ -46,6 +47,13 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
   if (isAdmin) {
     // Admin pages render their own full layout via admin/layout.tsx
     return <><NetworkStatus /><ProductTelemetry />{children}</>
+  }
+
+  if (path === '/creators/studio' || path === '/creators/payouts') {
+    return <><MfaGate/><NetworkStatus/><ProductTelemetry/><CreatorWorkspaceShell>{children}</CreatorWorkspaceShell><div hidden inert><MyPicksButton/><WatchlistButton/></div><UtilityDock teaserOnly/></>
+  }
+  if (path === '/creators' || path.startsWith('/creators/offers/') || path.startsWith('/creators/access/') || /^\/creators\/[^/]+$/.test(path)) {
+    return <><MfaGate/><NetworkStatus/><ProductTelemetry/><CreatorMarketShell>{children}</CreatorMarketShell><div hidden inert><MyPicksButton/><WatchlistButton/></div><UtilityDock teaserOnly/></>
   }
 
   if (isAuthPage || isLandingPage || isPublicPreviewPath(path) || process.env.NEXT_PUBLIC_DESIGN_REVIEW === '1' && path === '/design-review/full-audit') {

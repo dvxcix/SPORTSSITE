@@ -4,11 +4,11 @@ export function withPrivateDesignReview(base:NextConfig):NextConfig {
  const requested=process.env.SLIPSURGE_UI_REVIEW==='1'
  const privateBuild=requested&&process.env.SLIPSURGE_UI_REVIEW_BUILD==='1'&&!process.env.VERCEL
  const reviewDist=process.env.SLIPSURGE_UI_REVIEW_DIST??'.next-private-ui-review'
- if(privateBuild&&!/^\.next-private-[a-z0-9-]+$/.test(reviewDist))throw new Error('Private review output must stay in a local .next-private-* directory.')
+ if(requested&&!/^\.next-private-[a-z0-9-]+$/.test(reviewDist))throw new Error('Private review output must stay in a local .next-private-* directory.')
  const active=requested&&(process.env.NODE_ENV==='development'||privateBuild)&&!process.env.VERCEL
  if(requested&&!active)throw new Error('Design review may run only with next dev or an explicit private local review build.')
  const root=process.cwd()
- return {...base,...(privateBuild?{distDir:reviewDist}:process.env.SLIPSURGE_UI_BUILD_CHECK==='1'?{distDir:'.next-ui-build-check'}:{}),env:{...base.env,NEXT_PUBLIC_DESIGN_REVIEW:active?'1':'0'},...(active?{
+ return {...base,...((active&&!!process.env.SLIPSURGE_UI_REVIEW_DIST)||privateBuild?{distDir:reviewDist}:process.env.SLIPSURGE_UI_BUILD_CHECK==='1'?{distDir:'.next-ui-build-check'}:{}),env:{...base.env,NEXT_PUBLIC_DESIGN_REVIEW:active?'1':'0'},...(active?{
   devIndicators:false,
   logging:{browserToTerminal:false},
   onDemandEntries:{maxInactiveAge:3_600_000,pagesBufferLength:200},
@@ -17,6 +17,7 @@ export function withPrivateDesignReview(base:NextConfig):NextConfig {
    const result=base.webpack?base.webpack(config,context):config
    if(context.dev)result.devtool=false
    result.resolve.alias={...result.resolve.alias,
+    '@/components/creator/CreatorCheckoutEmbed$':path.join(root,'review/CreatorCheckoutEmbed.tsx'),
     '@supabase/ssr$':path.join(root,'review/supabase.ts'),
     '@supabase/supabase-js$':path.join(root,'review/supabase.ts'),
     '@/lib/supabase/admin$':path.join(root,'review/admin.ts'),
@@ -28,6 +29,7 @@ export function withPrivateDesignReview(base:NextConfig):NextConfig {
    }
    const replacements:Record<string,string>={
     [path.join(root,'src/lib/supabase/admin')]:path.join(root,'review/admin.ts'),
+    [path.join(root,'src/components/creator/CreatorCheckoutEmbed')]:path.join(root,'review/CreatorCheckoutEmbed.tsx'),
     [path.join(root,'src/lib/nbaPaintData')]:path.join(root,'review/nba.ts'),
     [path.join(root,'src/lib/nbaResearchResources')]:path.join(root,'review/nba-resources.ts'),
     [path.join(root,'src/lib/nbaSharedCache')]:path.join(root,'review/cache.ts'),
@@ -37,7 +39,7 @@ export function withPrivateDesignReview(base:NextConfig):NextConfig {
    result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/^@slipsurge\/core\/espn-api$/, (resource:{request:string})=>{
     resource.request=path.join(root,'review/scoreboard.ts')
    }))
-   result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/(?:supabase[/\\]admin|nbaPaintData|nbaResearchResources|nbaSharedCache|nflTouchdownFeed|[./]data)(?:\.ts)?$/, (resource:any)=>{
+   result.plugins.push(new context.webpack.NormalModuleReplacementPlugin(/(?:supabase[/\\]admin|CreatorCheckoutEmbed|nbaPaintData|nbaResearchResources|nbaSharedCache|nflTouchdownFeed|[./]data)(?:\.tsx?)?$/, (resource:any)=>{
     const target=(resource.request.startsWith('@/')?path.join(root,'src',resource.request.slice(2)):path.resolve(resource.context,resource.request)).replace(/\.tsx?$/,'')
     if(replacements[target])resource.request=replacements[target]
    }))

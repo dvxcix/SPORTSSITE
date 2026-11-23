@@ -146,3 +146,36 @@ test('a provider outage cannot extend a locally expired membership',async()=>{
  assert.equal(f.provider.length,1)
  assert.equal(commerce.hasCurrentCreatorAccess({status:'expired',current_period_end:'2020-01-01'}),false)
 })
+
+function embeddedCheckout(options={}){
+ const providerCalls=[]
+ const admin=db(call=>{
+  if(call.table==='creator_products')return {data:{id:ids.product,creator_id:options.owner?ids.user:ids.creator,status:options.paused?'paused':'active',whop_plan_id:'plan_owned'},error:null}
+  if(call.table==='creator_entitlements')return {data:options.entitled?{status:'active',current_period_end:'2099-01-01'}:null,error:null}
+  return {data:{whop_connected_company_id:'biz_creator'},error:null}
+ })
+ const next={NextResponse:{json:(body,init={})=>new Response(JSON.stringify(body),{status:init.status||200,headers:init.headers})}}
+ const route=compile('src/app/api/creator/products/[productId]/checkout/route.ts',{
+  'next/server':next,'@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:ids.user}}})}})},
+  '@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/platform':{PLATFORM_URL:'https://www.slipsurge.com'},
+  '@/lib/creatorWhop':{getCreatorPaymentState:async()=>{if(options.wrongAccount)throw Error('Wrong parent');return {canCharge:!options.restricted}},creatorWhop:async(path,body,key)=>{providerCalls.push({path,body,key});return options.response??{id:'ch_verified',purchase_url:'https://whop.com/checkout/verified'}}},
+  '@/lib/creatorCommerce':commerce,'@/lib/serverRateLimit':{consumeServerRateLimit:async()=>({allowed:!options.limited,available:true})},
+  '@/lib/creatorWebhookConfig':{creatorDeliveryReady:async()=>!options.disconnected},
+  '@/lib/safeApiError':{safeApiError:(_tag,_cause,message,status=500)=>next.NextResponse.json({error:message},{status})},
+  '@/lib/whopUrl':{isTrustedWhopUrl:value=>{try{return new URL(value).protocol==='https:'&&new URL(value).hostname==='whop.com'}catch{return false}}},
+ })
+ return {providerCalls,admin,run:()=>route.POST(new Request('https://www.slipsurge.com/api/creator/products/'+ids.product+'/checkout',{method:'POST',body:JSON.stringify({creator_id:'attacker',account_id:'biz_attacker',price:0})}),{params:Promise.resolve({productId:ids.product})})}
+}
+test('embedded creator checkout is configured for the server-owned account, variant and signed-in buyer',async()=>{
+ const f=embeddedCheckout(),response=await f.run(),data=await response.json();assert.equal(response.status,200);assert.equal(data.checkoutConfigurationId,'ch_verified');assert.equal(response.headers.get('cache-control'),'private, no-store')
+ assert.deepEqual(f.providerCalls[0].body,{account_id:'biz_creator',variant_id:'plan_owned',redirect_url:'https://www.slipsurge.com/creators/access/complete?product='+ids.product,metadata:{slipsurge_product_id:ids.product,slipsurge_creator_id:ids.creator,internal_user_id:ids.user}})
+ assert.match(f.providerCalls[0].key,/^slipsurge-checkout-/);assert.equal(f.admin.calls.some(call=>call.rpc||call.values),false,'checkout must not fulfill or alter memberships')
+})
+test('embedded checkout rejects missing, legacy and malformed provider configurations and unsafe hosted fallbacks',async()=>{
+ for(const response of [{purchase_url:'https://whop.com/checkout/x'},{id:'plan_owned',purchase_url:'https://whop.com/checkout/x'},{id:'ch_x?secret',purchase_url:'https://whop.com/checkout/x'},{id:'ch_owned',purchase_url:'https://attacker.example/checkout'}]){const f=embeddedCheckout({response});assert.equal((await f.run()).status,502)}
+})
+test('embedded checkout retains owner, active-member, publication, provider readiness and rate gates',async()=>{
+ for(const [options,status]of[[{owner:true},409],[{entitled:true},409],[{paused:true},404],[{restricted:true},409],[{wrongAccount:true},502],[{disconnected:true},503],[{limited:true},429]]){
+  const f=embeddedCheckout(options),response=await f.run();assert.equal(response.status,status);assert.equal(f.providerCalls.length,0);if(options.entitled)assert.equal((await response.json()).accessUrl,'/creators/access/complete?product='+ids.product)
+ }
+})

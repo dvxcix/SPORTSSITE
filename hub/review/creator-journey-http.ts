@@ -6,8 +6,27 @@ export async function creatorJourneyHttp(request:NextRequest,role:ReviewRole){
  const path=request.nextUrl.pathname,user=authUser(role),profile=reviewProfile(role)
  const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'no-store','X-SlipSurge-Review':'local-fixtures-only'}})
  if(path==='/api/creator/members')return json({members:table('creator_entitlements').filter(row=>row.creator_id===user?.id).map(row=>({...row,product:table('creator_products').find(product=>product.id===row.product_id),member:table('users').find(member=>member.id===row.user_id)}))})
+ if(path==='/api/creator/scheduled-posts'){
+  if(!user)return json({error:'Sign in required.'},401)
+  const rows=table('creator_scheduled_posts')
+  if(request.method==='DELETE'){const id=request.nextUrl.searchParams.get('id'),index=rows.findIndex(row=>row.id===id&&row.creator_id===user.id);if(index<0)return json({error:'Draft not found.'},404);rows.splice(index,1);return json({ok:true})}
+  if(request.method==='POST'||request.method==='PATCH'){
+   const body=await request.json(),existing=rows.find(row=>row.id===body.id&&row.creator_id===user.id)
+   if(request.method==='PATCH'&&!existing)return json({error:'Post not found.'},404)
+   if(body.action==='cancel'){existing.status='canceled';return json({ok:true})}
+   if(body.groupId&&!table('groups').some(group=>group.id===body.groupId&&group.owner_id===user.id))return json({error:'Choose one of your communities.'},403)
+   if(!body.content?.trim()||!Number.isFinite(Date.parse(body.scheduledFor)))return json({error:'Add your post and a valid publishing time.'},400)
+   const post={id:existing?.id||crypto.randomUUID(),creator_id:user.id,group_id:body.groupId||null,content:body.content,post_type:body.postType||'text',sport:body.sport||null,visibility:body.visibility||'public',scheduled_for:body.scheduledFor,status:body.draft?'draft':'scheduled',published_post_id:null,attempts:0,created_at:existing?.created_at||new Date().toISOString()}
+   if(existing)Object.assign(existing,post);else rows.push(post)
+   return json({post},request.method==='POST'?201:200)
+  }
+ }
  if(path==='/api/admin/creator-fees')return json({rows:[{label:'platform processing',percentage:2,fixed:null,source:'Illustrative review'}],checkedAt:new Date().toISOString()})
  if(/^\/api\/creator\/products\/[^/]+\/restore$/.test(path))return json({state:'link_required'})
+ if(/^\/api\/creator\/products\/[^/]+\/checkout$/.test(path)){
+  if(!user)return json({error:'Sign in to purchase access.'},401)
+  return json({checkoutConfigurationId:'ch_reviewonly',url:'https://whop.com/checkout/review-only'})
+ }
  if(/^\/api\/groups\/[^/]+\/discord\/claim$/.test(path))return json({ok:true})
  if(/^\/api\/groups\/[^/]+\/discord$/.test(path)){
   const groupId=path.split('/')[3]

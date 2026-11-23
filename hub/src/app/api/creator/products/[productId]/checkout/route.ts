@@ -28,12 +28,12 @@ export async function POST(_request: Request, context: { params: Promise<{ produ
     if (!await creatorDeliveryReady(admin)) return NextResponse.json({ error: 'SlipSurge creator payments need a connection check. Please try again later.' }, { status: 503 })
     const { data: creator } = await admin.from('users').select('whop_connected_company_id').eq('id', product.creator_id).single()
     if (!creator?.whop_connected_company_id || !(await getCreatorPaymentState(creator.whop_connected_company_id)).canCharge) return NextResponse.json({ error: 'This creator cannot accept payments right now.' }, { status: 409 })
-    const checkout = await creatorWhop<{ purchase_url?: string | null }>('/checkout_configurations', {
+    const checkout = await creatorWhop<{ id?: string; purchase_url?: string | null }>('/checkout_configurations', {
       account_id: creator.whop_connected_company_id, variant_id: product.whop_plan_id,
       redirect_url: `${PLATFORM_URL}/creators/access/complete?product=${product.id}`,
       metadata: { slipsurge_product_id: product.id, slipsurge_creator_id: product.creator_id, internal_user_id: user.id },
     }, `slipsurge-checkout-${product.id}-${user.id}-${Math.floor(Date.now() / 300_000)}`)
-    if (!isTrustedWhopUrl(checkout.purchase_url)) throw new Error('Invalid checkout destination')
-    return NextResponse.json({ url: checkout.purchase_url }, { headers: { 'Cache-Control': 'private, no-store' } })
+    if (!checkout.id || !/^ch_[a-zA-Z0-9]+$/.test(checkout.id) || !isTrustedWhopUrl(checkout.purchase_url)) throw new Error('Invalid checkout configuration')
+    return NextResponse.json({ checkoutConfigurationId: checkout.id, url: checkout.purchase_url }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (cause) { return safeApiError('creator-checkout', cause, 'Checkout could not be opened. Try again.', 502) }
 }

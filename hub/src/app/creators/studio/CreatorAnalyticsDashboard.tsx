@@ -35,18 +35,18 @@ export function CreatorAnalyticsDashboard({ analytics }: { analytics: CreatorAna
 
   return (
     <section className={styles.dashboard} aria-labelledby="creator-analytics-title">
-      <header><div><span>PERFORMANCE</span><h2 id="creator-analytics-title">Creator analytics</h2><p>Last 30 days, compared with the previous 30.</p></div><Activity size={20} /></header>
+      <header><div><h2 id="creator-analytics-title">Last 30 days</h2><p>Compared with the previous 30 days.</p></div><Activity size={20} /></header>
 
       <div className={styles.kpis}>
-        <article><span><UserPlus size={15} /></span><div><small>NEW MEMBERS</small><strong>{analytics.newMembers30}</strong><Trend value={analytics.memberGrowth} /></div></article>
-        <article><span><BadgeDollarSign size={15} /></span><div><small>REVENUE</small><strong>${analytics.revenue30.toFixed(2)}</strong><Trend value={analytics.revenueGrowth} money /></div></article>
-        <article><span><ShieldCheck size={15} /></span><div><small>RETENTION</small><strong>{analytics.retentionRate.toFixed(1)}%</strong><em>{analytics.churned30} lost · {analytics.atRiskMembers} at risk</em></div></article>
-        <article><span><Repeat2 size={15} /></span><div><small>ENGAGEMENT</small><strong>{analytics.engagement30}</strong><em>Across {analytics.posts30} posts</em></div></article>
+        <article><span><UserPlus size={15} /></span><div><small>New members</small><strong>{analytics.newMembers30}</strong><Trend value={analytics.memberGrowth} /></div></article>
+        <article><span><BadgeDollarSign size={15} /></span><div><small>Revenue</small><strong>${analytics.revenue30.toFixed(2)}</strong><Trend value={analytics.revenueGrowth} money /></div></article>
+        <article><span><ShieldCheck size={15} /></span><div><small>Retention</small><strong>{analytics.retentionRate.toFixed(1)}%</strong><em>{analytics.churned30} lost · {analytics.atRiskMembers} at risk</em></div></article>
+        <article><span><Repeat2 size={15} /></span><div><small>Engagement</small><strong>{analytics.engagement30}</strong><em>Across {analytics.posts30} posts</em></div></article>
       </div>
 
       <div className={styles.analyticsGrid}>
         <article className={styles.funnelCard}>
-          <header><div><small>AUDIENCE FUNNEL</small><strong>From discovery to access</strong></div><Users size={16} /></header>
+          <header><div><strong>From discovery to access</strong></div><Users size={16} /></header>
           <div className={styles.funnel}>
             {funnel.map(({ label, value, icon: Icon }) => (
               <div key={label}><span><Icon size={12} /><b>{label}</b><strong>{value}</strong></span><i><span style={{ width: `${Math.max(value > 0 ? 4 : 0, Math.min(100, (value / maxFunnel) * 100))}%` }} /></i></div>
@@ -56,13 +56,13 @@ export function CreatorAnalyticsDashboard({ analytics }: { analytics: CreatorAna
         </article>
 
         <article className={styles.sourceCard}>
-          <header><div><small>DISCOVERY</small><strong>Audience sources</strong></div><Eye size={16} /></header>
+          <header><div><strong>Audience sources</strong></div><Eye size={16} /></header>
           <div>{analytics.sources.length ? analytics.sources.slice(0, 6).map(source => <span key={source.source}><b>{source.source}</b><strong>{source.count}</strong></span>) : <p>Source data begins with new storefront visits.</p>}</div>
         </article>
       </div>
 
       <article className={styles.offerCard}>
-        <header><div><small>OFFER PERFORMANCE</small><strong>Membership conversion</strong></div><CircleDollarSign size={16} /></header>
+        <header><div><strong>Membership performance</strong></div><CircleDollarSign size={16} /></header>
         {analytics.offers.length ? (
           <div className={styles.offerTable} role="table" aria-label="Offer performance over the last 30 days">
             <div className={styles.offerHead} role="row"><span role="columnheader">Offer</span><span role="columnheader">Views</span><span role="columnheader">Checkout</span><span role="columnheader">Purchased</span><span role="columnheader">Active</span><span role="columnheader">Revenue</span></div>

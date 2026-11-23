@@ -3192,7 +3192,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3210,7 +3210,8 @@
       "docs/design/creator-community-onboarding-2026-11-22.txt",
       "docs/design/creator-community-onboarding-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.json",
-      "docs/design/creator-business-journey-2026-11-22.txt"
+      "docs/design/creator-business-journey-2026-11-22.txt",
+      "docs/design/creator-workspace-redesign-2026-11-23.json"
     ],
     "release": {
       "state": "Live",
@@ -3240,7 +3241,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "creator-community-onboarding-2026-11-22",
-    "notes": "2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
+    "notes": "2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3255,7 +3256,8 @@
       "docs/design/creator-community-onboarding-2026-11-22.txt",
       "docs/design/creator-community-onboarding-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.json",
-      "docs/design/creator-business-journey-2026-11-22.txt"
+      "docs/design/creator-business-journey-2026-11-22.txt",
+      "docs/design/creator-workspace-redesign-2026-11-23.json"
     ],
     "release": {
       "state": "Live",
@@ -3331,7 +3333,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3350,7 +3352,8 @@
       "docs/design/creator-community-onboarding-2026-11-22.txt",
       "docs/design/creator-community-onboarding-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.json",
-      "docs/design/creator-business-journey-2026-11-22.txt"
+      "docs/design/creator-business-journey-2026-11-22.txt",
+      "docs/design/creator-workspace-redesign-2026-11-23.json"
     ],
     "release": {
       "state": "Live",
@@ -3381,7 +3384,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3399,7 +3402,8 @@
       "docs/design/creator-community-onboarding-2026-11-22.txt",
       "docs/design/creator-community-onboarding-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.json",
-      "docs/design/creator-business-journey-2026-11-22.txt"
+      "docs/design/creator-business-journey-2026-11-22.txt",
+      "docs/design/creator-workspace-redesign-2026-11-23.json"
     ],
     "release": {
       "state": "Live",
@@ -3429,7 +3433,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3447,7 +3451,8 @@
       "docs/design/creator-community-onboarding-2026-11-22.txt",
       "docs/design/creator-community-onboarding-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.json",
-      "docs/design/creator-business-journey-2026-11-22.txt"
+      "docs/design/creator-business-journey-2026-11-22.txt",
+      "docs/design/creator-workspace-redesign-2026-11-23.json"
     ],
     "release": {
       "state": "Live",
@@ -3477,7 +3482,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3495,7 +3500,8 @@
       "docs/design/creator-community-onboarding-2026-11-22.txt",
       "docs/design/creator-community-onboarding-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.json",
-      "docs/design/creator-business-journey-2026-11-22.txt"
+      "docs/design/creator-business-journey-2026-11-22.txt",
+      "docs/design/creator-workspace-redesign-2026-11-23.json"
     ],
     "release": {
       "state": "Live",

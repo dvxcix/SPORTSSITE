@@ -1,0 +1,34 @@
+SlipSurge creator workspace and customer storefront redesign
+2026-11-23
+
+Reviewed references
+- Whop product workspace and staged product creation: https://mobbin.com/flows/67d6fec7-58ed-41a0-b42d-e11a97557d44?tab=screens
+- Patreon membership management: https://mobbin.com/flows/ae9281cf-a8cb-44e2-8c67-be0f3cffd625?tab=screens
+- Buy Me a Coffee page editing overlay: https://mobbin.com/screens/f8d96638-d8fd-4423-85e9-5228a97af0a2
+- Patreon customer membership selection: https://mobbin.com/flows/0e2d0e6f-bf09-49b2-85e8-158cddf3b3fe?tab=screens
+- Whop customer purchase overlay: https://mobbin.com/flows/7fe84cb0-9a69-42ef-a55c-60c71c28c757?tab=screens
+- Current Whop Elements checkout and return contract: https://docs.whop.com/developer/guides/embed-checkout
+
+Implemented checklist
+[x] Dedicated Creator Studio navigation: Overview, Products, Communities, Members, Content, Analytics, Balance & payouts, Settings. The research sidebar does not occupy the business workspace.
+[x] Separate customer shell for creator discovery, storefronts, offers and membership returns. Discover, communities, account, Creator Studio and appearance remain reachable.
+[x] Products catalogue with search, status filter, explicit drafts, price/access period, linked community and publication actions. Existing pause, resume and closed-link verification remain available.
+[x] Focused product dialog: details, pricing, review and live member preview. Closing and reopening retains the unsaved draft while the page stays mounted. Request IDs and exact saved-draft retries remain stable after provider failures.
+[x] Free or paid community creation in a dialog, including banner/avatar upload and product binding. Successful creation returns to Studio rather than taking creators out of their workspace.
+[x] Community appearance, Discord and management sections in a focused dialog. Channels, invitations, roles, member management, community posts and chat remain linked to their existing permission-checked tools.
+[x] Public profile editor in Studio for creator name, bio, avatar and cover. It updates only the signed-in member's profile fields; existing effects, rings, social links and preferences are preserved.
+[x] Branded discovery cards with creator covers/avatars, search and sorting by followers, price or name. No invented sales, testimonials, reviews or revenue.
+[x] Storefront cover/identity, membership cards, direct Join action, existing-member/owner access links, membership details and community discovery.
+[x] Whop Elements checkout dialog with actual account-scoped server-authored checkout configuration, member attribution, light/dark appearance and validated hosted fallback.
+[x] Checkout configuration rejects missing or malformed configuration IDs and untrusted destinations. Owner, already-entitled, paused, readiness and rate gates remain enforced on the server.
+[x] Failed/canceled checkout returns show a retry path. An active server-verified entitlement wins over return-page wording. Browser callbacks and URL status never grant membership or Discord roles.
+[x] Content calendar keeps scheduled posts and drafts visible; creating/editing a post uses a focused dialog with audience, community destination and schedule controls. Provider errors remain visible inside that dialog.
+[x] Analytics uses readable labels, ordinary case, consistent surfaces, responsive metrics, funnel and membership performance table. No scoring, financial aggregation or membership policy changed.
+[x] Mobile account actions retain My Picks and Watchlist portal hosts. VOLT remains the only floating launcher, underneath portaled dialogs.
+[x] Dialogs contain keyboard focus, close on Escape when idle, restore focus, and prevent dismissal during saves. Phone editors fill the viewport with one scrollable body. Reduced-motion preferences are respected.
+
+Validation scope and results are recorded in creator-workspace-redesign-2026-11-23.json.
+Release identifiers and production verification are recorded after deployment.
+
+Testing boundary
+Local creator/product/community/profile/post writes use the guarded in-memory review adapter with no production credentials. Checkout preview uses a build-only replacement; production imports the real Whop Elements component. No live membership purchase, financial-account creation, KYC acceptance, payout, role grant or member message was performed for QA. The published checkout and fulfillment contracts are covered by provider-response and database transaction tests; this is not a receipt for a real paid customer transaction.

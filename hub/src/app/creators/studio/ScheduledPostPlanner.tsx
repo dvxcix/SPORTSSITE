@@ -1,8 +1,9 @@
 'use client'
 
 import { useMemo, useRef, useState } from 'react'
-import { CalendarClock, CalendarDays, Check, Clock3, Edit3, FileText, Loader2, Send, Trash2, X } from 'lucide-react'
+import { Plus, CalendarDays, Check, Clock3, Edit3, FileText, Loader2, Send, Trash2, X } from 'lucide-react'
 import styles from './ScheduledPostPlanner.module.css'
+import { CreatorDialog } from '@/components/creator/CreatorDialog'
 import { EmojiText } from '@/components/social/EmojiText'
 
 export type ScheduledPost = { group_id?: string | null; id: string; content: string; post_type: string; sport: string | null; visibility: string; scheduled_for: string; status: string; published_post_id: string | null; attempts: number; created_at: string; updated_at?: string }
@@ -25,6 +26,7 @@ function dateKey(value: string | Date) {
 }
 
 export function ScheduledPostPlanner({ posts, mlbAccess, groups = [] }: { posts: ScheduledPost[]; mlbAccess: boolean; groups?: { id: string; name: string; access_type: string }[] }) {
+  const [composerOpen, setComposerOpen] = useState(false)
   const [items, setItems] = useState(posts)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [content, setContent] = useState('')
@@ -50,11 +52,13 @@ export function ScheduledPostPlanner({ posts, mlbAccess, groups = [] }: { posts:
   }
 
   function edit(post: ScheduledPost) {
+    setComposerOpen(true)
     setGroupId(post.group_id || ''); setEditingId(post.id); setContent(post.content); setPostType(post.post_type); setSport(post.sport ?? ''); setVisibility(post.visibility); setScheduledFor(localInputFromIso(post.scheduled_for)); setMessage('')
     requestAnimationFrame(() => { composerRef.current?.focus(); composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) })
   }
 
   function chooseDay(day: Date) {
+    setComposerOpen(true); setMessage('')
     const current = new Date(scheduledFor)
     const next = new Date(day); next.setHours(current.getHours() || 12, current.getMinutes(), 0, 0)
     setScheduledFor(localInputFromIso(next.toISOString()))
@@ -75,7 +79,7 @@ export function ScheduledPostPlanner({ posts, mlbAccess, groups = [] }: { posts:
       if (!response.ok || !data?.post) throw new Error(data?.error || 'Could not save post.')
       setItems(current => editingId ? current.map(item => item.id === editingId ? data.post : item) : [...current, data.post])
       setMessage(editingId ? 'Post updated.' : draft ? 'Draft saved.' : 'Post scheduled.')
-      resetComposer()
+      resetComposer(); setComposerOpen(false)
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not save post.') } finally { setBusy('') }
   }
 
@@ -110,19 +114,19 @@ export function ScheduledPostPlanner({ posts, mlbAccess, groups = [] }: { posts:
   </div>
 
   return <article className={styles.panel}>
-    <header><div><span>CONTENT CALENDAR</span><h2>Draft and schedule posts</h2><p>Plan creator updates and keep every publishing window in one place.</p></div><CalendarClock size={21}/></header>
+    <header><div><h2>Publishing schedule</h2><p>Your next seven days.</p></div><button type="button" className={styles.newPost} onClick={()=>{setComposerOpen(true);setMessage('')}}><Plus size={16}/>New post</button></header>
     <div className={styles.calendar} aria-label="Next seven publishing days">{calendarDays.map(day => <button key={day.key} type="button" onClick={() => chooseDay(day.date)} data-selected={dateKey(scheduledFor) === day.key}><span>{day.date.toLocaleDateString('en-US', { weekday: 'short' })}</span><strong>{day.date.getDate()}</strong><small>{day.count ? day.count + ' scheduled' : 'Open'}</small></button>)}</div>
-    <div className={styles.composer} data-editing={Boolean(editingId)}>
-      <div className={styles.composerTitle}>{editingId ? <><Edit3 size={14}/><strong>Editing scheduled content</strong><button type="button" onClick={resetComposer}>Cancel edit</button></> : <><CalendarDays size={14}/><strong>New calendar post</strong></>}</div>
+    {composerOpen&&<CreatorDialog title={editingId?'Edit post':'New post'} description="Write for your feed or community, then save a draft or choose when it goes out." busy={!!busy} onClose={()=>setComposerOpen(false)}><fieldset disabled={!!busy} className={styles.composer} data-editing={Boolean(editingId)}>
+      {editingId&&<div className={styles.composerTitle}><Edit3 size={14}/><strong>Editing scheduled content</strong><button type="button" onClick={resetComposer}>Start a new post</button></div>}
       <textarea ref={composerRef} value={content} onChange={event => setContent(event.target.value)} maxLength={500} placeholder="Write a take or research update…" aria-label="Scheduled post content"/>
       <label className={styles.audienceLabel}>Destination<select value={groupId} onChange={event => { setGroupId(event.target.value); setVisibility('public') }} aria-label="Post destination"><option value="">My public feed</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}{group.access_type === 'paid' ? ' · Paid members' : ' · Community'}</option>)}</select></label>
       <div className={styles.options}><select value={postType} onChange={event => setPostType(event.target.value)} aria-label="Post type"><option value="text">Take</option><option value="analysis">Research</option></select><select value={sport} onChange={event => setSport(event.target.value)} aria-label="Sport"><option value="">Any sport</option>{mlbAccess && <option>MLB</option>}<option>NFL</option><option>NBA</option><option>NHL</option><option>NCAAF</option><option>NCAAB</option></select><select value={visibility} disabled={!!groupId} onChange={event => setVisibility(event.target.value)} aria-label="Audience"><option value="public">{groupId ? 'Community members' : 'Public'}</option>{!groupId && <option value="followers">Followers</option>}{visibility === 'premium' && <option value="premium">Choose a paid community</option>}</select><label><Clock3 size={13}/><input type="datetime-local" value={scheduledFor} min={localInputDate(1)} onChange={event => setScheduledFor(event.target.value)} aria-label="Publish date and time"/></label></div>
       <div className={styles.actions}><span>{content.length}/500</span><button type="button" onClick={() => void save(true)} disabled={!content.trim() || Boolean(busy)}>{busy === 'draft' || busy === 'edit' ? <Loader2 className="animate-spin" size={14}/> : <FileText size={14}/>}Save draft</button><button type="button" onClick={() => void save(false)} disabled={!content.trim() || Boolean(busy)}>{busy === 'schedule' || busy === 'edit' ? <Loader2 className="animate-spin" size={14}/> : editingId ? <Check size={14}/> : <Send size={14}/>} {editingId ? 'Update & schedule' : 'Schedule'}</button></div>
-    </div>
+    {message&&<div className={styles.message} role="status">{message}</div>}</fieldset></CreatorDialog>}
     <div className={styles.board}>
-      <section><header><div><span>UPCOMING</span><strong>{scheduled.length} scheduled</strong></div><CalendarDays size={16}/></header><div className={styles.queue}>{scheduled.length ? scheduled.map(row) : <p>No scheduled posts yet.</p>}</div></section>
-      <section><header><div><span>WORKBENCH</span><strong>{drafts.length} drafts</strong></div><FileText size={16}/></header><div className={styles.queue}>{drafts.length ? drafts.map(row) : <p>No drafts waiting.</p>}</div></section>
+      <section><header><div><strong>Scheduled</strong><span>{scheduled.length} posts</span></div><CalendarDays size={16}/></header><div className={styles.queue}>{scheduled.length ? scheduled.map(row) : <p>No scheduled posts yet.</p>}</div></section>
+      <section><header><div><strong>Drafts</strong><span>{drafts.length} posts</span></div><FileText size={16}/></header><div className={styles.queue}>{drafts.length ? drafts.map(row) : <p>No drafts waiting.</p>}</div></section>
     </div>
-    {message && <div className={styles.message} role="status">{message}</div>}
+    {!composerOpen&&message && <div className={styles.message} role="status">{message}</div>}
   </article>
 }

@@ -1,0 +1,716 @@
+{
+  "date": "2026-11-23T00:57:03.666Z",
+  "scope": "Creator workspace, marketplace, storefront, checkout and membership return",
+  "layouts": [
+    {
+      "name": "overview",
+      "layout": "desktop-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Your business, at a glance"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "name": "products",
+      "layout": "desktop-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Products"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "name": "communities",
+      "layout": "desktop-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Communities"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "name": "members",
+      "layout": "desktop-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Members"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "name": "content",
+      "layout": "desktop-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Content"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "name": "analytics",
+      "layout": "desktop-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Analytics"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "name": "settings",
+      "layout": "desktop-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Settings"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "name": "payouts",
+      "layout": "desktop-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Balance & payouts"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "name": "discover",
+      "layout": "desktop-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Find your community."
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "name": "storefront",
+      "layout": "desktop-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Jordan L."
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "name": "offer",
+      "layout": "desktop-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "The weekly research room"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "name": "overview",
+      "layout": "desktop-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Your business, at a glance"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "name": "products",
+      "layout": "desktop-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Products"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "name": "communities",
+      "layout": "desktop-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Communities"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "name": "members",
+      "layout": "desktop-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Members"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "name": "content",
+      "layout": "desktop-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Content"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "name": "analytics",
+      "layout": "desktop-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Analytics"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "name": "settings",
+      "layout": "desktop-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Settings"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "name": "payouts",
+      "layout": "desktop-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Balance & payouts"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "name": "discover",
+      "layout": "desktop-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Find your community."
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "name": "storefront",
+      "layout": "desktop-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Jordan L."
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "name": "offer",
+      "layout": "desktop-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "The weekly research room"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "name": "overview",
+      "layout": "phone-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Your business, at a glance"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "products",
+      "layout": "phone-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Products"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "communities",
+      "layout": "phone-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Communities"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "members",
+      "layout": "phone-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Members"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "content",
+      "layout": "phone-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Content"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "analytics",
+      "layout": "phone-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Analytics"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "settings",
+      "layout": "phone-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Settings"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "payouts",
+      "layout": "phone-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Balance & payouts"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "discover",
+      "layout": "phone-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Find your community."
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "storefront",
+      "layout": "phone-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Jordan L."
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "offer",
+      "layout": "phone-dark",
+      "background": "rgb(12, 17, 24)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "The weekly research room"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "name": "overview",
+      "layout": "phone-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Your business, at a glance"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "products",
+      "layout": "phone-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Products"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "communities",
+      "layout": "phone-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Communities"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "members",
+      "layout": "phone-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Members"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "content",
+      "layout": "phone-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Content"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "analytics",
+      "layout": "phone-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Analytics"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "settings",
+      "layout": "phone-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Settings"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "payouts",
+      "layout": "phone-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Balance & payouts"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "discover",
+      "layout": "phone-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Find your community."
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "storefront",
+      "layout": "phone-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "Jordan L."
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "name": "offer",
+      "layout": "phone-light",
+      "background": "rgb(237, 240, 244)",
+      "brokenImages": [],
+      "errors": [],
+      "headings": [
+        "The weekly research room"
+      ],
+      "main": 1,
+      "overflow": false,
+      "theme": "light",
+      "width": 390
+    }
+  ],
+  "checkoutReturns": [
+    {
+      "status": "canceled",
+      "hasCommunityGrantLink": false,
+      "overflow": false,
+      "title": "Checkout canceled"
+    },
+    {
+      "status": "failed",
+      "hasCommunityGrantLink": false,
+      "overflow": false,
+      "title": "Checkout wasn’t completed"
+    },
+    {
+      "status": "succeeded",
+      "hasCommunityGrantLink": false,
+      "overflow": false,
+      "title": "Checking your membership"
+    }
+  ],
+  "functionalChecks": [
+    "Isolated product Details -> Pricing -> Review -> saved draft",
+    "Exact product -> paid community binding -> publication",
+    "Community appearance/Discord/management dialog tabs",
+    "Unsaved product draft retention after Escape and reopen",
+    "Public storefront profile edit and isolated save",
+    "Creator discovery search, empty state, clearing and price sort",
+    "Embedded checkout preview with no real payment",
+    "Canceled and failed returns expose retry; unverified succeeded does not grant access",
+    "Mobile account menu opens Watchlist and My Picks portals",
+    "Community research draft save, edit, schedule, cancellation and disposable draft deletion",
+    "Post submission error stays visible in the dialog and retains the written draft"
+  ],
+  "tests": {
+    "creatorCommerce": 56,
+    "whopElements": 8,
+    "productionSource": 134,
+    "privateReview": 4,
+    "checklist": 4,
+    "typecheck": "passed",
+    "eslint": "passed"
+  },
+  "financialBoundary": "No real checkout payment, KYC submission, payout, role grant or message was executed. Operational membership authorization remains in existing signed webhook and server/RLS paths.",
+  "release": null,
+  "narrowChecks": [
+    {
+      "name": "products",
+      "overflow": false,
+      "theme": "dark",
+      "width": 320
+    },
+    {
+      "name": "content",
+      "overflow": false,
+      "theme": "dark",
+      "width": 320
+    },
+    {
+      "name": "analytics",
+      "overflow": false,
+      "theme": "dark",
+      "width": 320
+    },
+    {
+      "name": "storefront",
+      "overflow": false,
+      "theme": "dark",
+      "width": 320
+    },
+    {
+      "name": "products",
+      "overflow": false,
+      "theme": "light",
+      "width": 320
+    },
+    {
+      "name": "content",
+      "overflow": false,
+      "theme": "light",
+      "width": 320
+    },
+    {
+      "name": "analytics",
+      "overflow": false,
+      "theme": "light",
+      "width": 320
+    },
+    {
+      "name": "storefront",
+      "overflow": false,
+      "theme": "light",
+      "width": 320
+    }
+  ]
+}

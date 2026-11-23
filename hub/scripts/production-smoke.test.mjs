@@ -1606,8 +1606,12 @@ test('application routes expose one top-level main landmark without nested page 
   assert.deepEqual(withMain.sort(), [
     'src/app/global-error.tsx',
     'src/components/admin/AdminShell.tsx',
+    'src/components/creator/CreatorWorkspaceShell.tsx',
     'src/components/layout/RootLayoutShell.tsx',
   ])
+  const shell = await read('src/components/layout/RootLayoutShell.tsx')
+  assert.match(shell, /return <>.*<CreatorWorkspaceShell>\{children\}<\/CreatorWorkspaceShell>/)
+  assert.match(shell, /return <>.*<CreatorMarketShell>\{children\}<\/CreatorMarketShell>/)
 })
 
 test('watchlist research sharing preserves sport context and accessible modal behavior', async () => {
@@ -1925,8 +1929,9 @@ test('creator analytics are durable, bounded, deduplicated, and derived from suc
   assert.match(studio, /\.limit\(5000\)/)
   assert.match(studio, /retentionRate:/)
   assert.match(client, /<CreatorAnalyticsDashboard analytics=\{analytics\} \/>/)
-  assert.match(dashboard, /AUDIENCE FUNNEL/)
-  assert.match(dashboard, /OFFER PERFORMANCE/)
+  assert.match(dashboard, /analytics\.funnel\.storefrontViews/)
+  assert.match(dashboard, /analytics\.funnel\.checkoutStarts/)
+  assert.match(dashboard, /aria-label="Offer performance over the last 30 days"/)
   assert.match(dashboard, /role="table"/)
 })
 
