@@ -19406,6 +19406,7 @@
     "Viewport emulation is not physical-device certification.",
     "Provider transactions, real member posts/messages, destructive admin actions and collector jobs were not exercised.",
     "157 existing routes were rendered; 83 non-page inventory surfaces retain prior evidence and approvals, not new full operational certification.",
-    "No field conversion or performance claim is inferred from these checks."
+    "No field conversion or performance claim is inferred from these checks.",
+    "The inactive legacy MLB player-detail fixture has no heading: its four observations establish shell geometry only, not complete player content. This release does not change that sports page."
   ]
 }
