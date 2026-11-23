@@ -33,6 +33,7 @@
 .emptyPosts span, .locked span { margin-top: 4px; color: var(--text-2); font-size: 12px; }
 .locked > svg { margin-bottom: 12px; color: var(--text-3); }
 .chatViewport { display: flex; min-height: 440px; height: min(620px, 70dvh); flex-direction: column; overflow: hidden; }
+:global(body.ss-keyboard-open) .chatViewport { min-height: 0; height: calc(var(--ss-visible-height, 100dvh) - var(--topbar-h, 64px) - var(--banner-h, 0px) - var(--review-bar-h, 0px) - 12px); }
 .discord{padding:0 18px;border-bottom:1px solid var(--border)}.discord summary{display:flex;align-items:center;min-height:44px;color:var(--text-2);font-size:12px;cursor:pointer}.discord summary:after{content:'+';margin-left:auto;font-size:18px}.discord[open] summary:after{content:'−'}.discord summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 @media (max-width: 600px) {

@@ -16,6 +16,8 @@
 /* Keep live status and market values clear without decorative glow. */
 .triggerLive{border-color:#a56f45!important;color:var(--gold)!important;background:var(--surface-3)!important;box-shadow:none}
 .count{font-size:12px;font-weight:700}
+.triggerShortLabel{display:none}
+@media(max-width:767px){.triggerLabel{display:none}.triggerShortLabel{display:inline}}
 .backdrop{backdrop-filter:none}
 .sheet{background:var(--surface-2);box-shadow:0 20px 56px rgba(0,0,0,.55)}
 .sheet>header{background:var(--surface-2)}.sheet h2{font-weight:600;line-height:1.2}.sheet header p{color:var(--text-2);font-size:12px;line-height:1.4}

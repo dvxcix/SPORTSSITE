@@ -17,6 +17,7 @@ import { ProductTelemetry } from './ProductTelemetry'
 import { isPublicPreviewPath } from '@/lib/publicResearchPreview'
 import { getProductArea } from './navigationConfig'
 import { CreatorMarketShell, CreatorWorkspaceShell } from '@/components/creator/CreatorWorkspaceShell'
+import { useMobileViewport } from './useMobileViewport'
 
 const WatchlistButton=dynamic(()=>import('@/components/dugout/WatchlistPanel').then(module=>module.WatchlistButton),{ssr:false})
 const MyPicksButton=dynamic(()=>import('@/components/dugout/MyPicksPanel').then(module=>module.MyPicksButton),{ssr:false})
@@ -33,6 +34,7 @@ export function RootLayoutShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
+  useMobileViewport()
   const path = usePathname()
   const isAdmin = path.startsWith('/admin')
   const isAuthPage = path.startsWith('/auth/') || path === '/onboarding'

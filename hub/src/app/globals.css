@@ -847,6 +847,11 @@ img { max-width: 100%; }
   cursor: pointer;
   transition: color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
 }
+.ss-dock-label-short { display: none; }
+@media (max-width: 360px) {
+  .ss-dock-label-full { display: none; }
+  .ss-dock-label-short { display: inline; }
+}
 .ss-mobile-dock-item:hover { color: var(--text-1); background: var(--surface-3); }
 .ss-mobile-dock-item:active { transform: scale(.95); }
 .ss-mobile-dock-item.is-active { color: var(--accent); background: var(--accent-dim); }

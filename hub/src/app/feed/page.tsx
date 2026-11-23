@@ -70,7 +70,7 @@ export default async function FeedPage({
             <div>
               <h1 id="feed-title">The Feed</h1>
             </div>
-            <div className="ss-member-header-actions"><ResearchSavedActions /><Link href="/explore" className="ss-feed-explore"><Compass size={15} /><span>Explore</span></Link></div>
+            <div className="ss-member-header-actions"><ResearchSavedActions /><Link href="/explore" className="ss-feed-explore" aria-label="Explore members and research"><Compass size={15} /><span>Explore</span></Link></div>
           </header>
           <div className="ss-feed-toolbar">
           <nav className="ss-feed-filters" aria-label="Feed filters">

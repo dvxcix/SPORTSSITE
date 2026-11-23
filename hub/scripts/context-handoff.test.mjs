@@ -334,3 +334,16 @@ test('returning to an open Missions tab discovers a new cross-device destination
   assert.equal(pushed, '/feed?filter=picks')
   await unmount()
 })
+
+test('mobile navigation does not keep resurfacing resume offers, but returning to the app refreshes them', async () => {
+  cloud.set('member-a', { path: '/picks', page_title: 'Picks', scroll_y: 400 })
+  await mount('/feed')
+  window.matchMedia = () => ({ matches: true })
+  assert.ok(document.querySelector('aside'))
+  state.path = '/groups'; await render()
+  assert.equal(document.querySelector('aside'), null)
+  Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+  await act(async () => document.dispatchEvent(new window.Event('visibilitychange')))
+  assert.ok(document.querySelector('aside'))
+  await unmount()
+})

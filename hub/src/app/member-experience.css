@@ -196,6 +196,11 @@ body:has(.ss-context-handoff) .ss-profile-savebar{--profile-resume-offset:76px}
   .ss-feed-composer{padding:16px 12px}.ss-feed-composer-layout{display:grid;grid-template-columns:40px minmax(0,1fr);gap:8px 12px}.ss-feed-composer-main{display:contents}.ss-feed-composer-main>.ss-composer-modes{grid-column:2;margin:0}.ss-feed-composer-main>:not(.ss-composer-modes){grid-column:1/-1}.ss-composer-modes>button{min-height:44px;padding-inline:7px}.ss-composer-options{margin:0}.ss-feed-composer-actions{margin-top:0;padding-top:6px}
   .ss-feed-composer-actions{flex-wrap:wrap}.ss-composer-tool{min-height:44px;min-width:44px}.ss-composer-sport-trigger,.ss-composer-visibility-trigger,.ss-composer-post-button{min-height:44px}
   .ss-feed-composer-tools{gap:2px}.ss-feed-composer-tools button{min-width:44px;min-height:44px}.ss-composer-spoiler>span{display:none}.ss-feed-composer-submit{margin-left:auto}
+  .ss-stories-bar[data-empty=true]{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px}
+  .ss-stories-bar[data-empty=true] .ss-stories-heading{margin:0;padding:0}.ss-stories-bar[data-empty=true] .ss-stories-heading small{display:none}
+  .ss-stories-bar[data-empty=true] .ss-stories-rail{padding:0}
+  .ss-stories-bar[data-empty=true] .ss-story-item{display:flex;align-items:center;gap:8px;width:auto;min-height:44px;flex:0 0 auto}
+  .ss-stories-bar[data-empty=true] .ss-story-item.is-create .ss-story-ring{width:40px;height:40px;margin:0}.ss-stories-bar[data-empty=true] .ss-story-item>span{width:auto;margin:0}
   .ss-follow-button.is-compact,.ss-theme-switch:not(.is-full) button{min-height:44px}
   .ss-post-bet-dialog input,.ss-post-bet-dialog select{font-size:16px!important}
   .ss-feed-composer textarea{font-size:16px}.ss-post-avatar-trigger .ss-member-avatar{transform:none!important;margin-right:0!important}
@@ -209,7 +214,7 @@ body:has(.ss-context-handoff) .ss-profile-savebar{--profile-resume-offset:76px}
   .ss-settings-hero p:not(.ss-settings-eyebrow){font-size:12px}.ss-settings-content :is(input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea){font-size:16px}
   .ss-settings-content :is(button,[role=switch]){min-height:44px}.ss-profile-ring-colors>button{min-width:44px;min-height:44px}
   .ss-watchlist-row{padding:14px 12px!important;gap:9px!important}
-  .ss-profile-savebar{bottom:calc(var(--mobile-dock-clearance,88px) + 8px + var(--profile-resume-offset,0px));padding:9px;gap:8px}.ss-profile-savebar>button{min-width:120px}.ss-profile-savebar>span{font-size:11px}
+  .ss-profile-savebar{position:static;padding:9px;gap:8px}.ss-profile-savebar>button{min-width:120px}.ss-profile-savebar>span{font-size:11px}
 }
 @media(prefers-reduced-motion:reduce){.ss-member-cover::before{animation:none}.ss-hot-pick,.ss-member-profile-tabs>a{transition:none}.ss-hot-pick:hover{transform:none}}
 @media(max-width:360px){.ss-composer-modes>button{min-width:44px}.ss-composer-modes>button>svg{display:none}}

@@ -43,7 +43,7 @@ export function MobileDock({ onMenuClick, hidden = false }: { onMenuClick: () =>
           return (
             <Link key={item.href} href={item.href} prefetch={false} className={cn('ss-mobile-dock-item', active && 'is-active')} aria-current={active ? 'page' : undefined} data-label={item.label}>
               <span className="ss-mobile-dock-icon"><Icon size={18} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" /></span>
-              <span>{item.label}</span>
+              {item.label === 'Communities' ? <span><span className="ss-dock-label-full">Communities</span><span className="ss-dock-label-short">Groups</span></span> : <span>{item.label}</span>}
             </Link>
           )
         })}

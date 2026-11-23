@@ -318,6 +318,12 @@ body:has(.ss-review-ribbon) .ss-site-sidebar,body:has(.ss-review-ribbon) .ss-des
 .ss-community-room-layout{min-height:0;height:calc(100dvh - var(--topbar-h,64px) - var(--banner-h,0px) - var(--review-bar-h,0px))}
 @media(max-width:767px),(max-width:1024px) and (any-pointer:coarse){.ss-dm-room{height:calc(100dvh - var(--topbar-h,64px) - var(--banner-h,0px) - var(--review-bar-h,0px) - var(--mobile-dock-clearance,88px))}.ss-community-room-layout{height:calc(100dvh - var(--banner-h,0px) - var(--topbar-h,64px) - var(--review-bar-h,0px) - var(--mobile-dock-clearance,88px) - 12px)}}
 
-@media(max-width:767px){.ss-topbar-search-clear,.ss-sidebar-close{width:44px!important;height:44px!important;min-width:44px;min-height:44px}.ss-topbar-search-input{padding-right:50px!important}.ss-topbar-notification-tabs [role=tab]{min-width:44px}.ss-site-main button[aria-label='Clear player comparison'],.ss-site-main button[aria-label='Delete workspace']{min-width:44px;min-height:44px}}
+body.ss-keyboard-open{--mobile-dock-clearance:0px}
+body.ss-keyboard-open :is(.ss-mobile-dock,.ss-utility-dock,.ss-context-handoff){visibility:hidden;pointer-events:none}
+body.ss-keyboard-open :is(.ss-dm-room,.ss-community-room-layout){height:calc(var(--ss-visible-height,100dvh) - var(--topbar-h,64px) - var(--banner-h,0px) - var(--review-bar-h,0px));min-height:0}
+body.ss-keyboard-open [data-modal-viewport]{top:var(--ss-visible-top,0px)!important;bottom:auto!important;height:var(--ss-visible-height,100dvh)!important}
+body.ss-keyboard-open [data-modal-viewport]>[aria-modal=true]{max-height:100%!important}
+
+@media(max-width:767px){.ss-topbar-search-clear,.ss-sidebar-close{width:44px!important;height:44px!important;min-width:44px;min-height:44px}.ss-topbar-search-clear{right:0}.ss-topbar-search-input{min-height:44px;padding-right:12px!important}.ss-topbar-search[data-has-query=true] .ss-topbar-search-input{padding-right:46px!important}.ss-topbar-notification-tabs [role=tab]{min-width:44px}.ss-site-main button[aria-label='Clear player comparison'],.ss-site-main button[aria-label='Delete workspace']{min-width:44px;min-height:44px}}
 
 @media(max-width:767px){.ss-gif-panel :is(.ss-gif-discovery,.ss-gif-state,.ss-gif-tools,footer,.ss-gif-search) button{min-width:44px;min-height:44px}.ss-gif-panel :is(input,textarea){font-size:16px}}

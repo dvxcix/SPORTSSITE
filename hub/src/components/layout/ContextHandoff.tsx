@@ -62,7 +62,18 @@ function ContextHandoffContent() {
   const userId = user?.id
   const search = searchParams.toString()
   const currentPath = pathname + (search ? '?' + search : '')
+  const [offerPath, setOfferPath] = useState(currentPath)
   const remoteContext = remoteResult && remoteResult.userId === userId && remoteResult.sourcePath === currentPath ? remoteResult.context : null
+
+  useEffect(() => {
+    const returned = () => { if (document.visibilityState === 'visible') setOfferPath(currentPath) }
+    document.addEventListener('visibilitychange', returned)
+    window.addEventListener('pageshow', returned)
+    return () => {
+      document.removeEventListener('visibilitychange', returned)
+      window.removeEventListener('pageshow', returned)
+    }
+  }, [currentPath])
 
   useEffect(() => {
     if (!userId || !isSafeProductPath(currentPath)) return
@@ -211,6 +222,8 @@ function ContextHandoffContent() {
   }
 
   if (!userId || !remoteContext || dismissedPath === remoteContext.path) return null
+  // A phone gets a resume offer on arrival or returning to the app, not after every in-app link.
+  if (offerPath !== currentPath && typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)').matches) return null
 
   return (
     <aside className="ss-context-handoff" aria-label="Continue your last session">

@@ -429,7 +429,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           hide on desktop. */}
       {onMenuClick && (
         <button type="button" onClick={onMenuClick} className="flex md:hidden items-center justify-center" style={{
-          width: 42, height: 42, borderRadius: 11, flexShrink: 0,
+          width: 44, height: 44, borderRadius: 11, flexShrink: 0,
           background: 'transparent', border: '1px solid var(--border)',
           color: 'var(--text-2)', cursor: 'pointer',
         }}
@@ -440,7 +440,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
 
       {!user && <div className="ss-topbar-theme"><ThemeToggle /></div>}
       {/* Search */}
-      <form ref={searchRef} onSubmit={handleSearch} className="ss-topbar-search">
+      <form ref={searchRef} onSubmit={handleSearch} className="ss-topbar-search" data-has-query={!!search}>
         <Search size={14} style={{
           position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)',
           color: 'var(--text-3)', pointerEvents: 'none',
@@ -451,7 +451,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           maxLength={64}
           onChange={e => { setSearch(e.target.value); setQuickOpen(true) }}
           onFocus={() => setQuickOpen(true)}
-          placeholder="Search SlipSurge"
+          placeholder="Search"
           className="ss-topbar-search-input"
           aria-label="Search SlipSurge"
         />

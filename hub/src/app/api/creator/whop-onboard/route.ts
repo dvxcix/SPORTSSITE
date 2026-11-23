@@ -7,7 +7,7 @@ import { isTrustedWhopUrl } from '@/lib/whopUrl'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { safeApiError } from '@/lib/safeApiError'
 
-export async function POST(request?: NextRequest) {
+export async function POST(request: NextRequest) {
   const embedded = request?.nextUrl.searchParams.get('embedded') === '1'
   if (embedded && request?.headers.get('origin') !== request?.nextUrl.origin) return NextResponse.json({ error: 'Open payment setup from SlipSurge.' }, { status: 403 })
   const supabase = await createClient()

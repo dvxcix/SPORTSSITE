@@ -1,0 +1,77 @@
+SlipSurge mobile experience follow-up, 23 November 2026
+
+Direction: the established SlipSurge research and community interface. Keep
+the lime accent, team identity, player images, member effects and theme tokens.
+Use compact reading surfaces and deliberate touch layouts, without adding a
+new visual theme or replacing existing tools. ENERGY 2 / RHYTHM 2 / MOTION 2.
+
+The owner requested antislop-layoutmobile. Installed from
+https://github.com/miqdadbadjuber/anti-slop for Codex at user scope; its core
+and mobile layout instructions were read for this pass. Existing instructions
+authorize repairs and publication, so no new install wizard or approval gate
+was added to the product or development workflow.
+
+Repairs and reasons
+1. Mobile search uses a short placeholder and reserves clear-button space only
+   for a query. The previous empty field lost 50px to an absent clear button.
+2. Search and menu have 44px targets. At the narrowest widths, the duplicate
+   header Messages shortcut yields space to search; Messages remains in the
+   social tabs and all-navigation menu.
+3. The bottom nav says Groups on narrow phones, with smaller three-sport
+   marks, so neither Communities nor the research marks overlap their peers.
+4. VOLT stays floating, as explicitly requested, at 48 x 52px on phones. A
+   temporary resume offer takes priority instead of moving VOLT over content.
+5. Profile Save stays in the form on phones, so it cannot cover the profile
+   banner or controls. Desktop retains its existing sticky save treatment.
+6. Empty Stories becomes a compact create row on phones. Existing stories
+   retain their avatar rail and the create action remains available.
+7. The compact social tabs use 48px targets and less vertical margin.
+8. Icon-only Studio and Explore shortcuts now have accessible names.
+9. The shared viewport observer distinguishes a software keyboard from pinch
+   zoom and short landscape. Chats use the visible height; modal surfaces stay
+   above the keyboard. Bottom navigation, VOLT and resume overlays yield while
+   the keyboard is open. Listeners and viewport properties are cleaned up.
+10. Resume offers appear on mobile arrival or returning to the app, rather
+    than after each in-app link. Cloud saving and cross-device restore remain.
+11. NFL's sample row and action row remain accessible in a compact mobile
+    toolbar. TDs is the short visual label; its accessible name is unchanged.
+12. Corrected the Whop onboarding POST parameter's optional TypeScript type
+    after the production-style build rejected it. No payment behavior changed.
+13. At narrow widths the NFL week and statistical-sample selectors use labeled
+    rows, preserving the full selected week and season instead of clipping them.
+
+Purpose gate: existing neutral surfaces keep research and posts readable;
+lime still identifies selection, status colors retain their actual meaning,
+and team/member artwork supplies identity. No new assets or dependencies.
+The small mascot keeps the owner's requested brand presence. Compact controls
+save phone space while preserving 44px targets and explicit accessible names.
+
+Private verification: 85 viewport/theme receipts across member journeys,
+creator/storefront screens, research boards and all NBA/NFL player sections.
+Widths: 320, 390, 768, 844 and 1280px, including short landscape. Eleven
+interaction receipts include real private-fixture comment/chat sends, badge
+panels, avatar selection, research access, saved drawers and toolbar actions.
+The final live release and checks will be appended after publication.
+Physical phone keyboards are represented by viewport-event tests; this pass
+does not claim a physical-device test or a field performance measurement.
+
+Delivery gate, scoped to this change
+PASS R-03: narrow nav labels and marks fit; recorded page/drawer bounds pass.
+PASS R-17/18/36/38: no new invented content, claims or statistics were shipped.
+PASS R-23/24/26: existing artwork and destinations retained; named shortcuts,
+research picker, NFL toolbar and saved drawers were exercised in the browser.
+PASS R-25/34: both themes retain the existing contrast tokens and were visually
+checked on the affected surfaces; no replacement palette was introduced.
+PASS R-27: existing empty/error/loading behavior retained; automated source and
+interaction checks passed, including failed/pending comments and restore.
+PASS R-32: keyboard, focus restoration and nested dialogs passed their tests;
+menus, drawers and creator navigation were opened and dismissed in browser.
+PASS R-33: interface changes were made directly in their source files.
+PASS R-35: optimized build, TypeScript and scoped lint passed. The final build
+and production checks are recorded with the deployment receipt.
+PASS R-37/39/40: existing brand direction, labels, native controls, reduced
+motion and reserved image sizes retained. Viewport events are coalesced into
+one animation frame without causing React renders; cleanup is tested.
+PASS Purpose/Liveliness/Quality: the owner retained the floating mascot; compact
+reading space, real team/member identity and established transitions supply
+the stated direction. Each layout change has a concrete reason listed above.

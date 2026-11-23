@@ -87,6 +87,7 @@ export function ModalSurface({
     <div
       className={backdropClassName}
       style={{ position: 'fixed', inset: 0, display: 'flex', ...backdropStyle }}
+      data-modal-viewport
       onMouseDown={event => { if (event.target === event.currentTarget) closeRef.current() }}
     >
       <div

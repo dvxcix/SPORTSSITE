@@ -21,7 +21,7 @@
 @keyframes volt-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.025, .975); } }
 @keyframes volt-blink { 0%, 91%, 100% { transform: scaleY(1); } 94.5% { transform: scaleY(.08); } }
 @media(max-width:767px), (max-width:1024px) and (any-pointer:coarse) {
-  .trigger, .float { width: 64px; height: 68px; }
+  .trigger, .float { width: 48px; height: 52px; }
   .tooltip { padding: 12px 14px; }
 }
 @media(prefers-reduced-motion:reduce) { .hover, .shadow, .breath, .eyes rect { animation: none; } }

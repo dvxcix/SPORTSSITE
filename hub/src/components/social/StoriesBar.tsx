@@ -45,7 +45,7 @@ export function StoriesBar() {
 
   return (
     <>
-      <section className="ss-stories-bar" aria-label="Community stories">
+      <section className="ss-stories-bar" aria-label="Community stories" data-empty={visibleStories.length === 0}>
         <div className="ss-stories-heading"><span><Sparkles size={12}/> Stories</span><small>{visibleStories.length ? `${visibleStories.length} live` : 'Share the moment'}</small></div>
         <div className="ss-stories-rail">
           {userId && (

@@ -39,7 +39,7 @@ export function NflTouchdownTracker({ events, onJumpToGame }: { events: NflTouch
   const firstCount = events?.filter(event => event.isFirstTdOfGame).length
   return <>
     <button type="button" className={events?.length ? styles.triggerLive : undefined} onClick={() => setOpen(true)} aria-label={events == null ? 'Open touchdown tracker, temporarily unavailable' : `Open today's touchdown tracker, ${events.length} touchdowns`}>
-      <Flame size={15} /> Touchdowns
+      <Flame size={15} /><span className={styles.triggerLabel}>Touchdowns</span><span className={styles.triggerShortLabel}>TDs</span>
       <span className={styles.count}>{events?.length ?? '—'}</span>
     </button>
     <ModalSurface open={open} onClose={() => setOpen(false)} labelledBy="nfl-touchdown-title" backdropClassName={styles.backdrop} backdropStyle={{ display: 'grid' }} panelClassName={styles.sheet}>
