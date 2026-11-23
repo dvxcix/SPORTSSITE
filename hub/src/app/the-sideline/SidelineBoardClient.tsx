@@ -1417,6 +1417,9 @@ function ComparisonPanel({ players, teams, window, board, gameSeason, finalResul
   const [tab,setTab]=useState<'matchup'|'tracking'|'markets'>('matchup')
   const [market,setMarket]=useState('first_td')
   const [allLines,setAllLines]=useState(false)
+  const scroller=useRef<HTMLDivElement>(null)
+  const resetScroll=()=>{if(scroller.current){scroller.current.scrollTop=0;scroller.current.scrollLeft=0}}
+  const changeSection=(value:typeof tab)=>{setTab(value);resetScroll()}
   if (!players.length) return null
   const entries=players.map(player=>({player,marketPlayer:findMarketPlayer(board,player)}))
   const marketOptions=[...new Map(entries.flatMap(({marketPlayer})=>marketPlayer?.markets.map(item=>[item.propType,{value:item.propType,label:item.label}] as const)??[])).values()]
@@ -1439,11 +1442,11 @@ function ComparisonPanel({ players, teams, window, board, gameSeason, finalResul
         <button type="button" onClick={onClear}>Clear</button>
       </header>
       <div className={styles.compareControls}>
-        <ResearchSectionNav label="Comparison section" value={tab} onChange={setTab} items={[{value:'matchup',label:'Matchup'},{value:'tracking',label:'NFL Tracking'},{value:'markets',label:'Sportsbooks'}]}/>
-        {tab==='markets'&&<button type="button" className={styles.compareAllLines} aria-pressed={allLines} onClick={()=>setAllLines(value=>!value)}>All lines</button>}
-        {tab==='markets'?<label>Market<select aria-label="Comparison market" value={selectedMarket} onChange={event=>setMarket(event.target.value)} disabled={!marketOptions.length}>{marketOptions.length?marketOptions.map(item=><option key={item.value} value={item.value}>{item.label}</option>):<option value="">No markets</option>}</select></label>:<label>Sample<select aria-label="Comparison sample" value={window} onChange={event=>onWindow(event.target.value as SidelineWindow)}>{WINDOW_OPTIONS.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>}
+        <ResearchSectionNav label="Comparison section" value={tab} onChange={changeSection} items={[{value:'matchup',label:'Matchup'},{value:'tracking',label:'NFL Tracking'},{value:'markets',label:'Sportsbooks'}]}/>
+        {tab==='markets'&&<button type="button" className={styles.compareAllLines} aria-pressed={allLines} onClick={()=>{setAllLines(value=>!value);resetScroll()}}>All lines</button>}
+        {tab==='markets'?<label>Market<select aria-label="Comparison market" value={selectedMarket} onChange={event=>{setMarket(event.target.value);resetScroll()}} disabled={!marketOptions.length}>{marketOptions.length?marketOptions.map(item=><option key={item.value} value={item.value}>{item.label}</option>):<option value="">No markets</option>}</select></label>:<label>Sample<select aria-label="Comparison sample" value={window} onChange={event=>onWindow(event.target.value as SidelineWindow)}>{WINDOW_OPTIONS.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>}
       </div>
-      <div className={styles.compareScroller} role="region" aria-label="Player comparison table" tabIndex={0}>
+      <div ref={scroller} className={styles.compareScroller} role="region" aria-label="Player comparison table" tabIndex={0}>
         <table className={styles.compareTable} style={{'--compare-players':players.length} as CSSProperties}>
           <caption className="sr-only">{players.map(player=>player.name).join(' versus ')} · {WINDOW_OPTIONS.find(item=>item.id===window)?.label} · {tab==='matchup'?'Matchup':tab==='tracking'?'NFL Tracking':'Sportsbooks'}</caption>
           <colgroup><col className={styles.compareLabelColumn}/>{players.map(player=><col key={player.id}/>)}</colgroup>

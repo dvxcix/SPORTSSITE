@@ -91,11 +91,16 @@ test('comparison primary lines stay compact while every alternate contract remai
  try{
   await act(async()=>ui.host.querySelector<HTMLButtonElement>('button[aria-label="Compare James Cook"]')!.click())
   const panel=ui.host.querySelector<HTMLElement>('[data-player-comparison]')!
+  const scrollRegion=panel.querySelector<HTMLElement>('[aria-label="Player comparison table"]')!
+  scrollRegion.scrollTop=120;scrollRegion.scrollLeft=80
   await act(async()=>[...panel.querySelectorAll<HTMLButtonElement>('nav button')].find(button=>button.textContent==='Sportsbooks')!.click())
+  assert.equal(scrollRegion.scrollTop,0);assert.equal(scrollRegion.scrollLeft,0)
   await act(async()=>{const select=panel.querySelector<HTMLSelectElement>('select[aria-label="Comparison market"]')!;select.value='receiving_yards';select.dispatchEvent(new win.Event('change',{bubbles:true}))})
   assert.doesNotMatch(panel.querySelector('tbody')!.textContent!,/7500/)
   const toggle=[...panel.querySelectorAll('button')].find(button=>button.textContent==='All lines')!
+  scrollRegion.scrollTop=150;scrollRegion.scrollLeft=40
   assert.equal(toggle.getAttribute('aria-pressed'),'false');await act(async()=>toggle.click())
+  assert.equal(scrollRegion.scrollTop,0);assert.equal(scrollRegion.scrollLeft,0)
   assert.equal(toggle.getAttribute('aria-pressed'),'true');assert.match(panel.querySelector('tbody')!.textContent!,/150\+.*\+7500.*Open \+8000/)
   await act(async()=>toggle.click());assert.doesNotMatch(panel.querySelector('tbody')!.textContent!,/7500/)
  }finally{await ui.close();globalThis.fetch=old}
