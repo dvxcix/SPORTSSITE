@@ -1,9 +1,9 @@
 {
   "production": {
     "state": "Live",
-    "commit": "c3c1bc13eb7aa7d59757e7d381671576ed89bc35",
-    "deploymentId": "dpl_BWvN2QKinep1sCevfwDzQTtz7kMR",
-    "verifiedAt": "2026-11-23T12:58:32.641Z",
+    "commit": "1822523bd5f206ace82ee09b2d9e416771e7d382",
+    "deploymentId": "dpl_Bq9cRDnNc52uTgLHxVq3o968vWbK",
+    "verifiedAt": "2026-11-23T14:11:36.349Z",
     "url": "https://www.slipsurge.com"
   },
   "items": [
@@ -313,6 +313,13 @@
       "deploymentId": "dpl_5mSnYiPtHh61mkVpk5MM1qdCAKZ2",
       "verifiedAt": "2026-11-23T01:07:33.818Z",
       "url": "https://www.slipsurge.com"
+    },
+    {
+      "state": "Live",
+      "commit": "c3c1bc13eb7aa7d59757e7d381671576ed89bc35",
+      "deploymentId": "dpl_BWvN2QKinep1sCevfwDzQTtz7kMR",
+      "verifiedAt": "2026-11-23T12:58:32.641Z",
+      "url": "https://www.slipsurge.com"
     }
   ],
   "nflAvailability": {
@@ -347,5 +354,15 @@
     "url": "https://www.slipsurge.com",
     "evidence": "docs/design/creator-guided-storefront-2026-11-23.json",
     "scope": "Guided creator stores, public discovery, rich publishing, promotion controls and native Whop balances/payout UI"
+  },
+  "communityPipeline": {
+    "state": "Live",
+    "commit": "1822523bd5f206ace82ee09b2d9e416771e7d382",
+    "deploymentId": "dpl_Bq9cRDnNc52uTgLHxVq3o968vWbK",
+    "verifiedAt": "2026-11-23T14:11:36.349Z",
+    "url": "https://www.slipsurge.com",
+    "evidence": "docs/design/community-unified-2026-11-23.json",
+    "privateChecks": 76,
+    "liveChecks": 72
   }
 }

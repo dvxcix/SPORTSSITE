@@ -46,3 +46,16 @@ SlipSurge-specific implementation decisions requested by the owner.
 Verification and release receipts follow in the companion JSON. Real payment,
 bank, Discord-role and member-notification actions are outside this QA pass.
 No database migration, fee change or production content write is required.
+
+Published source: 6d377358 plus 1822523bd5f206ace82ee09b2d9e416771e7d382.
+Production deployment dpl_Bq9cRDnNc52uTgLHxVq3o968vWbK is READY on
+www.slipsurge.com and slipsurge.com, with no alias error.
+76 private and 72 actual live in-app browser theme/viewport checks passed.
+Desktop: 1280px; phone: 390px. Production console error query returned none.
+The old group-channel route redirects into the member workspace before
+reading history. Shared Live rooms lists exclude creator group channels;
+these remain accessible inside their communities. Four authorization and
+routing tests cover redirects, hidden groups, lookup errors and the existing
+Basic gate for site-wide rooms. Private group chat and direct-message sends
+passed; no production message or financial action was sent.
+All 240 publication records and ten owner approvals are retained.

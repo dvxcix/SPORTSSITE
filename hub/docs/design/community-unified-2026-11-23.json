@@ -1,6 +1,6 @@
 {
   "date": "2026-11-23",
-  "state": "Validated; production verification follows deployment",
+  "state": "Live",
   "browser": "ChatGPT in-app browser",
   "checks": {
     "creatorCommerce": 102,
@@ -10,7 +10,8 @@
     "reviewRelease": 8,
     "typeScript": "pass",
     "changedFileLint": "pass",
-    "optimizedBuild": "pass"
+    "optimizedBuild": "pass",
+    "canonicalChannelEntry": 4
   },
   "privateLayouts": [
     {
@@ -732,6 +733,46 @@
       "pageWidth": 380,
       "theme": "dark",
       "width": 390
+    },
+    {
+      "key": "storefront",
+      "path": "/creators/jordan-review",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Court Notes",
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "storefront",
+      "path": "/creators/jordan-review",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Court Notes",
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "storefront",
+      "path": "/creators/jordan-review",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Court Notes",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "storefront",
+      "path": "/creators/jordan-review",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Court Notes",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
     }
   ],
   "interactions": [
@@ -742,11 +783,749 @@
     "More menu and Escape dismissal",
     "Keyboard Posts/Picks/Chat tabs",
     "Private mobile chat send",
-    "Store publication reuses an existing group; group count unchanged"
+    "Store publication reuses an existing group; group count unchanged",
+    "Private mobile direct-message send",
+    "Legacy create-group link opens the guided creator setup",
+    "Legacy group-room link opens the same member Chat tab"
   ],
   "dataSafety": "No production group, message, membership or payment was created, deleted or merged. Free and paid access remain separate.",
   "references": [
     "https://mobbin.com/screens/fa71773b-df3e-4f48-a613-c5f270dd55d6",
     "https://mobbin.com/screens/db33e0a3-12df-4632-975b-e769101be469"
-  ]
+  ],
+  "release": {
+    "state": "Live",
+    "commit": "1822523bd5f206ace82ee09b2d9e416771e7d382",
+    "deploymentId": "dpl_Bq9cRDnNc52uTgLHxVq3o968vWbK",
+    "verifiedAt": "2026-11-23T14:11:36.349Z",
+    "url": "https://www.slipsurge.com"
+  },
+  "liveLayouts": [
+    {
+      "key": "groups",
+      "path": "/groups",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Communities",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "group-posts",
+      "path": "/groups/parlayparty?view=posts",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "group-picks",
+      "path": "/groups/parlayparty?view=picks",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "group-chat",
+      "path": "/groups/parlayparty?view=chat",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "rooms",
+      "path": "/channels",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Live rooms",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "room",
+      "path": "/channels/general-sports",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "General Sports",
+      "pageWidth": 390,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "messages",
+      "path": "/messages",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Messages",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "feed",
+      "path": "/feed",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "The Feed",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "studio",
+      "path": "/creators/studio",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Your business, at a glance",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "discussions",
+      "path": "/forum",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Discussions",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "pages",
+      "path": "/pages",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Pages",
+      "pageWidth": 390,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "events",
+      "path": "/events",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Events",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "articles",
+      "path": "/blog",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Stories & analysis",
+      "pageWidth": 390,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "notifications",
+      "path": "/notifications",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Notifications",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "saved",
+      "path": "/bookmarks",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Bookmarks",
+      "pageWidth": 390,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "group-settings",
+      "path": "/groups/parlayparty/settings",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Group settings",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "new-message",
+      "path": "/messages/new",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "Who do you want to message?",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "storefront",
+      "path": "/creators/parlayparty",
+      "layout": "phone-light",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "key": "groups",
+      "path": "/groups",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Communities",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "group-posts",
+      "path": "/groups/parlayparty?view=posts",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "group-picks",
+      "path": "/groups/parlayparty?view=picks",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "group-chat",
+      "path": "/groups/parlayparty?view=chat",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "rooms",
+      "path": "/channels",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Live rooms",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "room",
+      "path": "/channels/general-sports",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "General Sports",
+      "pageWidth": 390,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "messages",
+      "path": "/messages",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Messages",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "feed",
+      "path": "/feed",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "The Feed",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "studio",
+      "path": "/creators/studio",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Your business, at a glance",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "discussions",
+      "path": "/forum",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Discussions",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "pages",
+      "path": "/pages",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Pages",
+      "pageWidth": 390,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "events",
+      "path": "/events",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Events",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "articles",
+      "path": "/blog",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Stories & analysis",
+      "pageWidth": 390,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "notifications",
+      "path": "/notifications",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Notifications",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "saved",
+      "path": "/bookmarks",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Bookmarks",
+      "pageWidth": 390,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "group-settings",
+      "path": "/groups/parlayparty/settings",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Group settings",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "new-message",
+      "path": "/messages/new",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "Who do you want to message?",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "storefront",
+      "path": "/creators/parlayparty",
+      "layout": "phone-dark",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "key": "groups",
+      "path": "/groups",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Communities",
+      "pageWidth": 1280,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "group-posts",
+      "path": "/groups/parlayparty?view=posts",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "group-picks",
+      "path": "/groups/parlayparty?view=picks",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "group-chat",
+      "path": "/groups/parlayparty?view=chat",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "rooms",
+      "path": "/channels",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Live rooms",
+      "pageWidth": 1280,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "room",
+      "path": "/channels/general-sports",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "General Sports",
+      "pageWidth": 1280,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "messages",
+      "path": "/messages",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Messages",
+      "pageWidth": 1280,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "feed",
+      "path": "/feed",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "The Feed",
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "studio",
+      "path": "/creators/studio",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Your business, at a glance",
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "discussions",
+      "path": "/forum",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Discussions",
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "pages",
+      "path": "/pages",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Pages",
+      "pageWidth": 1280,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "events",
+      "path": "/events",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Events",
+      "pageWidth": 1280,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "articles",
+      "path": "/blog",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Stories & analysis",
+      "pageWidth": 1280,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "notifications",
+      "path": "/notifications",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Notifications",
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "saved",
+      "path": "/bookmarks",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Bookmarks",
+      "pageWidth": 1280,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "group-settings",
+      "path": "/groups/parlayparty/settings",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Group settings",
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "new-message",
+      "path": "/messages/new",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "Who do you want to message?",
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "storefront",
+      "path": "/creators/parlayparty",
+      "layout": "desktop-light",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "key": "groups",
+      "path": "/groups",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Communities",
+      "pageWidth": 1280,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "group-posts",
+      "path": "/groups/parlayparty?view=posts",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "group-picks",
+      "path": "/groups/parlayparty?view=picks",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "group-chat",
+      "path": "/groups/parlayparty?view=chat",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "rooms",
+      "path": "/channels",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Live rooms",
+      "pageWidth": 1280,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "room",
+      "path": "/channels/general-sports",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "General Sports",
+      "pageWidth": 1280,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "messages",
+      "path": "/messages",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Messages",
+      "pageWidth": 1280,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "feed",
+      "path": "/feed",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "The Feed",
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "studio",
+      "path": "/creators/studio",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Your business, at a glance",
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "discussions",
+      "path": "/forum",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Discussions",
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "pages",
+      "path": "/pages",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Pages",
+      "pageWidth": 1280,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "events",
+      "path": "/events",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Events",
+      "pageWidth": 1280,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "articles",
+      "path": "/blog",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Stories & analysis",
+      "pageWidth": 1280,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "notifications",
+      "path": "/notifications",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Notifications",
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "saved",
+      "path": "/bookmarks",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Bookmarks",
+      "pageWidth": 1280,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "group-settings",
+      "path": "/groups/parlayparty/settings",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Group settings",
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "new-message",
+      "path": "/messages/new",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "Who do you want to message?",
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "key": "storefront",
+      "path": "/creators/parlayparty",
+      "layout": "desktop-dark",
+      "errors": [],
+      "heading": "ParlayParty",
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280
+    }
+  ],
+  "canonicalChat": {
+    "path": "/channels/group-parlayparty",
+    "destination": "/groups/parlayparty?view=chat&channel=group-parlayparty",
+    "verified": true
+  },
+  "productionConsoleErrors": []
 }
