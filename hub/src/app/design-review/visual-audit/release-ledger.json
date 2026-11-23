@@ -1,9 +1,9 @@
 {
   "production": {
     "state": "Live",
-    "commit": "76d71ef1171e6307c2c258b6257061a3d1586672",
-    "deploymentId": "dpl_5mSnYiPtHh61mkVpk5MM1qdCAKZ2",
-    "verifiedAt": "2026-11-23T01:07:33.818Z",
+    "commit": "c3c1bc13eb7aa7d59757e7d381671576ed89bc35",
+    "deploymentId": "dpl_BWvN2QKinep1sCevfwDzQTtz7kMR",
+    "verifiedAt": "2026-11-23T12:58:32.641Z",
     "url": "https://www.slipsurge.com"
   },
   "items": [
@@ -306,6 +306,13 @@
       "url": "https://www.slipsurge.com",
       "evidence": "docs/design/social-interaction-followup-2026-11-22.json",
       "scope": "Conversation recovery, draft safety, shared popover placement and channel discovery"
+    },
+    {
+      "state": "Live",
+      "commit": "76d71ef1171e6307c2c258b6257061a3d1586672",
+      "deploymentId": "dpl_5mSnYiPtHh61mkVpk5MM1qdCAKZ2",
+      "verifiedAt": "2026-11-23T01:07:33.818Z",
+      "url": "https://www.slipsurge.com"
     }
   ],
   "nflAvailability": {
@@ -331,5 +338,14 @@
     "evidence": "docs/design/social-interaction-followup-2026-11-22.json",
     "privateChecks": 22,
     "liveChecks": 28
+  },
+  "creatorStorefront": {
+    "state": "Live",
+    "commit": "c3c1bc13eb7aa7d59757e7d381671576ed89bc35",
+    "deploymentId": "dpl_BWvN2QKinep1sCevfwDzQTtz7kMR",
+    "verifiedAt": "2026-11-23T12:58:32.641Z",
+    "url": "https://www.slipsurge.com",
+    "evidence": "docs/design/creator-guided-storefront-2026-11-23.json",
+    "scope": "Guided creator stores, public discovery, rich publishing, promotion controls and native Whop balances/payout UI"
   }
 }

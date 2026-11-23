@@ -52,3 +52,14 @@ modal presentation is the owner's explicit request. No conversion claim.
 Whop contract:
 https://docs.whop.com/developer/platforms/render-payout-portal
 https://docs.whop.com/developer/guides/auth-scoping
+
+Published and verified:
+GitHub main c3c1bc13eb7aa7d59757e7d381671576ed89bc35.
+Vercel dpl_BWvN2QKinep1sCevfwDzQTtz7kMR READY; www.slipsurge.com
+and slipsurge.com aliases assigned without error. 48 authenticated live
+in-app browser checks across 12 creator/admin views at 1280px and 390px,
+light and dark: matching themes, no horizontal page overflow, no UI alerts.
+Production Whop account reads completed; payout verification is still
+required for the tested owner. No financial/identity submission was made.
+Database RLS is enabled; anonymous draft read and member direct writes
+are denied, with two read policies. The companion JSON records each view.

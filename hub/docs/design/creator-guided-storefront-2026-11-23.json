@@ -1,0 +1,525 @@
+{
+  "date": "2026-11-23",
+  "release": {
+    "state": "Live",
+    "commit": "c3c1bc13eb7aa7d59757e7d381671576ed89bc35",
+    "deploymentId": "dpl_BWvN2QKinep1sCevfwDzQTtz7kMR",
+    "verifiedAt": "2026-11-23T12:58:32.641Z",
+    "url": "https://www.slipsurge.com"
+  },
+  "scope": "Guided creator stores, public discovery, rich publishing, promotion controls and native Whop balances/payout UI",
+  "browser": "ChatGPT in-app browser",
+  "liveChecks": [
+    {
+      "key": "overview",
+      "url": "/creators/studio",
+      "layout": "phone-dark",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390,
+      "screenshot": "live-overview-phone-dark.png"
+    },
+    {
+      "key": "products",
+      "url": "/creators/studio?section=products",
+      "layout": "phone-dark",
+      "errors": [],
+      "pageWidth": 390,
+      "theme": "dark",
+      "width": 390,
+      "screenshot": "live-products-phone-dark.png"
+    },
+    {
+      "key": "communities",
+      "url": "/creators/studio?section=communities",
+      "layout": "phone-dark",
+      "errors": [],
+      "pageWidth": 390,
+      "theme": "dark",
+      "width": 390,
+      "screenshot": "live-communities-phone-dark.png"
+    },
+    {
+      "key": "members",
+      "url": "/creators/studio?section=members",
+      "layout": "phone-dark",
+      "errors": [],
+      "pageWidth": 390,
+      "theme": "dark",
+      "width": 390,
+      "screenshot": "live-members-phone-dark.png"
+    },
+    {
+      "key": "content",
+      "url": "/creators/studio?section=content",
+      "layout": "phone-dark",
+      "errors": [],
+      "pageWidth": 390,
+      "theme": "dark",
+      "width": 390,
+      "screenshot": "live-content-phone-dark.png"
+    },
+    {
+      "key": "grow",
+      "url": "/creators/studio?section=promotion",
+      "layout": "phone-dark",
+      "errors": [],
+      "pageWidth": 390,
+      "theme": "dark",
+      "width": 390,
+      "screenshot": "live-grow-phone-dark.png"
+    },
+    {
+      "key": "analytics",
+      "url": "/creators/studio?section=analytics",
+      "layout": "phone-dark",
+      "errors": [],
+      "pageWidth": 390,
+      "theme": "dark",
+      "width": 390,
+      "screenshot": "live-analytics-phone-dark.png"
+    },
+    {
+      "key": "settings",
+      "url": "/creators/studio?section=settings",
+      "layout": "phone-dark",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390,
+      "screenshot": "live-settings-phone-dark.png"
+    },
+    {
+      "key": "payouts",
+      "url": "/creators/payouts",
+      "layout": "phone-dark",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390,
+      "screenshot": "live-payouts-phone-dark.png"
+    },
+    {
+      "key": "directory",
+      "url": "/creators",
+      "layout": "phone-dark",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390,
+      "screenshot": "live-directory-phone-dark.png"
+    },
+    {
+      "key": "storefront",
+      "url": "/creators/parlayparty",
+      "layout": "phone-dark",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390,
+      "screenshot": "live-storefront-phone-dark.png"
+    },
+    {
+      "key": "admin",
+      "url": "/admin/creators",
+      "layout": "phone-dark",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "dark",
+      "width": 390,
+      "screenshot": "live-admin-phone-dark.png"
+    },
+    {
+      "key": "products",
+      "url": "/creators/studio?section=products",
+      "layout": "phone-light",
+      "errors": [],
+      "pageWidth": 390,
+      "theme": "light",
+      "width": 390,
+      "screenshot": "live-products-phone-light.png"
+    },
+    {
+      "key": "communities",
+      "url": "/creators/studio?section=communities",
+      "layout": "phone-light",
+      "errors": [],
+      "pageWidth": 390,
+      "theme": "light",
+      "width": 390,
+      "screenshot": "live-communities-phone-light.png"
+    },
+    {
+      "key": "members",
+      "url": "/creators/studio?section=members",
+      "layout": "phone-light",
+      "errors": [],
+      "pageWidth": 390,
+      "theme": "light",
+      "width": 390,
+      "screenshot": "live-members-phone-light.png"
+    },
+    {
+      "key": "content",
+      "url": "/creators/studio?section=content",
+      "layout": "phone-light",
+      "errors": [],
+      "pageWidth": 390,
+      "theme": "light",
+      "width": 390,
+      "screenshot": "live-content-phone-light.png"
+    },
+    {
+      "key": "grow",
+      "url": "/creators/studio?section=promotion",
+      "layout": "phone-light",
+      "errors": [],
+      "pageWidth": 390,
+      "theme": "light",
+      "width": 390,
+      "screenshot": "live-grow-phone-light.png"
+    },
+    {
+      "key": "analytics",
+      "url": "/creators/studio?section=analytics",
+      "layout": "phone-light",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390,
+      "screenshot": "live-analytics-phone-light.png"
+    },
+    {
+      "key": "settings",
+      "url": "/creators/studio?section=settings",
+      "layout": "phone-light",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390,
+      "screenshot": "live-settings-phone-light.png"
+    },
+    {
+      "key": "payouts",
+      "url": "/creators/payouts",
+      "layout": "phone-light",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390,
+      "screenshot": "live-payouts-phone-light.png"
+    },
+    {
+      "key": "directory",
+      "url": "/creators",
+      "layout": "phone-light",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390,
+      "screenshot": "live-directory-phone-light.png"
+    },
+    {
+      "key": "storefront",
+      "url": "/creators/parlayparty",
+      "layout": "phone-light",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390,
+      "screenshot": "live-storefront-phone-light.png"
+    },
+    {
+      "key": "admin",
+      "url": "/admin/creators",
+      "layout": "phone-light",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390,
+      "screenshot": "live-admin-phone-light.png"
+    },
+    {
+      "key": "overview",
+      "url": "/creators/studio",
+      "layout": "desktop-dark",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280,
+      "screenshot": "live-overview-desktop-dark.png"
+    },
+    {
+      "key": "products",
+      "url": "/creators/studio?section=products",
+      "layout": "desktop-dark",
+      "errors": [],
+      "pageWidth": 1280,
+      "theme": "dark",
+      "width": 1280,
+      "screenshot": "live-products-desktop-dark.png"
+    },
+    {
+      "key": "communities",
+      "url": "/creators/studio?section=communities",
+      "layout": "desktop-dark",
+      "errors": [],
+      "pageWidth": 1280,
+      "theme": "dark",
+      "width": 1280,
+      "screenshot": "live-communities-desktop-dark.png"
+    },
+    {
+      "key": "members",
+      "url": "/creators/studio?section=members",
+      "layout": "desktop-dark",
+      "errors": [],
+      "pageWidth": 1280,
+      "theme": "dark",
+      "width": 1280,
+      "screenshot": "live-members-desktop-dark.png"
+    },
+    {
+      "key": "content",
+      "url": "/creators/studio?section=content",
+      "layout": "desktop-dark",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280,
+      "screenshot": "live-content-desktop-dark.png"
+    },
+    {
+      "key": "grow",
+      "url": "/creators/studio?section=promotion",
+      "layout": "desktop-dark",
+      "errors": [],
+      "pageWidth": 1280,
+      "theme": "dark",
+      "width": 1280,
+      "screenshot": "live-grow-desktop-dark.png"
+    },
+    {
+      "key": "analytics",
+      "url": "/creators/studio?section=analytics",
+      "layout": "desktop-dark",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280,
+      "screenshot": "live-analytics-desktop-dark.png"
+    },
+    {
+      "key": "settings",
+      "url": "/creators/studio?section=settings",
+      "layout": "desktop-dark",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280,
+      "screenshot": "live-settings-desktop-dark.png"
+    },
+    {
+      "key": "payouts",
+      "url": "/creators/payouts",
+      "layout": "desktop-dark",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280,
+      "screenshot": "live-payouts-desktop-dark.png"
+    },
+    {
+      "key": "directory",
+      "url": "/creators",
+      "layout": "desktop-dark",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280,
+      "screenshot": "live-directory-desktop-dark.png"
+    },
+    {
+      "key": "storefront",
+      "url": "/creators/parlayparty",
+      "layout": "desktop-dark",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280,
+      "screenshot": "live-storefront-desktop-dark.png"
+    },
+    {
+      "key": "admin",
+      "url": "/admin/creators",
+      "layout": "desktop-dark",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "dark",
+      "width": 1280,
+      "screenshot": "live-admin-desktop-dark.png"
+    },
+    {
+      "key": "products",
+      "url": "/creators/studio?section=products",
+      "layout": "desktop-light",
+      "errors": [],
+      "pageWidth": 1280,
+      "theme": "light",
+      "width": 1280,
+      "screenshot": "live-products-desktop-light.png"
+    },
+    {
+      "key": "communities",
+      "url": "/creators/studio?section=communities",
+      "layout": "desktop-light",
+      "errors": [],
+      "pageWidth": 1280,
+      "theme": "light",
+      "width": 1280,
+      "screenshot": "live-communities-desktop-light.png"
+    },
+    {
+      "key": "members",
+      "url": "/creators/studio?section=members",
+      "layout": "desktop-light",
+      "errors": [],
+      "pageWidth": 1280,
+      "theme": "light",
+      "width": 1280,
+      "screenshot": "live-members-desktop-light.png"
+    },
+    {
+      "key": "content",
+      "url": "/creators/studio?section=content",
+      "layout": "desktop-light",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280,
+      "screenshot": "live-content-desktop-light.png"
+    },
+    {
+      "key": "grow",
+      "url": "/creators/studio?section=promotion",
+      "layout": "desktop-light",
+      "errors": [],
+      "pageWidth": 1280,
+      "theme": "light",
+      "width": 1280,
+      "screenshot": "live-grow-desktop-light.png"
+    },
+    {
+      "key": "analytics",
+      "url": "/creators/studio?section=analytics",
+      "layout": "desktop-light",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280,
+      "screenshot": "live-analytics-desktop-light.png"
+    },
+    {
+      "key": "settings",
+      "url": "/creators/studio?section=settings",
+      "layout": "desktop-light",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280,
+      "screenshot": "live-settings-desktop-light.png"
+    },
+    {
+      "key": "payouts",
+      "url": "/creators/payouts",
+      "layout": "desktop-light",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280,
+      "screenshot": "live-payouts-desktop-light.png"
+    },
+    {
+      "key": "directory",
+      "url": "/creators",
+      "layout": "desktop-light",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280,
+      "screenshot": "live-directory-desktop-light.png"
+    },
+    {
+      "key": "storefront",
+      "url": "/creators/parlayparty",
+      "layout": "desktop-light",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280,
+      "screenshot": "live-storefront-desktop-light.png"
+    },
+    {
+      "key": "admin",
+      "url": "/admin/creators",
+      "layout": "desktop-light",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280,
+      "screenshot": "live-admin-desktop-light.png"
+    },
+    {
+      "key": "overview",
+      "url": "/creators/studio",
+      "layout": "desktop-light",
+      "errors": [],
+      "pageWidth": 1270,
+      "theme": "light",
+      "width": 1280,
+      "screenshot": "live-overview-desktop-light.png"
+    },
+    {
+      "key": "overview",
+      "url": "/creators/studio",
+      "layout": "phone-light",
+      "errors": [],
+      "pageWidth": 380,
+      "theme": "light",
+      "width": 390,
+      "screenshot": "live-overview-phone-light.png"
+    }
+  ],
+  "privateReview": {
+    "surfaces": 12,
+    "layouts": [
+      "desktop-light",
+      "desktop-dark",
+      "phone-light",
+      "phone-dark"
+    ],
+    "note": "Rendered private fixtures, separate from production provider reads. Free wizard exercised through local publication; paid wizard through the payment setup and member-preview path."
+  },
+  "validation": {
+    "creatorWalletStorefront": 87,
+    "productionSource": 134,
+    "whopElements": 8,
+    "reviewReleaseContracts": 8,
+    "typeScript": "pass",
+    "changedFileLint": "pass",
+    "productionBuild": "READY"
+  },
+  "database": {
+    "migration": "20261123123549_creator_guided_storefronts",
+    "rls": true,
+    "anonymousDraftRead": false,
+    "memberDirectWrite": false,
+    "readPolicies": 2
+  },
+  "providerRead": "Authenticated production balances/history response completed; payment-enabled account requires additional payout verification. Missing balance stays unavailable.",
+  "limits": [
+    "No real payment, withdrawal, bank change, identity submission or Discord role was performed in QA.",
+    "Existing Whop fees remain unchanged; no extra application fee added."
+  ]
+}

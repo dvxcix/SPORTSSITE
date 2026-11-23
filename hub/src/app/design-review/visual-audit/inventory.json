@@ -536,7 +536,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained.",
+    "notes": "Polished responsive forms, metrics and locally scrolling tables; retained all operational controls. Operational writes were not executed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: guided store setup, branded discovery, rich publishing, featured placement and native Whop wallet released. Fresh in-app browser evidence covers desktop/mobile and light/dark. Existing Whop fees apply; no extra SlipSurge application fee.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -552,19 +552,21 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/creators",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/creators",
       "docs/design/creator-business-journey-2026-11-22.json",
-      "docs/design/creator-business-journey-2026-11-22.txt"
+      "docs/design/creator-business-journey-2026-11-22.txt",
+      "docs/design/creator-guided-storefront-2026-11-23.json",
+      "docs/design/creator-guided-storefront-2026-11-23.txt"
     ],
     "release": {
       "state": "Live",
-      "commit": "0890bb6cdcbf17b28a86887dadfd1267f53a5df6",
-      "deploymentId": "dpl_J7URfCgMNyR4j1MLTDQateWjybsi",
-      "verifiedAt": "2026-11-22T17:37:13.484Z",
+      "commit": "c3c1bc13eb7aa7d59757e7d381671576ed89bc35",
+      "deploymentId": "dpl_BWvN2QKinep1sCevfwDzQTtz7kMR",
+      "verifiedAt": "2026-11-23T12:58:32.641Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "creator-business-journey",
-      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
+      "date": "2026-11-23",
+      "batch": "creator-guided-storefront",
+      "environment": "48 real production in-app browser viewport/theme checks plus private interaction fixtures",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -3192,7 +3194,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report. 2026-11-23: guided store setup, branded discovery, rich publishing, featured placement and native Whop wallet released. Fresh in-app browser evidence covers desktop/mobile and light/dark. Existing Whop fees apply; no extra SlipSurge application fee.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3211,19 +3213,21 @@
       "docs/design/creator-community-onboarding-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.txt",
-      "docs/design/creator-workspace-redesign-2026-11-23.json"
+      "docs/design/creator-workspace-redesign-2026-11-23.json",
+      "docs/design/creator-guided-storefront-2026-11-23.json",
+      "docs/design/creator-guided-storefront-2026-11-23.txt"
     ],
     "release": {
       "state": "Live",
-      "commit": "76d71ef1171e6307c2c258b6257061a3d1586672",
-      "deploymentId": "dpl_5mSnYiPtHh61mkVpk5MM1qdCAKZ2",
-      "verifiedAt": "2026-11-23T01:07:33.818Z",
+      "commit": "c3c1bc13eb7aa7d59757e7d381671576ed89bc35",
+      "deploymentId": "dpl_BWvN2QKinep1sCevfwDzQTtz7kMR",
+      "verifiedAt": "2026-11-23T12:58:32.641Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "creator-business-journey",
-      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
+      "date": "2026-11-23",
+      "batch": "creator-guided-storefront",
+      "environment": "48 real production in-app browser viewport/theme checks plus private interaction fixtures",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -3384,7 +3388,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report. 2026-11-23: guided store setup, branded discovery, rich publishing, featured placement and native Whop wallet released. Fresh in-app browser evidence covers desktop/mobile and light/dark. Existing Whop fees apply; no extra SlipSurge application fee.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3403,19 +3407,21 @@
       "docs/design/creator-community-onboarding-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.txt",
-      "docs/design/creator-workspace-redesign-2026-11-23.json"
+      "docs/design/creator-workspace-redesign-2026-11-23.json",
+      "docs/design/creator-guided-storefront-2026-11-23.json",
+      "docs/design/creator-guided-storefront-2026-11-23.txt"
     ],
     "release": {
       "state": "Live",
-      "commit": "76d71ef1171e6307c2c258b6257061a3d1586672",
-      "deploymentId": "dpl_5mSnYiPtHh61mkVpk5MM1qdCAKZ2",
-      "verifiedAt": "2026-11-23T01:07:33.818Z",
+      "commit": "c3c1bc13eb7aa7d59757e7d381671576ed89bc35",
+      "deploymentId": "dpl_BWvN2QKinep1sCevfwDzQTtz7kMR",
+      "verifiedAt": "2026-11-23T12:58:32.641Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "creator-business-journey",
-      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
+      "date": "2026-11-23",
+      "batch": "creator-guided-storefront",
+      "environment": "48 real production in-app browser viewport/theme checks plus private interaction fixtures",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -3433,7 +3439,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report. 2026-11-23: guided store setup, branded discovery, rich publishing, featured placement and native Whop wallet released. Fresh in-app browser evidence covers desktop/mobile and light/dark. Existing Whop fees apply; no extra SlipSurge application fee.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3452,19 +3458,21 @@
       "docs/design/creator-community-onboarding-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.txt",
-      "docs/design/creator-workspace-redesign-2026-11-23.json"
+      "docs/design/creator-workspace-redesign-2026-11-23.json",
+      "docs/design/creator-guided-storefront-2026-11-23.json",
+      "docs/design/creator-guided-storefront-2026-11-23.txt"
     ],
     "release": {
       "state": "Live",
-      "commit": "76d71ef1171e6307c2c258b6257061a3d1586672",
-      "deploymentId": "dpl_5mSnYiPtHh61mkVpk5MM1qdCAKZ2",
-      "verifiedAt": "2026-11-23T01:07:33.818Z",
+      "commit": "c3c1bc13eb7aa7d59757e7d381671576ed89bc35",
+      "deploymentId": "dpl_BWvN2QKinep1sCevfwDzQTtz7kMR",
+      "verifiedAt": "2026-11-23T12:58:32.641Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "creator-business-journey",
-      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
+      "date": "2026-11-23",
+      "batch": "creator-guided-storefront",
+      "environment": "48 real production in-app browser viewport/theme checks plus private interaction fixtures",
       "layouts": [
         "desktop-dark",
         "desktop-light",
@@ -3482,7 +3490,7 @@
     "kind": "Page",
     "status": "Review ready",
     "batch": "site-completion-2026-11-21",
-    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report.",
+    "notes": "Polished storefront, offer, marketplace or creator workspace layout and mobile controls. No payments, applications or commerce settings changed. 2026-11-22: individually rechecked in desktop/phone and light/dark; detailed receipts are in the full mobile audit. 2026-11-22: self-service creator communities; owned paid offers, verified Whop readiness, current membership access and protected social children. See creator-community-onboarding-2026-11-22.txt. Supersedes earlier no-payment-change notes for this batch. 2026-11-22: creator/member business follow-up and verified NFL final outcomes; see creator-business-journey-2026-11-22.txt/json. Published as 0890bb6c; real production deployment READY, fee 10% unchanged and 12 legacy applications retained. 2026-11-23: dedicated creator workspace and customer shell, focused setup dialogs, branded storefront and embedded checkout; desktop/phone and light/dark receipts in the dated creator redesign report. 2026-11-23: guided store setup, branded discovery, rich publishing, featured placement and native Whop wallet released. Fresh in-app browser evidence covers desktop/mobile and light/dark. Existing Whop fees apply; no extra SlipSurge application fee.",
     "checks": {
       "desktopDark": true,
       "desktopLight": true,
@@ -3501,19 +3509,21 @@
       "docs/design/creator-community-onboarding-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.txt",
-      "docs/design/creator-workspace-redesign-2026-11-23.json"
+      "docs/design/creator-workspace-redesign-2026-11-23.json",
+      "docs/design/creator-guided-storefront-2026-11-23.json",
+      "docs/design/creator-guided-storefront-2026-11-23.txt"
     ],
     "release": {
       "state": "Live",
-      "commit": "76d71ef1171e6307c2c258b6257061a3d1586672",
-      "deploymentId": "dpl_5mSnYiPtHh61mkVpk5MM1qdCAKZ2",
-      "verifiedAt": "2026-11-23T01:07:33.818Z",
+      "commit": "c3c1bc13eb7aa7d59757e7d381671576ed89bc35",
+      "deploymentId": "dpl_BWvN2QKinep1sCevfwDzQTtz7kMR",
+      "verifiedAt": "2026-11-23T12:58:32.641Z",
       "url": "https://www.slipsurge.com"
     },
     "lastAudit": {
-      "date": "2026-11-22",
-      "batch": "creator-business-journey",
-      "environment": "56 compiled private visual/layout checks; 32 real live route/layout checks; database verified in rollback-only transactions",
+      "date": "2026-11-23",
+      "batch": "creator-guided-storefront",
+      "environment": "48 real production in-app browser viewport/theme checks plus private interaction fixtures",
       "layouts": [
         "desktop-dark",
         "desktop-light",

@@ -1,5 +1,6 @@
 Creator native payouts — 23 November 2026
-Status: implemented on codex/creator-native-payouts-20261123; NOT published.
+Status: PUBLISHED with the guided storefront release c3c1bc13, deployment dpl_BWvN2QKinep1sCevfwDzQTtz7kMR.
+The preparation notes below are historical and superseded by creator-guided-storefront-2026-11-23.txt/json.
 Base: GitHub main 37a255992f12cf7cb4220f328a5c5d024967bb03.
 
 Replaces the primary Whop payout redirect with SlipSurge balance cards,
@@ -36,7 +37,7 @@ Validation completed:
 - Initial optimized local fixture build compiled successfully; subsequent
   small lint/handler refinements have TypeScript/source validation only.
 
-Outstanding before release:
+Historical pre-release checklist (now completed):
 - Desktop/mobile, light/dark visual and interaction review.
 - Authenticated real-provider read-only balances/history verification.
 - Final optimized build and GitHub main/Vercel release verification.
@@ -44,7 +45,7 @@ Outstanding before release:
 Browser review was stopped by physical Escape. No further computer input
 was issued. Local illustrative wallet/forms are guarded by the existing
 private build adapter; no real token, payout, bank change, KYC submission,
-payment, Discord role or message was created in QA. Production is unchanged.
+payment, Discord role or message was created in QA. This was the historical preparation state; the combined release is now live.
 
 Provider contracts checked:
 https://docs.whop.com/developer/platforms/render-payout-portal
