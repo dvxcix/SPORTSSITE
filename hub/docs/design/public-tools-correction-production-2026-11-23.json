@@ -1,0 +1,371 @@
+{
+  "at": "2026-11-23T21:20:40.411Z",
+  "sourceCommit": "d42d3b92279cf6372ad66816ebf99c2c173469c5",
+  "deployment": "dpl_A4QzdhFUbs1iATrRtVMZnVsjGu9B",
+  "authentication": "Anonymous HTTP; no cookies or authorization headers",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "fixtureText": false,
+      "pageError": false,
+      "portraits": 27,
+      "games": [
+        "21718171"
+      ],
+      "workbench": true,
+      "players": true,
+      "bookLogo": true,
+      "asOf": true,
+      "limitedLabel": true,
+      "pass": true
+    },
+    {
+      "path": "/preview/nba",
+      "status": 200,
+      "fixtureText": false,
+      "pageError": false,
+      "portraits": 17,
+      "games": [],
+      "pass": true
+    },
+    {
+      "path": "/preview/nfl",
+      "status": 200,
+      "fixtureText": false,
+      "pageError": false,
+      "portraits": 17,
+      "games": [],
+      "pass": true
+    },
+    {
+      "path": "/creators",
+      "status": 200,
+      "fixtureText": false,
+      "pageError": false,
+      "portraits": 0,
+      "games": [],
+      "peopleHeading": true,
+      "creatorProfileAvailable": true,
+      "pass": true
+    },
+    {
+      "path": "/groups",
+      "status": 200,
+      "fixtureText": false,
+      "pageError": false,
+      "portraits": 0,
+      "games": [],
+      "pass": true
+    },
+    {
+      "path": "/creators/parlayparty",
+      "status": 200,
+      "personAndStore": true,
+      "pass": true
+    },
+    {
+      "path": "/admin",
+      "status": 307,
+      "location": "/auth/login?next=%2Fadmin",
+      "pass": true
+    },
+    {
+      "path": "/creators/studio",
+      "status": 307,
+      "location": "/auth/login?next=%2Fcreators%2Fstudio",
+      "pass": true
+    },
+    {
+      "path": "/the-paint",
+      "status": 307,
+      "location": "/auth/login?next=%2Fthe-paint",
+      "pass": true
+    },
+    {
+      "path": "/the-sideline",
+      "status": 307,
+      "location": "/auth/login?next=%2Fthe-sideline",
+      "pass": true
+    },
+    {
+      "path": "/api/features",
+      "status": 200,
+      "flagCount": 9,
+      "pass": true
+    }
+  ],
+  "pass": true,
+  "browserVerification": {
+    "browser": "Codex in-app browser",
+    "physicalDevicesTested": false,
+    "liveFlows": [
+      {
+        "case": "production-final-nba-light",
+        "dialogs": [],
+        "errors": [],
+        "headings": [
+          "The Court",
+          "Points",
+          "NBA on Nov 23",
+          "Go deeper",
+          "Take the next matchup further."
+        ],
+        "height": 720,
+        "overflow": false,
+        "portraits": [
+          {
+            "loaded": true,
+            "name": "Ty Jerome"
+          },
+          {
+            "loaded": true,
+            "name": "Ty Jerome"
+          },
+          {
+            "loaded": true,
+            "name": "Cedric Coward"
+          },
+          {
+            "loaded": true,
+            "name": "Cam Spencer"
+          },
+          {
+            "loaded": true,
+            "name": "Isaiah Stewart"
+          },
+          {
+            "loaded": true,
+            "name": "Brandon Miller"
+          },
+          {
+            "loaded": true,
+            "name": "Coby White"
+          },
+          {
+            "loaded": true,
+            "name": "Naz Reid"
+          },
+          {
+            "loaded": true,
+            "name": "Moussa Diabate"
+          }
+        ],
+        "small": [],
+        "theme": "light",
+        "width": 1280
+      },
+      {
+        "case": "production-final-nba-select-25-dark",
+        "dialogs": [],
+        "errors": [],
+        "headings": [
+          "The Court",
+          "Points",
+          "NBA on Nov 23",
+          "Go deeper",
+          "Take the next matchup further."
+        ],
+        "height": 720,
+        "overflow": false,
+        "portraits": [
+          {
+            "loaded": true,
+            "name": "Ty Jerome"
+          },
+          {
+            "loaded": true,
+            "name": "Ty Jerome"
+          },
+          {
+            "loaded": true,
+            "name": "Cedric Coward"
+          },
+          {
+            "loaded": true,
+            "name": "Cam Spencer"
+          },
+          {
+            "loaded": true,
+            "name": "Isaiah Stewart"
+          },
+          {
+            "loaded": true,
+            "name": "Brandon Miller"
+          },
+          {
+            "loaded": true,
+            "name": "Coby White"
+          },
+          {
+            "loaded": true,
+            "name": "Naz Reid"
+          },
+          {
+            "loaded": true,
+            "name": "Moussa Diabate"
+          }
+        ],
+        "small": [],
+        "theme": "dark",
+        "width": 1280
+      },
+      {
+        "case": "production-final-nfl-dark",
+        "dialogs": [],
+        "errors": [],
+        "headings": [
+          "The Sideline",
+          "Receiving yards",
+          "NFL on Nov 23",
+          "Go deeper",
+          "Take the next matchup further."
+        ],
+        "height": 720,
+        "overflow": false,
+        "portraits": [
+          {
+            "loaded": true,
+            "name": "Chase Brown"
+          },
+          {
+            "loaded": true,
+            "name": "Chase Brown"
+          },
+          {
+            "loaded": true,
+            "name": "Dohnte Meyers"
+          },
+          {
+            "loaded": true,
+            "name": "Mike Gesicki"
+          },
+          {
+            "loaded": true,
+            "name": "Tee Higgins"
+          },
+          {
+            "loaded": true,
+            "name": "Antonio Williams"
+          },
+          {
+            "loaded": true,
+            "name": "Treylon Burks"
+          },
+          {
+            "loaded": true,
+            "name": "Chig Okonkwo"
+          },
+          {
+            "loaded": true,
+            "name": "Stefon Diggs"
+          }
+        ],
+        "small": [],
+        "theme": "dark",
+        "width": 1280
+      },
+      {
+        "case": "production-final-nfl-select-40-light",
+        "dialogs": [],
+        "errors": [],
+        "headings": [
+          "The Sideline",
+          "Receiving yards",
+          "NFL on Nov 23",
+          "Go deeper",
+          "Take the next matchup further."
+        ],
+        "height": 720,
+        "overflow": false,
+        "portraits": [
+          {
+            "loaded": true,
+            "name": "Chase Brown"
+          },
+          {
+            "loaded": true,
+            "name": "Chase Brown"
+          },
+          {
+            "loaded": true,
+            "name": "Dohnte Meyers"
+          },
+          {
+            "loaded": true,
+            "name": "Mike Gesicki"
+          },
+          {
+            "loaded": true,
+            "name": "Tee Higgins"
+          },
+          {
+            "loaded": true,
+            "name": "Antonio Williams"
+          },
+          {
+            "loaded": true,
+            "name": "Treylon Burks"
+          },
+          {
+            "loaded": true,
+            "name": "Chig Okonkwo"
+          },
+          {
+            "loaded": true,
+            "name": "Stefon Diggs"
+          }
+        ],
+        "small": [],
+        "theme": "light",
+        "width": 1280
+      }
+    ],
+    "nba": {
+      "game": "21718171",
+      "date": "2026-11-23",
+      "teams": [
+        "MEM",
+        "CHA"
+      ],
+      "portraitsLoaded": 9
+    },
+    "nfl": {
+      "game": "2026_11_CIN_WAS",
+      "date": "2026-11-23",
+      "teams": [
+        "CIN",
+        "WAS"
+      ],
+      "portraitsLoaded": 9
+    },
+    "creator": {
+      "path": "/creators/parlayparty",
+      "personHeading": "ParlayParty",
+      "separateStoreHeading": "Memberships",
+      "publicWork": true,
+      "themeSwap": true,
+      "overflow": false
+    },
+    "themeRestored": "light"
+  },
+  "databaseRepair": {
+    "project": "hkldweedwnxartkfhror",
+    "name": "public_creator_guest_post_policy",
+    "liveVersion": "20261123211222",
+    "sourceFile": "20261123210640_public_creator_guest_post_policy.sql",
+    "ownerApproval": "Approve this database repair",
+    "status": "applied once; do not replay",
+    "anonymousReadablePosts": 12,
+    "forbiddenVisiblePosts": 0,
+    "authenticatedPredicateMd5": "e16fed290d16f99191a0538d93f6c483",
+    "anonymousPrivateHelperExecute": false
+  },
+  "tests": {
+    "targeted": 105,
+    "productionSource": 134,
+    "failed": 0,
+    "optimizedProductionBuild": "passed",
+    "focusedLint": "passed"
+  }
+}

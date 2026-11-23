@@ -197,3 +197,25 @@ PASS final optimized production build including TypeScript and 177 static pages.
 Logs: review/public-tools-certified-tests.txt,
   public-tools-certified-production.txt, public-tools-final-source-lint.txt,
   public-tools-final-build.txt. This supersedes earlier integration counts.
+
+Published verification
+UI/data source d42d3b92279cf6372ad66816ebf99c2c173469c5 is live on
+www.slipsurge.com via READY deployment dpl_A4QzdhFUbs1iATrRtVMZnVsjGu9B.
+The real anonymous homepage rendered the interactive board and athlete art.
+Both current full previews were verified in the Codex in-app browser:
+  NBA 21718171, MEM at CHA, 23 November; nine visible portraits loaded.
+  NFL 2026_11_CIN_WAS, CIN at WAS, 23 November; nine portraits loaded.
+Milestone selections and light/dark swaps passed with no overflow or route
+errors. The creator profile showed the person and separate memberships, public
+work and communities; the original light preference was restored afterward.
+All 11 anonymous HTTP checks passed, including creator profile, both previews,
+communities, feature availability and protected member/admin redirects.
+No creator error logs appeared on the final source deployment during the check.
+
+Applied database history is 20261123211222_public_creator_guest_post_policy,
+corresponding to the CLI-created source file
+20261123210640_public_creator_guest_post_policy.sql. They are the same reviewed
+repair, applied once; do not replay it or the historical migration tree.
+The final production receipt records exact source/deployment, anonymous reads,
+actual browser flows, test counts, database checks and verification boundaries:
+public-tools-correction-production-2026-11-23.json.
