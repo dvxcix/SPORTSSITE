@@ -418,7 +418,7 @@
   },
   "src/app/groups/[slug]/page.tsx": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 2
+      "count": 1
     }
   },
   "src/app/hashtag/[tag]/page.tsx": {

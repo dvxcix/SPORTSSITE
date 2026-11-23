@@ -112,7 +112,7 @@ export function ProfilePostList({ userId, tab, initialPosts, initialCursor, init
       )}
       {loadError && <p role="status" className="ss-feed-end">Couldn&apos;t load more posts. <button type="button" onClick={loadMore} className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[var(--accent)] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime-300">Try again</button></p>}
       {!hasMore && posts.length === 0 && <p className="ss-feed-end">No posts to show.</p>}
-      {!hasMore && posts.length > 0 && (
+      {!hasMore && posts.length > 0 && viewerId && (
         <p className="ss-feed-end">You&apos;re all caught up</p>
       )}
     </div>

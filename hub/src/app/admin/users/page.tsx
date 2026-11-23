@@ -1,7 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminUserRow, type AdminUserRecord } from '@/components/admin/AdminUserRow'
 import { TerminateMembershipTool } from '@/components/admin/TerminateMembershipTool'
-import { Search } from 'lucide-react'
+import Link from 'next/link'
+import { Users } from 'lucide-react'
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
+import styles from '@/components/admin/adminWorkspace.module.css'
 import { effectiveTier, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 
 export const dynamic = 'force-dynamic'
@@ -36,7 +39,7 @@ export default async function AdminUsersPage({
   const fetchLimit = tierFilter ? 500 : 50
   query = query.limit(fetchLimit)
 
-  const { data: rawUsers } = await query
+  const { data: rawUsers, error: memberError } = await query
   let users = (rawUsers ?? []) as AdminUserRecord[]
   if (tierFilter) {
     users = users.filter(u => effectiveTier((u.tier as Tier) ?? 'free', u.discord_advanced_claimed, u.admin_granted_tier as Tier | null) === tierFilter)
@@ -51,43 +54,21 @@ export default async function AdminUsersPage({
 
   return (
     <div className="ss-admin-users min-w-0 p-4 sm:p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-[var(--text-1)]">Manage Users</h1>
-        <span className="text-sm text-[var(--text-3)]">{users.length} {users.length === 1 ? 'result' : 'results'}</span>
-      </div>
+      <AdminPageHeader title="Members" description="Find an account, check access and manage member support." icon={Users} actions={<Link className={styles.toolButton} href="/admin/users/deletions">Deletion requests</Link>} />
 
-      <TerminateMembershipTool />
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        <div className="relative min-w-0 basis-full sm:basis-64 flex-1 max-w-sm">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
-          <form>
-            <input name="q" defaultValue={q} placeholder="Search users…"
-              className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl pl-9 pr-4 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
-          </form>
-        </div>
-        <div className="flex flex-wrap gap-1" role="group" aria-label="Account type">
-          {[['', 'All'], ['user', 'Users'], ['creator', 'Creators'], ['admin', 'Admins']].map(([val, label]) => (
-            <a key={val} href={val ? `/admin/users?type=${val}` : '/admin/users'}
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${type === val || (!type && !val) ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[color-mix(in_srgb,var(--surface-2)_60%,transparent)]'}`}>
-              {label}
-            </a>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-1" role="group" aria-label="Membership tier">
-          {[['', 'All Tiers'], ['free', 'Free'], ['basic', 'Basic'], ['advanced', 'Advanced'], ['ultimate', 'Ultimate']].map(([val, label]) => (
-            <a key={val} href={val ? `/admin/users?tier=${val}` : '/admin/users'}
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${tierFilter === val || (!tierFilter && !val) ? 'bg-[var(--surface-2)] text-[var(--text-1)]' : 'text-[var(--text-3)] hover:text-[var(--text-1)] hover:bg-[color-mix(in_srgb,var(--surface-2)_60%,transparent)]'}`}>
-              {label}
-            </a>
-          ))}
-        </div>
-      </div>
+      <form action="/admin/users" method="get" aria-label="Find member accounts" className={styles.memberFilters}>
+        <label>Find an account<input name="q" defaultValue={q} placeholder="Name, username or email" type="search" /></label>
+        <label>Account type<select name="type" defaultValue={type ?? ''}>{[['', 'All accounts'], ['user', 'Members'], ['creator', 'Creators'], ['admin', 'Admins']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label>Membership<select name="tier" defaultValue={tierFilter ?? ''}>{[['', 'All memberships'], ['free', 'Free'], ['basic', 'Basic'], ['advanced', 'Advanced'], ['ultimate', 'Ultimate']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <div><button type="submit" className={styles.toolButton}>Find members</button>{(q || type || tierFilter) && <Link href="/admin/users" className={styles.toolButton}>Reset</Link>}</div>
+      </form>
+      <div className={styles.resultSummary}><span>{memberError ? 'Member search unavailable' : `${users.length} ${users.length === 1 ? 'account' : 'accounts'} shown`}</span><span>{tierFilter ? 'Membership filter checks the 500 most recent accounts.' : 'Up to 50 accounts, newest first.'}</span></div>
+      {memberError && <p role="alert" className={`${styles.notice} mb-4`}>Member accounts could not be loaded. Submit the search again to retry.</p>}
 
       {/* Table */}
       <div role="region" tabIndex={0} aria-label="Member accounts, scroll for all columns" className="ss-table-region min-w-0 bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-x-auto">
         <table className="w-full text-sm">
+          <caption className="sr-only">Member accounts and access</caption>
           <thead className="border-b border-[var(--border)]">
             <tr className="text-left">
               <th className="px-4 py-3 text-xs font-bold text-[var(--text-3)]">User</th>
@@ -101,6 +82,7 @@ export default async function AdminUsersPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
+            {!users.length && <tr><td colSpan={8} className="px-4 py-8 text-sm text-[var(--text-3)]">{memberError ? 'Accounts are temporarily unavailable.' : q || type || tierFilter ? 'No accounts match these filters. Adjust the search or reset the filters.' : 'No member accounts to display.'}</td></tr>}
             {users.map(u => {
               const rawTier: Tier = (u.tier as Tier) ?? 'free'
               const displayTier = effectiveTier(rawTier, u.discord_advanced_claimed, u.admin_granted_tier as Tier | null)
@@ -113,6 +95,7 @@ export default async function AdminUsersPage({
           </tbody>
         </table>
       </div>
+      <details className={styles.memberAdvanced}><summary>Advanced membership actions</summary><TerminateMembershipTool /></details>
     </div>
   )
 }

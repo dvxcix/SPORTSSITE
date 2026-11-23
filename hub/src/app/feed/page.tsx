@@ -70,7 +70,7 @@ export default async function FeedPage({
             <div>
               <h1 id="feed-title">The Feed</h1>
             </div>
-            <div className="ss-member-header-actions"><ResearchSavedActions /><Link href="/explore" className="ss-feed-explore" aria-label="Explore members and research"><Compass size={15} /><span>Explore</span></Link></div>
+            <div className="ss-member-header-actions">{user && <ResearchSavedActions />}<Link href="/explore" className="ss-feed-explore" aria-label="Explore members and research"><Compass size={15} /><span>Explore</span></Link></div>
           </header>
           <div className="ss-feed-toolbar">
           <nav className="ss-feed-filters" aria-label="Feed filters">
@@ -101,10 +101,10 @@ export default async function FeedPage({
             <div className="ss-feed-empty">
               <PageState
                 compact
-                title={filter === 'following' ? 'No posts from people you follow yet' : filter === 'picks' ? 'No picks posted yet' : 'No posts yet'}
-                message={filter === 'following' ? 'Follow some bettors to build your feed.' : 'Start the conversation with a new post.'}
-                actionLabel={filter === 'following' ? 'Explore members' : undefined}
-                actionHref={filter === 'following' ? '/explore' : undefined}
+                title={filter === 'following' ? user ? 'No posts from people you follow yet' : 'Build your own feed' : filter === 'picks' ? 'No picks posted yet' : 'No posts yet'}
+                message={filter === 'following' ? user ? 'Follow members to build your feed.' : 'Create a free account to follow members and see their posts here.' : 'Start the conversation with a new post.'}
+                actionLabel={filter === 'following' ? user ? 'Explore members' : 'Create free account' : undefined}
+                actionHref={filter === 'following' ? user ? '/explore' : '/auth/register?next=%2Ffeed%3Ffilter%3Dfollowing' : undefined}
               />
               {suggested.length > 0 && (
                 <div className="ss-feed-empty-suggestions">
@@ -117,8 +117,9 @@ export default async function FeedPage({
               )}
             </div>
           ) : (
-            <FeedList key={`${filter}:${sport ?? 'all'}`} filter={filter} sport={sport} initialPosts={posts} initialCursor={nextCursor} initialHasMore={hasMore} viewerId={user?.id ?? null} />
+            <FeedList key={`${filter}:${sport ?? 'all'}`} filter={filter} sport={sport} initialPosts={posts} initialCursor={nextCursor} initialHasMore={Boolean(user) && hasMore} viewerId={user?.id ?? null} />
           )}
+          {!user && posts.length > 0 && <div className="ss-feed-guest-end"><div><h2>Make this feed yours</h2><p>Follow members, save posts and share your own picks.</p></div><Link href="/auth/register?next=%2Ffeed">Create free account</Link></div>}
         </div>
       </section>
 

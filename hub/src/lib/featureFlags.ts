@@ -31,7 +31,8 @@ export type FeatureRollout = {
 export async function fetchFeatureFlagsClient(): Promise<Record<string, boolean>> {
   const keys = Object.values(FEATURE_FLAGS)
   const flags: Record<string, boolean> = {}
-  for (const key of keys) flags[key] = true
+  const optionalDiscovery = new Set<string>([FEATURE_FLAGS.blog, FEATURE_FLAGS.forum, FEATURE_FLAGS.pages, FEATURE_FLAGS.events])
+  for (const key of keys) flags[key] = !optionalDiscovery.has(key)
   try {
     const response = await fetch('/api/features', { cache: 'no-store', credentials: 'same-origin' })
     if (!response.ok) return flags

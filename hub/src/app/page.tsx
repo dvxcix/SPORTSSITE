@@ -6,8 +6,8 @@ import { memberLaunchDestination } from '@/lib/researchPreferencesServer'
 
 export const dynamic = 'force-dynamic'
 export const metadata = pageMetadata({
-  title: 'SlipSurge | NBA and NFL Odds Research',
-  description: 'Compare saved NBA and NFL prop odds, see how prices moved before game time, and try a free research board without an account.',
+  title: 'SlipSurge | Sports Research, Picks and Communities',
+  description: 'Try free NBA and NFL research boards, browse public picks and find your community. Take a look inside SlipSurge before creating an account.',
   path: '/',
 })
 

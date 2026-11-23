@@ -10,6 +10,7 @@ import { MemberAvatar } from '@/components/social/MemberAvatar'
 import { AccountMenu } from '@/components/layout/AccountMenu'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { CreatorDialog } from './CreatorDialog'
+import { VisitorBrowseShell } from '@/components/layout/VisitorBrowseShell'
 import styles from './creatorWorkspace.module.css'
 
 const sections = [
@@ -54,5 +55,7 @@ function Workspace({ children }: { children: React.ReactNode }) {
 
 export function CreatorMarketShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
+  const pathname = usePathname()
+  if (!user && !loading) return <VisitorBrowseShell pathname={pathname}>{children}</VisitorBrowseShell>
   return <div className={styles.marketShell}><a className="ss-skip-link" href="#main-content">Skip to content</a><header className={styles.marketHeader}><Link href="/creators" className={styles.marketBrand}><Image src="/icon-192.png" width={29} height={29} alt="SlipSurge"/><strong>SlipSurge</strong></Link><nav aria-label="Creator marketplace"><Link href="/creators">Discover</Link><Link href="/groups">My communities</Link></nav><div className={styles.topbarActions}><ThemeToggle/>{user ? <><Link className={styles.studioLink} href="/creators/studio">Creator Studio <ArrowUpRight size={14}/></Link><AccountMenu compact/></> : !loading ? <Link href="/auth/login?next=%2Fcreators">Sign in</Link> : null}</div></header><main id="main-content" tabIndex={-1}>{children}</main></div>
 }

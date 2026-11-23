@@ -1,0 +1,120 @@
+SlipSurge unified experience release
+23 November 2026
+
+Owner-authorized scope
+One coordinated navigation/social, visitor-discovery and admin release. Applied
+antislop, sales-funnel-blueprint and interface-design to the existing product.
+The approved direction is the existing Geist, semantic light/dark surfaces and
+lime action/selection accent. ENERGY 2 / RHYTHM 2 / MOTION 1; the public working
+board uses local selection transitions (MOTION 2), never an auto-cycling demo.
+
+Completed implementation checklist
+[x] Public homepage leads with a working, dated NBA/NFL archive before signup.
+[x] Player/milestone selection carries into the same full free preview.
+[x] Public Feed, communities, profiles, scores and records can be read before
+    signup. APIs, account actions, management, messages and paid research retain
+    their existing access checks. Public content remains subject to live RLS.
+[x] Shared visitor header/footer connects discovery, previews, creator listings,
+    membership, help and legal pages; sign-in keeps a safe return destination.
+[x] Real public/free community metadata replaces fabricated marketing proof.
+    Empty, failed and loading reads retain useful browsing destinations.
+[x] Community root pages no longer repeat the shell's primary navigation.
+    Nested pages retain a back path; More keeps useful secondary tools reachable.
+[x] Optional Discussions/Pages/Events/Articles respect existing feature flags;
+    failed availability reads do not advertise disabled destinations.
+[x] Pick/poll builders retain drafts when switched or closed. Post/inbox tabs
+    support keyboard selection and correctly associated panels.
+[x] Message requests prevent overlapping actions, wait for acknowledgement,
+    retain failed requests and show returned/thrown errors for retry.
+[x] Guest feeds do not fetch protected pagination or falsely report completion.
+    Group guests see the join/access context instead of an empty private feed.
+[x] Admin shares the product's theme, type, spacing and controls. All existing
+    operations remain reachable through task groups, section picker and search.
+[x] Admin phone drawer and command palette support Escape, keyboard selection,
+    visible focus and return focus. Tables have named contained scroll regions.
+[x] Member search combines text, account type and membership filters.
+[x] Admin status separates unknown signals from confirmed healthy/zero states.
+[x] General settings retain edits on failure and protect failed initial loads.
+    Advanced membership actions require a deliberate disclosure first.
+[x] Changelog publisher has associated labels, a working popup preview, retained
+    failed drafts, pending visibility controls and visible mutation failures.
+[x] Narrow NFL preview heading/actions wrap without clipping the page or tools.
+
+Verification
+The companion JSON records actual layout observations by route and theme.
+157 route pages: 628 phone/desktop measurements, light/dark. Additional six-view
+checks cover all 51 admin pages plus social, creator, settings and guest paths at
+320px, 820px and 844px landscape in both themes. The final NFL guest fix is
+verified separately after the final optimized build; prior failed observations
+remain in the raw evidence instead of being presented as passes.
+The in-app browser interaction log covers public preview handoff, sport and
+milestone selection, public browsing, poll draft retention, badge containment,
+request acceptance, More/Escape, combined member filters, theme persistence,
+settings save/restore, admin search/keyboard/Escape and release-popup preview.
+Settings writes and request acceptance used isolated local fixtures only.
+Automated: 128 targeted regressions and 134 production source checks passed;
+the final availability failure test passed 3/3 after its typed Response repair.
+Changed-source ESLint and the optimized Next build/TypeScript checks passed.
+
+Privacy and operational boundaries
+Live read-only preflight reviewed anonymous content policies, private/group/
+creator restrictions and public boolean feature responses. No RLS, grant,
+membership, price, Whop fee or feature-flag mutation belongs to this release.
+No sports models, formulas, collector schedules, team/player assets or odds
+calculation were changed. Existing source history and owner approvals remain.
+Browser coverage is viewport emulation, not physical-device certification.
+No real messages, posts, charges, payout/KYC actions, destructive admin actions
+or job replays were performed to test the interface. Field speed/conversion and
+provider delivery are not claimed as measured outcomes of this design review.
+
+Root antislop delivery gate, scoped to this release
+R-02 PASS: new visitor/release copy uses plain product language, no em dash.
+R-03 PASS: recorded route and guest checks; NFL 320px failure repaired/rechecked.
+R-17 PASS: no invented member totals, conversion rates, win or speed figures.
+R-18 PASS: no fictional customer endorsements or generated customer portraits.
+R-23 PASS: owner-authorized navigation; existing branded art and sourced data.
+R-24 PASS: public/admin links map to real pages; protected actions retain gates.
+R-25 PASS: semantic text/surface roles checked in settled light/dark views;
+  changed controls preserve the existing accessible contrast palette.
+R-26 PASS: changed controls use real links/handlers; safe actions clicked and
+  failure/pending paths exercised by component tests, without real transactions.
+R-27 PASS: empty/error/loading paths verified in component tests and review UI.
+R-28 PASS: public FAQ answers actual preview, access, community and wager use.
+R-32 PASS: named tabs, drawer and palette keyboard/focus/Escape checks recorded.
+R-33 PASS: features implemented directly in TSX/CSS source, no runtime patches.
+R-34 PASS: desktop/phone plus narrow/tablet/landscape checks in both themes.
+R-35 PASS: optimized build, component regressions and in-app safe click-through;
+  operational/provider boundaries are disclosed above, not certified by renders.
+R-36 PASS: no fabricated security/compliance/performance/customer claims.
+R-37 PASS: owner's explicit product direction retained; dials declared above.
+R-38 PASS: dated real archives and bounded metadata; fixtures clearly labeled
+  in the private review and never published as customer proof.
+R-39 PASS: semantic links/buttons, field labels, selected/disabled states,
+  keyboard handling and visible focus; reduced-motion rules retained.
+R-40 PASS: existing media dimensions retained; no new blocking provider script
+  or unmeasured performance claim. Public community reads have a bounded wait.
+R-01/R-04/R-06/R-07/R-08/R-09 PASS: retained team gradients identify ownership;
+  existing bolt/VOLT and icon set identify real actions; Geist matches the app;
+  court lines belong to the sports illustration, arrows indicate actual paths,
+  badges express real member/selection state. No decorative status claims added.
+R-10/R-12/R-13/R-14/R-19/R-22 PASS: quiet surfaces, elevation for overlays and
+  local state transitions; working board, research art and community directory
+  have different jobs. No new generic illustration, glow system or auto-demo.
+Liveliness PASS: dials explicit, working board/admin attention queue focal points,
+  structural spacing, deliberate lime accent and repeated product control style.
+C-1 PASS: hierarchy follows research, conversation, discovery or operational work.
+C-2 PASS: functional changed controls checked within the disclosed boundaries.
+C-3 PASS: no filler testimonials, logo wall or generic three-step sales section.
+C-4 PASS: route/state/theme/keyboard checks recorded, including narrow repair.
+C-5 PASS: claims are sourced or omitted; unknown operational signals stay unknown.
+R-05/R-11/R-15/R-16/R-20/R-21/R-29/R-30/R-31 PASS: content-led composition,
+  varied control radii, specific action text, no new marketing buzzwords, retained
+  team identity, both themes, semantic palette and SlipSurge's own methods/art.
+
+Release sequence
+Canonical source goes to GitHub main in one feature commit after final clearance.
+Wait for its Vercel production deployment to be READY, verify live public/member/
+admin paths, then publish only the reviewed all-member notice with a guarded ID.
+Keep prior notices and all per-member dismissals. The popup is shown on the
+member's next visit; dismissed updates remain in What's new.
+The production receipt records the actual deployment and announcement result.

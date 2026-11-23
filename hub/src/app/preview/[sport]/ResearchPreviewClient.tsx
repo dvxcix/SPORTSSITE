@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Check, ChevronRight, Clock3, Layers3, LockKeyhole, Minus, ShieldCheck, X } from 'lucide-react'
 import { ModalSurface } from '@/components/ui/ModalSurface'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
+import { PublicSiteHeader } from '@/components/marketing/PublicSiteHeader'
 import { useAuth } from '@/context/AuthContext'
 import { hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { nflOddsBoardMove } from '@/lib/nflOddsBoard'
@@ -92,7 +93,7 @@ export function ResearchPreviewClient({ sport, preview, initial }: { sport: Prev
   }
 
   return <div className={styles.page}>
-    <header className={styles.top}>
+    {user ? <header className={styles.top}>
       <Link href="/" className={styles.brand} aria-label="SlipSurge home"><Image src="/logo.png" alt="" width={30} height={30} /> <span>Slip<span>Surge</span></span></Link>
       <nav aria-label="Research previews" className={styles.switcher}>
         <Link href="/preview/nba" aria-current={sport === 'nba' ? 'page' : undefined}>NBA</Link>
@@ -103,9 +104,10 @@ export function ResearchPreviewClient({ sport, preview, initial }: { sport: Prev
         <ThemeToggle />
         <Link className={styles.topUpgrade} href={paid ? workspace : pricing}>{paid ? 'Open workspace' : 'View Ultimate'}<ArrowRight size={14} /></Link>
       </div>
-    </header>
+    </header> : <PublicSiteHeader returnTo={previewPagePath(context)} />}
 
-    <div className={styles.content}>
+    <main id="main-content" tabIndex={-1} className={styles.content}>
+      {!user && <nav aria-label="Research previews" className={styles.guestSports}><Link href="/preview/nba" aria-current={sport==='nba'?'page':undefined}>NBA</Link><Link href="/preview/nfl" aria-current={sport==='nfl'?'page':undefined}>NFL</Link></nav>}
       <section className={styles.intro} aria-labelledby="preview-title">
         <div className={styles.introCopy}>
           <div className={styles.eyebrow}><span className={styles.dot} />{config.label} RESEARCH PREVIEW</div>
@@ -205,7 +207,7 @@ export function ResearchPreviewClient({ sport, preview, initial }: { sport: Prev
       </section>
 
       <footer className={styles.footer}><Link href="/">SlipSurge</Link><Link href="/responsible-gambling">Responsible Gambling</Link><Link href="/pricing">Memberships</Link></footer>
-    </div>
+    </main>
 
     <ModalSurface open={unlock !== null} onClose={() => setUnlock(null)} labelledBy={dialogTitle} describedBy={dialogDescription}
       backdropClassName={styles.modalBackdrop} panelClassName={styles.modal}>

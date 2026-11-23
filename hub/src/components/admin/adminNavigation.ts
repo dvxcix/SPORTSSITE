@@ -117,12 +117,14 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     links: [
       { href: '/admin/social-platforms', label: 'Connected accounts', description: 'Social platform integrations', icon: AtSign },
       { href: '/admin/discord', label: 'Discord', description: 'Bot, roles, and messages', icon: Bot },
+      { href: '/admin/discord/compose', label: 'Discord composer', description: 'Prepare a message for a connected Discord channel', icon: MessageSquare, keywords: ['embed', 'broadcast'] },
       { href: '/admin/design-system', label: 'Design system', description: 'Production components and tokens', icon: Palette, keywords: ['ui', 'ux'] },
       { href: '/admin/settings/email', label: 'Email operations', description: 'Delivery, webhooks, and template previews', icon: MailCheck, keywords: ['resend', 'smtp', 'email'] },
       { href: '/admin/settings/general', label: 'General settings', description: 'Core platform configuration', icon: Settings },
       { href: '/admin/settings/features', label: 'Feature controls', description: 'Feature availability and rollout', icon: Settings, keywords: ['flags'] },
       { href: '/admin/settings/social-login', label: 'Social login', description: 'Authentication providers', icon: AtSign },
       { href: '/admin/settings/payments', label: 'Whop payments', description: 'Membership and billing configuration', icon: CreditCard, keywords: ['billing'] },
+      { href: '/admin/whop-renewal-shape', label: 'Renewal diagnostics', description: 'Inspect a Whop renewal response with verified admin access', icon: CreditCard, keywords: ['whop', 'membership', 'renewal'] },
       { href: '/admin/settings/ai', label: 'AI settings', description: 'AI-assisted product configuration', icon: Sparkles },
       { href: '/admin/settings/custom-code', label: 'Custom code', description: 'Custom CSS and JavaScript', icon: FileText },
     ],
@@ -142,3 +144,14 @@ export function adminRouteForPath(path: string) {
     .filter(link => adminPathIsActive(path, link.href))
     .sort((a, b) => b.href.length - a.href.length)[0]
 }
+
+export function adminLinksForQuery(query: string) {
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  return ADMIN_NAV_LINKS.filter(link => {
+    const text = [link.label, link.description, link.group, ...(link.keywords ?? [])].join(' ').toLowerCase()
+    return terms.every(term => text.includes(term))
+  })
+}
+
+export const ADMIN_QUICK_LINKS = ['/admin/users', '/admin/creators', '/admin/reports', '/admin/changelog', '/admin/pipeline-health', '/admin/settings/features']
+  .map(href => ADMIN_NAV_LINKS.find(link => link.href === href)!)

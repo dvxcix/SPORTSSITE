@@ -2,7 +2,7 @@
 
 import { memberTone } from '@/lib/memberIdentity'
 
-import { useMemo, useState, useRef } from 'react'
+import { useId, useMemo, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { uploadMedia } from '@/lib/uploadMedia'
@@ -62,12 +62,12 @@ export function FeedComposer({ onPost, groupId, groupAudience, pageId, preferred
   const imageInputRef = useRef<HTMLInputElement>(null)
   const sportMenuRef = useRef<HTMLDivElement>(null)
   const visibilityMenuRef = useRef<HTMLDivElement>(null)
+  const modePanelId = useId()
 
   function activateMode(mode: 'take' | 'pick' | 'poll' | 'research') {
     setComposerMode(mode)
     setShowPickForm(mode === 'pick')
     setShowPollForm(mode === 'poll')
-    if (mode !== 'pick') { setLegs([]); setWager('') }
   }
 
   async function uploadImage(file: File) {
@@ -104,10 +104,8 @@ export function FeedComposer({ onPost, groupId, groupAudience, pageId, preferred
   if (!user || !profile) {
     return (
       <div className="ss-feed-composer ss-feed-composer-signed-out">
-        <p style={{ fontSize: 14, color: 'var(--text-3)' }}>
-          <Link href="/auth/login" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>Sign in</Link>
-          {' '}to post picks and join the conversation
-        </p>
+        <p>Read the conversation. Join when you’re ready to add your take.</p>
+        <div><Link href="/auth/register?next=%2Ffeed">Create free account</Link><Link href="/auth/login?next=%2Ffeed">Sign in</Link></div>
       </div>
     )
   }
@@ -216,24 +214,31 @@ export function FeedComposer({ onPost, groupId, groupAudience, pageId, preferred
           ringStyle={profile.avatar_ring_style} ringColor={profile.avatar_ring_color} />
 
         <div className="ss-feed-composer-main">
-          <div className="ss-composer-modes" role="tablist" aria-label="Post type">
+          <div className="ss-composer-modes" role="tablist" aria-label="Post type" onKeyDown={event => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+            const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
+            const current = buttons.findIndex(button => button === document.activeElement)
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length
+            event.preventDefault(); buttons[next].focus(); buttons[next].click()
+          }}>
             {([
               { key: 'take', label: 'Take', icon: <MessageCircle size={13} /> },
               { key: 'pick', label: 'Pick', icon: <TrendingUp size={13} /> },
               { key: 'poll', label: 'Poll', icon: <BarChart2 size={13} /> },
               { key: 'research', label: 'Research', icon: <Microscope size={13} /> },
             ] as const).map(option => (
-              <button key={option.key} type="button" role="tab" aria-selected={composerMode === option.key}
+              <button key={option.key} type="button" role="tab" id={`${modePanelId}-${option.key}`} aria-controls={modePanelId} aria-selected={composerMode === option.key} tabIndex={composerMode === option.key ? 0 : -1}
                 className={composerMode === option.key ? 'is-active' : ''}
                 onClick={() => activateMode(option.key)}>{option.icon}<span>{option.label}</span></button>
             ))}
           </div>
+          <div role="tabpanel" id={modePanelId} aria-labelledby={`${modePanelId}-${composerMode}`}>
           <MentionInput
             ref={textareaRef}
             value={content}
             onValueChange={setContent}
             currentUserId={user.id}
-            placeholder={composerMode === 'pick' ? 'Add your read on this pick…' : composerMode === 'poll' ? 'Ask the community…' : composerMode === 'research' ? 'Share the signal, chart, or board context…' : 'What are you seeing?'}
+            placeholder={composerMode === 'pick' ? 'Add your read on this pick…' : composerMode === 'poll' ? 'Ask the community…' : composerMode === 'research' ? 'Share your research…' : 'What are you seeing?'}
             maxLength={charLimit}
             aria-label="Post text"
             rows={content.length > 80 ? 3 : 2}
@@ -307,14 +312,14 @@ export function FeedComposer({ onPost, groupId, groupAudience, pageId, preferred
                 legs={legs}
                 onAddLeg={l => setLegs(prev => [...prev, l])}
                 onRemoveLeg={i => setLegs(prev => prev.filter((_, j) => j !== i))}
-                onClose={() => { setShowPickForm(false); setLegs([]); setWager('') }}
+                onClose={() => activateMode('take')}
               />
               {legs.length > 0 && (
                 <div className="ss-composer-wager">
-                  <label>Wager <span>optional</span></label>
+                  <label htmlFor={`${modePanelId}-wager`}>Wager <span>optional</span></label>
                   <i>$</i>
                   <input
-                    type="number" min="0" step="1" value={wager}
+                    id={`${modePanelId}-wager`} type="number" min="0" step="1" value={wager}
                     onChange={e => setWager(e.target.value)}
                     placeholder="0.00"
                     className="ss-composer-wager-input"
@@ -336,7 +341,7 @@ export function FeedComposer({ onPost, groupId, groupAudience, pageId, preferred
             <div className="ss-composer-poll">
               <div className="ss-composer-poll-head">
                 <span><BarChart2 size={13}/> Poll</span>
-                <button type="button" onClick={() => setShowPollForm(false)} aria-label="Close poll">
+                <button type="button" onClick={() => activateMode('take')} aria-label="Close poll">
                   <X size={14} />
                 </button>
               </div>
@@ -437,6 +442,7 @@ export function FeedComposer({ onPost, groupId, groupAudience, pageId, preferred
                 return pickIncomplete ? <Tooltip content="Finish selecting a player and market first">{button}</Tooltip> : button
               })()}
             </div>
+          </div>
           </div>
         </div>
       </div>

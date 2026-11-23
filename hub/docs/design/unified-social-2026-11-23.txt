@@ -1,0 +1,53 @@
+SlipSurge unified experience: social implementation handoff
+23 November 2026
+
+Purpose and direction
+Member conversations should feel like the same SlipSurge workspace as navigation and research. Visitors can read genuinely public content before an account prompt; joining, posting, following and private conversations still require their existing account/access checks.
+Use the approved Geist typeface, semantic light/dark surfaces, restrained lime for primary actions and existing member identity art. No changes to sports boards, logos, headshots, odds, scores, models or formulas. ENERGY 2 / RHYTHM 2 / MOTION 1.
+
+Implemented
+1. Remove the duplicate four-link CommunityNav row from root social pages. Messages and Live rooms now have the same labeled More menu as Communities. The menu keeps Live rooms, Messages, Saved posts, Activity, Discussions, Pages, Events and Articles reachable. Nested pages return to their actual area; group settings returns to the community.
+2. Inbox tabs have a single keyboard tab stop, Arrow/Home/End operation and matching tab/panel labels. Accept/decline waits for server acknowledgement, prevents overlapping actions, handles rejected promises and returned errors, and keeps failed requests available for retry.
+3. Pick/Poll composer modes preserve staged selections and field values while switching or closing a builder. Closing a builder returns the selected mode to Take. Wager has a programmatically associated label. Post-type tabs now have keyboard operation and a named panel.
+4. Anonymous Feed, ProfilePostList and GroupPostFeed never auto-fetch protected pagination APIs. Public previews do not falsely end with "You're all caught up". Members retain their full pagination paths.
+5. Public Feed has an optional account prompt, specific Following opt-in and no signed-in saved-research header controls. Public/free group guests see metadata plus a join prompt and public Feed link, without an empty restricted posts panel. Private/paid content is not exposed.
+6. Community discovery shows actual filtered collection counts and a working clear-filters action. Guest Your communities has a specific opt-in; discover remains available. Storefront card headings can be h3 below an existing h2 without changing other pages.
+7. Live rooms distinguishes membership access from a genuinely empty set of rooms, while retaining its Basic-tier checks. Its fallback offers communities and plans rather than falsely saying rooms do not exist.
+
+Automated verification
+PASS: 8 new component/contract tests in scripts/unified-social-flows.test.mts.
+PASS: 33 existing checks for comments, member pagination, community access/deduplication, group workspace navigation and watchlist post flow. Combined run: 41 passed, 0 failed.
+PASS: focused ESLint on changed client components, Live rooms page and the new test file.
+PASS: git diff --check.
+No production writes, member messages, purchases, account changes, collector replays, secret changes or schema changes were performed.
+
+Evidence boundaries and parent integration checks
+The component tests render real changed components in JSDOM with isolated auth/data and adjacent visual primitives. They certify state transitions, retries, draft retention and semantics, not browser layout or backend availability. Anonymous pagination page expressions are source contracts; middleware/RLS checks are owned by the integrating agent.
+Parent must complete the optimized build/typecheck and actual in-app browser checks in light/dark at phone, tablet and desktop widths before release. This is an implementation handoff, not a production delivery receipt.
+
+Browser checklist
+- Signed-out Feed: Latest/Top/Picks read public posts; Following shows the specific account prompt; scrolling does not call protected pagination or show a 401 retry loop.
+- Signed-out public profile: existing privacy rules hold; initial public posts are readable with no protected pagination loop or false caught-up message.
+- Signed-out public/free group: metadata and Join community return path render; no empty restricted posts feed; private/paid pages preserve their metadata-only/access boundary.
+- Member composer: stage a pick and wager, switch to Research and back, close/reopen Pick; values persist. Close/reopen Poll; options persist. Arrow/Home/End move Post type selection and visible focus.
+- Inbox: navigate Inbox/Requests with arrows, search, clear search, accept/decline in private fixtures and inspect pending/error/retry states.
+- More: open on Communities, Messages and Live rooms at 320px and desktop, inspect all destinations, use Escape and verify focus returns. Nested Messages/Live rooms/group settings return to the right page.
+- Community filters: search, filter sport/access, clear, switch lists, inspect guest opt-in and h3 storefront card titles.
+- Live rooms: inspect permitted, membership-limited and empty states separately.
+
+Scoped anti-slop gate
+R-02 PASS: new interface copy uses short action/status text and no internal-method explanations.
+R-03 IMPLEMENTED, browser pending: controls and new links reserve 44px, menus have a bounded scroll region, and header actions wrap through existing responsive rules.
+R-17/R-18 PASS: displayed counts come from current collection data; no statistics or testimonials were invented.
+R-23 PASS: existing assets and identity are retained; no new assets were generated.
+R-24/R-26 PASS for code/component checks: retained menu links have existing destinations; buttons have implemented actions and behavioral tests. Actual navigation is in the browser checklist.
+R-25/R-34 IMPLEMENTED, browser pending: new surfaces use existing semantic theme tokens and no new palette; final light/dark visual review belongs to integration.
+R-27 PASS: request loading/error/retry states and contextual empty/access states are implemented; draft-loss regressions are covered by tests.
+R-28 PASS: no FAQ content was added.
+R-32/R-39 PASS for component checks: tab relationships, tab order, keyboard movement and wager labeling are asserted; existing popup primitives remain responsible for focus/Escape behavior.
+R-33 PASS: changes are direct repository source edits, not runtime or external CSS patching.
+R-35 PENDING INTEGRATION: no browser or build certification is claimed in this handoff.
+R-36/R-38 PASS: no performance, security or conversion promises; public/private boundaries are stated honestly.
+R-37 PASS: approved SlipSurge identity governs these changes; no unrelated template or style system was introduced.
+R-40 PASS: no animation or third-party runtime was added; protected pagination work is avoided for guests.
+Purpose/craft PASS for implementation: headings identify actual tasks, the accent identifies actions, original badge/avatar artwork identifies members, and compact contextual navigation leaves conversations as the focal point. No new decoration competes with content.

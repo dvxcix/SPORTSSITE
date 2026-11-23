@@ -6,6 +6,7 @@ import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { isMlbOnlyPath, isMlbPullPath } from '@/lib/mlbOffseasonAccess'
 import { isPublicPreviewPath } from '@/lib/publicResearchPreview'
 import { ownOnboardingComplete } from './ownOnboarding'
+import { isPublicBrowseRequest, isPublicFeatureRequest } from '@/lib/publicBrowsePolicy'
 
 const AUTH_REFRESH_RETRY_COOKIE = 'ss-auth-refresh-retry'
 
@@ -33,6 +34,7 @@ export async function updateSession(request: NextRequest) {
   // These two routes only render a bounded public projection and never use
   // account cookies. An auth outage should not hide the product preview.
   if (isPublicPreviewPath(request.nextUrl.pathname)) return NextResponse.next({ request })
+  if (isPublicFeatureRequest(request.nextUrl.pathname, request.method)) return NextResponse.next({ request })
   const isAuthRoute = request.nextUrl.pathname === '/auth' || request.nextUrl.pathname.startsWith('/auth/')
   // Login and token-exchange handlers authenticate themselves. A stale cookie
   // must not trigger a second proxy refresh or delete a newer browser session.
@@ -284,18 +286,10 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Public discovery also includes published editorial content plus the
-  // creator acquisition and catalog surface. Creator studios and payouts
-  // remain gated below. The marketing homepage, legal/info pages, and pricing (no
-  // real member data on any of them) are visible signed-out — /feed,
-  // /channels, and /leaderboard used to be in this list too, which meant
-  // anyone with the URL could browse real members' posts, picks, and
-  // win/loss records without an account. Homepage handles its own signed-in
-  // redirect to /feed itself (see app/page.tsx), so it stays public here.
-  // /pricing must stay public too — it's the tier sign-up funnel, and a
-  // prospective subscriber needs to see plans before they have an account
-  // to log into; PricingCheckoutButton itself handles sending a logged-out
-  // click to /auth/login.
+  // Visitors can read public discovery pages before creating an account.
+  // This is an exact, read-only page policy, never an API or mutation bypass.
+  // Request-scoped queries retain RLS for private profiles, group/creator
+  // content and posts. Studios, messages and account actions stay gated.
   const pathname = request.nextUrl.pathname
   const creatorSlug = pathname.match(/^\/creators\/([^/]+)$/)?.[1]
   const blogSlug = pathname.match(/^\/blog\/([^/]+)$/)?.[1]
@@ -307,7 +301,7 @@ export async function updateSession(request: NextRequest) {
     || (!!blogSlug && !['create', 'edit', 'my'].includes(blogSlug))
   const isPublicRoute = ['/', '/about', '/faq', '/terms', '/privacy', '/responsible-gambling', '/support', '/pricing'].some(p =>
     pathname === p
-  ) || isPublicCreatorRoute || isPublicBlogRoute
+  ) || isPublicCreatorRoute || isPublicBlogRoute || isPublicBrowseRequest(pathname, request.method)
 
   if (!userId && !isAuthRoute && !isPublicRoute) {
     if (pathname.startsWith('/api/') || /^\/the-sideline\/(market|results|touchdown-replay)$/.test(pathname)) {

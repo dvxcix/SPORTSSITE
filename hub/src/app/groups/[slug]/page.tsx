@@ -26,6 +26,7 @@ import { publishedPaidCommunities, invitedCommunityEntry } from '@/lib/creatorCo
 import { CommunityEntry } from '@/components/groups/CommunityEntry'
 import { groupFeedPage } from '@/lib/groupFeed'
 import { GroupPostFeed } from '@/components/groups/GroupPostFeed'
+import { authVisibilityUnavailable } from '@/lib/blocks'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,10 +51,11 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
   const { slug } = await params
   const { setup, channel: requestedChannel, view } = await searchParams
   const supabase = await createClient()
-  const [{ data: { user } }, { data: group }] = await Promise.all([
+  const [{ data: { user }, error: authError }, { data: group }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from('groups').select('*').eq('slug', slug).single(),
   ])
+  if (authVisibilityUnavailable(authError)) throw new Error('Community access could not be verified. Try again.')
   const showMlb = await canViewMlb(supabase, user?.id)
   if (!group) {
     const [published,invitation]=await Promise.all([publishedPaidCommunities({slug}),user?invitedCommunityEntry(supabase,slug,user.id):Promise.resolve(null)])
@@ -103,7 +105,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
   // non-member of a private group gets the header/join-or-invite state and
   // nothing else. Public groups stay open to everyone, matching how they
   // already worked.
-  const canViewContent = group.is_public || isMember
+  const canViewContent = Boolean(user) && (isMember || (group.is_public && group.access_type !== 'paid'))
 
   const [
     { data: members },
@@ -210,7 +212,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
                 autoOpen={!isOwner && setup === 'community' && !memberPreferences?.onboarding_completed_at}
               />
             )}
-            {!user && <Link href="/auth/login" className={styles.primaryAction}>Sign in</Link>}
+            {!user && <Link href={`/auth/register?next=${encodeURIComponent(`/groups/${slug}`)}`} className={styles.primaryAction}>Join community</Link>}
           </div>
         </div>
 
@@ -251,9 +253,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
 
       {!canViewContent ? (
         <div className={styles.locked}>
-          <Lock size={28} />
-          <p>This is a private group</p>
-          <span>Only members can see posts and chat here. Ask a member to invite you.</span>
+          {!user && group.is_public && group.access_type !== 'paid' ? <><Users size={28} aria-hidden="true" /><p>Join the conversation</p><span>Create a free account to join this community for posts, picks and member chat.</span><Link href="/feed" className={styles.secondaryAction}>Browse the public Feed</Link></> : <><Lock size={28} aria-hidden="true" /><p>Members-only community</p><span>Only members can see posts and chat here.{group.is_public ? ' Join the community to continue.' : ' Ask a member to invite you.'}</span></>}
         </div>
       ) : (
 
@@ -263,7 +263,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
           posts={<div className={styles.posts}>
             {canPost && user && <FeedComposer groupId={group.id} groupAudience={group.access_type === 'paid' || !group.is_public ? 'members' : 'public'} />}
             {!isMember&&group.is_public&&<p className="px-5 py-3 text-sm text-[var(--text-2)]">Join this community to post and chat.</p>}
-            <GroupPostFeed key={`${group.id}:${view==='picks'?'picks':'posts'}:${postPage.posts[0]?.id||'empty'}`} groupId={group.id} picks={view==='picks'} initialPosts={postPage.posts} initialCursor={postPage.nextCursor} initialHasMore={postPage.hasMore}/>
+            <GroupPostFeed key={`${group.id}:${view==='picks'?'picks':'posts'}:${postPage.posts[0]?.id||'empty'}`} groupId={group.id} picks={view==='picks'} initialPosts={postPage.posts} initialCursor={postPage.nextCursor} initialHasMore={Boolean(user) && postPage.hasMore}/>
           </div>}
           chat={isMember ? activeChannel ? (
             <GroupChannelWorkspace groupSlug={slug} channels={workspaceChannels} activeChannel={activeChannel}>

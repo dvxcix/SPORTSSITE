@@ -1,0 +1,103 @@
+SlipSurge administration working brief
+23 November 2026
+
+Intent: the SlipSurge operator needs to locate an account, inspect an exception,
+or publish an update without losing their place. The workspace should feel calm,
+direct and visibly part of the same member product.
+
+Domain: member access, creator stores, moderation queues, release announcements,
+source observations, delivery attempts and operational handoffs.
+Color world: existing lime for selection/actions, slate ink for reading, light
+canvas for the day theme, charcoal for the night theme, amber/red only for actual
+pending/failure conditions. No additional palette or artwork.
+Signature: task handoffs pair the affected SlipSurge workspace with an honest
+status and a real route. This appears in the attention queue, section switcher,
+admin search results, member support flow and return-to-site navigation.
+Rejected defaults: equal decorative metric cards become a secondary metric strip;
+an ornamental glowing search overlay becomes a quiet shared modal; independent
+filter chips become one labeled search form that preserves every chosen filter.
+
+Hierarchy: work requiring attention leads; total account/activity figures follow.
+Palette: existing semantic tokens preserve the product's identity in both themes.
+Depth: quiet surface changes and boundaries; elevation belongs to modal overlays.
+Surfaces: existing canvas/surface/control roles, no admin-only color universe.
+Typography: the installed Geist, 13-16px controls/body, 24-30px page titles and
+tabular numbers. Weight and text roles separate labels, values and context.
+Spacing: 4px base; 12-20px workbench groups; 24px between distinct tasks.
+Dials: ENERGY 2 / RHYTHM 2 / MOTION 1. Admin work needs legibility and immediate
+response. No additional animation or generated visual assets are required.
+
+Implemented
+- One administration shell uses the same product type, tokens and theme control.
+  A context selector jumps within the current task group. Search and return to
+  the member site stay reachable at each screen size.
+- Phone navigation now uses the existing ModalSurface focus stack, Escape,
+  outside-click, scroll locking and focus restoration. It closes when the
+  viewport returns to desktop. Every group remains searchable.
+- The deepest route gets the current-page marker. Discord compose and verified
+  renewal diagnostics are linked; old alias redirects stay unchanged.
+- Admin search uses the same matching rules as navigation. Arrow keys, Home,
+  End, Enter, Tab and Escape work through real controls. The palette uses a
+  quiet surface instead of a heavy glow and never invents tool destinations.
+- The control center leads with work requiring attention. Counts that cannot
+  be read stay unavailable; missing pipeline observations cannot imply green
+  zero or an all-clear state. Activity totals are a secondary strip.
+- Member search combines name/email, account type and effective membership in
+  one GET form. Labels and reset behavior are explicit. Empty and failed
+  results differ. The 50-account result limit and 500-account membership scan
+  window remain visible and preserve the existing bounded query behavior.
+- The raw membership cancellation tool is under Advanced membership actions,
+  with a Keep membership path out of its existing confirmation step. No
+  cancellation request was made during verification.
+- General settings reuse the same saved-settings form as other configuration
+  pages. A failed read offers Retry instead of editable fallback defaults;
+  failed saves retain edits. Fields have associated labels, saved/dirty/saving
+  states and announced feedback. Existing setting keys and upsert semantics
+  are preserved.
+- Published-post, marketplace, monetization and email table regions now have
+  meaningful accessible names. Shared admin controls, tables and forms inherit
+  scoped responsive sizing, existing theme roles and tabular number rendering.
+
+Executed verification
+- scripts/unified-admin-experience.test.mts: 9 passed, 0 failed.
+  Real component tests cover task matching, deepest active route, palette
+  keyboard navigation, no results, Escape/focus restoration, phone navigation
+  lifecycle, combined member filters, unknown dashboard source status, settings
+  load failure/retry, retained failed-save edits/success retry and reversible
+  membership confirmation. Data and navigation providers were isolated fixtures.
+- ESLint: edited core admin components, dashboard/member/settings pages and the
+  new focused tests passed with no errors or warnings.
+- git diff --check passed for owned changes.
+- No server, app build, shared browser, production database mutation, provider
+  transaction, grant, deletion, collector or job replay was executed by this
+  subtask. The integration owner runs the combined build and visual review.
+
+Required integration browser checks
+1. /admin at 320, 390, 820 and 1440 widths, light/dark: toolbar containment,
+   attention/unknown states, secondary metric strip and real workspace links.
+2. Open admin navigation on a phone; filter; follow Discord composer; reopen;
+   Escape/backdrop close; resize to desktop; verify focus and no retained lock.
+3. Open Search admin tools and Ctrl K; type a multiword task; move with arrows,
+   Home/End and Enter; no-results state; Escape and focus restoration.
+4. /admin/users: combine search + account type + membership, submit, reset;
+   empty results; open member details; horizontal table scroll; Advanced action
+   disclosure and Keep membership. Do not submit real account mutations.
+5. /admin/settings/general: saved fields, toggle, dirty state, label focus and
+   Save/failed-load paths only with isolated review fixtures. Keep real settings.
+6. Traverse every existing admin route using the review catalog in both themes;
+   check forms/tables and honest empty/error states without operational writes.
+
+Scoped delivery gate
+Honesty: PASS in source and tests; unavailable counts and provider operations
+are not presented as zero, verified health or successful transactions.
+Navigation/function: PASS in component tests; canonical routes remain available
+and search/section navigation uses the existing tools. Browser review is pending.
+Identity/purpose: PASS in source. The existing bolt/Geist/lime and semantic roles
+are retained; no art, marketing figures, team data, formulas or testimonials added.
+Accessibility/state: PASS in tests for shared modal lifecycle, keyboard search,
+field labels and error/success handling. Responsive geometry/contrast require the
+integration browser checks above before the full release gate can pass.
+Craft self-check: the signature is the real task handoff across queue, search,
+section picker, member filtering and site return. Removing these choices would
+change the workflow. Content hierarchy is deliberate; no decorative status glow
+or dashboard-only palette remains in the changed components.

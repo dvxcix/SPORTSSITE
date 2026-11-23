@@ -1,0 +1,208 @@
+SlipSurge visitor journey
+23 November 2026
+
+Shape: direct offer with a working product preview before account creation.
+Visitors can research a bounded public board and browse public community pages,
+then choose an account or a membership when they want to participate or unlock
+the existing research workspaces. No new offer, fee, upsell or pricing tier.
+
+Inputs and direction
+- Offer: existing free account and Ultimate research membership. The canonical
+  pricing page currently shows $19.99 every 30 days with its existing 3-day
+  trial, or $199.99 every 365 days. This update does not change billing.
+- Traffic assumption: direct, organic search and social links. No new ad
+  campaign, acquisition budget, affiliate program or promotional offer.
+- Awareness: sports fans comparing research products, often arriving cold.
+- Fulfilment: existing digital research and community access through SlipSurge.
+- Existing product: both preview routes, archived public quote slices, community
+  directory, Feed, creator storefronts, pricing, authentication and Whop checkout.
+- Audience: someone checking the product on a phone before creating an account.
+- Reading this as a sports research/community product entrance, in the existing
+  SlipSurge visual language. ENERGY 2 / RHYTHM 2 / MOTION 2.
+- Geist remains the product typeface. Semantic surfaces and the existing lime
+  action/selection accent keep the public and member experiences connected.
+- The working board is the hero focal point. Real group cards are the second
+  product proof. Existing team/player artwork is preserved as supporting art.
+- Short, local state transitions explain selection; no auto-cycling demos,
+  floating decoration, fabricated testimonials, member counts or win claims.
+
+Page: product entrance / (LANDING)
+Goal: open a useful research or community view without signing in.
+Traffic in: direct, search and social visitors comparing what the product does.
+Above fold: Research the game. Share your read. Working archived NBA/NFL board,
+  sport and milestone controls, and specific links to the full free previews.
+Body: bounded working board; existing research/player artwork and real tool
+  paths; actual public/free communities; public Feed/creator/scores destinations;
+  current free/paid access distinction; product-specific questions; legal/footer.
+Proof: the dated public November 8 archive already tracked in the repository,
+  with original observations and official box-score source links. Community
+  cards come only from a bounded public/free metadata read under normal RLS.
+Objections: no account needed to preview/browse; paid spaces remain member-only;
+  dated archived examples are labelled and do not imply current/live prices.
+Fields: none. No lead capture or email-wall before product discovery.
+Price: current canonical membership figures, with billing period/trial visible.
+Exit: keep using public previews, browse community pages or read the legal/help
+  pages without creating an account.
+Metric: public_discovery_opened by destination, then research_preview_explored.
+  Target: establish the site's own baseline before setting a conversion target;
+  the skill's generic paid-traffic ranges are not a measured SlipSurge target.
+
+Page: /preview/nba or /preview/nfl (LANDING / product trial)
+Goal: inspect a player and milestone, then decide whether broader access helps.
+Traffic in: homepage board links retain sport/game/date/player/line context.
+Above fold: existing real preview board, date and data availability.
+Body: unchanged preview components, player/rung selectors, odds and book context.
+Proof: existing server-bounded data projection and dated fallback archive.
+Objections: preview works before signup; missing prices stay unavailable.
+Fields: none. Selection only.
+Price: existing pricing route, shown only when requested.
+Exit: return to home or browse public community pages.
+Metric: existing research_preview_explored and research_preview_locked_opened.
+  Target: compare interaction/continuation rates against the initial baseline.
+
+Page: /feed, /groups, /creators, /sports (LANDING / public discovery)
+Goal: see real public content and choose a community, creator or conversation.
+Traffic in: specific homepage links and shared public header.
+Above fold/body: actual product pages, not fabricated marketing records.
+Proof: existing public content and directory metadata. Private content remains
+  subject to existing membership/visibility rules, with no account bypass.
+Fields: none for browsing. Account required at existing participation actions.
+Price: published creator pricing only where the existing storefront shows it.
+Exit: other public views and a clear route back to the product entrance.
+Metric: destination-specific public_discovery_opened; normal route telemetry.
+  Target: establish baseline browse-to-account and browse-to-plan continuation.
+Integration: root owner adds a narrow GET/HEAD public-page allowlist and verifies
+  underlying access rules. This work does not open member APIs or private rooms.
+
+Page: /pricing (LANDING / existing offer)
+Goal: compare the current free account and paid research membership.
+Traffic in: explicit membership links or the existing preview unlock dialog.
+Above fold/body: existing current pricing, periods, features and Whop checkout.
+Proof: current product access; no invented savings, trial or membership benefits.
+Fields: existing checkout/auth only, unchanged by this visual update.
+Price: canonical pricing page controls the offer and subscription terms.
+Exit: return to the same research preview or use the free community.
+Metric: existing checkout-start flow and provider-confirmed purchase state.
+  Target: use actual current conversion baseline. No promised uplift.
+
+Page: existing auth/checkout/confirmation (CHECKOUT / THANKYOU / ERROR)
+Goal: complete the requested account or membership action, preserving context.
+Traffic in: existing explicit account/save/join/paid actions.
+Above fold/body: existing auth/checkout UI and success/error handling.
+Proof: provider-confirmed membership status, not client-side payment assumptions.
+Fields/price: existing forms and Whop plan, unchanged.
+Exit: existing preview return or the member's saved launch destination.
+Metric: existing provider-confirmed checkout/membership events. Failed/canceled
+  states remain retryable without implying that a payment succeeded.
+
+Price ladder
+- Entry: free anonymous research slice and public browsing.
+- Free account: existing save, follow, post and joining capabilities.
+- Core subscription: existing Ultimate plan, same pricing and entitlement rules.
+- Creator memberships: separate published offers, unchanged creator-set pricing.
+- Immediate upsell/downsell: none. The user requested discovery, not new billing.
+- Back end: existing account membership management. No new campaign/nurture flow.
+
+Instrumentation boundaries and build order
+1. Verify existing preview/access/checkout contracts and public route eligibility.
+2. Build the common public header and put working research above the fold.
+3. Link public destinations and stream bounded public/free community metadata.
+4. Add privacy-safe public_discovery_opened and public_preview_interacted events;
+   event fields are destination/sport/action only, no identities or private data.
+5. Root integration verifies browser flow, redirects, loading/error states,
+   desktop/mobile and both themes, then publishes the single coordinated release.
+6. Existing analytics do not prove ad attribution or revenue reconciliation.
+   Click-ID persistence, server purchase attribution/value/currency and an A/B
+   baseline are required before scaling paid traffic, not fabricated in this UI.
+   No new ad pixels, provider events or purchase jobs are added by this update.
+7. Future A/B slot: hero CTA wording, measured by meaningful preview interaction
+   and completed account/membership action. No experiment is enabled here.
+
+Reference used for sequencing only
+https://unjuiced.bet/ (reviewed 23 November 2026): its signed-out product demos
+appear before plan choice. SlipSurge keeps its own research, archive and social
+identity; none of the competitor's data, paid claims, models or records is used.
+
+Public metadata read documentation
+https://supabase.com/docs/reference/javascript/select
+https://supabase.com/docs/reference/javascript/using-modifiers-abortsignal
+Changelog checked: https://supabase.com/changelog.md, 23 November 2026.
+
+Assumptions
+Organic/social/direct discovery is the launch traffic mix. The existing offer,
+membership, archive and public content policies remain authoritative. No fresh
+owner direction, pricing decision or marketing statistic was invented.
+
+Implementation receipt
+- PublicSiteHeader is shared with the guest product frame, with marketing and
+  public-browse modes, one common theme control and safe sign-in return paths.
+- The hero renders the working saved-data ResearchShowcase. Player selection,
+  sport switching and milestone controls work before any account prompt.
+- The preview handoff retains sport/game/date/player/line via previewPagePath.
+  Root integration owns the bounded fixed-archive context resolver.
+- Historical results appear only for the corresponding sourced player. Missing
+  quote rows stay unavailable. Archived prices are clearly dated and labelled.
+- The existing player cards, logo sources and team-color artwork were preserved.
+- CommunityDirectory cards are reused with heading level 3. The homepage reads
+  at most three normal-RLS public/free NBA/NFL or sport-neutral group cards,
+  with a four-second abort limit and loading/empty/failure UI.
+- Public destinations replace premature registration links. Sign-in/account
+  entry and the current membership offer remain accessible at their real steps.
+- Navbar, main and footer have separate landmarks; the skip link targets main.
+- Only the selected board panel has a 160ms opacity change on sport switching;
+  reduced-motion mode removes it. No auto-play, timer, carousel or floating art.
+
+Focused verification
+Command: node --import tsx --test scripts/unified-visitor-experience.test.mts
+  scripts/public-research-preview.test.mts
+Result: 13 passed, 0 failed.
+Owned TSX and new test ESLint: passed with no diagnostics.
+Owned-file git diff --check: passed.
+Whole-app build/typecheck, desktop/mobile light/dark visual checks and the
+production release are coordinated by the root agent, not claimed by these
+focused component tests.
+
+Scoped antislop gate at integration handoff
+R-02 PASS: new public prose uses no em dashes; missing-price placeholders use an
+  en dash. Existing owner's product name Ultimate is retained as a plan name.
+R-17/R-18/R-36/R-38 PASS: no invented statistics, users, reviews, performance or
+  security claims. Public archive comes from the existing tracked data slice.
+R-23/R-37 PASS: existing SlipSurge identity/direction and assets are preserved;
+  no new generated asset or marketing offer was introduced.
+R-24/R-26 PASS in component tests: links have real routes/anchors; sport, player
+  and milestone controls update rendered values and exact preview context.
+R-27 PASS: missing quote, empty community, failed read and rejected read tested.
+R-28 PASS: questions address actual preview, access, community and wagering use.
+R-32/R-39 mechanism PASS: native buttons/links, labels and selected states, focus
+  rules and skip link. Browser keyboard/focus verification belongs to root QA.
+R-33 PASS: implementation is direct TSX/CSS Module source, not runtime patching.
+R-40 mechanism PASS: existing image dimensions preserved; no new third-party
+  blocking scripts or unspecified media. Field performance was not measured.
+R-03/R-25/R-34/R-35 browser gate: root integration must record actual 320/390/
+  tablet/desktop and both themes, theme changes, header scrolling, all new links,
+  archive handoff and missing/error UI before production publication.
+Purpose gate: the lime accent identifies actions/selections; team gradients and
+  player art retain their existing ownership identity. Border/surface depth
+  groups working product areas. No decorative background or new palette.
+Liveliness: ENERGY 2 / RHYTHM 2 / MOTION 2. A working board leads, research art
+  supports the story, real community cards provide product proof, and the two
+  existing plan choices follow it. The page does not recycle a three-step pitch.
+Craftsmanship: Geist and product tokens keep a shared identity. Spacing follows
+  the existing product scale; mobile stacks the working board and shows public
+  navigation rather than hiding every destination behind a hamburger.
+
+Browser checklist for root integration
+1. Guest homepage: one header/main/footer and H1, skip link lands after header.
+2. On 320/390px, browse six public-header links in their contained scroll area;
+   keyboard reaches the last link and body does not overflow.
+3. Toggle NBA/NFL, inspect another player, select a priced and an unavailable
+   milestone, then open the exact full archive preview context.
+4. Check that switching sport resets incompatible player/line selection and
+   only the matching player's sourced final result is displayed.
+5. Public communities: actual metadata cards; empty/error states retain useful
+   directory and Feed paths, with no private/paid/member content exposure.
+6. Browse Feed, communities, creators, scores and records before account entry.
+7. Check light/dark and reduced-motion; preserved player imagery remains scoped
+   to its own card. No duplicate theme controls/public headers in the root frame.
+8. Check current plan/trial terms on pricing and the sign-in return destination.
+   Do not initiate a real charge, membership change or provider transaction.

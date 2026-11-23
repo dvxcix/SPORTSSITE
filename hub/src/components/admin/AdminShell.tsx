@@ -2,27 +2,35 @@
 
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { ExternalLink, Menu, Search, ShieldCheck } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { ExternalLink, Menu, Search } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { AdminCommandPalette } from '@/components/admin/AdminCommandPalette'
-import { adminRouteForPath } from '@/components/admin/adminNavigation'
+import { ADMIN_NAV_GROUPS, adminRouteForPath } from '@/components/admin/adminNavigation'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
+import styles from './adminWorkspace.module.css'
 
 export function AdminShell({ email, children }: { email: string; children: React.ReactNode }) {
-  const path = usePathname()
+  const path = usePathname(), router = useRouter()
   const [navOpen, setNavOpen] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
   const route = adminRouteForPath(path)
-  const title = route?.label ?? 'Admin workspace'
-  const group = route?.group ?? 'Operations'
+  const group = ADMIN_NAV_GROUPS.find(item => item.label === route?.group) ?? ADMIN_NAV_GROUPS[0]
   const closeCommand = useCallback(() => setCommandOpen(false), [])
   const closeNav = useCallback(() => setNavOpen(false), [])
+
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width:1024px)')
+    const onResize = () => { if (desktop.matches) closeNav() }
+    desktop.addEventListener('change', onResize)
+    return () => desktop.removeEventListener('change', onResize)
+  }, [closeNav])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
+        setNavOpen(false)
         setCommandOpen(current => !current)
       }
     }
@@ -31,41 +39,32 @@ export function AdminShell({ email, children }: { email: string; children: React
   }, [])
 
   return (
-    <div className="flex min-h-dvh bg-[var(--bg)]">
+    <div className={styles.shell}>
       <a href="#admin-content" className="ss-skip-link">Skip to admin content</a>
       <AdminSidebar open={navOpen} onClose={closeNav} />
-      <div className="min-w-0 flex-1">
-        <header className="sticky top-[var(--banner-h,0px)] z-[var(--layer-sticky)] flex min-h-16 items-center gap-2 border-b border-[var(--hairline)] bg-[var(--surface)] px-3 py-2 sm:gap-3 sm:px-5 lg:px-6">
-          <button type="button" aria-label="Open admin navigation" onClick={() => setNavOpen(true)} className="grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--border-2)] bg-[var(--surface)] text-[var(--text-2)] transition-colors hover:border-[color-mix(in_srgb,var(--accent)_32%,var(--border-2))] hover:text-[var(--accent)] lg:hidden">
+      <div className={styles.body}>
+        <header className={styles.toolbar}>
+          <button type="button" aria-label="Open admin navigation" aria-expanded={navOpen} onClick={() => setNavOpen(true)} className={`${styles.toolButton} ${styles.navTrigger}`}>
             <Menu size={18} aria-hidden="true" />
           </button>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--text-2)]">
-              <span className="hidden sm:inline">{group}</span><span className="hidden sm:inline" aria-hidden="true">/</span><span className="truncate">{title}</span>
-            </div>
-
-          </div>
-
-          <button type="button" onClick={() => setCommandOpen(true)} className="hidden min-h-10 min-w-52 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-left text-xs font-semibold text-[var(--text-3)] transition hover:border-[color-mix(in_srgb,var(--accent)_28%,var(--border))] hover:bg-[var(--surface-2)] hover:text-[var(--text-2)] md:flex xl:min-w-64">
-            <Search size={14} aria-hidden="true" />
-            <span className="min-w-0 flex-1 truncate">Search admin tools</span>
-            <kbd className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--text-3)]">Ctrl K</kbd>
+          <label className={styles.location}>
+            <span>{group.label}</span>
+            <span className="sr-only">Admin workspace section</span>
+            <select aria-label="Admin workspace section" value={route?.href ?? '/admin'} onChange={event => router.push(event.target.value)}>
+              {group.links.map(link => <option key={link.href} value={link.href}>{link.label}</option>)}
+            </select>
+          </label>
+          <button type="button" onClick={() => setCommandOpen(true)} className={`${styles.toolButton} ${styles.search}`}>
+            <Search size={15} aria-hidden="true" /><span>Search admin tools</span><kbd>Ctrl K</kbd>
           </button>
-          <button type="button" aria-label="Search admin tools" onClick={() => setCommandOpen(true)} className="grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--border-2)] bg-[var(--surface)] text-[var(--text-2)] transition-colors hover:text-[var(--accent)] md:hidden">
-            <Search size={17} aria-hidden="true" />
+          <button type="button" aria-label="Search admin tools" onClick={() => setCommandOpen(true)} className={`${styles.toolButton} ${styles.searchIcon}`}>
+            <Search size={18} aria-hidden="true" />
           </button>
-
-          <div className="sr-only">
-            <ShieldCheck size={14} aria-hidden="true" className="shrink-0 text-[var(--accent)]" />
-            <span className="max-w-44 truncate text-[12px] font-bold text-[var(--text-2)]">{email}</span>
-          </div>
-          <ThemeToggle />
-          <Link href="/" aria-label="Open SlipSurge" className="grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--border-2)] bg-[var(--surface)] text-[var(--text-2)] transition-colors hover:border-[color-mix(in_srgb,var(--accent)_32%,var(--border-2))] hover:text-[var(--accent)]">
-            <ExternalLink size={16} aria-hidden="true" />
-          </Link>
+          <span className="sr-only">Administrator: {email}</span>
+          <div className={styles.appearance}><ThemeToggle /></div>
+          <Link href="/feed" aria-label="Return to SlipSurge" className={`${styles.toolButton} ${styles.siteReturn}`}><ExternalLink size={17} aria-hidden="true" /></Link>
         </header>
-        <main id="admin-content" tabIndex={-1} className="ss-admin-content min-w-0 pb-[max(24px,env(safe-area-inset-bottom))] focus:outline-none">{children}</main>
+        <main id="admin-content" tabIndex={-1} className="ss-admin-content focus:outline-none">{children}</main>
       </div>
       <AdminCommandPalette open={commandOpen} onClose={closeCommand} />
     </div>

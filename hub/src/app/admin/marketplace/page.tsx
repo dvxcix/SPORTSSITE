@@ -68,7 +68,7 @@ export default async function AdminMarketplacePage() {
         <div className="rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_60%,transparent)] py-20 text-center text-sm text-[var(--text-3)]">No Matrix publications yet.</div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)]">
-          <div role="region" tabIndex={0} aria-label=" table, scroll for all columns" className="ss-table-region overflow-x-auto">
+          <div role="region" tabIndex={0} aria-label="Matrix publications, scroll for all columns" className="ss-table-region overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm">
               <thead className="border-b border-[var(--border)] bg-[var(--surface)]">
                 <tr className="text-left">

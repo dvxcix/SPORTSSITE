@@ -114,7 +114,7 @@ export default async function AdminPostsPage({
         ))}
       </div>
 
-      <div role="region" tabIndex={0} aria-label=" table, scroll for all columns" className="ss-table-region bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-x-auto">
+      <div role="region" tabIndex={0} aria-label="Published posts, scroll for all columns" className="ss-table-region bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-[var(--border)]">
             <tr className="text-left">

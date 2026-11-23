@@ -1,4 +1,14 @@
 /* Member surfaces. Color belongs to identity and context; reading surfaces stay calm. */
+.ss-feed-composer-signed-out,.ss-feed-guest-end{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:18px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
+.ss-feed-composer-signed-out>p,.ss-feed-guest-end p{flex:1 1 240px;margin:0;color:var(--text-2);font-size:13px;line-height:1.6;text-wrap:pretty}
+.ss-feed-composer-signed-out>div{display:flex;flex-wrap:wrap;gap:8px}
+.ss-feed-composer-signed-out a,.ss-feed-guest-end>a{display:inline-flex;min-height:44px;align-items:center;justify-content:center;padding:9px 12px;border:1px solid var(--control-border);border-radius:8px;color:var(--text-1);font-size:12px;font-weight:600}
+.ss-feed-composer-signed-out a:first-child,.ss-feed-guest-end>a{border-color:transparent;background:var(--accent-fill);color:var(--accent-fg)}
+.ss-feed-composer-signed-out a:hover,.ss-feed-guest-end>a:hover{filter:brightness(.96)}
+.ss-feed-composer-signed-out a:focus-visible,.ss-feed-guest-end>a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.ss-feed-guest-end{gap:16px;padding-block:24px}.ss-feed-guest-end>div{flex:1 1 240px}.ss-feed-guest-end h2{margin:0 0 6px;color:var(--text-1);font-size:18px;font-weight:600;letter-spacing:-.025em}
+.ss-message-request-actions button:disabled{cursor:not-allowed;opacity:.6}
+.ss-message-inbox [role=tabpanel]{min-width:0}
 .ss-member-header-actions{display:flex;align-items:center;gap:8px;min-width:0}
 body:has([data-saved-research-header]) .ss-utility-dock-toggle,
 body:has([data-saved-research-header]) .ss-utility-dock-items{display:none}

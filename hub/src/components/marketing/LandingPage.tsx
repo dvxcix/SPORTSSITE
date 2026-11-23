@@ -1,11 +1,14 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, ArrowUpRight, Check, ChevronDown } from 'lucide-react'
+import { Suspense } from 'react'
+import { ArrowRight, Check, ChevronDown } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
-import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { sportTeamBackground, sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
 import { PREVIEW_CONFIG } from '@/lib/publicResearchPreview'
 import { ResearchShowcase } from './ResearchShowcase'
+import { PublicSiteHeader } from './PublicSiteHeader'
+import { PublicCommunities, PublicCommunitiesLoading } from './PublicCommunities'
+import { DiscoveryLink } from './DiscoveryLink'
 import styles from './LandingPage.module.css'
 
 const portraits = [
@@ -14,16 +17,16 @@ const portraits = [
 ] as const
 
 const community = [
-  { title: 'Post picks and parlays', copy: 'Build a slip with saved prices and see each leg grade against the result.', href: '/auth/register?utm_feature=picks' },
-  { title: 'Follow the scores', copy: 'Keep up with games and box scores alongside your research.', href: '/auth/register?utm_feature=scores' },
-  { title: 'Check public records', copy: 'Browse the leaderboard by sport, record and streak.', href: '/leaderboard' },
-  { title: 'Follow the community', copy: 'Find people to follow and join the conversation in groups and channels.', href: '/auth/register?utm_feature=community' },
+  { title: 'Read the Feed', copy: 'See the public picks, research and conversations people are sharing.', href: '/feed', destination: 'feed' },
+  { title: 'Meet the creators', copy: 'Browse their communities and memberships before choosing who to follow.', href: '/creators', destination: 'creators' },
+  { title: 'Follow the games', copy: 'Open scores and box scores alongside your research.', href: '/sports', destination: 'scores' },
+  { title: 'Check public records', copy: 'Browse the leaderboard by sport, record and streak.', href: '/leaderboard', destination: 'leaderboard' },
 ]
 
 const faqs = [
   { q: 'Can I try the boards without an account?', a: 'Yes. The NBA and NFL previews each have a featured matchup, one market and FanDuel prices. You can change the player and line and compare each saved price with its opening.' },
   { q: 'What comes with Ultimate?', a: 'Both research workspaces come with one membership. You get the full available odds boards, more markets and sportsbooks, saved pregame history, NBA projections and defense by position, and NFL matchup research and public pick counts where available.' },
-  { q: 'How do picks and parlays grade?', a: 'Each leg grades against the final box score. A parlay wins when all legs win or push and at least one leg wins. A losing leg loses the parlay, and an all-push parlay grades as a push.' },
+  { q: 'Do I need an account to browse communities?', a: 'You can browse public posts, creator pages and community listings first. Create a free account when you want to follow people, post or join a community. Paid communities require their own active membership.' },
   { q: 'Can I place a bet on SlipSurge?', a: 'SlipSurge is a research and community platform. It does not accept wagers or hold betting funds.' },
 ]
 
@@ -62,63 +65,62 @@ function PlayerCards() {
 export function LandingPage() {
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.nav}>
-          <Link href="/" className={styles.brand} aria-label="SlipSurge home">
-            <Image src="/logo.png" alt="" width={30} height={30} preload />
-            <span>Slip<span>Surge</span></span>
-          </Link>
-          <nav className={styles.primaryNav} aria-label="Product navigation">
-            <a href="#research">Research</a>
-            <a href="#community">Community</a>
-            <a href="#membership">Membership</a>
-          </nav>
-          <nav className={styles.navActions} aria-label="Account">
-            <Link href="/auth/login" className={styles.textLink}>Sign in</Link>
-            <Link href="/pricing" className={styles.secondaryButton}>View plans</Link>
-            <ThemeToggle />
-          </nav>
-        </div>
-      </header>
-
-      <section className={styles.hero} aria-labelledby="landing-title">
+      <PublicSiteHeader />
+      <main id="main-content" tabIndex={-1}>
+      <section id="research" className={styles.hero} aria-labelledby="landing-title">
         <div className={styles.heroCopy}>
-          <p className={styles.kicker}>NBA and NFL research</p>
-          <h1 id="landing-title">See how the odds moved</h1>
-          <p className={styles.lede}>Compare opening and saved prices, research the matchup, then check what the player actually did.</p>
+          <h1 id="landing-title">Research the game.<br />Share your read.</h1>
+          <p className={styles.lede}>Your NBA and NFL research, picks and communities. Take a look around before making an account.</p>
           <div className={styles.actions}>
-            <a href="#research" className={styles.primaryButton}>Try a free board <ArrowRight size={17} /></a>
-            <a href="#membership" className={styles.textLink}>What’s in Ultimate</a>
+            <DiscoveryLink href="/preview/nba" destination="nba_preview" className={styles.primaryButton}>Open NBA board</DiscoveryLink>
+            <DiscoveryLink href="/preview/nfl" destination="nfl_preview" className={styles.secondaryButton}>Open NFL board</DiscoveryLink>
           </div>
-          <p className={styles.note}>Free previews open without an account.</p>
+          <p className={styles.note}>Free previews. No account needed.</p>
         </div>
+        <div className={styles.heroWorkbench}><ResearchShowcase /></div>
+      </section>
+
+      <section className={`${styles.section} ${styles.researchStory}`} aria-labelledby="research-title">
         <PlayerCards />
+        <div>
+          <div className={styles.sectionIntro}>
+            <h2 id="research-title">Two sports.<br />One research desk.</h2>
+            <p>Move from a price to a player, a matchup and a conversation.</p>
+          </div>
+          <div className={styles.workspaceLinks}>
+            <DiscoveryLink href="/preview/nba" destination="nba_preview"><span><strong>The Court</strong><span>NBA player trends, game logs and odds boards.</span></span><span>NBA <ArrowRight size={16} aria-hidden="true" /></span></DiscoveryLink>
+            <DiscoveryLink href="/preview/nfl" destination="nfl_preview"><span><strong>The Sideline</strong><span>NFL usage, matchups and odds boards.</span></span><span>NFL <ArrowRight size={16} aria-hidden="true" /></span></DiscoveryLink>
+          </div>
+          <p className={styles.note}>The examples above are dated archives. Open a preview to see its featured matchup and available prices.</p>
+        </div>
       </section>
 
-      <section id="research" className={styles.section} aria-labelledby="research-title">
-        <div className={styles.sectionIntro}>
-          <p className={styles.kicker}>The research desk</p>
-          <h2 id="research-title">Try a saved pregame board</h2>
-          <p>Pick a sport and a milestone to see how each player’s FanDuel price changed before tip or kickoff.</p>
+      <section id="community" className={styles.section} aria-labelledby="community-title">
+        <div className={styles.communityHeading}>
+          <div className={styles.sectionIntro}>
+            <h2 id="community-title">Find your people.</h2>
+            <p>Read public posts, browse creators and get a feel for a community before joining.</p>
+          </div>
+          <DiscoveryLink href="/groups" destination="communities" className={styles.secondaryButton}>Browse all communities</DiscoveryLink>
         </div>
-        <ResearchShowcase />
-      </section>
-
-      <section id="how-it-works" className={styles.section} aria-labelledby="workflow-title">
-        <div className={styles.sectionIntro}>
-          <h2 id="workflow-title">From the opening line to the box score</h2>
+        <Suspense fallback={<PublicCommunitiesLoading />}><PublicCommunities /></Suspense>
+        <div className={styles.communityGrid}>
+          {community.map(({ title, copy, href, destination }) => (
+            <DiscoveryLink href={href} destination={destination} key={href} className={styles.communityLink}>
+              <div><h3>{title}</h3><p>{copy}</p></div><ArrowRight size={17} aria-hidden="true" />
+            </DiscoveryLink>
+          ))}
         </div>
-        <ol className={styles.workflow}>
-          <li><span>01</span><h3>See the move</h3><p>Compare the same player, book and milestone against its opening price across the available slate.</p></li>
-          <li><span>02</span><h3>Research the matchup</h3><p>Check projections, player trends and defense by position in The Court. In The Sideline, look at usage, matchup splits and public picks.</p></li>
-          <li><span>03</span><h3>Review the result</h3><p>Reopen saved pregame boards and compare the prices you saw before the game with the final result.</p></li>
-        </ol>
+        <div className={styles.books}>
+          <span>Post picks from</span>
+          {['fanduel', 'draftkings', 'betmgm', 'caesars'].map(book => <BookLogo key={book} vendor={book} size={18} />)}
+        </div>
       </section>
 
       <section id="membership" className={styles.section} aria-labelledby="membership-title">
         <div className={styles.sectionIntro}>
           <h2 id="membership-title">One membership for both sports</h2>
-          <p>Try a matchup in each sport first. Ultimate gives you both research workspaces.</p>
+          <p>Browse first. Create a free account to take part, or choose Ultimate for both research workspaces.</p>
         </div>
         <div className={styles.plans}>
           <div className={styles.plan}>
@@ -127,9 +129,10 @@ export function LandingPage() {
             <ul className={styles.planFeatures}>
               <li><Check size={16} /> One featured game per preview</li>
               <li><Check size={16} /> NBA points and NFL receiving yards</li>
-              <li><Check size={16} /> Feed, favorites and public records with an account</li>
+              <li><Check size={16} /> Browse public posts and communities</li>
+              <li><Check size={16} /> Create an account to post, follow and save</li>
             </ul>
-            <a href="#research" className={styles.secondaryButton}>Try the free boards <ArrowRight size={16} /></a>
+            <DiscoveryLink href="/auth/register" destination="registration" className={styles.secondaryButton}>Create a free account</DiscoveryLink>
           </div>
           <div className={styles.plan}>
             <h3>Ultimate</h3>
@@ -141,25 +144,8 @@ export function LandingPage() {
               <li><Check size={16} /> NFL Matchup Lab, player usage and The Public</li>
               <li><Check size={16} /> Saved pregame boards and historical results</li>
             </ul>
-            <Link href="/pricing" className={styles.primaryButton}>See Ultimate plans <ArrowRight size={16} /></Link>
+            <DiscoveryLink href="/pricing" destination="membership" className={styles.primaryButton}>See Ultimate plans</DiscoveryLink>
           </div>
-        </div>
-      </section>
-
-      <section id="community" className={styles.section} aria-labelledby="community-title">
-        <div className={styles.sectionIntro}>
-          <h2 id="community-title">Share picks and follow the games</h2>
-        </div>
-        <div className={styles.communityGrid}>
-          {community.map(({ title, copy, href }) => (
-            <Link href={href} key={title} className={styles.communityLink}>
-              <div><h3>{title}</h3><p>{copy}</p></div><ArrowUpRight size={17} />
-            </Link>
-          ))}
-        </div>
-        <div className={styles.books}>
-          <span>Post picks from</span>
-          {['fanduel', 'draftkings', 'betmgm', 'caesars'].map(book => <BookLogo key={book} vendor={book} size={18} />)}
         </div>
       </section>
 
@@ -179,15 +165,16 @@ export function LandingPage() {
 
       <section className={styles.finalCta} aria-labelledby="final-title">
         <div>
-          <h2 id="final-title">Start with a matchup</h2>
-          <p>Open the board for either sport and see what moved before game time.</p>
+          <h2 id="final-title">Take a look inside.</h2>
+          <p>Start with a board or meet the community. Your account can come later.</p>
         </div>
         <div className={styles.actions}>
-          <Link href="/preview/nba" className={styles.primaryButton}>NBA preview <ArrowRight size={16} /></Link>
-          <Link href="/preview/nfl" className={styles.secondaryButton}>NFL preview <ArrowRight size={16} /></Link>
+          <DiscoveryLink href="/preview/nba" destination="nba_preview" className={styles.primaryButton}>Open NBA research</DiscoveryLink>
+          <DiscoveryLink href="/groups" destination="communities" className={styles.secondaryButton}>Browse communities</DiscoveryLink>
         </div>
       </section>
 
+      </main>
       <footer className={styles.footer}>
         <span>© {new Date().getFullYear()} SlipSurge</span>
         <nav aria-label="Footer">

@@ -18,6 +18,9 @@ import { isPublicPreviewPath } from '@/lib/publicResearchPreview'
 import { getProductArea } from './navigationConfig'
 import { CreatorMarketShell, CreatorWorkspaceShell } from '@/components/creator/CreatorWorkspaceShell'
 import { useMobileViewport } from './useMobileViewport'
+import { useAuth } from '@/context/AuthContext'
+import { usesVisitorBrowseFrame } from '@/lib/publicBrowsePolicy'
+import { VisitorBrowseShell } from './VisitorBrowseShell'
 
 const WatchlistButton=dynamic(()=>import('@/components/dugout/WatchlistPanel').then(module=>module.WatchlistButton),{ssr:false})
 const MyPicksButton=dynamic(()=>import('@/components/dugout/MyPicksPanel').then(module=>module.MyPicksButton),{ssr:false})
@@ -45,6 +48,7 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
   // hamburger button and the sidebar's own backdrop/close button drive.
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const isDesktop = useDesktopPlatform()
+  const { user, loading, authUnavailable } = useAuth()
 
   if (isAdmin) {
     // Admin pages render their own full layout via admin/layout.tsx
@@ -58,8 +62,16 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
     return <><MfaGate/><NetworkStatus/><ProductTelemetry/><CreatorMarketShell>{children}</CreatorMarketShell><div hidden inert><MyPicksButton/><WatchlistButton/></div><UtilityDock teaserOnly/></>
   }
 
-  if (isAuthPage || isLandingPage || isPublicPreviewPath(path) || process.env.NEXT_PUBLIC_DESIGN_REVIEW === '1' && path === '/design-review/full-audit') {
+  if (isLandingPage || isPublicPreviewPath(path)) {
+    return <><NetworkStatus/><ProductTelemetry/>{children}<UtilityDock teaserOnly/></>
+  }
+
+  if (isAuthPage || process.env.NEXT_PUBLIC_DESIGN_REVIEW === '1' && path === '/design-review/full-audit') {
     return <><NetworkStatus /><ProductTelemetry /><main id="main-content">{children}</main>{(isLandingPage || isPublicPreviewPath(path)) && <UtilityDock teaserOnly />}</>
+  }
+
+  if (usesVisitorBrowseFrame(path) && !loading && !authUnavailable && !user) {
+    return <><NetworkStatus/><ProductTelemetry/><VisitorBrowseShell pathname={path}>{children}</VisitorBrowseShell><UtilityDock teaserOnly/></>
   }
 
   // Single drawer hosts stay mounted here; headers and the account menu open

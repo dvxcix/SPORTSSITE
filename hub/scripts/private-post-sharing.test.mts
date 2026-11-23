@@ -3,6 +3,8 @@ import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import * as jsx from 'react/jsx-runtime'
+import { renderToStaticMarkup } from 'react-dom/server'
+import type { ReactNode } from 'react'
 
 const postId = '11111111-1111-4111-8111-111111111111'
 const actorId = '22222222-2222-4222-8222-222222222222'
@@ -91,8 +93,9 @@ test('service admin dashboard omits private content and private posts from commu
     if (name === '@/lib/pipelineRegistry') return { TRACKED_PIPELINES: [] }
     return new Proxy({}, { get: () => () => null })
   }, loaded, loaded.exports)
-  const rendered = JSON.stringify(await loaded.exports.default())
+  const dashboard = await loaded.exports.default()
+  const rendered = JSON.stringify(dashboard)
   assert.equal(rendered.includes('SECRET PRIVATE PICK'), false)
   assert.equal(rendered.includes('VISIBLE COMMUNITY PICK'), true)
-  assert.match(rendered, /"label":"Published posts","value":1/)
+  assert.match(renderToStaticMarkup(dashboard as ReactNode), /<dt>Published posts<\/dt><dd>1(?:<|$)/)
 })

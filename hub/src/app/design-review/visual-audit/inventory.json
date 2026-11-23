@@ -23,7 +23,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/about",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/about",
-      "docs/design/mobile-complete-2026-11-23.json#route:/about"
+      "docs/design/mobile-complete-2026-11-23.json#route:/about",
+      "docs/design/unified-experience-2026-11-23.json#route:/about"
     ],
     "release": {
       "state": "Live",
@@ -52,6 +53,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -78,7 +87,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/activity",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/activity",
-      "docs/design/mobile-complete-2026-11-23.json#route:/activity"
+      "docs/design/mobile-complete-2026-11-23.json#route:/activity",
+      "docs/design/unified-experience-2026-11-23.json#route:/activity"
     ],
     "release": {
       "state": "Live",
@@ -107,6 +117,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -133,7 +151,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/ads",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/ads",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/ads"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/ads",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/ads"
     ],
     "release": {
       "state": "Live",
@@ -164,6 +183,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -190,7 +217,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/audit",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/audit",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/audit"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/audit",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/audit"
     ],
     "release": {
       "state": "Live",
@@ -221,6 +249,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -247,7 +283,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/badges",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/badges",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/badges"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/badges",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/badges"
     ],
     "release": {
       "state": "Live",
@@ -278,6 +315,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -304,7 +349,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/browserbase",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/browserbase",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/browserbase"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/browserbase",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/browserbase"
     ],
     "release": {
       "state": "Live",
@@ -335,6 +381,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -361,7 +415,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/changelog",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/changelog",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/changelog"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/changelog",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/changelog"
     ],
     "release": {
       "state": "Live",
@@ -392,6 +447,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -418,7 +481,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/contact-recap",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/contact-recap",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/contact-recap"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/contact-recap",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/contact-recap"
     ],
     "release": {
       "state": "Live",
@@ -449,6 +513,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -475,7 +547,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/content/blogs",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/content/blogs",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/content/blogs"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/content/blogs",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/content/blogs"
     ],
     "release": {
       "state": "Live",
@@ -506,6 +579,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -532,7 +613,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/content/posts",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/content/posts",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/content/posts"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/content/posts",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/content/posts"
     ],
     "release": {
       "state": "Live",
@@ -563,6 +645,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -589,7 +679,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/content/reports",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/content/reports",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/content/reports"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/content/reports",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/content/reports"
     ],
     "release": {
       "state": "Live",
@@ -620,6 +711,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -646,7 +745,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/content/stories",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/content/stories",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/content/stories"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/content/stories",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/content/stories"
     ],
     "release": {
       "state": "Live",
@@ -677,6 +777,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -707,7 +815,8 @@
       "docs/design/creator-business-journey-2026-11-22.txt",
       "docs/design/creator-guided-storefront-2026-11-23.json",
       "docs/design/creator-guided-storefront-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/creators"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/creators",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/creators"
     ],
     "release": {
       "state": "Live",
@@ -738,6 +847,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -764,7 +881,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/design-system",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/design-system",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/design-system"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/design-system",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/design-system"
     ],
     "release": {
       "state": "Live",
@@ -795,6 +913,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -821,7 +947,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/discord/compose",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/discord/compose",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/discord/compose"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/discord/compose",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/discord/compose"
     ],
     "release": {
       "state": "Live",
@@ -852,6 +979,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -878,7 +1013,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/discord",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/discord",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/discord"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/discord",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/discord"
     ],
     "release": {
       "state": "Live",
@@ -909,6 +1045,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -935,7 +1079,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/emojis",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/emojis",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/emojis"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/emojis",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/emojis"
     ],
     "release": {
       "state": "Live",
@@ -966,6 +1111,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -992,7 +1145,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/events",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/events",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/events"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/events",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/events"
     ],
     "release": {
       "state": "Live",
@@ -1023,6 +1177,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1049,7 +1211,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/fanduel-import",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/fanduel-import",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/fanduel-import"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/fanduel-import",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/fanduel-import"
     ],
     "release": {
       "state": "Live",
@@ -1080,6 +1243,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1106,7 +1277,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/forum",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/forum",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/forum"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/forum",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/forum"
     ],
     "release": {
       "state": "Live",
@@ -1137,6 +1309,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1165,7 +1345,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/groups",
       "docs/design/creator-business-journey-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/groups"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/groups",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/groups"
     ],
     "release": {
       "state": "Live",
@@ -1196,6 +1377,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1222,7 +1411,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/hr-intelligence",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/hr-intelligence",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/hr-intelligence"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/hr-intelligence",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/hr-intelligence"
     ],
     "release": {
       "state": "Live",
@@ -1253,6 +1443,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1279,7 +1477,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/jobs",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/jobs",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/jobs"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/jobs",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/jobs"
     ],
     "release": {
       "state": "Live",
@@ -1310,6 +1509,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1336,7 +1543,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/live",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/live",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/live"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/live",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/live"
     ],
     "release": {
       "state": "Live",
@@ -1367,6 +1575,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1393,7 +1609,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/market-dna",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/market-dna",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/market-dna"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/market-dna",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/market-dna"
     ],
     "release": {
       "state": "Live",
@@ -1424,6 +1641,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1450,7 +1675,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/marketplace",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/marketplace",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/marketplace"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/marketplace",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/marketplace"
     ],
     "release": {
       "state": "Live",
@@ -1481,6 +1707,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1507,7 +1741,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/matrix-backtest",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/matrix-backtest",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/matrix-backtest"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/matrix-backtest",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/matrix-backtest"
     ],
     "release": {
       "state": "Live",
@@ -1538,6 +1773,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1564,7 +1807,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/mgm-import",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/mgm-import",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/mgm-import"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/mgm-import",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/mgm-import"
     ],
     "release": {
       "state": "Live",
@@ -1595,6 +1839,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1621,7 +1873,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/mlb-archive",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/mlb-archive",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/mlb-archive"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/mlb-archive",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/mlb-archive"
     ],
     "release": {
       "state": "Live",
@@ -1652,6 +1905,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1680,7 +1941,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/monetization",
       "docs/design/creator-business-journey-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/monetization"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/monetization",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/monetization"
     ],
     "release": {
       "state": "Live",
@@ -1711,6 +1973,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1737,7 +2007,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/nfl-access",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/nfl-access",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/nfl-access"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/nfl-access",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/nfl-access"
     ],
     "release": {
       "state": "Live",
@@ -1768,6 +2039,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1794,7 +2073,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/notifications",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/notifications",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/notifications"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/notifications",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/notifications"
     ],
     "release": {
       "state": "Live",
@@ -1825,6 +2105,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1851,7 +2139,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin"
     ],
     "release": {
       "state": "Live",
@@ -1882,6 +2171,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1908,7 +2205,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/pages",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/pages",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/pages"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/pages",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/pages"
     ],
     "release": {
       "state": "Live",
@@ -1939,6 +2237,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -1965,7 +2271,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/pikkit-import",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/pikkit-import",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/pikkit-import"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/pikkit-import",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/pikkit-import"
     ],
     "release": {
       "state": "Live",
@@ -1996,6 +2303,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2022,7 +2337,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/pipeline-health",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/pipeline-health",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/pipeline-health"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/pipeline-health",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/pipeline-health"
     ],
     "release": {
       "state": "Live",
@@ -2053,6 +2369,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2079,7 +2403,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/product-audit",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/product-audit",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/product-audit"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/product-audit",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/product-audit"
     ],
     "release": {
       "state": "Live",
@@ -2110,6 +2435,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2136,7 +2469,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/reports",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/reports",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/reports"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/reports",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/reports"
     ],
     "release": {
       "state": "Live",
@@ -2167,6 +2501,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2193,7 +2535,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/ai",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/settings/ai",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/ai"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/ai",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/settings/ai"
     ],
     "release": {
       "state": "Live",
@@ -2224,6 +2567,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2250,7 +2601,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/custom-code",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/settings/custom-code",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/custom-code"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/custom-code",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/settings/custom-code"
     ],
     "release": {
       "state": "Live",
@@ -2281,6 +2633,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2307,7 +2667,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/email",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/settings/email",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/email"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/email",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/settings/email"
     ],
     "release": {
       "state": "Live",
@@ -2338,6 +2699,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2364,7 +2733,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/features",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/settings/features",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/features"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/features",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/settings/features"
     ],
     "release": {
       "state": "Live",
@@ -2395,6 +2765,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2421,7 +2799,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/general",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/settings/general",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/general"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/general",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/settings/general"
     ],
     "release": {
       "state": "Live",
@@ -2452,6 +2831,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2478,7 +2865,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/payments",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/settings/payments",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/payments"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/payments",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/settings/payments"
     ],
     "release": {
       "state": "Live",
@@ -2509,6 +2897,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2535,7 +2931,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/settings/social-login",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/settings/social-login",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/social-login"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/settings/social-login",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/settings/social-login"
     ],
     "release": {
       "state": "Live",
@@ -2566,6 +2963,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2592,7 +2997,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/site-banner",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/site-banner",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/site-banner"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/site-banner",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/site-banner"
     ],
     "release": {
       "state": "Live",
@@ -2623,6 +3029,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2649,7 +3063,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/social-platforms",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/social-platforms",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/social-platforms"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/social-platforms",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/social-platforms"
     ],
     "release": {
       "state": "Live",
@@ -2680,6 +3095,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2706,7 +3129,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/users/banned",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/users/banned",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/users/banned"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/users/banned",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/users/banned"
     ],
     "release": {
       "state": "Live",
@@ -2737,6 +3161,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2763,7 +3195,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/users/deletions",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/users/deletions",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/users/deletions"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/users/deletions",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/users/deletions"
     ],
     "release": {
       "state": "Live",
@@ -2794,6 +3227,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2820,7 +3261,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/users/online",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/users/online",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/users/online"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/users/online",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/users/online"
     ],
     "release": {
       "state": "Live",
@@ -2851,6 +3293,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2877,7 +3327,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/users",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/users",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/users"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/users",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/users"
     ],
     "release": {
       "state": "Live",
@@ -2908,6 +3359,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2934,7 +3393,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/users/verify",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/users/verify",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/users/verify"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/users/verify",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/users/verify"
     ],
     "release": {
       "state": "Live",
@@ -2965,6 +3425,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -2991,7 +3459,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/admin/whop-renewal-shape",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/admin/whop-renewal-shape",
-      "docs/design/mobile-complete-2026-11-23.json#route:/admin/whop-renewal-shape"
+      "docs/design/mobile-complete-2026-11-23.json#route:/admin/whop-renewal-shape",
+      "docs/design/unified-experience-2026-11-23.json#route:/admin/whop-renewal-shape"
     ],
     "release": {
       "state": "Live",
@@ -3022,6 +3491,14 @@
       "limitations": [
         "Administrative layout and guarded states reviewed. Collectors, job replays, grants, deletion and financial operations were not executed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3048,7 +3525,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/allstar2026",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/allstar2026",
-      "docs/design/mobile-complete-2026-11-23.json#route:/allstar2026"
+      "docs/design/mobile-complete-2026-11-23.json#route:/allstar2026",
+      "docs/design/unified-experience-2026-11-23.json#route:/allstar2026"
     ],
     "release": {
       "state": "Live",
@@ -3077,6 +3555,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3103,7 +3589,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/desktop/complete",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/auth/desktop/complete",
-      "docs/design/mobile-complete-2026-11-23.json#route:/auth/desktop/complete"
+      "docs/design/mobile-complete-2026-11-23.json#route:/auth/desktop/complete",
+      "docs/design/unified-experience-2026-11-23.json#route:/auth/desktop/complete"
     ],
     "release": {
       "state": "Live",
@@ -3134,6 +3621,14 @@
       "limitations": [
         "Local account/access UI only; external OAuth, real credentials and real account creation were not performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3160,7 +3655,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/desktop/start",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/auth/desktop/start",
-      "docs/design/mobile-complete-2026-11-23.json#route:/auth/desktop/start"
+      "docs/design/mobile-complete-2026-11-23.json#route:/auth/desktop/start",
+      "docs/design/unified-experience-2026-11-23.json#route:/auth/desktop/start"
     ],
     "release": {
       "state": "Live",
@@ -3191,6 +3687,14 @@
       "limitations": [
         "Local account/access UI only; external OAuth, real credentials and real account creation were not performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3217,7 +3721,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/forgot-password",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/auth/forgot-password",
-      "docs/design/mobile-complete-2026-11-23.json#route:/auth/forgot-password"
+      "docs/design/mobile-complete-2026-11-23.json#route:/auth/forgot-password",
+      "docs/design/unified-experience-2026-11-23.json#route:/auth/forgot-password"
     ],
     "release": {
       "state": "Live",
@@ -3249,6 +3754,14 @@
       "limitations": [
         "Local account/access UI only; external OAuth, real credentials and real account creation were not performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3275,7 +3788,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/login",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/auth/login",
-      "docs/design/mobile-complete-2026-11-23.json#route:/auth/login"
+      "docs/design/mobile-complete-2026-11-23.json#route:/auth/login",
+      "docs/design/unified-experience-2026-11-23.json#route:/auth/login"
     ],
     "release": {
       "state": "Live",
@@ -3307,6 +3821,14 @@
       "limitations": [
         "Local account/access UI only; external OAuth, real credentials and real account creation were not performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3333,7 +3855,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/register",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/auth/register",
-      "docs/design/mobile-complete-2026-11-23.json#route:/auth/register"
+      "docs/design/mobile-complete-2026-11-23.json#route:/auth/register",
+      "docs/design/unified-experience-2026-11-23.json#route:/auth/register"
     ],
     "release": {
       "state": "Live",
@@ -3364,6 +3887,14 @@
       "limitations": [
         "Local account/access UI only; external OAuth, real credentials and real account creation were not performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3390,7 +3921,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/reset-password",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/auth/reset-password",
-      "docs/design/mobile-complete-2026-11-23.json#route:/auth/reset-password"
+      "docs/design/mobile-complete-2026-11-23.json#route:/auth/reset-password",
+      "docs/design/unified-experience-2026-11-23.json#route:/auth/reset-password"
     ],
     "release": {
       "state": "Live",
@@ -3421,6 +3953,14 @@
       "limitations": [
         "Local account/access UI only; external OAuth, real credentials and real account creation were not performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3447,7 +3987,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/auth/whop/complete",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/auth/whop/complete",
-      "docs/design/mobile-complete-2026-11-23.json#route:/auth/whop/complete"
+      "docs/design/mobile-complete-2026-11-23.json#route:/auth/whop/complete",
+      "docs/design/unified-experience-2026-11-23.json#route:/auth/whop/complete"
     ],
     "release": {
       "state": "Live",
@@ -3478,6 +4019,14 @@
       "limitations": [
         "Local account/access UI only; external OAuth, real credentials and real account creation were not performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3504,7 +4053,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/batter-cost",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/batter-cost",
-      "docs/design/mobile-complete-2026-11-23.json#route:/batter-cost"
+      "docs/design/mobile-complete-2026-11-23.json#route:/batter-cost",
+      "docs/design/unified-experience-2026-11-23.json#route:/batter-cost"
     ],
     "release": {
       "state": "Live",
@@ -3535,6 +4085,14 @@
       "limitations": [
         "Existing off-season/unavailable state only; seasonal data and hidden features were not enabled."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3561,7 +4119,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/blog/[slug]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/blog/[slug]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/blog/[slug]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/blog/[slug]",
+      "docs/design/unified-experience-2026-11-23.json#route:/blog/[slug]"
     ],
     "release": {
       "state": "Live",
@@ -3590,6 +4149,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3616,7 +4183,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/blog/create/ai",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/blog/create/ai",
-      "docs/design/mobile-complete-2026-11-23.json#route:/blog/create/ai"
+      "docs/design/mobile-complete-2026-11-23.json#route:/blog/create/ai",
+      "docs/design/unified-experience-2026-11-23.json#route:/blog/create/ai"
     ],
     "release": {
       "state": "Live",
@@ -3645,6 +4213,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3671,7 +4247,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/blog/create",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/blog/create",
-      "docs/design/mobile-complete-2026-11-23.json#route:/blog/create"
+      "docs/design/mobile-complete-2026-11-23.json#route:/blog/create",
+      "docs/design/unified-experience-2026-11-23.json#route:/blog/create"
     ],
     "release": {
       "state": "Live",
@@ -3700,6 +4277,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3726,7 +4311,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/blog/edit/[id]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/blog/edit/[id]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/blog/edit/[id]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/blog/edit/[id]",
+      "docs/design/unified-experience-2026-11-23.json#route:/blog/edit/[id]"
     ],
     "release": {
       "state": "Live",
@@ -3755,6 +4341,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3781,7 +4375,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/blog/my",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/blog/my",
-      "docs/design/mobile-complete-2026-11-23.json#route:/blog/my"
+      "docs/design/mobile-complete-2026-11-23.json#route:/blog/my",
+      "docs/design/unified-experience-2026-11-23.json#route:/blog/my"
     ],
     "release": {
       "state": "Live",
@@ -3810,6 +4405,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3838,7 +4441,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/blog",
       "docs/design/community-unified-2026-11-23.json",
       "docs/design/community-unified-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/blog"
+      "docs/design/mobile-complete-2026-11-23.json#route:/blog",
+      "docs/design/unified-experience-2026-11-23.json#route:/blog"
     ],
     "release": {
       "state": "Live",
@@ -3867,6 +4471,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3896,7 +4508,8 @@
       "docs/design/social-workflow-repair-2026-11-22.json",
       "docs/design/community-unified-2026-11-23.json",
       "docs/design/community-unified-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/bookmarks"
+      "docs/design/mobile-complete-2026-11-23.json#route:/bookmarks",
+      "docs/design/unified-experience-2026-11-23.json#route:/bookmarks"
     ],
     "release": {
       "state": "Live",
@@ -3925,6 +4538,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -3957,7 +4578,8 @@
       "docs/design/social-interaction-followup-2026-11-22.json",
       "docs/design/community-unified-2026-11-23.json",
       "docs/design/community-unified-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/channels/[slug]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/channels/[slug]",
+      "docs/design/unified-experience-2026-11-23.json#route:/channels/[slug]"
     ],
     "release": {
       "state": "Live",
@@ -3986,6 +4608,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4020,7 +4650,8 @@
       "docs/design/community-unified-2026-11-23.txt",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/channels"
+      "docs/design/mobile-complete-2026-11-23.json#route:/channels",
+      "docs/design/unified-experience-2026-11-23.json#route:/channels"
     ],
     "release": {
       "state": "Live",
@@ -4056,6 +4687,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4085,7 +4724,8 @@
       "docs/design/social-workflow-repair-2026-11-22.json",
       "docs/design/community-unified-2026-11-23.json",
       "docs/design/community-unified-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/community"
+      "docs/design/mobile-complete-2026-11-23.json#route:/community",
+      "docs/design/unified-experience-2026-11-23.json#route:/community"
     ],
     "release": {
       "state": "Live",
@@ -4114,6 +4754,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4151,7 +4799,8 @@
       "docs/design/community-unified-2026-11-23.txt",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/creators/[username]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/creators/[username]",
+      "docs/design/unified-experience-2026-11-23.json#route:/creators/[username]"
     ],
     "release": {
       "state": "Live",
@@ -4190,6 +4839,14 @@
       "limitations": [
         "Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4218,7 +4875,8 @@
       "docs/design/creator-business-journey-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.txt",
       "docs/design/creator-workspace-redesign-2026-11-23.json",
-      "docs/design/mobile-complete-2026-11-23.json#route:/creators/access/complete"
+      "docs/design/mobile-complete-2026-11-23.json#route:/creators/access/complete",
+      "docs/design/unified-experience-2026-11-23.json#route:/creators/access/complete"
     ],
     "release": {
       "state": "Live",
@@ -4250,6 +4908,14 @@
       "limitations": [
         "Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4278,7 +4944,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/creators/apply",
       "docs/design/creator-community-onboarding-2026-11-22.txt",
       "docs/design/creator-community-onboarding-2026-11-22.json",
-      "docs/design/mobile-complete-2026-11-23.json#route:/creators/apply"
+      "docs/design/mobile-complete-2026-11-23.json#route:/creators/apply",
+      "docs/design/unified-experience-2026-11-23.json#route:/creators/apply"
     ],
     "release": {
       "state": "Live",
@@ -4309,6 +4976,14 @@
       "limitations": [
         "Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4341,7 +5016,8 @@
       "docs/design/creator-business-journey-2026-11-22.json",
       "docs/design/creator-business-journey-2026-11-22.txt",
       "docs/design/creator-workspace-redesign-2026-11-23.json",
-      "docs/design/mobile-complete-2026-11-23.json#route:/creators/offers/[productId]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/creators/offers/[productId]",
+      "docs/design/unified-experience-2026-11-23.json#route:/creators/offers/[productId]"
     ],
     "release": {
       "state": "Live",
@@ -4374,6 +5050,14 @@
       "limitations": [
         "Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4407,7 +5091,8 @@
       "docs/design/creator-workspace-redesign-2026-11-23.json",
       "docs/design/creator-guided-storefront-2026-11-23.json",
       "docs/design/creator-guided-storefront-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/creators"
+      "docs/design/mobile-complete-2026-11-23.json#route:/creators",
+      "docs/design/unified-experience-2026-11-23.json#route:/creators"
     ],
     "release": {
       "state": "Live",
@@ -4438,6 +5123,14 @@
       "limitations": [
         "Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4471,7 +5164,8 @@
       "docs/design/creator-workspace-redesign-2026-11-23.json",
       "docs/design/creator-guided-storefront-2026-11-23.json",
       "docs/design/creator-guided-storefront-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/creators/payouts"
+      "docs/design/mobile-complete-2026-11-23.json#route:/creators/payouts",
+      "docs/design/unified-experience-2026-11-23.json#route:/creators/payouts"
     ],
     "release": {
       "state": "Live",
@@ -4503,6 +5197,14 @@
       "limitations": [
         "Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4540,7 +5242,8 @@
       "docs/design/community-unified-2026-11-23.txt",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/creators/studio"
+      "docs/design/mobile-complete-2026-11-23.json#route:/creators/studio",
+      "docs/design/unified-experience-2026-11-23.json#route:/creators/studio"
     ],
     "release": {
       "state": "Live",
@@ -4579,6 +5282,14 @@
       "limitations": [
         "Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4605,7 +5316,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/daily-recap",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/daily-recap",
-      "docs/design/mobile-complete-2026-11-23.json#route:/daily-recap"
+      "docs/design/mobile-complete-2026-11-23.json#route:/daily-recap",
+      "docs/design/unified-experience-2026-11-23.json#route:/daily-recap"
     ],
     "release": {
       "state": "Live",
@@ -4636,6 +5348,14 @@
       "limitations": [
         "Existing off-season/unavailable state only; seasonal data and hidden features were not enabled."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4662,7 +5382,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/dugout",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/dugout",
-      "docs/design/mobile-complete-2026-11-23.json#route:/dugout"
+      "docs/design/mobile-complete-2026-11-23.json#route:/dugout",
+      "docs/design/unified-experience-2026-11-23.json#route:/dugout"
     ],
     "release": {
       "state": "Live",
@@ -4693,6 +5414,14 @@
       "limitations": [
         "Existing off-season/unavailable state only; seasonal data and hidden features were not enabled."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4720,7 +5449,8 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/events/[id]",
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/events/[id]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/events/[id]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/events/[id]",
+      "docs/design/unified-experience-2026-11-23.json#route:/events/[id]"
     ],
     "release": {
       "state": "Live",
@@ -4750,6 +5480,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4776,7 +5514,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/events/create",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/events/create",
-      "docs/design/mobile-complete-2026-11-23.json#route:/events/create"
+      "docs/design/mobile-complete-2026-11-23.json#route:/events/create",
+      "docs/design/unified-experience-2026-11-23.json#route:/events/create"
     ],
     "release": {
       "state": "Live",
@@ -4805,6 +5544,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4834,7 +5581,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/events",
       "docs/design/community-unified-2026-11-23.json",
       "docs/design/community-unified-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/events"
+      "docs/design/mobile-complete-2026-11-23.json#route:/events",
+      "docs/design/unified-experience-2026-11-23.json#route:/events"
     ],
     "release": {
       "state": "Live",
@@ -4864,6 +5612,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4890,7 +5646,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/explore",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/explore",
-      "docs/design/mobile-complete-2026-11-23.json#route:/explore"
+      "docs/design/mobile-complete-2026-11-23.json#route:/explore",
+      "docs/design/unified-experience-2026-11-23.json#route:/explore"
     ],
     "release": {
       "state": "Live",
@@ -4920,6 +5677,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 5,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -4946,7 +5711,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/faq",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/faq",
-      "docs/design/mobile-complete-2026-11-23.json#route:/faq"
+      "docs/design/mobile-complete-2026-11-23.json#route:/faq",
+      "docs/design/unified-experience-2026-11-23.json#route:/faq"
     ],
     "release": {
       "state": "Live",
@@ -4975,6 +5741,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5011,7 +5785,8 @@
       "docs/design/community-unified-2026-11-23.txt",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/feed"
+      "docs/design/mobile-complete-2026-11-23.json#route:/feed",
+      "docs/design/unified-experience-2026-11-23.json#route:/feed"
     ],
     "release": {
       "state": "Live",
@@ -5049,6 +5824,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 12,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5076,7 +5859,8 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/forum/[category]",
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/forum/[category]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/forum/[category]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/forum/[category]",
+      "docs/design/unified-experience-2026-11-23.json#route:/forum/[category]"
     ],
     "release": {
       "state": "Live",
@@ -5106,6 +5890,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5132,7 +5924,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/forum/new",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/forum/new",
-      "docs/design/mobile-complete-2026-11-23.json#route:/forum/new"
+      "docs/design/mobile-complete-2026-11-23.json#route:/forum/new",
+      "docs/design/unified-experience-2026-11-23.json#route:/forum/new"
     ],
     "release": {
       "state": "Live",
@@ -5161,6 +5954,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5189,7 +5990,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/forum",
       "docs/design/community-unified-2026-11-23.json",
       "docs/design/community-unified-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/forum"
+      "docs/design/mobile-complete-2026-11-23.json#route:/forum",
+      "docs/design/unified-experience-2026-11-23.json#route:/forum"
     ],
     "release": {
       "state": "Live",
@@ -5218,6 +6020,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5245,7 +6055,8 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/forum/thread/[id]",
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/forum/thread/[id]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/forum/thread/[id]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/forum/thread/[id]",
+      "docs/design/unified-experience-2026-11-23.json#route:/forum/thread/[id]"
     ],
     "release": {
       "state": "Live",
@@ -5275,6 +6086,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5312,7 +6131,8 @@
       "docs/design/community-unified-2026-11-23.txt",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/groups/[slug]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/groups/[slug]",
+      "docs/design/unified-experience-2026-11-23.json#route:/groups/[slug]"
     ],
     "release": {
       "state": "Live",
@@ -5350,6 +6170,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 14,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5384,7 +6212,8 @@
       "docs/design/creator-business-journey-2026-11-22.txt",
       "docs/design/community-unified-2026-11-23.json",
       "docs/design/community-unified-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/groups/[slug]/settings"
+      "docs/design/mobile-complete-2026-11-23.json#route:/groups/[slug]/settings",
+      "docs/design/unified-experience-2026-11-23.json#route:/groups/[slug]/settings"
     ],
     "release": {
       "state": "Live",
@@ -5415,6 +6244,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 3,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5448,7 +6285,8 @@
       "docs/design/creator-business-journey-2026-11-22.txt",
       "docs/design/community-unified-2026-11-23.json",
       "docs/design/community-unified-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/groups/create"
+      "docs/design/mobile-complete-2026-11-23.json#route:/groups/create",
+      "docs/design/unified-experience-2026-11-23.json#route:/groups/create"
     ],
     "release": {
       "state": "Live",
@@ -5477,6 +6315,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5512,7 +6358,8 @@
       "docs/design/community-unified-2026-11-23.txt",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/groups"
+      "docs/design/mobile-complete-2026-11-23.json#route:/groups",
+      "docs/design/unified-experience-2026-11-23.json#route:/groups"
     ],
     "release": {
       "state": "Live",
@@ -5548,6 +6395,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5574,7 +6429,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/hashtag/[tag]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/hashtag/[tag]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/hashtag/[tag]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/hashtag/[tag]",
+      "docs/design/unified-experience-2026-11-23.json#route:/hashtag/[tag]"
     ],
     "release": {
       "state": "Live",
@@ -5603,6 +6459,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5628,7 +6492,8 @@
     "evidence": [
       "docs/design/member-workspace-preferences-release-2026-11-21.txt",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/launch",
-      "docs/design/mobile-complete-2026-11-23.json#route:/launch"
+      "docs/design/mobile-complete-2026-11-23.json#route:/launch",
+      "docs/design/unified-experience-2026-11-23.json#route:/launch"
     ],
     "release": {
       "state": "Live",
@@ -5657,6 +6522,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5684,7 +6557,8 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/leaderboard",
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/leaderboard",
-      "docs/design/mobile-complete-2026-11-23.json#route:/leaderboard"
+      "docs/design/mobile-complete-2026-11-23.json#route:/leaderboard",
+      "docs/design/unified-experience-2026-11-23.json#route:/leaderboard"
     ],
     "release": {
       "state": "Live",
@@ -5714,6 +6588,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5740,7 +6622,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/marketplace/[id]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/marketplace/[id]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/marketplace/[id]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/marketplace/[id]",
+      "docs/design/unified-experience-2026-11-23.json#route:/marketplace/[id]"
     ],
     "release": {
       "state": "Live",
@@ -5771,6 +6654,14 @@
       "limitations": [
         "Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5797,7 +6688,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/marketplace",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/marketplace",
-      "docs/design/mobile-complete-2026-11-23.json#route:/marketplace"
+      "docs/design/mobile-complete-2026-11-23.json#route:/marketplace",
+      "docs/design/unified-experience-2026-11-23.json#route:/marketplace"
     ],
     "release": {
       "state": "Live",
@@ -5828,6 +6720,14 @@
       "limitations": [
         "Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5854,7 +6754,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/marketplace/sell",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/marketplace/sell",
-      "docs/design/mobile-complete-2026-11-23.json#route:/marketplace/sell"
+      "docs/design/mobile-complete-2026-11-23.json#route:/marketplace/sell",
+      "docs/design/unified-experience-2026-11-23.json#route:/marketplace/sell"
     ],
     "release": {
       "state": "Live",
@@ -5885,6 +6786,14 @@
       "limitations": [
         "Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5917,7 +6826,8 @@
       "docs/design/community-unified-2026-11-23.txt",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/messages/[username]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/messages/[username]",
+      "docs/design/unified-experience-2026-11-23.json#route:/messages/[username]"
     ],
     "release": {
       "state": "Live",
@@ -5954,6 +6864,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 8,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -5982,7 +6900,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/messages/group/[id]",
       "docs/design/social-workflow-repair-2026-11-22.json",
       "docs/design/social-interaction-followup-2026-11-22.json",
-      "docs/design/mobile-complete-2026-11-23.json#route:/messages/group/[id]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/messages/group/[id]",
+      "docs/design/unified-experience-2026-11-23.json#route:/messages/group/[id]"
     ],
     "release": {
       "state": "Live",
@@ -6012,6 +6931,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 3,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6043,7 +6970,8 @@
       "docs/design/community-unified-2026-11-23.txt",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/messages/new"
+      "docs/design/mobile-complete-2026-11-23.json#route:/messages/new",
+      "docs/design/unified-experience-2026-11-23.json#route:/messages/new"
     ],
     "release": {
       "state": "Live",
@@ -6079,6 +7007,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6110,7 +7046,8 @@
       "docs/design/community-unified-2026-11-23.txt",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/messages"
+      "docs/design/mobile-complete-2026-11-23.json#route:/messages",
+      "docs/design/unified-experience-2026-11-23.json#route:/messages"
     ],
     "release": {
       "state": "Live",
@@ -6146,6 +7083,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6172,7 +7117,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/missions",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/missions",
-      "docs/design/mobile-complete-2026-11-23.json#route:/missions"
+      "docs/design/mobile-complete-2026-11-23.json#route:/missions",
+      "docs/design/unified-experience-2026-11-23.json#route:/missions"
     ],
     "release": {
       "state": "Live",
@@ -6201,6 +7147,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6227,7 +7181,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/mlb/teams/[id]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/mlb/teams/[id]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/mlb/teams/[id]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/mlb/teams/[id]",
+      "docs/design/unified-experience-2026-11-23.json#route:/mlb/teams/[id]"
     ],
     "release": {
       "state": "Live",
@@ -6258,6 +7213,14 @@
       "limitations": [
         "Existing off-season/unavailable state only; seasonal data and hidden features were not enabled."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6285,7 +7248,8 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/nba",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/nba",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/nba",
-      "docs/design/mobile-complete-2026-11-23.json#route:/nba"
+      "docs/design/mobile-complete-2026-11-23.json#route:/nba",
+      "docs/design/unified-experience-2026-11-23.json#route:/nba"
     ],
     "release": {
       "state": "Live",
@@ -6321,6 +7285,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6348,7 +7320,8 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/nba/players/[id]",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/nba/players/[id]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/nba/players/[id]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/nba/players/[id]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/nba/players/[id]",
+      "docs/design/unified-experience-2026-11-23.json#route:/nba/players/[id]"
     ],
     "release": {
       "state": "Live",
@@ -6384,6 +7357,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6411,7 +7392,8 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/nba/teams/[id]",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/nba/teams/[id]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/nba/teams/[id]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/nba/teams/[id]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/nba/teams/[id]",
+      "docs/design/unified-experience-2026-11-23.json#route:/nba/teams/[id]"
     ],
     "release": {
       "state": "Live",
@@ -6447,6 +7429,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6475,7 +7465,8 @@
       "sideline-review/ui-final.txt",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/nfl/players/[id]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/nfl/players/[id]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/nfl/players/[id]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/nfl/players/[id]",
+      "docs/design/unified-experience-2026-11-23.json#route:/nfl/players/[id]"
     ],
     "release": {
       "state": "Live",
@@ -6511,6 +7502,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6539,7 +7538,8 @@
       "sideline-review/ui-final.txt",
       "docs/design/nba-nfl-interface-polish-2026-11-21.json#route:/nfl/teams/[abbr]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/nfl/teams/[abbr]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/nfl/teams/[abbr]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/nfl/teams/[abbr]",
+      "docs/design/unified-experience-2026-11-23.json#route:/nfl/teams/[abbr]"
     ],
     "release": {
       "state": "Live",
@@ -6575,6 +7575,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6604,7 +7612,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/notifications",
       "docs/design/community-unified-2026-11-23.json",
       "docs/design/community-unified-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/notifications"
+      "docs/design/mobile-complete-2026-11-23.json#route:/notifications",
+      "docs/design/unified-experience-2026-11-23.json#route:/notifications"
     ],
     "release": {
       "state": "Live",
@@ -6634,6 +7643,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6660,7 +7677,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/odds-terminal",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/odds-terminal",
-      "docs/design/mobile-complete-2026-11-23.json#route:/odds-terminal"
+      "docs/design/mobile-complete-2026-11-23.json#route:/odds-terminal",
+      "docs/design/unified-experience-2026-11-23.json#route:/odds-terminal"
     ],
     "release": {
       "state": "Live",
@@ -6691,6 +7709,14 @@
       "limitations": [
         "Existing off-season/unavailable state only; seasonal data and hidden features were not enabled."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6717,7 +7743,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/onboarding",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/onboarding",
-      "docs/design/mobile-complete-2026-11-23.json#route:/onboarding"
+      "docs/design/mobile-complete-2026-11-23.json#route:/onboarding",
+      "docs/design/unified-experience-2026-11-23.json#route:/onboarding"
     ],
     "release": {
       "state": "Live",
@@ -6748,6 +7775,14 @@
       "limitations": [
         "Local account/access UI only; external OAuth, real credentials and real account creation were not performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6774,7 +7809,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/",
-      "docs/design/mobile-complete-2026-11-23.json#route:/"
+      "docs/design/mobile-complete-2026-11-23.json#route:/",
+      "docs/design/unified-experience-2026-11-23.json#route:/"
     ],
     "release": {
       "state": "Live",
@@ -6803,6 +7839,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6830,7 +7874,8 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/pages/[slug]",
       "docs/design/member-visual-review-2026-11-22.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/pages/[slug]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/pages/[slug]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/pages/[slug]",
+      "docs/design/unified-experience-2026-11-23.json#route:/pages/[slug]"
     ],
     "release": {
       "state": "Live",
@@ -6859,6 +7904,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6885,7 +7938,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/pages/[slug]/settings",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/pages/[slug]/settings",
-      "docs/design/mobile-complete-2026-11-23.json#route:/pages/[slug]/settings"
+      "docs/design/mobile-complete-2026-11-23.json#route:/pages/[slug]/settings",
+      "docs/design/unified-experience-2026-11-23.json#route:/pages/[slug]/settings"
     ],
     "release": {
       "state": "Live",
@@ -6914,6 +7968,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6940,7 +8002,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/pages/create",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/pages/create",
-      "docs/design/mobile-complete-2026-11-23.json#route:/pages/create"
+      "docs/design/mobile-complete-2026-11-23.json#route:/pages/create",
+      "docs/design/unified-experience-2026-11-23.json#route:/pages/create"
     ],
     "release": {
       "state": "Live",
@@ -6969,6 +8032,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -6997,7 +8068,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/pages",
       "docs/design/community-unified-2026-11-23.json",
       "docs/design/community-unified-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/pages"
+      "docs/design/mobile-complete-2026-11-23.json#route:/pages",
+      "docs/design/unified-experience-2026-11-23.json#route:/pages"
     ],
     "release": {
       "state": "Live",
@@ -7026,6 +8098,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7058,7 +8138,8 @@
       "docs/design/social-workflow-repair-2026-11-22.json",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/picks"
+      "docs/design/mobile-complete-2026-11-23.json#route:/picks",
+      "docs/design/unified-experience-2026-11-23.json#route:/picks"
     ],
     "release": {
       "state": "Live",
@@ -7096,6 +8177,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 9,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7122,7 +8211,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/pitcher-report",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/pitcher-report",
-      "docs/design/mobile-complete-2026-11-23.json#route:/pitcher-report"
+      "docs/design/mobile-complete-2026-11-23.json#route:/pitcher-report",
+      "docs/design/unified-experience-2026-11-23.json#route:/pitcher-report"
     ],
     "release": {
       "state": "Live",
@@ -7153,6 +8243,14 @@
       "limitations": [
         "Existing off-season/unavailable state only; seasonal data and hidden features were not enabled."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7179,7 +8277,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/players/[id]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/players/[id]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/players/[id]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/players/[id]",
+      "docs/design/unified-experience-2026-11-23.json#route:/players/[id]"
     ],
     "release": {
       "state": "Live",
@@ -7210,6 +8309,14 @@
       "limitations": [
         "Existing off-season/unavailable state only; seasonal data and hidden features were not enabled."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7236,7 +8343,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/posts/[id]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/posts/[id]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/posts/[id]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/posts/[id]",
+      "docs/design/unified-experience-2026-11-23.json#route:/posts/[id]"
     ],
     "release": {
       "state": "Live",
@@ -7265,6 +8373,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7291,7 +8407,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/preview/[sport]",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/preview/[sport]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/preview/[sport]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/preview/[sport]",
+      "docs/design/unified-experience-2026-11-23.json#route:/preview/[sport]"
     ],
     "release": {
       "state": "Live",
@@ -7320,6 +8437,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7346,7 +8471,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/pricing",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/pricing",
-      "docs/design/mobile-complete-2026-11-23.json#route:/pricing"
+      "docs/design/mobile-complete-2026-11-23.json#route:/pricing",
+      "docs/design/unified-experience-2026-11-23.json#route:/pricing"
     ],
     "release": {
       "state": "Live",
@@ -7377,6 +8503,14 @@
       "limitations": [
         "Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7403,7 +8537,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/privacy",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/privacy",
-      "docs/design/mobile-complete-2026-11-23.json#route:/privacy"
+      "docs/design/mobile-complete-2026-11-23.json#route:/privacy",
+      "docs/design/unified-experience-2026-11-23.json#route:/privacy"
     ],
     "release": {
       "state": "Live",
@@ -7432,6 +8567,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7458,7 +8601,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/pro",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/pro",
-      "docs/design/mobile-complete-2026-11-23.json#route:/pro"
+      "docs/design/mobile-complete-2026-11-23.json#route:/pro",
+      "docs/design/unified-experience-2026-11-23.json#route:/pro"
     ],
     "release": {
       "state": "Live",
@@ -7489,6 +8633,14 @@
       "limitations": [
         "Checkout, wallet and membership UI use isolated fixtures. No real charge, withdrawal, KYC or external role grant was performed."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7522,7 +8674,8 @@
       "docs/design/social-workflow-repair-2026-11-22.json",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/profile/[username]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/profile/[username]",
+      "docs/design/unified-experience-2026-11-23.json#route:/profile/[username]"
     ],
     "release": {
       "state": "Live",
@@ -7560,6 +8713,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 7,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7586,7 +8747,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/research",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/research",
-      "docs/design/mobile-complete-2026-11-23.json#route:/research"
+      "docs/design/mobile-complete-2026-11-23.json#route:/research",
+      "docs/design/unified-experience-2026-11-23.json#route:/research"
     ],
     "release": {
       "state": "Live",
@@ -7615,6 +8777,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7641,7 +8811,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/responsible-gambling",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/responsible-gambling",
-      "docs/design/mobile-complete-2026-11-23.json#route:/responsible-gambling"
+      "docs/design/mobile-complete-2026-11-23.json#route:/responsible-gambling",
+      "docs/design/unified-experience-2026-11-23.json#route:/responsible-gambling"
     ],
     "release": {
       "state": "Live",
@@ -7670,6 +8841,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7696,7 +8875,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/scores",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/scores",
-      "docs/design/mobile-complete-2026-11-23.json#route:/scores"
+      "docs/design/mobile-complete-2026-11-23.json#route:/scores",
+      "docs/design/unified-experience-2026-11-23.json#route:/scores"
     ],
     "release": {
       "state": "Live",
@@ -7725,6 +8905,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7752,7 +8940,8 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/search",
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/search",
-      "docs/design/mobile-complete-2026-11-23.json#route:/search"
+      "docs/design/mobile-complete-2026-11-23.json#route:/search",
+      "docs/design/unified-experience-2026-11-23.json#route:/search"
     ],
     "release": {
       "state": "Live",
@@ -7783,6 +8972,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 1,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7811,7 +9008,8 @@
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/settings/account",
-      "docs/design/mobile-complete-2026-11-23.json#route:/settings/account"
+      "docs/design/mobile-complete-2026-11-23.json#route:/settings/account",
+      "docs/design/unified-experience-2026-11-23.json#route:/settings/account"
     ],
     "release": {
       "state": "Live",
@@ -7842,6 +9040,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 1,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7871,7 +9077,8 @@
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/settings/blocked",
-      "docs/design/mobile-complete-2026-11-23.json#route:/settings/blocked"
+      "docs/design/mobile-complete-2026-11-23.json#route:/settings/blocked",
+      "docs/design/unified-experience-2026-11-23.json#route:/settings/blocked"
     ],
     "release": {
       "state": "Live",
@@ -7902,6 +9109,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 1,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7930,7 +9145,8 @@
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/settings/connections",
-      "docs/design/mobile-complete-2026-11-23.json#route:/settings/connections"
+      "docs/design/mobile-complete-2026-11-23.json#route:/settings/connections",
+      "docs/design/unified-experience-2026-11-23.json#route:/settings/connections"
     ],
     "release": {
       "state": "Live",
@@ -7961,6 +9177,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 1,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -7989,7 +9213,8 @@
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/settings/interests",
-      "docs/design/mobile-complete-2026-11-23.json#route:/settings/interests"
+      "docs/design/mobile-complete-2026-11-23.json#route:/settings/interests",
+      "docs/design/unified-experience-2026-11-23.json#route:/settings/interests"
     ],
     "release": {
       "state": "Live",
@@ -8020,6 +9245,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 1,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8050,7 +9283,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/settings/membership",
       "docs/design/creator-community-onboarding-2026-11-22.txt",
       "docs/design/creator-community-onboarding-2026-11-22.json",
-      "docs/design/mobile-complete-2026-11-23.json#route:/settings/membership"
+      "docs/design/mobile-complete-2026-11-23.json#route:/settings/membership",
+      "docs/design/unified-experience-2026-11-23.json#route:/settings/membership"
     ],
     "release": {
       "state": "Live",
@@ -8081,6 +9315,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 8,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8109,7 +9351,8 @@
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/settings/notifications",
-      "docs/design/mobile-complete-2026-11-23.json#route:/settings/notifications"
+      "docs/design/mobile-complete-2026-11-23.json#route:/settings/notifications",
+      "docs/design/unified-experience-2026-11-23.json#route:/settings/notifications"
     ],
     "release": {
       "state": "Live",
@@ -8140,6 +9383,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 1,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8170,7 +9421,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/settings",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/settings"
+      "docs/design/mobile-complete-2026-11-23.json#route:/settings",
+      "docs/design/unified-experience-2026-11-23.json#route:/settings"
     ],
     "release": {
       "state": "Live",
@@ -8207,6 +9459,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8235,7 +9495,8 @@
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/settings/privacy",
-      "docs/design/mobile-complete-2026-11-23.json#route:/settings/privacy"
+      "docs/design/mobile-complete-2026-11-23.json#route:/settings/privacy",
+      "docs/design/unified-experience-2026-11-23.json#route:/settings/privacy"
     ],
     "release": {
       "state": "Live",
@@ -8266,6 +9527,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 1,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8298,7 +9567,8 @@
       "docs/design/social-workflow-repair-2026-11-22.json",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/settings/profile"
+      "docs/design/mobile-complete-2026-11-23.json#route:/settings/profile",
+      "docs/design/unified-experience-2026-11-23.json#route:/settings/profile"
     ],
     "release": {
       "state": "Live",
@@ -8336,6 +9606,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 2,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8365,7 +9643,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/settings/research",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/settings/research"
+      "docs/design/mobile-complete-2026-11-23.json#route:/settings/research",
+      "docs/design/unified-experience-2026-11-23.json#route:/settings/research"
     ],
     "release": {
       "state": "Live",
@@ -8403,6 +9682,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 4,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8431,7 +9718,8 @@
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/member-visual-review-2026-11-22.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/settings/security",
-      "docs/design/mobile-complete-2026-11-23.json#route:/settings/security"
+      "docs/design/mobile-complete-2026-11-23.json#route:/settings/security",
+      "docs/design/unified-experience-2026-11-23.json#route:/settings/security"
     ],
     "release": {
       "state": "Live",
@@ -8462,6 +9750,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 1,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8488,7 +9784,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/slate-breakdown",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/slate-breakdown",
-      "docs/design/mobile-complete-2026-11-23.json#route:/slate-breakdown"
+      "docs/design/mobile-complete-2026-11-23.json#route:/slate-breakdown",
+      "docs/design/unified-experience-2026-11-23.json#route:/slate-breakdown"
     ],
     "release": {
       "state": "Live",
@@ -8519,6 +9816,14 @@
       "limitations": [
         "Existing off-season/unavailable state only; seasonal data and hidden features were not enabled."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8546,7 +9851,8 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/sports/[sport]/[gameId]",
       "docs/design/member-experience-polish-2026-11-21.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/sports/[sport]/[gameId]",
-      "docs/design/mobile-complete-2026-11-23.json#route:/sports/[sport]/[gameId]"
+      "docs/design/mobile-complete-2026-11-23.json#route:/sports/[sport]/[gameId]",
+      "docs/design/unified-experience-2026-11-23.json#route:/sports/[sport]/[gameId]"
     ],
     "release": {
       "state": "Live",
@@ -8576,6 +9882,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8602,7 +9916,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/sports",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/sports",
-      "docs/design/mobile-complete-2026-11-23.json#route:/sports"
+      "docs/design/mobile-complete-2026-11-23.json#route:/sports",
+      "docs/design/unified-experience-2026-11-23.json#route:/sports"
     ],
     "release": {
       "state": "Live",
@@ -8631,6 +9946,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8657,7 +9980,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/spray-charts",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/spray-charts",
-      "docs/design/mobile-complete-2026-11-23.json#route:/spray-charts"
+      "docs/design/mobile-complete-2026-11-23.json#route:/spray-charts",
+      "docs/design/unified-experience-2026-11-23.json#route:/spray-charts"
     ],
     "release": {
       "state": "Live",
@@ -8688,6 +10012,14 @@
       "limitations": [
         "Existing off-season/unavailable state only; seasonal data and hidden features were not enabled."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8714,7 +10046,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/stories/create",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/stories/create",
-      "docs/design/mobile-complete-2026-11-23.json#route:/stories/create"
+      "docs/design/mobile-complete-2026-11-23.json#route:/stories/create",
+      "docs/design/unified-experience-2026-11-23.json#route:/stories/create"
     ],
     "release": {
       "state": "Live",
@@ -8743,6 +10076,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8769,7 +10110,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/support",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/support",
-      "docs/design/mobile-complete-2026-11-23.json#route:/support"
+      "docs/design/mobile-complete-2026-11-23.json#route:/support",
+      "docs/design/unified-experience-2026-11-23.json#route:/support"
     ],
     "release": {
       "state": "Live",
@@ -8798,6 +10140,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 6,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8824,7 +10174,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/synergy",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/synergy",
-      "docs/design/mobile-complete-2026-11-23.json#route:/synergy"
+      "docs/design/mobile-complete-2026-11-23.json#route:/synergy",
+      "docs/design/unified-experience-2026-11-23.json#route:/synergy"
     ],
     "release": {
       "state": "Live",
@@ -8855,6 +10206,14 @@
       "limitations": [
         "Existing off-season/unavailable state only; seasonal data and hidden features were not enabled."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8881,7 +10240,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/terms",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/terms",
-      "docs/design/mobile-complete-2026-11-23.json#route:/terms"
+      "docs/design/mobile-complete-2026-11-23.json#route:/terms",
+      "docs/design/unified-experience-2026-11-23.json#route:/terms"
     ],
     "release": {
       "state": "Live",
@@ -8910,6 +10270,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -8940,7 +10308,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/the-paint",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/the-paint"
+      "docs/design/mobile-complete-2026-11-23.json#route:/the-paint",
+      "docs/design/unified-experience-2026-11-23.json#route:/the-paint"
     ],
     "release": {
       "state": "Live",
@@ -8984,6 +10353,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 12,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -9010,7 +10387,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/the-public",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/the-public",
-      "docs/design/mobile-complete-2026-11-23.json#route:/the-public"
+      "docs/design/mobile-complete-2026-11-23.json#route:/the-public",
+      "docs/design/unified-experience-2026-11-23.json#route:/the-public"
     ],
     "release": {
       "state": "Live",
@@ -9041,6 +10419,14 @@
       "limitations": [
         "Existing off-season/unavailable state only; seasonal data and hidden features were not enabled."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -9073,7 +10459,8 @@
       "docs/design/full-mobile-audit-2026-11-22.json#route:/the-sideline",
       "docs/design/mobile-experience-2026-11-23.json",
       "docs/design/mobile-experience-2026-11-23.txt",
-      "docs/design/mobile-complete-2026-11-23.json#route:/the-sideline"
+      "docs/design/mobile-complete-2026-11-23.json#route:/the-sideline",
+      "docs/design/unified-experience-2026-11-23.json#route:/the-sideline"
     ],
     "release": {
       "state": "Live",
@@ -9125,6 +10512,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 166,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -9151,7 +10546,8 @@
       "docs/design/full-site-overhaul-2026-11-21.txt",
       "docs/design/full-site-audit-2026-11-21.json#route:/weather-lab",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/weather-lab",
-      "docs/design/mobile-complete-2026-11-23.json#route:/weather-lab"
+      "docs/design/mobile-complete-2026-11-23.json#route:/weather-lab",
+      "docs/design/unified-experience-2026-11-23.json#route:/weather-lab"
     ],
     "release": {
       "state": "Live",
@@ -9182,6 +10578,14 @@
       "limitations": [
         "Existing off-season/unavailable state only; seasonal data and hidden features were not enabled."
       ]
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {
@@ -9209,7 +10613,8 @@
       "docs/design/full-site-audit-2026-11-21.json#route:/workspace",
       "docs/design/avatar-decoration-release-2026-11-21.json",
       "docs/design/full-mobile-audit-2026-11-22.json#route:/workspace",
-      "docs/design/mobile-complete-2026-11-23.json#route:/workspace"
+      "docs/design/mobile-complete-2026-11-23.json#route:/workspace",
+      "docs/design/unified-experience-2026-11-23.json#route:/workspace"
     ],
     "release": {
       "state": "Live",
@@ -9239,6 +10644,14 @@
       "layoutReceipts": 10,
       "interactionReceipts": 0,
       "limitations": []
+    },
+    "experienceReview": {
+      "date": "2026-11-23",
+      "batch": "unified-experience-2026-11-23",
+      "environment": "Isolated optimized app in Codex in-app browser",
+      "standardLayouts": 4,
+      "narrowLayouts": 0,
+      "scope": "Navigation, discovery, social and admin integration; operational boundaries in report"
     }
   },
   {

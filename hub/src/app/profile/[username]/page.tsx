@@ -213,7 +213,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               />
             </div>
           ) : (
-            <a href="/auth/login"
+            <a href={`/auth/login?next=${encodeURIComponent(`/profile/${profile.username}`)}`}
               className="inline-flex items-center h-9 px-4 text-sm rounded-xl bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] text-[var(--accent-fg)] font-semibold transition-colors">
               Follow
             </a>
@@ -376,7 +376,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 tab={postTab}
                 initialPosts={mappedPosts}
                 initialCursor={nextCursor}
-                initialHasMore={hasMore}
+                initialHasMore={Boolean(authUser) && hasMore}
                 viewerId={authUser?.id ?? null}
               />
             )}

@@ -1,92 +1,80 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useId, useState, useEffect, type FormEvent } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/Switch'
+import styles from './adminWorkspace.module.css'
 
 type SettingValue = string | number | boolean
 export type SettingField = { key: string; label: string; type: 'text' | 'email' | 'number' | 'toggle'; default: SettingValue; hint?: string }
 
-// Generic settings-list component backed by site_settings (key/value text
-// rows). Unlike AdminGeneralSettings (its older sibling), this actually
-// loads existing saved values on mount instead of always resetting to
-// defaults — that was a real bug there, not fixed here since it's a
-// separate, already-shipped page outside this task's scope.
 export function AdminKeyValueSettings({ fields }: { fields: SettingField[] }) {
-  const [values, setValues] = useState<Record<string, SettingValue>>(() => {
-    const v: Record<string, SettingValue> = {}
-    fields.forEach(f => { v[f.key] = f.default })
-    return v
-  })
+  const id = useId()
+  const [values, setValues] = useState<Record<string, SettingValue>>(() => Object.fromEntries(fields.map(field => [field.key, field.default])))
   const [loading, setLoading] = useState(true)
+  const [loadVersion, setLoadVersion] = useState(0)
+  const [loadError, setLoadError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     let cancelled = false
     const supabase = createClient()
-    Promise.resolve(supabase.from('site_settings').select('key, value').in('key', fields.map(f => f.key)))
-      .then(({ data }) => {
-        if (cancelled || !data) return
-        setValues(prev => {
-          const next = { ...prev }
-          for (const row of data) {
-            const field = fields.find(f => f.key === row.key)
-            if (!field) continue
-            next[row.key] = field.type === 'toggle' ? row.value === 'true' : field.type === 'number' ? Number(row.value) : row.value
+    Promise.resolve(supabase.from('site_settings').select('key, value').in('key', fields.map(field => field.key)))
+      .then(({ data, error: readError }) => {
+        if (cancelled) return
+        if (readError) throw new Error('Saved settings could not be loaded.')
+        setValues(previous => {
+          const next = { ...previous }
+          for (const row of data ?? []) {
+            const field = fields.find(item => item.key === row.key)
+            if (field) next[row.key] = field.type === 'toggle' ? row.value === 'true' : field.type === 'number' ? Number(row.value) : row.value
           }
           return next
         })
+        setDirty(false)
       })
+      .catch(() => { if (!cancelled) setLoadError('Saved settings could not be loaded. Retry before making changes.') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
+    // Each page supplies a fixed settings schema. Retrying must not depend on form edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [loadVersion])
 
-  async function save() {
-    setSaving(true)
-    setError('')
-    const supabase = createClient()
-    const { error: err } = await supabase.from('site_settings').upsert(
-      Object.entries(values).map(([key, value]) => ({ key, value: String(value) })),
-      { onConflict: 'key' }
-    )
-    setSaving(false)
-    if (err) { setError(err.message); return }
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  function change(key: string, value: SettingValue) {
+    setValues(previous => ({ ...previous, [key]: value }))
+    setDirty(true)
+    setSaved(false)
   }
 
-  if (loading) return <div className="text-sm text-[var(--text-3)] py-8 text-center">Loading…</div>
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (loading || loadError || saving || !dirty) return
+    setSaving(true)
+    setError('')
+    setSaved(false)
+    try {
+      const supabase = createClient()
+      const { error: writeError } = await supabase.from('site_settings').upsert(Object.entries(values).map(([key, value]) => ({ key, value: String(value) })), { onConflict: 'key' })
+      if (writeError) throw new Error(writeError.message)
+      setSaved(true)
+      setDirty(false)
+    } catch {
+      setError('Changes could not be saved. Your edits are still here; try again.')
+    } finally { setSaving(false) }
+  }
 
-  return (
-    <div className="space-y-4">
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl divide-y divide-[var(--border)]">
-        {fields.map(f => (
-          <div key={f.key} className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <label className="text-sm font-medium text-[var(--text-1)]">{f.label}</label>
-              {f.hint && <p className="text-xs text-[var(--text-3)] mt-0.5">{f.hint}</p>}
-            </div>
-            {f.type === 'toggle' ? (
-              <Switch checked={!!values[f.key]} onChange={v => setValues(prev => ({ ...prev, [f.key]: v }))} ariaLabel={f.label} />
-            ) : (
-              <input
-                type={f.type}
-                value={String(values[f.key] ?? '')}
-                onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
-                className="w-full shrink-0 rounded-lg border border-[var(--border-2)] bg-[var(--surface-2)] px-3 py-2 text-left text-sm text-[var(--text-1)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] sm:w-56 sm:py-1.5 sm:text-right"
-              />
-            )}
-          </div>
-        ))}
-      </div>
-      {error && <div className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
-      <button onClick={save} disabled={saving}
-        className="w-full bg-[var(--accent-fill)] hover:bg-[var(--accent-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold py-2.5 rounded-xl transition-colors">
-        {saved ? 'Saved!' : saving ? 'Saving…' : 'Save Settings'}
-      </button>
-    </div>
-  )
+  if (loading) return <p role="status" className={styles.notice}>Loading saved settings…</p>
+  if (loadError) return <div className={styles.settingsForm}><p role="alert" className={styles.settingsError}>{loadError}</p><button type="button" className={styles.toolButton} onClick={() => { setLoading(true); setLoadError(''); setLoadVersion(value => value + 1) }}>Retry settings</button></div>
+
+  return <form onSubmit={save} className={styles.settingsForm} aria-label="Platform settings" aria-busy={saving}>
+    <div className={styles.settingsFields}>{fields.map(field => <div key={field.key} className={styles.settingsRow}>
+      <div><label htmlFor={field.type === 'toggle' ? undefined : `${id}-${field.key}`}>{field.label}</label>{field.hint && <p id={`${id}-${field.key}-hint`}>{field.hint}</p>}</div>
+      {field.type === 'toggle' ? <Switch checked={!!values[field.key]} disabled={saving} onChange={value => change(field.key, value)} ariaLabel={field.label} /> : <input id={`${id}-${field.key}`} type={field.type} aria-describedby={field.hint ? `${id}-${field.key}-hint` : undefined} value={String(values[field.key] ?? '')} disabled={saving} onChange={event => change(field.key, event.target.value)} />}
+    </div>)}</div>
+    {error && <p role="alert" className={styles.settingsError}>{error}</p>}
+    <div className={styles.settingsFooter}><span role="status">{saved ? 'Changes saved.' : dirty ? 'Unsaved changes' : 'Saved settings loaded'}</span><button type="submit" disabled={saving || !dirty} className={styles.toolButton}>{saving ? 'Saving…' : 'Save changes'}</button></div>
+  </form>
 }

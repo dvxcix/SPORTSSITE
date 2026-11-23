@@ -7,13 +7,10 @@ import {
   Bell,
   CheckCircle2,
   Cloud,
-  FileText,
   Flag,
   LayoutDashboard,
-  MessageSquare,
   Radio,
   Settings,
-  ShieldAlert,
   Trash2,
   Users,
   Webhook,
@@ -21,7 +18,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader'
-import { AdminStatCard } from '@/components/admin/AdminStatCard'
+import styles from '@/components/admin/adminWorkspace.module.css'
 import { Badge } from '@/components/ui/badge'
 import { EmojiText } from '@/components/social/EmojiText'
 import { TRACKED_PIPELINES } from '@/lib/pipelineRegistry'
@@ -57,17 +54,17 @@ export default async function AdminDashboard() {
   const supabase = createAdminClient()
   const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const [
-    { count: userCount },
-    { count: postCount },
-    { count: groupCount },
-    { count: reportCount },
-    { count: creatorCount },
-    { count: deletionCount },
-    { count: webhookFailures },
-    { count: pushFailures },
-    { data: recentUsersData },
-    { data: recentPostsData },
-    { data: pipelineData },
+    { count: userCount, error: userError },
+    { count: postCount, error: postError },
+    { count: groupCount, error: groupError },
+    { count: reportCount, error: reportError },
+    { count: creatorCount, error: creatorError },
+    { count: deletionCount, error: deletionError },
+    { count: webhookFailures, error: webhookError },
+    { count: pushFailures, error: pushError },
+    { data: recentUsersData, error: recentUsersError },
+    { data: recentPostsData, error: recentPostsError },
+    { data: pipelineData, error: pipelineError },
   ] = await Promise.all([
     supabase.from('users').select('id', { count: 'exact', head: true }),
     supabase.from('posts').select('*', { count: 'exact', head: true }).neq('visibility', 'private'),
@@ -96,22 +93,25 @@ export default async function AdminDashboard() {
   })
   const pipelineIssues = pipelineRows.filter(row => ['failed', 'stale', 'timed_out'].includes(row.state)).length
   const pipelineHealthy = pipelineRows.filter(row => row.state === 'succeeded' || row.state === 'running').length
-  const actionTotal = (reportCount ?? 0) + (creatorCount ?? 0) + (deletionCount ?? 0) + (webhookFailures ?? 0) + (pushFailures ?? 0) + pipelineIssues
+  const pipelineUnknown = pipelineRows.filter(row => row.state === 'unknown').length
+  const countValue = (count: number | null, error: unknown) => error ? null : count
+  const queueCounts = [countValue(reportCount, reportError), countValue(creatorCount, creatorError), countValue(deletionCount, deletionError), countValue(webhookFailures, webhookError), countValue(pushFailures, pushError)]
+  const statusIncomplete = queueCounts.some(value => value == null) || !!pipelineError || pipelineUnknown > 0
+  const actionTotal = statusIncomplete ? null : queueCounts.reduce<number>((sum, value) => sum + (value ?? 0), pipelineIssues)
 
   const stats = [
-    { label: 'Members', value: userCount ?? 0, icon: Users, tone: 'info' as const, detail: 'Registered accounts' },
-    { label: 'Published posts', value: postCount ?? 0, icon: FileText, tone: 'success' as const, detail: 'Community content' },
-    { label: 'Community spaces', value: groupCount ?? 0, icon: MessageSquare, tone: 'warning' as const, detail: 'Active groups' },
-    { label: 'Action queue', value: actionTotal, icon: ShieldAlert, tone: actionTotal > 0 ? 'danger' as const : 'success' as const, detail: actionTotal > 0 ? 'Items needing review' : 'All queues clear' },
+    { label: 'Members', value: countValue(userCount, userError), detail: 'Registered accounts' },
+    { label: 'Published posts', value: countValue(postCount, postError), detail: 'Community content' },
+    { label: 'Community spaces', value: countValue(groupCount, groupError), detail: 'Created groups' },
   ]
 
   const queues = [
-    { label: 'Moderation reports', value: reportCount ?? 0, detail: 'Reported content and accounts', href: '/admin/reports', icon: Flag, tone: 'danger' as const },
-    { label: 'Creator applications', value: creatorCount ?? 0, detail: 'Applicants awaiting approval', href: '/admin/creators', icon: Zap, tone: 'warning' as const },
-    { label: 'Deletion requests', value: deletionCount ?? 0, detail: 'Privacy operations queue', href: '/admin/users/deletions', icon: Trash2, tone: 'danger' as const },
-    { label: 'Webhook failures', value: webhookFailures ?? 0, detail: 'Provider events to inspect', href: '/admin/pipeline-health', icon: Webhook, tone: 'warning' as const },
-    { label: 'Push failures', value: pushFailures ?? 0, detail: 'Delivery failures in 24 hours', href: '/admin/pipeline-health', icon: Bell, tone: 'warning' as const },
-    { label: 'Pipeline issues', value: pipelineIssues, detail: `${pipelineHealthy} of ${TRACKED_PIPELINES.length} reporting healthy`, href: '/admin/pipeline-health', icon: Activity, tone: 'danger' as const },
+    { label: 'Moderation reports', value: queueCounts[0], detail: 'Reported content and accounts', href: '/admin/reports', icon: Flag, tone: 'danger' as const },
+    { label: 'Creator applications', value: queueCounts[1], detail: 'Legacy applications awaiting review', href: '/admin/creators', icon: Zap, tone: 'warning' as const },
+    { label: 'Deletion requests', value: queueCounts[2], detail: 'Privacy operations queue', href: '/admin/users/deletions', icon: Trash2, tone: 'danger' as const },
+    { label: 'Webhook failures', value: queueCounts[3], detail: 'Provider events to inspect', href: '/admin/pipeline-health', icon: Webhook, tone: 'warning' as const },
+    { label: 'Push failures', value: queueCounts[4], detail: 'Delivery failures in 24 hours', href: '/admin/pipeline-health', icon: Bell, tone: 'warning' as const },
+    { label: 'Pipeline issues', value: pipelineError ? null : pipelineIssues, detail: `${pipelineHealthy} reporting healthy${pipelineUnknown ? ` · ${pipelineUnknown} without a signal` : ''}`, href: '/admin/pipeline-health', icon: Activity, tone: 'danger' as const },
   ]
 
   return (
@@ -127,27 +127,23 @@ export default async function AdminDashboard() {
         )}
       />
 
-      <section aria-label="Platform overview" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {stats.map(stat => <AdminStatCard key={stat.label} {...stat} />)}
-      </section>
-
-      <section className="relative overflow-hidden rounded-3xl border border-[color-mix(in_srgb,var(--accent)_22%,var(--border))] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)] sm:p-5 lg:p-6" aria-labelledby="operations-heading">
-
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <section className={styles.attention} aria-labelledby="operations-heading">
+        <div className={styles.attentionHeader}>
           <div>
-
-            <h2 id="operations-heading" className="mt-1 text-lg font-semibold text-[var(--text-1)]">What needs attention</h2>
-            <p className="mt-1 text-xs text-[var(--text-3)]">Moderation, accounts, delivery and production queues.</p>
+            <h2 id="operations-heading">What needs attention</h2>
+            <p>Member support, moderation and delivery.</p>
           </div>
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--text-2)]">
-            <span className={`size-2 rounded-full ${actionTotal > 0 ? 'bg-[var(--gold-fill)] shadow-[0_0_10px_rgba(251,191,36,.8)]' : 'bg-[var(--green-fill)] shadow-[0_0_10px_rgba(52,211,153,.8)]'}`} />
-            {actionTotal > 0 ? `${actionTotal} open signals` : 'All clear'}
-          </span>
+          <span className={styles.attentionCount}><strong>{actionTotal == null ? 'Unknown' : actionTotal.toLocaleString()}</strong><small>{actionTotal == null ? 'Status incomplete' : actionTotal > 0 ? 'Items to review' : 'Queues clear'}</small></span>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {queues.map(queue => <QueueCard key={queue.label} {...queue} />)}
+        {statusIncomplete && <p className={styles.notice}>Some status checks are unavailable. Open the relevant tool to inspect its latest activity.</p>}
+        <div className="grid gap-x-6 sm:grid-cols-2">
+          {[...queues].sort((a,b) => (b.value ?? -1) - (a.value ?? -1)).map(queue => <QueueCard key={queue.label} {...queue} />)}
         </div>
       </section>
+
+      <dl aria-label="Platform overview" className={styles.metricStrip}>
+        {stats.map(stat => <div key={stat.label}><dt>{stat.label}</dt><dd>{stat.value == null ? 'Unavailable' : stat.value.toLocaleString()}<small>{stat.detail}</small></dd></div>)}
+      </dl>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">
         <section className={sectionClass} aria-labelledby="quick-actions-heading">
@@ -161,7 +157,7 @@ export default async function AdminDashboard() {
             <WorkspaceLink href="/admin/pipeline-health" icon={Activity} label="Data operations" detail="Pipelines, telemetry, webhooks, and retention" />
             <WorkspaceLink href="/admin/browserbase" icon={Cloud} label="Browser automation" detail="Proxy spend, scraper attribution, and session forensics" />
             <WorkspaceLink href="/admin/notifications" icon={Bell} label="Engagement" detail="Broadcasts, push delivery, and release messaging" />
-            <WorkspaceLink href="/admin/live" icon={Radio} label="Live" detail="Rooms, streams, and realtime experiences" />
+            <WorkspaceLink href="/admin/groups" icon={Radio} label="Communities" detail="Groups, channels and memberships" />
             <WorkspaceLink href="/admin/settings/features" icon={Settings} label="Platform controls" detail="Features, integrations, design, and configuration" />
           </div>
         </section>
@@ -206,7 +202,7 @@ export default async function AdminDashboard() {
                   </div>
                 </div>
               )
-            }) : <EmptyRow label="No recent members" />}
+            }) : <EmptyRow label={recentUsersError ? 'Recent members are unavailable. Open Members to retry.' : 'No recent members'} />}
           </div>
         </section>
 
@@ -218,7 +214,7 @@ export default async function AdminDashboard() {
                 <div className="mb-1 flex items-center justify-between gap-3"><p className="truncate text-xs font-bold text-[var(--accent-primary)]">@{post.author?.username || 'unknown'}</p><time className="shrink-0 text-[12px] tabular-nums text-[var(--text-muted)]">{relativeTime(post.created_at)}</time></div>
                 <p className="line-clamp-2 text-sm leading-5 text-[var(--text-secondary)]"><EmojiText text={post.content || 'Post has no text content.'} /></p>
               </article>
-            )) : <EmptyRow label="No recent posts" />}
+            )) : <EmptyRow label={recentPostsError ? 'Recent posts are unavailable. Open Posts to retry.' : 'No recent posts'} />}
           </div>
         </section>
       </div>
@@ -226,13 +222,13 @@ export default async function AdminDashboard() {
   )
 }
 
-function QueueCard({ icon: Icon, label, value, detail, href, tone }: { icon: LucideIcon; label: string; value: number; detail: string; href: string; tone: 'warning' | 'danger' }) {
-  const active = value > 0
-  const toneClass = !active ? 'text-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)]' : tone === 'danger' ? 'text-[var(--red)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)]' : 'text-[var(--gold)] bg-[color-mix(in_srgb,var(--gold)_10%,transparent)]'
+function QueueCard({ icon: Icon, label, value, detail, href, tone }: { icon: LucideIcon; label: string; value: number | null; detail: string; href: string; tone: 'warning' | 'danger' }) {
+  const active = value != null && value > 0
+  const toneClass = value == null ? 'text-[var(--text-3)]' : !active ? 'text-[var(--green)]' : tone === 'danger' ? 'text-[var(--red)]' : 'text-[var(--gold)]'
   return (
-    <Link href={href} className="group flex min-h-24 items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3.5 transition hover:-translate-y-0.5 hover:border-[var(--border-2)] hover:bg-[var(--surface-2)] sm:p-4">
-      <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${toneClass}`}><Icon size={17} aria-hidden="true" /></span>
-      <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><strong className="truncate text-xs text-[var(--text-1)] sm:text-sm">{label}</strong><b className={`text-xl tabular-nums ${active ? tone === 'danger' ? 'text-[var(--red)]' : 'text-[var(--gold)]' : 'text-[var(--green)]'}`}>{value}</b></span><span className="mt-1 block text-[12px] leading-4 text-[var(--text-3)] sm:text-xs">{active ? detail : 'Queue is clear'}</span></span>
+    <Link href={href} className="group flex min-h-20 items-center gap-3 border-b border-[var(--border)] px-1 py-3 transition-colors hover:bg-[var(--surface-2)]">
+      <span className={`grid size-8 shrink-0 place-items-center ${toneClass}`}><Icon size={17} aria-hidden="true" /></span>
+      <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><strong className="text-xs text-[var(--text-1)] sm:text-sm">{label}</strong><b className={`text-lg tabular-nums ${toneClass}`}>{value == null ? '?' : value.toLocaleString()}</b></span><span className="mt-1 block text-[12px] leading-4 text-[var(--text-3)]">{value == null ? 'Status unavailable' : active ? detail : label === 'Pipeline issues' ? detail : 'Queue is clear'}</span></span>
       <ArrowRight size={14} aria-hidden="true" className="shrink-0 text-[var(--text-3)] transition group-hover:translate-x-0.5 group-hover:text-[var(--accent)]" />
     </Link>
   )

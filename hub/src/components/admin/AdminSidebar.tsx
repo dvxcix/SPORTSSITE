@@ -5,27 +5,36 @@ import Image from 'next/image'
 import { AccountMenu } from '@/components/layout/AccountMenu'
 import { usePathname } from 'next/navigation'
 import { ChevronDown, Search, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { ADMIN_NAV_GROUPS, adminPathIsActive } from '@/components/admin/adminNavigation'
+import { useId, useMemo, useState } from 'react'
+import { ADMIN_NAV_GROUPS, adminLinksForQuery, adminRouteForPath } from '@/components/admin/adminNavigation'
 import { cn } from '@/lib/utils'
+import { ModalSurface } from '@/components/ui/ModalSurface'
+import styles from './adminWorkspace.module.css'
 
 export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return <>
+    <aside aria-label="Admin workspace navigation" className={`ss-admin-sidebar ${styles.sidebar}`}><AdminNavigationBody onClose={onClose} /></aside>
+    <ModalSurface open={open} onClose={onClose} label="Admin navigation" backdropClassName={styles.mobileBackdrop} panelClassName={styles.mobileSidebar}><AdminNavigationBody onClose={onClose} /></ModalSurface>
+  </>
+}
+
+function AdminNavigationBody({ onClose }: { onClose: () => void }) {
   const path = usePathname()
+  const id = useId()
   const [query, setQuery] = useState('')
-  const activeGroup = ADMIN_NAV_GROUPS.find(group => group.links.some(link => adminPathIsActive(path, link.href)))?.label
+  const activeRoute = adminRouteForPath(path)
+  const activeGroup = activeRoute?.group
   const [expanded, setExpanded] = useState<string[]>(() => activeGroup ? [activeGroup] : ['Overview'])
   const normalizedQuery = query.trim().toLowerCase()
 
   const visibleGroups = useMemo(() => {
     if (!normalizedQuery) return ADMIN_NAV_GROUPS
+    const matching = new Set(adminLinksForQuery(query).map(link => link.href))
     return ADMIN_NAV_GROUPS.flatMap(group => {
-      const links = group.links.filter(link =>
-        [link.label, link.description, group.label, ...(link.keywords ?? [])]
-          .some(value => value.toLowerCase().includes(normalizedQuery)),
-      )
+      const links = group.links.filter(link => matching.has(link.href))
       return links.length ? [{ ...group, links }] : []
     })
-  }, [normalizedQuery])
+  }, [normalizedQuery, query])
 
   function toggle(label: string) {
     setExpanded(current => current.includes(label)
@@ -35,28 +44,9 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <>
-      <button
-        type="button"
-        aria-label="Close admin navigation"
-        aria-hidden={!open}
-        tabIndex={open ? 0 : -1}
-        onClick={onClose}
-        className={cn(
-          'fixed inset-0 z-[calc(var(--layer-popover)-1)] bg-[var(--overlay)] backdrop-blur-sm transition-opacity lg:hidden',
-          open ? 'opacity-100' : 'pointer-events-none opacity-0',
-        )}
-      />
-      <aside
-        aria-label="Admin workspace navigation"
-        className={cn(
-          'ss-admin-sidebar',
-          'fixed inset-y-0 left-0 z-[var(--layer-popover)] flex h-dvh w-[292px] max-w-[calc(100vw_-_16px)] flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-overlay)] transition-[transform,visibility] duration-[var(--duration-normal)] motion-reduce:transition-none lg:visible lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shadow-none',
-          open ? 'visible translate-x-0' : 'invisible -translate-x-full',
-        )}
-      >
-        <div className="relative flex min-h-20 items-center gap-3 overflow-hidden border-b border-[var(--border)] px-4">
-          <Link href="/admin" aria-label="SlipSurge admin home" className="flex flex-1 items-center"><Image src="/logo.png" alt="SlipSurge" width={40} height={40}/></Link>
-          <button type="button" aria-label="Close navigation" onClick={onClose} className="relative grid size-11 shrink-0 place-items-center rounded-xl text-[var(--text-3)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text-1)] lg:hidden">
+        <div className={styles.sidebarHeader}>
+          <Link href="/admin" aria-label="SlipSurge admin home" onClick={onClose}><Image src="/logo.png" alt="" width={28} height={28}/><span>SlipSurge<small>Administration</small></span></Link>
+          <button type="button" aria-label="Close admin navigation" onClick={onClose} className={styles.toolButton}>
             <X size={17} aria-hidden="true" />
           </button>
         </div>
@@ -66,6 +56,7 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
             <Search size={14} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
             <span className="sr-only">Filter admin tools</span>
             <input
+              data-modal-autofocus
               type="search"
               autoComplete="off"
               value={query}
@@ -79,13 +70,13 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
         <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3" aria-label="Admin tools">
           <div className="space-y-2.5">
             {visibleGroups.map(group => {
-              const hasActiveLink = group.links.some(link => adminPathIsActive(path, link.href))
+              const hasActiveLink = group.label === activeGroup
               const isOpen = normalizedQuery.length > 0 || expanded.includes(group.label) || hasActiveLink
               return (
-                <section key={group.label} aria-labelledby={`admin-nav-${group.label.replaceAll(' ', '-').toLowerCase()}`}>
+                <section key={group.label} aria-labelledby={`${id}-${group.label.replaceAll(' ', '-').toLowerCase()}`}>
                   <button
                     type="button"
-                    id={`admin-nav-${group.label.replaceAll(' ', '-').toLowerCase()}`}
+                    id={`${id}-${group.label.replaceAll(' ', '-').toLowerCase()}`}
                     aria-expanded={isOpen}
                     onClick={() => toggle(group.label)}
                     className={cn(
@@ -104,7 +95,7 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
                     <div className="mt-1 space-y-1">
                       {group.links.map(link => {
                         const Icon = link.icon
-                        const active = adminPathIsActive(path, link.href)
+                        const active = activeRoute?.href === link.href
                         return (
                           <Link
                             key={link.href}
@@ -118,7 +109,6 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
                                 : 'border border-transparent text-[var(--text-2)] hover:border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--text-1)]',
                             )}
                           >
-                            {active ? <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-[var(--accent-fill)]" /> : null}
                             <span className={cn('grid size-8 shrink-0 place-items-center rounded-lg', active ? 'bg-[color-mix(in_srgb,var(--accent)_14%,transparent)]' : 'bg-[var(--surface-3)] text-[var(--text-3)] group-hover/link:text-[var(--accent)]')}>
                               <Icon size={15} aria-hidden="true" />
                             </span>
@@ -145,12 +135,11 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
         </nav>
 
         <div className="border-t border-[var(--border)] p-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-          <Link href="/" className="flex min-h-11 items-center justify-center rounded-xl border border-[var(--border-2)] bg-[var(--surface-2)] px-3 text-xs font-extrabold text-[var(--text-2)] transition hover:border-[color-mix(in_srgb,var(--accent)_35%,var(--border-2))] hover:text-[var(--accent)]">
+          <Link href="/feed" onClick={onClose} className="flex min-h-11 items-center justify-center rounded-xl border border-[var(--border-2)] bg-[var(--surface-2)] px-3 text-xs font-extrabold text-[var(--text-2)] transition hover:border-[color-mix(in_srgb,var(--accent)_35%,var(--border-2))] hover:text-[var(--accent)]">
             Return to SlipSurge
           </Link>
         </div>
         <div className="ss-admin-account"><AccountMenu placement="sidebar" onNavigate={onClose}/></div>
-      </aside>
     </>
   )
 }

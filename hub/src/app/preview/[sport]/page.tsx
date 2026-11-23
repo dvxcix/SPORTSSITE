@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { getPublicResearchPreview } from '@/lib/publicResearchPreviewData'
 import { isPreviewSport, PREVIEW_CONFIG, PREVIEW_SPORTS, readPreviewContext } from '@/lib/publicResearchPreview'
 import { ResearchPreviewClient } from './ResearchPreviewClient'
+import { preservePublicPreviewContext } from '@/lib/publicPreviewContext'
 
 type Props = {
   params: Promise<{ sport: string }>
@@ -29,8 +30,8 @@ export default async function ResearchPreviewPage({ params, searchParams }: Prop
   const { sport } = await params
   if (!isPreviewSport(sport)) notFound()
   const query = await searchParams
-  const preview = await getPublicResearchPreview(sport)
   const context = readPreviewContext({ ...query, preview: sport })
+  const preview = preservePublicPreviewContext(sport, await getPublicResearchPreview(sport), context)
   const initial = context?.game === preview.board.game.id && context.date === preview.board.game.date ? context : null
   return <ResearchPreviewClient key={sport + ':' + preview.board.game.id} sport={sport} preview={preview} initial={initial} />
 }

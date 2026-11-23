@@ -175,6 +175,7 @@
   .largeTeam img { width: 27px; height: 27px; }
   .mainGrid { gap: 12px; }
   .boardHeader, .controls, .selection, .boardFooter { padding-left: 10px; padding-right: 10px; }
+  .boardHeader { flex-wrap: wrap; align-items: flex-start; }
   .controls { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
   .controls .book { grid-column: 1 / -1; }
   .selection { grid-template-columns: minmax(85px,1fr) minmax(50px,.65fr) minmax(48px,.65fr) minmax(68px,.9fr); gap: 5px; }
@@ -199,3 +200,9 @@
 }
 
 @media(max-width:480px){.brand>span{display:none}.brand{min-height:44px;min-width:32px}}
+.guestSports{display:flex;gap:8px;margin-bottom:16px}
+.guestSports a{display:inline-flex;align-items:center;justify-content:center;min-width:64px;min-height:44px;padding:8px 16px;border:1px solid var(--border);border-radius:8px;color:var(--text-2);text-decoration:none;font-size:13px;font-weight:550}
+.guestSports a[aria-current=page]{background:var(--accent-dim);border-color:var(--accent);color:var(--text-1)}
+.guestSports a:hover{background:var(--surface-2)}
+.guestSports a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:767px),(max-width:1024px) and (any-pointer:coarse){.page button{min-height:44px;min-width:44px}}

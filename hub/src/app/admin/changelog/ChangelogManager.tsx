@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { uploadMedia } from '@/lib/uploadMedia'
@@ -16,11 +16,13 @@ const EMPTY_DRAFT = { id: null as string | null, title: '', description: '', how
 type Draft = typeof EMPTY_DRAFT
 
 export function ChangelogManager({ initialEntries }: { initialEntries: ChangelogEntry[] }) {
+  const fieldId = useId()
   const [entries, setEntries] = useState(initialEntries)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [pendingEntries, setPendingEntries] = useState<string[]>([])
   // "Preview as popup" — the exact same Modal + ChangelogPopupBody a real
   // member sees, just fed the in-progress draft instead of a DB row, and
   // with no DB write on dismiss. This is the honest answer to "show me
@@ -56,31 +58,45 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
     if (!draft || !draft.title.trim() || !draft.description.trim()) { setError('Title and description are required.'); return }
     setSaving(true)
     setError('')
-    const { data: { user } } = await supabase.auth.getUser()
-    const payload = {
-      title: draft.title.trim(),
-      description: draft.description.trim(),
-      how_to_use: draft.how_to_use.trim() || null,
-      screenshot_urls: draft.screenshot_urls,
-      audience_tier: draft.audience_tier,
-      is_active: draft.is_active,
-      updated_at: new Date().toISOString(),
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) { setError('Sign in again before saving this update. Your draft is still here.'); return }
+      const payload = {
+        title: draft.title.trim(),
+        description: draft.description.trim(),
+        how_to_use: draft.how_to_use.trim() || null,
+        screenshot_urls: draft.screenshot_urls,
+        audience_tier: draft.audience_tier,
+        is_active: draft.is_active,
+        updated_at: new Date().toISOString(),
+      }
+      const result = draft.id
+        ? await supabase.from('changelog_entries').update(payload).eq('id', draft.id).select().single()
+        : await supabase.from('changelog_entries').insert({ ...payload, created_by: user?.id ?? null }).select().single()
+      if (result.error) { setError(result.error.message); return }
+      const saved = result.data as ChangelogEntry
+      setEntries(prev => draft.id ? prev.map(e => e.id === saved.id ? saved : e) : [saved, ...prev])
+      setDraft(null)
+      router.refresh()
+    } catch {
+      setError('The update could not be saved. Your draft is still here. Please retry.')
+    } finally {
+      setSaving(false)
     }
-    const result = draft.id
-      ? await supabase.from('changelog_entries').update(payload).eq('id', draft.id).select().single()
-      : await supabase.from('changelog_entries').insert({ ...payload, created_by: user?.id ?? null }).select().single()
-    setSaving(false)
-    if (result.error) { setError(result.error.message); return }
-    const saved = result.data as ChangelogEntry
-    setEntries(prev => draft.id ? prev.map(e => e.id === saved.id ? saved : e) : [saved, ...prev])
-    setDraft(null)
-    router.refresh()
   }
 
   async function toggleActive(entry: ChangelogEntry) {
-    const { error: err } = await supabase.from('changelog_entries').update({ is_active: !entry.is_active }).eq('id', entry.id)
-    if (err) return
-    setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, is_active: !e.is_active } : e))
+    if (pendingEntries.includes(entry.id)) return
+    setPendingEntries(current => [...current, entry.id])
+    try {
+      const { error: err } = await supabase.from('changelog_entries').update({ is_active: !entry.is_active }).eq('id', entry.id)
+      if (err) { notify({title:'Visibility unchanged',message:err.message,tone:'error'}); return }
+      setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, is_active: !e.is_active } : e))
+    } catch {
+      notify({title:'Visibility unchanged',message:'The update could not be changed. Please retry.',tone:'error'})
+    } finally {
+      setPendingEntries(current => current.filter(id => id !== entry.id))
+    }
   }
 
   async function remove(entry: ChangelogEntry) {
@@ -112,44 +128,37 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
                 how_to_use={draft.how_to_use.trim() || null}
                 screenshot_urls={draft.screenshot_urls}
                 audienceLabel={draft.audience_tier === 'ultimate' ? 'Ultimate release' : undefined}
-                dismissLabel="Got it. Don't show again"
-                onDismiss={() => {}}
+                dismissLabel="Preview popup"
+                onDismiss={() => setShowFullPreview(true)}
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setShowFullPreview(true)}
-              className="mt-2 text-xs font-bold text-[var(--green)] hover:text-[var(--green)]"
-            >
-              Preview as popup (full-screen, exactly as a member sees it) →
-            </button>
           </div>
 
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-4">
-          {error && <div className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
+          {error && <div role="alert" className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
 
           <div>
-            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Title</label>
-            <input value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} placeholder="Custom Matrix Columns"
+            <label htmlFor={`${fieldId}-title`} className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Title</label>
+            <input id={`${fieldId}-title`} value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} placeholder="Custom Matrix Columns"
               className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)]" />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">What changed</label>
-            <textarea value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} rows={3}
+            <label htmlFor={`${fieldId}-description`} className="block text-xs font-bold text-[var(--text-2)] mb-1.5">What changed</label>
+            <textarea id={`${fieldId}-description`} value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} rows={3}
               placeholder="What shipped, in plain terms a member would recognize."
               className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] resize-none" />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">How to use it (optional)</label>
-            <textarea value={draft.how_to_use} onChange={e => setDraft({ ...draft, how_to_use: e.target.value })} rows={3}
+            <label htmlFor={`${fieldId}-instructions`} className="block text-xs font-bold text-[var(--text-2)] mb-1.5">How to use it (optional)</label>
+            <textarea id={`${fieldId}-instructions`} value={draft.how_to_use} onChange={e => setDraft({ ...draft, how_to_use: e.target.value })} rows={3}
               placeholder="Step-by-step, if it's not obvious from the description alone."
               className="w-full bg-[var(--surface-2)] border border-[var(--border-2)] rounded-lg px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] outline-none focus:border-[color-mix(in_srgb,var(--green)_50%,transparent)] resize-none" />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Screenshots</label>
+            <label htmlFor={`${fieldId}-screenshots`} className="block text-xs font-bold text-[var(--text-2)] mb-1.5">Screenshots</label>
             <div className="flex flex-wrap gap-2 mb-2">
               {draft.screenshot_urls.map(url => (
                 <div key={url} className="relative">
@@ -160,7 +169,7 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
                 </div>
               ))}
             </div>
-            <input type="file" accept="image/*" multiple disabled={uploading} onChange={e => handleFiles(e.target.files)}
+            <input id={`${fieldId}-screenshots`} type="file" accept="image/*" multiple disabled={uploading} onChange={e => handleFiles(e.target.files)}
               className="text-xs text-[var(--text-2)] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--surface-2)] file:text-[var(--text-2)] file:text-xs" />
             {uploading && <p className="text-xs text-[var(--text-3)] mt-1">Uploading…</p>}
           </div>
@@ -227,7 +236,7 @@ export function ChangelogManager({ initialEntries }: { initialEntries: Changelog
               <p className="text-[12px] text-[var(--text-3)] mt-0.5">{new Date(entry.created_at).toLocaleDateString('en-US', {timeZone:'UTC'})} · {entry.audience_tier === 'ultimate' ? 'Ultimate only' : 'All members'} · {entry.screenshot_urls.length} screenshot{entry.screenshot_urls.length === 1 ? '' : 's'}</p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
-              <Toggle checked={entry.is_active} onChange={() => toggleActive(entry)} ariaLabel={`${entry.title} active`} />
+              <Toggle checked={entry.is_active} disabled={pendingEntries.includes(entry.id)} onChange={() => toggleActive(entry)} ariaLabel={`${entry.title} active`} />
               <button onClick={() => startEdit(entry)} className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)]">Edit</button>
               <button onClick={() => remove(entry)} className="text-xs font-bold text-[var(--red)] hover:text-[var(--red)]">Delete</button>
             </div>

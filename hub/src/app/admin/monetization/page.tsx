@@ -58,7 +58,7 @@ export default async function AdminMonetizationPage() {
 
       <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
         <header className="border-b border-[var(--border)] px-4 py-3"><h2 className="text-sm font-bold text-[var(--text-1)]">Recent Whop commerce</h2><p className="mt-1 text-xs text-[var(--text-3)]">Provider events recorded for creator products. Creator withdrawals remain in each connected Whop payout portal.</p></header>
-        <div role="region" tabIndex={0} aria-label=" table, scroll for all columns" className="ss-table-region overflow-x-auto">
+        <div role="region" tabIndex={0} aria-label="Membership and revenue records, scroll for all columns" className="ss-table-region overflow-x-auto">
           <table className="w-full min-w-[760px] text-sm">
             <thead className="border-b border-[var(--border)]"><tr>{['Creator', 'Offer', 'Event', 'Amount', 'Status', 'Time'].map(label => <th key={label} className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-wider text-[var(--text-3)]">{label}</th>)}</tr></thead>
             <tbody className="divide-y divide-[var(--border)]">{events.length ? events.map(event => {

@@ -23,8 +23,8 @@ export function TerminateMembershipTool() {
       if (!res.ok) throw new Error(body?.error || 'Termination failed')
       setResult(
         body.matchedAccountId
-          ? `Terminated (${body.business} business) — linked SlipSurge account downgraded to Free.`
-          : `Terminated (${body.business} business) — no SlipSurge account has this membership ID on file.`
+          ? `Terminated (${body.business} business). Linked SlipSurge account downgraded to Free.`
+          : `Terminated (${body.business} business). No SlipSurge account has this membership ID on file.`
       )
     } catch (e: unknown) {
       setIsError(true)
@@ -39,8 +39,8 @@ export function TerminateMembershipTool() {
     <div className="bg-[var(--surface)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl p-4 mb-4 space-y-3">
       <p className="text-sm font-semibold text-[var(--red)]">Terminate a Whop membership</p>
       <p className="text-xs text-[var(--text-3)]">
-        Cancels immediately (not at period end) by raw Whop membership ID — works against either business, and
-        does not require the membership to be linked to a SlipSurge account. For ToS violations, fraud, or chargebacks.
+        Cancels immediately by Whop membership ID, including memberships from either business that are
+        not linked to a SlipSurge account. Use for terms violations, fraud or chargebacks.
       </p>
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <input
@@ -52,6 +52,7 @@ export function TerminateMembershipTool() {
         />
         {!confirming ? (
           <button
+            type="button"
             onClick={() => setConfirming(true)}
             disabled={!membershipId.trim() || running}
             className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--red)_20%,transparent)] disabled:opacity-40 text-[var(--red)] font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-[color-mix(in_srgb,var(--red)_30%,transparent)] whitespace-nowrap"
@@ -59,16 +60,17 @@ export function TerminateMembershipTool() {
             Terminate
           </button>
         ) : (
-          <button
+          <><button
+            type="button"
             onClick={run}
             disabled={running}
             className="bg-[var(--red-fill)] hover:bg-[var(--red-fill)] disabled:opacity-40 text-[var(--accent-fg)] font-semibold px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap"
           >
-            {running ? 'Terminating…' : 'Confirm — cancel now'}
-          </button>
+            {running ? 'Terminating…' : 'Confirm cancellation'}
+          </button><button type="button" disabled={running} onClick={() => setConfirming(false)} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-2)]">Keep membership</button></>
         )}
       </div>
-      {result && <p className={`text-xs ${isError ? 'text-[var(--red)]' : 'text-[var(--green)]'}`}>{result}</p>}
+      {result && <p role={isError ? 'alert' : 'status'} className={`text-xs ${isError ? 'text-[var(--red)]' : 'text-[var(--green)]'}`}>{result}</p>}
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { Plus, ShieldCheck } from 'lucide-react'
 import { authVisibilityUnavailable, getBlockedEitherWayIds } from '@/lib/blocks'
 import { MessageInbox } from '@/components/social/MessageInbox'
-import { CommunityNav } from '@/components/community/CommunityNav'
+import { CommunityNav, CommunityMore } from '@/components/community/CommunityNav'
 import { ProductAction, ProductPageShell, ProductPanel, ProductSectionHeader } from '@/components/product/ProductPage'
 import { GroupConversationInbox } from '@/components/chat/GroupConversationInbox'
 import styles from './messages.module.css'
@@ -120,7 +120,7 @@ export default async function MessagesPage() {
   return (
     <ProductPageShell narrow className={`ss-messages-page ${styles.page}`}>
       <CommunityNav />
-      <header className="ss-community-heading"><h1>Messages</h1><ProductAction href="/messages/new"><Plus size={15}/> New message</ProductAction></header>
+      <header className="ss-community-heading"><h1>Messages</h1><div><ProductAction href="/messages/new"><Plus size={15}/> New message</ProductAction><CommunityMore /></div></header>
 
       {groupConversations.length > 0 && <><ProductSectionHeader title="Group conversations" meta={`${groupConversations.length} group${groupConversations.length === 1 ? '' : 's'}`}/><ProductPanel className="ss-messages-inbox-shell"><GroupConversationInbox conversations={groupConversations}/></ProductPanel></>}
 
