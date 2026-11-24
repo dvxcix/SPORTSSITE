@@ -1,0 +1,86 @@
+[
+  {
+    "dialogWidth": 860,
+    "documentWidth": 1440,
+    "theme": "dark",
+    "view": "Set up",
+    "width": 1440
+  },
+  {
+    "dialogWidth": 860,
+    "documentWidth": 1440,
+    "theme": "dark",
+    "view": "Member preview",
+    "width": 1440
+  },
+  {
+    "dialogWidth": 860,
+    "documentWidth": 1440,
+    "theme": "dark",
+    "view": "Access rules",
+    "width": 1440
+  },
+  {
+    "dialogWidth": 390,
+    "documentWidth": 390,
+    "theme": "dark",
+    "view": "Set up",
+    "width": 390
+  },
+  {
+    "dialogWidth": 390,
+    "documentWidth": 390,
+    "theme": "dark",
+    "view": "Member preview",
+    "width": 390
+  },
+  {
+    "dialogWidth": 390,
+    "documentWidth": 390,
+    "theme": "dark",
+    "view": "Access rules",
+    "width": 390
+  },
+  {
+    "dialogWidth": 860,
+    "documentWidth": 1440,
+    "theme": "light",
+    "view": "Set up",
+    "width": 1440
+  },
+  {
+    "dialogWidth": 860,
+    "documentWidth": 1440,
+    "theme": "light",
+    "view": "Member preview",
+    "width": 1440
+  },
+  {
+    "dialogWidth": 860,
+    "documentWidth": 1440,
+    "theme": "light",
+    "view": "Access rules",
+    "width": 1440
+  },
+  {
+    "dialogWidth": 390,
+    "documentWidth": 390,
+    "theme": "light",
+    "view": "Set up",
+    "width": 390
+  },
+  {
+    "dialogWidth": 390,
+    "documentWidth": 390,
+    "theme": "light",
+    "view": "Member preview",
+    "width": 390
+  },
+  {
+    "dialogWidth": 390,
+    "documentWidth": 390,
+    "theme": "light",
+    "view": "Access rules",
+    "width": 390
+  }
+]
