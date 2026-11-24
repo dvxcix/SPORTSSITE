@@ -3,6 +3,10 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import ts from 'typescript'
 import * as crypto from 'node:crypto'
+import * as React from 'react'
+import * as jsx from 'react/jsx-runtime'
+import { createRoot } from 'react-dom/client'
+import { JSDOM } from 'jsdom'
 
 const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8')
 function compile(path,imports={},globals={}){
@@ -243,4 +247,82 @@ test('matching Discord reauthorization preserves the community return and normal
 })
 test('cancelled Discord consent returns to the community without an automatic role claim',async()=>{
  const f=callbackFixture();const result=await f.run('reauthorize','');assert.match(result.headers.get('location'),/link_error=discord_authorization_declined/);assert.equal(result.headers.get('location').includes('discord=claim'),false);assert.deepEqual(f.calls,[])
+})
+
+test('server inspection blocks a bot without Manage Roles before offering any roles',async()=>{
+ const admin=database(()=>({error:null}));admin.auth={admin:{getUserById:async()=>({data:{user:{identities:[{provider:'discord',identity_data:{sub:discordId}}]}}})}}
+ const module=compile('src/lib/creatorDiscord.ts',{'./creatorDiscordPolicy':policy,'./creatorCommerce':{},'./creatorWebhook':{}},{process:{env:{DISCORD_BOT_TOKEN:'fixture'}},fetch:async url=>response(url.endsWith('/users/@me')?{id:bot}:url.endsWith('/guilds/'+guild)?{id:guild,name:'Club',owner_id:discordId,roles:[{id:guild,permissions:'0',position:0},{id:bot,permissions:'0',position:2}]}:{roles:[bot]})})
+ await assert.rejects(module.inspectCreatorGuild(admin,user,guild),error=>error.code==='discord_permissions'&&/Manage Roles/.test(error.message))
+})
+
+test('setup access context reads only the owned community’s bound product',async()=>{
+ for(const paid of [false,true]){
+  const admin=database(call=>({data:call.table==='creator_products'?{title:'Weekend research',status:'active'}:[],error:null}))
+  const route=compile('src/app/api/groups/[groupId]/discord/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/creatorDiscord':{...coreFixture().core,creatorDiscordIdentity:async()=>discordId,creatorDiscordConfigured:()=>true,creatorBotInvite:()=>null},'@/lib/creatorDiscordAccount':{},'@/lib/creatorDiscordOwner':{creatorDiscordOwner:async()=>({admin,user:{id:user},group:{name:'Club',slug:'club',access_type:paid?'paid':'free',creator_product_id:paid?'product':null}})},'@/lib/creatorDiscordPolicy':policy,'@/lib/serverRateLimit':{},'@/lib/safeApiError':{safeApiError:()=>Response.json({error:'failed'},{status:502})}},{process:{env:{}}})
+  const result=await route.GET(new Request('https://www.slipsurge.com/api/setup'),{params:Promise.resolve({groupId:group})})
+  assert.equal(result.status,200);const data=await result.json();assert.equal(data.access.type,paid?'paid':'free')
+  const product=admin.calls.find(call=>call.table==='creator_products')
+  if(paid){assert.deepEqual(product.filters,[['eq','id','product'],['eq','creator_id',user],['maybeSingle']]);assert.equal(data.access.product.title,'Weekend research')}else{assert.equal(product,undefined);assert.equal(data.access.product,null)}
+ }
+})
+
+async function setupUI(options={},run){
+ const dom=new JSDOM('<!doctype html><body></body>',{url:'https://www.slipsurge.com/creators/studio'})
+ const globals=['window','document','location','history','IS_REACT_ACT_ENVIRONMENT'],previous=Object.fromEntries(globals.map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]))
+ for(const [key,value]of Object.entries({window:dom.window,document:dom.window.document,location:dom.window.location,history:dom.window.history,IS_REACT_ACT_ENVIRONMENT:true}))Object.defineProperty(globalThis,key,{configurable:true,writable:true,value})
+ const integration={id:'saved',guild_id:guild,guild_name:'Club server',role_id:role,role_name:'Member',invite_url:null},calls=[]
+ const client={DiscordClientError:class extends Error{constructor(message,code){super(message);this.code=code}},connectCommunityDiscord:async()=>{},discordApi:async(path,init={})=>{
+  calls.push({path,init});if(options.api){const override=options.api(path,init,calls);if(override!==undefined)return override}
+  if(path.includes('servers=1'))return {servers:[{id:guild,name:'Club server'},{id:bot,name:'Other server'}]}
+  if(path.includes('guildId='))return {roles:[{id:role,name:path.includes(bot)?'Other server role':'Member'},{id:discordId,name:'Research'}],canCreateRoles:true}
+  return {configured:true,connected:!options.unlinked,installUrl:'https://discord.com/oauth2/authorize?client_id='+bot,integrations:options.saved?[integration]:[],access:{name:'Club',slug:'club',type:'paid',product:{title:'Weekend research',status:'active'}}}
+ }}
+ const stub=(tag)=>(props)=>React.createElement(tag,props,props.children)
+ const imports={'react':React,'react/jsx-runtime':jsx,'next/link':{default:stub('a')},'lucide-react':{Check:()=>null,ExternalLink:()=>null,Link2:()=>null,RefreshCw:()=>null},'@/components/ui/button':{Button:({variant,...props})=>React.createElement('button',props)},'@/components/ui/FeedbackProvider':{useFeedback:()=>({confirm:async()=>true})},'./creatorDiscordClient':client,'@/lib/creatorDiscordPolicy':policy,'./creatorDiscord.module.css':{default:{}}}
+ const summary=compile('src/components/creator/CreatorDiscordClaim.tsx',imports)
+ const {CreatorDiscordSetup}=compile('src/components/creator/CreatorDiscordSetup.tsx',{...imports,'./CreatorDiscordClaim':summary})
+ const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
+ const flush=async(action=()=>{})=>React.act(async()=>{await action();await Promise.resolve()})
+ const button=text=>Array.from(host.querySelectorAll('button')).find(button=>button.textContent===text)
+ try{await flush(()=>root.render(React.createElement(CreatorDiscordSetup,{groupId:group})));await run({host,calls,flush,button,dom})}finally{await React.act(async()=>root.unmount());dom.window.close();for(const key of globals){if(previous[key])Object.defineProperty(globalThis,key,previous[key]);else delete globalThis[key]}}
+}
+
+test('creator setup checks saved server automatically and previews saved roles, not unsaved selections',async()=>{
+ await setupUI({saved:true},async({host,calls,flush,button})=>{
+  assert.equal(button('Access saved').disabled,true);assert.equal(calls.filter(call=>call.path.includes('guildId=')).length,1)
+  await flush(()=>host.querySelectorAll('input[type=checkbox]')[1].click())
+  assert.match(host.textContent,/Changes are not saved/);assert.equal(button('Save Discord access').disabled,false)
+  await flush(()=>button('Member preview').click());assert.match(host.textContent,/Member/);assert.doesNotMatch(host.textContent,/Member · Research/)
+  assert.equal(calls.some(call=>call.init.method==='POST'),false)
+  await flush(()=>button('Access rules').click());assert.match(host.textContent,/Weekend research/);assert.match(host.textContent,/Members stay in your server/)
+ })
+})
+
+test('changing server cancels a stale inspection and clearing the selection restores the chooser',async()=>{
+ let resolveOld
+ await setupUI({api:(path)=>path.includes('guildId='+guild)?new Promise(resolve=>{resolveOld=resolve}):undefined},async({host,flush,button})=>{
+  const select=host.querySelector('select')
+  await flush(()=>{select.value=guild;select.dispatchEvent(new window.Event('change',{bubbles:true}))})
+  await flush(()=>{select.value=bot;select.dispatchEvent(new window.Event('change',{bubbles:true}))})
+  await flush(()=>resolveOld({roles:[{id:role,name:'Wrong server role'}],canCreateRoles:true}))
+  assert.match(host.textContent,/Other server role/);assert.doesNotMatch(host.textContent,/Wrong server role/)
+  await flush(()=>{select.value='';select.dispatchEvent(new window.Event('change',{bubbles:true}))})
+  assert.equal(button('Save Discord access'),undefined);assert.doesNotMatch(host.textContent,/permissions checked/)
+ })
+})
+
+test('unlinked setup leads with authorization and never offers an unscoped bot installation',async()=>{
+ await setupUI({unlinked:true},async({host,button})=>{assert.ok(button('Connect Discord'));assert.equal(host.querySelector('a[href*="discord.com"]'),null);assert.equal(host.querySelector('select'),null)})
+})
+
+test('returning from a deliberate bot installation rechecks once without background polling',async()=>{
+ let attempts=0
+ await setupUI({saved:true,api:path=>{if(path.includes('guildId=')&&++attempts===1)return Promise.reject(new Error('Add SlipSurge to this server.'))}},async({host,flush,dom})=>{
+  Object.defineProperty(dom.window.document,'visibilityState',{value:'visible',configurable:true})
+  const install=host.querySelector('a[href*="discord.com/oauth2/authorize"]');assert.ok(install)
+  install.addEventListener('click',event=>event.preventDefault())
+  await flush(()=>install.click());await flush(()=>dom.window.dispatchEvent(new dom.window.Event('focus')))
+  assert.equal(attempts,2);assert.match(host.textContent,/permissions checked/)
+  await flush(()=>dom.window.dispatchEvent(new dom.window.Event('focus')));assert.equal(attempts,2)
+ })
 })

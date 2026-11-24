@@ -39,6 +39,7 @@ export async function inspectCreatorGuild(admin:SupabaseClient,userId:string,gui
  if(guild.owner_id!==discordId&&!creatorCanManageRoles(guild.roles,member.roles,guildId))throw new CreatorDiscordError('Manage Server and Manage Roles permissions are required to configure member access. Ask your Discord server owner.',403)
  const bot=await (await creatorDiscordRequest('/users/@me')).json() as {id:string}
  const botMember=await (await creatorDiscordRequest(`/guilds/${guildId}/members/${bot.id}`)).json() as {roles:string[]}
+ if(!creatorCanManageRoles(guild.roles,botMember.roles,guildId))throw new CreatorDiscordError('SlipSurge needs Manage Roles in this server. Update the bot’s permissions in Discord, then check again.',409,'discord_permissions')
  return {guildId:guild.id,guildName:guild.name,roles:creatorAssignableRoles(guildId,guild.roles,botMember.roles,member.roles,guild.owner_id===discordId).map(role=>({id:role.id,name:role.name})),canCreateRoles:true,inviteUrl:creatorBotInvite(guildId)}
 }
 

@@ -8,7 +8,7 @@ export async function creatorDiscordOwner(groupId:string){
  const client=await createClient(),{data:{user}}=await client.auth.getUser()
  if(!user)throw new CreatorDiscordError('Sign in first.',401)
  const admin=createAdminClient()
- const {data:group,error}=await admin.from('groups').select('id,owner_id,name,slug').eq('id',groupId).maybeSingle()
+ const {data:group,error}=await admin.from('groups').select('id,owner_id,name,slug,access_type,creator_product_id').eq('id',groupId).maybeSingle()
  if(error)throw new CreatorDiscordError('Community access could not be checked.',503)
  if(!group||group.owner_id!==user.id)throw new CreatorDiscordError('Community owner access required.',403)
  return {client,admin,user,group}

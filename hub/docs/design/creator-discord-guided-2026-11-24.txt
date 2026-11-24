@@ -1,0 +1,30 @@
+Creator Discord guided setup follow-up, 24 November 2026
+
+Reference: Whop's official Discord setup documentation, reviewed on 24 November 2026:
+https://whop.com/blog/link-whop-to-discord/
+https://whop.com/blog/paid-discord-server/
+The reference flow separates setup, preview and access, checks installation and role order, and connects member claims to membership access. These are the comparison criteria for this follow-up; this report does not claim every Whop feature is implemented.
+
+Direction: retain SlipSurge Creator Studio's accepted typography, lime access state, shared dialogs and native controls. ENERGY 1 / RHYTHM 2 / MOTION 1. The nested navigation separates configuration, member presentation and eligibility without adding new destinations to the site navigation. Green marks a verified checkpoint or saved role mapping. The saved server summary distinguishes the published member experience from pending edits. Phone layouts stack membership details and retain 44px controls; the shared desktop dialog close target remains 40px. No assets, marketing claims, fees, sports formulas or database migrations are introduced.
+
+Changes
+- Set up, Member preview and Access rules are separate views within the existing community Discord tab and group settings.
+- Account authorization leads first-time setup; bot installation is scoped to the selected managed server. Empty managed-server results explain permission requirements and provide a real retry.
+- Selecting or reopening a saved server automatically inspects its bot permissions and roles. Returning from an intentional bot installation triggers one fresh check, with no polling. Refresh remains available.
+- Server checks cancel when selection changes. A delayed response cannot populate another server's editor. Clearing selection cannot leave a connected checkpoint or a usable save action behind.
+- Manage Roles is verified on the actual bot before offering roles or role creation. Hierarchy recovery explains the exact Discord settings path and retains a permission-review link.
+- Saved roles are separate from unsaved selections. Preview uses the real member card summary component and only saved configuration. It does not claim or grant roles. Actual community entry remains accessible.
+- Access rules shows the owned community and its bound membership title from server data. Product lookup is restricted to the same creator. The view explains eligibility, expiry, removal and old-account cleanup; other server roles are untouched.
+- Connect-panel publication is disabled for unsaved settings. Existing claims, private commands, provider verification, prioritised removals and legacy SlipSurge-server automation remain in place.
+
+Verification before release
+- 84/84 focused Discord, storefront and creator commerce tests pass. Six added checks cover bot permission rejection, owned product context, saved-vs-unsaved preview, stale server inspection, first-time authorization and one-shot installation return.
+- 141/141 production source and existing Discord entitlement/retirement tests pass.
+- Focused lint and TypeScript pass. Logs are recorded in review/creator-discord-guided-lint.txt and review/creator-discord-guided-types.txt.
+- Private actual-app browser checks: multi-role save succeeds and preview reflects saved names; clearing/reselecting server removes/restores the editor correctly; explicit refresh succeeds. All three views reviewed at 1440, 390 and 320px in Light/Dark: 18 settled layout receipts, no document overflow, contained scrolling, phone controls at least 44px. The fixture-only environment uses no production credentials or external writes.
+- The eleven known unrelated auth regression fixture failures recorded by the original Discord release are unchanged; this follow-up does not claim to repair or certify those suites.
+- Real external server consent and actual member role grant/revoke are not executed for QA. Membership and role-delivery behavior remain covered by isolated provider/database checks from the original release.
+
+Craft gate: semantic controls, keyboard focus, contained phone layouts and both themes reviewed. Purpose gate: navigation follows the creator task; saved roles and access rules use real configuration. Liveliness: existing Studio/community identity and access accent retained without decorative additions. Verification scope is limited to the changes and stated flows.
+
+Publication: pending main release and live checks. No migration or secret change is required. The previously approved multi-role migration remains applied and must not be replayed.

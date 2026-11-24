@@ -1,0 +1,158 @@
+[
+  {
+    "dialogWidth": 860,
+    "documentWidth": 1440,
+    "smallControls": [
+      ""
+    ],
+    "theme": "light",
+    "view": "Set up",
+    "width": 1440
+  },
+  {
+    "dialogWidth": 860,
+    "documentWidth": 1440,
+    "smallControls": [
+      ""
+    ],
+    "theme": "light",
+    "view": "Member preview",
+    "width": 1440
+  },
+  {
+    "dialogWidth": 860,
+    "documentWidth": 1440,
+    "smallControls": [
+      ""
+    ],
+    "theme": "light",
+    "view": "Access rules",
+    "width": 1440
+  },
+  {
+    "dialogWidth": 390,
+    "documentWidth": 390,
+    "smallControls": [],
+    "theme": "light",
+    "view": "Set up",
+    "width": 390
+  },
+  {
+    "dialogWidth": 390,
+    "documentWidth": 390,
+    "smallControls": [],
+    "theme": "light",
+    "view": "Member preview",
+    "width": 390
+  },
+  {
+    "dialogWidth": 390,
+    "documentWidth": 390,
+    "smallControls": [],
+    "theme": "light",
+    "view": "Access rules",
+    "width": 390
+  },
+  {
+    "dialogWidth": 320,
+    "documentWidth": 320,
+    "smallControls": [],
+    "theme": "light",
+    "view": "Set up",
+    "width": 320
+  },
+  {
+    "dialogWidth": 320,
+    "documentWidth": 320,
+    "smallControls": [],
+    "theme": "light",
+    "view": "Member preview",
+    "width": 320
+  },
+  {
+    "dialogWidth": 320,
+    "documentWidth": 320,
+    "smallControls": [],
+    "theme": "light",
+    "view": "Access rules",
+    "width": 320
+  },
+  {
+    "dialogWidth": 860,
+    "documentWidth": 1440,
+    "smallControls": [
+      ""
+    ],
+    "theme": "dark",
+    "view": "Set up",
+    "width": 1440
+  },
+  {
+    "dialogWidth": 860,
+    "documentWidth": 1440,
+    "smallControls": [
+      ""
+    ],
+    "theme": "dark",
+    "view": "Member preview",
+    "width": 1440
+  },
+  {
+    "dialogWidth": 860,
+    "documentWidth": 1440,
+    "smallControls": [
+      ""
+    ],
+    "theme": "dark",
+    "view": "Access rules",
+    "width": 1440
+  },
+  {
+    "dialogWidth": 390,
+    "documentWidth": 390,
+    "smallControls": [],
+    "theme": "dark",
+    "view": "Set up",
+    "width": 390
+  },
+  {
+    "dialogWidth": 390,
+    "documentWidth": 390,
+    "smallControls": [],
+    "theme": "dark",
+    "view": "Member preview",
+    "width": 390
+  },
+  {
+    "dialogWidth": 390,
+    "documentWidth": 390,
+    "smallControls": [],
+    "theme": "dark",
+    "view": "Access rules",
+    "width": 390
+  },
+  {
+    "dialogWidth": 320,
+    "documentWidth": 320,
+    "smallControls": [],
+    "theme": "dark",
+    "view": "Set up",
+    "width": 320
+  },
+  {
+    "dialogWidth": 320,
+    "documentWidth": 320,
+    "smallControls": [],
+    "theme": "dark",
+    "view": "Member preview",
+    "width": 320
+  },
+  {
+    "dialogWidth": 320,
+    "documentWidth": 320,
+    "smallControls": [],
+    "theme": "dark",
+    "view": "Access rules",
+    "width": 320
+  }
+]

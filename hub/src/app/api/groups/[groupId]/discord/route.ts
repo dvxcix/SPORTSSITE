@@ -12,7 +12,7 @@ type Context={params:Promise<{groupId:string}>}
 function failure(cause:unknown){return cause instanceof CreatorDiscordError?NextResponse.json({error:cause.message,code:cause.code},{status:cause.status,headers}):safeApiError('creator-discord-setup',cause,'Discord setup could not be completed. Try again.',502)}
 export async function GET(request:Request,context:Context){
  try{
-  const {groupId}=await context.params,{admin,client,user}=await creatorDiscordOwner(groupId)
+  const {groupId}=await context.params,{admin,client,user,group}=await creatorDiscordOwner(groupId)
   const query=new URL(request.url).searchParams,guildId=query.get('guildId')
   if(guildId||query.get('servers')==='1'){
    const rate=await consumeServerRateLimit(user.id,'creator_discord_inspect',60,3600)
@@ -25,7 +25,9 @@ export async function GET(request:Request,context:Context){
    creatorDiscordIdentity(admin,user.id,false),
   ])
   if(error)throw error
-  return NextResponse.json({configured:creatorDiscordConfigured(),applicationId:process.env.DISCORD_APPLICATION_ID||null,connected:!!discordId,installUrl:creatorBotInvite(),integrations:data||[],integration:data?.[0]||null},{headers})
+  const product=group.creator_product_id?await admin.from('creator_products').select('title,status').eq('id',group.creator_product_id).eq('creator_id',user.id).maybeSingle():{data:null,error:null}
+  if(product.error)throw product.error
+  return NextResponse.json({configured:creatorDiscordConfigured(),applicationId:process.env.DISCORD_APPLICATION_ID||null,connected:!!discordId,installUrl:creatorBotInvite(),integrations:data||[],integration:data?.[0]||null,access:{name:group.name,slug:group.slug,type:group.access_type,product:product.data}},{headers})
  }catch(cause){return failure(cause)}
 }
 export async function POST(request:Request,context:Context){
