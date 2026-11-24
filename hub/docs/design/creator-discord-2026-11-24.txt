@@ -34,10 +34,10 @@ Liveliness PASS: declared direction/dials retained, a single main action per ste
 Craft gate PASS for the reviewed surfaces: accessible names, disabled/busy/error states, real native control behavior, and shared site tokens. This is a scoped UI review, not certification of unperformed live Discord operations.
 
 Publication gate
-NOT LIVE. Production remains origin/main 185c208f. Feature is committed on codex/creator-discord-20261124.
-Automatic approval review rejected applying creator_discord_multi_role to production because it requires explicit database authorization. A user approval question is pending. No migration, bot-command registration, external role, creator-server configuration or real Discord message has been applied by this task.
+Release in progress. The user explicitly approved the Discord database update after automatic review requested database-specific authorization. Applied once as 20261124132320_creator_discord_multi_role. Live postflight confirms the nonunique active-group index, intact mapping/job RLS, service-only configuration, zero anonymous/member execution and preserved zero mappings/jobs. Do not replay the migration or historical migrations.
+Functional Git source b02c0c6a passed its optimized Git-based preview build (dpl_55r5WndiqMZMGjhUTUnVmjtAtkmK). Main reconciliation and production runtime checks are next. No real external role, creator-server configuration or Discord message was created for QA.
 The separate rejected diagnostic export was replaced with admin-only server-side status checks; no production credentials were copied to a local file.
-After approval: verify live preflight again, apply only the reviewed new migration, verify schema/privileges, finish the final Git-based build, reconcile main, deploy, inspect actual bot installation settings, register supported commands, and verify live creator/member boundaries. Real creators still give Discord consent for their own servers.
+Production checks: reconcile main, deploy, inspect actual bot installation settings, register supported commands, and verify live creator/member boundaries. Real creators still give Discord consent for their own servers.
 No financial or sports-data behavior is part of this change.
 
 References
