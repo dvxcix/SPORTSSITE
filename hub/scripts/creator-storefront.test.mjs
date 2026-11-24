@@ -139,7 +139,7 @@ test('free community roles and admin-held memberships do not require a payment l
 test('a Whop outage blocks new paid role delivery and retains its retry',async()=>{
  const f=discordVerification({outage:true});assert.deepEqual(await f.module.processCreatorDiscordQueue(f.admin,1),{completed:0,failed:1})
  assert.equal(f.admin.calls.find(call=>call.rpc==='finish_creator_discord_job').args.p_success,false)
- assert.equal(f.admin.calls.some(call=>call.rpc==='creator_discord_access'),false)
+ assert.equal(f.admin.calls.some(call=>call.rpc==='creator_discord_access'),true,'Local revocation is checked before a provider outage can block delivery')
 })
 test('a provider outage cannot extend a locally expired membership',async()=>{
  const f=discordVerification({outage:true,expired:true});await f.module.verifyCreatorDiscordMembership(f.admin,'integration',ids.user)

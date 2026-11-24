@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { registerGlobalCommands } from '@/lib/discord'
+import { registerCreatorDiscordCommands } from '@/lib/creatorDiscordCommands'
 import { safeApiError } from '@/lib/safeApiError'
-import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -20,18 +19,14 @@ async function requireAdmin() {
 // Must stay in sync with the `name` switch in
 // /api/discord/interactions/route.ts, or Discord will show a command this
 // route doesn't know how to answer.
-const COMMANDS = [
-  { name: 'help', description: 'List what the SlipSurge bot can do' },
-  ...(!MLB_HIBERNATING ? [{ name: 'slate', description: "Today's MLB matchups and probable pitchers" }] : []),
-]
 
 export async function POST() {
   const { error } = await requireAdmin()
   if (error) return error
 
   try {
-    const result = await registerGlobalCommands(COMMANDS)
-    return NextResponse.json({ ok: true, registered: Array.isArray(result) ? result.length : 0 })
+    const registered = await registerCreatorDiscordCommands()
+    return NextResponse.json({ ok: true, registered })
   } catch (error) {
     return safeApiError('admin-discord-register-commands', error, 'Failed to register commands')
   }

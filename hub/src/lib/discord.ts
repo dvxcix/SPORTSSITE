@@ -315,6 +315,7 @@ export async function backfillDiscordIdentitiesAndListLinkedUserIds(admin: Supab
 export function verifyDiscordSignature(signature: string | null, timestamp: string | null, rawBody: string): boolean {
   const publicKeyHex = process.env.DISCORD_PUBLIC_KEY
   if (!publicKeyHex || !signature || !timestamp) return false
+  if(!/^[0-9a-f]{128}$/i.test(signature)||!/^\d{1,12}$/.test(timestamp)||Math.abs(Date.now()/1000-Number(timestamp))>300)return false
   try {
     const keyObject = createPublicKey({
       key: { kty: 'OKP', crv: 'Ed25519', x: Buffer.from(publicKeyHex, 'hex').toString('base64url') },
@@ -331,12 +332,13 @@ export function verifyDiscordSignature(signature: string | null, timestamp: stri
 // that needs a real network call (MLB schedule, DB queries) has to defer
 // (type 5) and come back later via this webhook-style edit, which uses the
 // per-interaction token, not the bot token.
-export async function editDeferredReply(applicationId: string, token: string, payload: { content?: string; embeds?: any[] }) {
+export async function editDeferredReply(applicationId: string, token: string, payload: { content?: string; embeds?: any[]; components?:unknown[] }) {
   try {
     const res = await fetch(`${API}/webhooks/${applicationId}/${token}/messages/@original`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({...payload,allowed_mentions:{parse:[]}}),
+      signal:AbortSignal.timeout(12000),
     })
     if (!res.ok) console.error('[discord] editDeferredReply failed', { status: res.status })
   } catch (e) {

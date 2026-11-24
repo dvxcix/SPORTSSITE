@@ -1,0 +1,29 @@
+begin;
+set local role service_role;
+do $$
+declare owner_id uuid:='00000000-0000-4000-8000-000000000001';buyer uuid:='00000000-0000-4000-8000-000000000002';space uuid;other_space uuid;ids uuid[];old_job uuid;
+begin
+ insert into groups(owner_id,name,slug,access_type,is_public)values(owner_id,'Discord multi-role fixture','discord-multi-fixture','free',true) returning id into space;
+ insert into groups(owner_id,name,slug,access_type,is_public)values(owner_id,'Separate fixture','discord-other-fixture','free',true) returning id into other_space;
+ insert into group_members(group_id,user_id,role)values(space,owner_id,'owner'),(space,buyer,'member');
+ update users set discord_id='223456789012345677' where id=buyer;
+ ids:=configure_creator_discord_roles(owner_id,space,'223456789012345678','Fixture server',array['223456789012345679','223456789012345680'],array['Member','Research'],null);
+ if cardinality(ids)<>2 or (select count(*) from creator_discord_integrations where group_id=space and enabled)<>2 then raise exception 'Multiple roles were not retained';end if;
+ if (select count(*) from creator_discord_jobs where user_id=buyer and integration_id=any(ids))<>2 then raise exception 'Each role must have independent delivery';end if;
+ if not (creator_discord_access(ids[1],buyer)->>'allowed')::boolean or not (creator_discord_access(ids[2],buyer)->>'allowed')::boolean then raise exception 'Free member roles unavailable';end if;
+ begin perform configure_creator_discord_roles(buyer,space,'223456789012345678','Fixture server',array['223456789012345681'],array['Role'],null);raise exception 'Non-owner accepted';exception when insufficient_privilege then null;end;
+ begin perform configure_creator_discord_roles(owner_id,other_space,'223456789012345678','Fixture server',array['223456789012345679'],array['Role'],null);raise exception 'Cross-community role reuse accepted';exception when raise_exception then if sqlerrm='Cross-community role reuse accepted' then raise;end if;end;
+ begin perform configure_creator_discord_roles(owner_id,space,'223456789012345678','Fixture server',array['223456789012345679','223456789012345679'],array['Role','Role'],null);raise exception 'Duplicate roles accepted';exception when raise_exception then if sqlerrm='Duplicate roles accepted' then raise;end if;end;
+ begin perform configure_creator_discord_roles(owner_id,space,'223456789012345678','Fixture server',array['223456789012345679'],null,null);raise exception 'Missing role names accepted';exception when raise_exception then if sqlerrm='Missing role names accepted' then raise;end if;end;
+ update creator_discord_jobs set pending=false where integration_id=any(ids);
+ update groups set access_type='paid' where id=space;
+ if exists(select 1 from creator_discord_jobs where integration_id=any(ids) and not pending) then raise exception 'Access change did not queue rechecks';end if;
+ if (creator_discord_access(ids[1],buyer)->>'allowed')::boolean then raise exception 'Paid membership without entitlement granted';end if;
+ perform configure_creator_discord_roles(owner_id,space,'223456789012345678','Fixture server',array['223456789012345681'],array['Replacement'],null);
+ if exists(select 1 from creator_discord_integrations where id=any(ids) and enabled) then raise exception 'Old mappings remain active';end if;
+ if (select count(*) from creator_discord_jobs where user_id=buyer and integration_id=any(ids) and pending)<>2 then raise exception 'Old role revocations were lost';end if;
+ perform configure_creator_discord(owner_id,space,null,null,null,null,null);
+ if exists(select 1 from creator_discord_integrations where group_id=space and enabled) then raise exception 'Legacy disconnect did not disable all roles';end if;
+ if has_function_privilege('anon','public.configure_creator_discord_roles(uuid,uuid,text,text,text[],text[],text)','EXECUTE') or has_function_privilege('authenticated','public.configure_creator_discord_roles(uuid,uuid,text,text,text[],text[],text)','EXECUTE') then raise exception 'Browser can configure roles';end if;
+end $$;
+rollback;

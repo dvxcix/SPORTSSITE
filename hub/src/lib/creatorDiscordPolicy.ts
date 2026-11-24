@@ -1,4 +1,12 @@
 export type DiscordRole = { id: string; name: string; permissions: string; position: number; managed?: boolean }
+export const DISCORD_ID = /^\d{17,22}$/
+export const MAX_COMMUNITY_DISCORD_ROLES = 5
+export function discordGuildChoices(guilds: { id: string; name: string; icon?: string | null; owner?: boolean; permissions?: string }[]) {
+ return guilds.filter(guild => {
+  if (!DISCORD_ID.test(guild.id)) return false
+  try { return guild.owner === true || !!(BigInt(guild.permissions || '0') & BigInt(40)) } catch { return false }
+ }).map(({ id, name, icon }) => ({ id, name, icon: icon && /^[a-zA-Z0-9_]+$/.test(icon) ? `https://cdn.discordapp.com/icons/${id}/${icon}.png?size=64` : null }))
+}
 const ADMIN = BigInt(8), MANAGE_GUILD = BigInt(32), MANAGE_ROLES = BigInt(268435456)
 export function managesDiscordGuild(ownerId: string, userId: string, memberRoles: string[], roles: DiscordRole[], guildId: string) {
  if (ownerId === userId) return true

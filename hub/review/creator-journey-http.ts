@@ -60,13 +60,21 @@ export async function creatorJourneyHttp(request:NextRequest,role:ReviewRole){
   if(!user)return json({error:'Sign in to purchase access.'},401)
   return json({checkoutConfigurationId:'ch_reviewonly',url:'https://whop.com/checkout/review-only'})
  }
- if(/^\/api\/groups\/[^/]+\/discord\/claim$/.test(path))return json({ok:true})
+ if(path==='/api/admin/discord/creator-health')return json({configured:true,connected:true,name:'SlipSurge · private review',publicBot:true,requiresCodeGrant:false,interactionsReady:true,activeRoleMappings:2,pendingDeliveries:0,missingCommands:[]})
+ if(/^\/api\/groups\/[^/]+\/discord\/claim$/.test(path))return json({ok:true,connected:true,ready:request.method==='POST',guildName:'NBA Lounge',roles:['Court members','Research'],inviteUrl:null})
+ if(/^\/api\/groups\/[^/]+\/discord\/actions$/.test(path)){
+  const body=await request.json()
+  if(body.action==='channels')return json({channels:[{id:'123456789012345688',name:'member-access'},{id:'123456789012345689',name:'general'}]})
+  if(body.action==='create_role')return json({role:{id:'123456789012345690',name:body.name}})
+  return json({ok:true,url:'https://discord.com/channels/123456789012345678/123456789012345688/123456789012345691'})
+ }
  if(/^\/api\/groups\/[^/]+\/discord$/.test(path)){
   const groupId=path.split('/')[3]
-  if(request.method==='GET'&&request.nextUrl.searchParams.has('guildId'))return json({guildId:request.nextUrl.searchParams.get('guildId'),guildName:'NBA Lounge',roles:[{id:'123456789012345679',name:'Court members'}]})
-  if(request.method==='GET')return json({configured:true,applicationId:null,integration:table('creator_discord_integrations').find(row=>row.group_id===groupId&&row.enabled)||null})
-  if(request.method==='POST'){const body=await request.json();const row=table('creator_discord_integrations').find(row=>row.group_id===groupId);if(row)Object.assign(row,{guild_id:body.guildId,role_id:body.roleId,invite_url:body.inviteUrl,enabled:true});return json({ok:true})}
-  if(request.method==='DELETE'){const row=table('creator_discord_integrations').find(row=>row.group_id===groupId);if(row)row.enabled=false;return json({ok:true})}
+  if(request.method==='GET'&&request.nextUrl.searchParams.has('servers'))return json({servers:[{id:'123456789012345678',name:'NBA Lounge'},{id:'123456789012345687',name:'My NFL server'}]})
+  if(request.method==='GET'&&request.nextUrl.searchParams.has('guildId'))return json({guildId:request.nextUrl.searchParams.get('guildId'),guildName:'NBA Lounge',canCreateRoles:true,roles:[{id:'123456789012345679',name:'Court members'},{id:'123456789012345680',name:'Research'}]})
+  if(request.method==='GET'){const integrations=table('creator_discord_integrations').filter(row=>row.group_id===groupId&&row.enabled);return json({configured:true,connected:true,installUrl:null,integrations,integration:integrations[0]||null})}
+  if(request.method==='POST'){const body=await request.json();table('creator_discord_integrations').filter(row=>row.group_id===groupId).forEach(row=>row.enabled=false);for(const id of body.roleIds||[])table('creator_discord_integrations').push({id:crypto.randomUUID(),group_id:groupId,guild_id:body.guildId,guild_name:'NBA Lounge',role_id:id,role_name:id==='123456789012345679'?'Court members':id==='123456789012345680'?'Research':'New role',invite_url:body.inviteUrl||null,enabled:true});return json({ok:true})}
+  if(request.method==='DELETE'){table('creator_discord_integrations').filter(row=>row.group_id===groupId).forEach(row=>row.enabled=false);return json({ok:true})}
  }
  if(path==='/api/review/mutation'&&request.method==='POST'){
   if(!user)return json({error:'Sign in required.'},401)

@@ -1,0 +1,11 @@
+Creator-owned Discord access, 24 November 2026
+
+Reading this as: community access setup for SlipSurge creators and members, using the existing Studio visual language. ENERGY 1 / RHYTHM 2 / MOTION 1.
+
+Creator setup intent: authorize an account, choose a real server, map safe member roles, then optionally publish a connect panel. The server/role choice leads, rather than raw identifiers. Existing button and dialog primitives retain the site's behavior. One quiet green accent marks the current action and confirmed access. Neutral surface steps provide depth without decorative shadows. Existing typeface: 18px/650 heading, 14px/600 step names, 13px supporting text. Four-pixel spacing grid, 12–16px control groups, 24px between setup steps. Native selects and checkboxes preserve keyboard/mobile access. All controls have 44px targets.
+
+Member claim intent: join the correct server and verify only this community's membership. A single primary connect/claim action leads. Server and role names remain visible, including pending/error/expiry states. The same token palette, type hierarchy, spacing and surface treatment apply. No private membership/role identifiers are public.
+
+Business admin intent: show actual bot installation/command readiness and creator delivery counts without revealing credentials. Existing administration controls, typography and status colors apply. Details are read-only until the administrator deliberately registers supported commands.
+
+Implementation and release evidence will be appended after verification. No financial or sports-data behavior is part of this change.

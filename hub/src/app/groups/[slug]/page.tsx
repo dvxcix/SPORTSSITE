@@ -47,9 +47,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function GroupPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ setup?: string; channel?: string; view?: string }> }) {
+export default async function GroupPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ setup?: string; channel?: string; view?: string; discord?:string }> }) {
   const { slug } = await params
-  const { setup, channel: requestedChannel, view } = await searchParams
+  const { setup, channel: requestedChannel, view, discord } = await searchParams
   const supabase = await createClient()
   const [{ data: { user }, error: authError }, { data: group }] = await Promise.all([
     supabase.auth.getUser(),
@@ -127,7 +127,8 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
       : Promise.resolve({ data: [], error: null }),
   ])
 
-  const {data:discordAccess}=isMember?await createAdminClient().from('creator_discord_integrations').select('guild_name,role_name,invite_url').eq('group_id',group.id).eq('enabled',true).maybeSingle():{data:null}
+  const {data:discordRoles}=isMember?await createAdminClient().from('creator_discord_integrations').select('guild_name,role_name,invite_url').eq('group_id',group.id).eq('enabled',true).order('created_at'):{data:null}
+  const discordAccess=discordRoles?.[0]
   const workspaceChannels = (groupChannels ?? []) as GroupWorkspaceChannel[]
   const activeChannel = workspaceChannels.find(item => item.slug === requestedChannel)
     ?? workspaceChannels.find(item => item.id === group.channel_id)
@@ -249,7 +250,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
       </div>
 
       <div className={styles.divider} />
-      {isMember&&discordAccess&&<details className={styles.discord}><summary>Discord access</summary><CreatorDiscordClaim groupId={group.id} slug={group.slug} guildName={discordAccess.guild_name} roleName={discordAccess.role_name} inviteUrl={discordAccess.invite_url}/></details>}
+      {isMember&&discordAccess&&<details className={styles.discord} open={discord==='connect'||discord==='claim'}><summary>Discord access</summary><CreatorDiscordClaim groupId={group.id} slug={group.slug} guildName={discordAccess.guild_name} roleName={discordRoles!.map(role=>role.role_name).join(' · ')} inviteUrl={discordAccess.invite_url}/></details>}
 
       {!canViewContent ? (
         <div className={styles.locked}>

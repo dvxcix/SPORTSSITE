@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Switch as Toggle } from '@/components/ui/Switch'
 import type { DiscordConfig } from '@/lib/supabase/types'
+import { CreatorDiscordHealth } from '@/components/creator/CreatorDiscordHealth'
 import { useFeedback } from '@/components/ui/FeedbackProvider'
 
 const ALERT_TYPES: { key: 'lineup_confirmed' | 'hr' | 'near_hr' | 'slate' | 'pipeline_health'; label: string; live: boolean }[] = [
@@ -228,6 +229,7 @@ export function DiscordBotManager({ initialConfig }: { initialConfig: DiscordCon
   return (
     <div className="space-y-6">
       {error && <div className="bg-[color-mix(in_srgb,var(--red)_10%,transparent)] border border-[color-mix(in_srgb,var(--red)_20%,transparent)] rounded-xl px-4 py-3 text-sm text-[var(--red)]">{error}</div>}
+      <CreatorDiscordHealth/>
 
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 space-y-3">
         <p className="text-sm font-bold text-[var(--text-1)]">MLB slate command</p>
