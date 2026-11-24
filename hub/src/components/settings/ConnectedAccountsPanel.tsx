@@ -1,12 +1,12 @@
 'use client'
 
-import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AtSign, BadgeCheck, Check, ExternalLink, Loader2, Link2, Unlink, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { extractIdentityHandle, type VerifiedIdentity } from '@/lib/verifiedIdentity'
 import { DiscordLogo, DISCORD_BRAND } from '@/components/brand/DiscordLogo'
+import { WhopLogo } from '@/components/brand/WhopLogo'
 
 type Provider = 'whop' | 'discord' | 'x'
 
@@ -25,7 +25,7 @@ const providers: Array<{
 
 function ProviderMark({ provider }: { provider: Provider }) {
   if (provider === 'whop') {
-    return <Image src="/brands/whop-logo.svg" alt="Whop" width={114} height={25} className="ss-connection-whop-logo" />
+    return <WhopLogo/>
   }
   if (provider === 'x') return <span className="ss-connection-x-logo" aria-label="X">𝕏</span>
   return (

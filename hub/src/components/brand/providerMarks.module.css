@@ -1,0 +1,4 @@
+.whop { display:inline-flex; align-items:center; gap:6px; color:var(--text-1); }
+.whop > span { display:block; width:26px; height:21px; overflow:hidden; flex:none; }
+.whop img { width:92px; height:21px; max-width:none; }
+.whop strong { font-size:17px; font-weight:700; letter-spacing:-.025em; }

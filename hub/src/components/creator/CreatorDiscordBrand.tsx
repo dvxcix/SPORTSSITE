@@ -1,5 +1,5 @@
 import { Check, Hash } from 'lucide-react'
-import Image from 'next/image'
+import { WhopLogo } from '@/components/brand/WhopLogo'
 import { DiscordLogo } from '@/components/brand/DiscordLogo'
 import styles from './creatorDiscord.module.css'
 
@@ -24,5 +24,5 @@ export function DiscordAccountIdentity({ handle }: { handle?: string | null }) {
 }
 
 export function WhopInlineMark() {
-  return <span className={styles.whopMark}><span><Image src="/brands/whop-logo.svg" alt="" width={92} height={21}/></span><strong>Whop</strong></span>
+  return <WhopLogo/>
 }

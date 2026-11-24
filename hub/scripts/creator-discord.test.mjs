@@ -280,6 +280,7 @@ async function setupUI(options={},run){
  const stub=(tag)=>(props)=>React.createElement(tag,props,props.children)
  const imports={'react':React,'react/jsx-runtime':jsx,'next/link':{default:stub('a')},'next/image':{default:stub('img')},'lucide-react':{Check:()=>null,ExternalLink:()=>null,Hash:()=>null,Users:()=>null,RefreshCw:()=>null},'@/components/ui/SafeImage':{SafeImage:({fallback,...props})=>props.src?React.createElement('img',props):fallback},'@/components/ui/button':{Button:({variant,...props})=>React.createElement('button',props)},'@/components/ui/FeedbackProvider':{useFeedback:()=>({confirm:async()=>true})},'./creatorDiscordClient':client,'@/lib/creatorDiscordPolicy':policy,'./creatorDiscord.module.css':{default:{}}}
  imports['@/components/brand/DiscordLogo']=compile('src/components/brand/DiscordLogo.tsx',imports)
+ imports['@/components/brand/WhopLogo']=compile('src/components/brand/WhopLogo.tsx',{...imports,'./providerMarks.module.css':{default:{}}})
  imports['./CreatorDiscordBrand']=compile('src/components/creator/CreatorDiscordBrand.tsx',imports)
  const summary=compile('src/components/creator/CreatorDiscordClaim.tsx',imports)
  const {CreatorDiscordSetup}=compile('src/components/creator/CreatorDiscordSetup.tsx',{...imports,'./CreatorDiscordClaim':summary})
