@@ -5,6 +5,7 @@ import { creatorDiscordOwner, requireDiscordSameOrigin } from '@/lib/creatorDisc
 import { MAX_COMMUNITY_DISCORD_ROLES } from '@/lib/creatorDiscordPolicy'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { safeApiError } from '@/lib/safeApiError'
+import { extractIdentityHandle } from '@/lib/verifiedIdentity'
 
 const headers={'Cache-Control':'private, no-store'}
 export const maxDuration=120
@@ -27,7 +28,9 @@ export async function GET(request:Request,context:Context){
   if(error)throw error
   const product=group.creator_product_id?await admin.from('creator_products').select('title,status').eq('id',group.creator_product_id).eq('creator_id',user.id).maybeSingle():{data:null,error:null}
   if(product.error)throw product.error
-  return NextResponse.json({configured:creatorDiscordConfigured(),applicationId:process.env.DISCORD_APPLICATION_ID||null,connected:!!discordId,installUrl:creatorBotInvite(),integrations:data||[],integration:data?.[0]||null,access:{name:group.name,slug:group.slug,type:group.access_type,product:product.data}},{headers})
+  const identity=user.identities?.find(item=>item.provider==='discord')
+  const accountHandle=discordId&&identity?extractIdentityHandle('discord',identity.identity_data||{})?.handle||null:null
+  return NextResponse.json({configured:creatorDiscordConfigured(),applicationId:process.env.DISCORD_APPLICATION_ID||null,connected:!!discordId,accountHandle,installUrl:creatorBotInvite(),integrations:data||[],integration:data?.[0]||null,access:{name:group.name,slug:group.slug,type:group.access_type,product:product.data}},{headers})
  }catch(cause){return failure(cause)}
 }
 export async function POST(request:Request,context:Context){

@@ -1,0 +1,26 @@
+Creator Discord branding correction, 24 November 2026
+
+Owner target: bring the creator setup and member claim cards up to the existing Connected Accounts treatment, including the Discord logo. This is a targeted visual correction within the existing Creator Studio dialog and community Discord card. Account/role authorization, routes, memberships, server actions, existing site tokens and tools are preserved.
+
+Baseline: the published guided flow was functional but used text headings and plain status rows. Connected Accounts already displayed provider marks, recognizable identity blocks, status badges and grouped actions. The actual live settings page and creator setup were inspected before editing. Source baseline: 808389c10555359dbfb806ef8bfd4d9d40f0547a.
+
+Reference direction
+- Whop connected accounts: logo, service name and associated action are grouped in one row. https://mobbin.com/screens/303640d3-33ad-4250-99a0-efcaff026489
+- Linear connected accounts: bounded service rows group the logo, explanation and connection action. Used for row structure only, not its developer-product styling. https://mobbin.com/screens/3b7417c7-551f-4935-890f-4788e4d8d334
+- Squarespace's logo chooser and Otter's integration catalogue were inspected but not used as the layout direction.
+
+One visual move: reuse SlipSurge's provider identity treatment throughout this connection flow. The same existing Discord SVG and brand colors are extracted into a shared component used by settings, creator setup and member claim. The setup has a provider header, connected-account identity block, server identity, readable role chips and provider-colored connection action. Actual available server icons use the existing resilient image component. Member preview and claim share the same header and role tags. The paid access view uses the existing Whop logo asset beside its actual connected product title. The header's supporting copy is shortened to “Connect your server and manage member roles.”
+
+Design details: accepted Studio typeface and neutral surfaces remain; Discord color identifies Discord actions; green means verified/saved access. The provider emblem supplies a small amount of depth. Cards group account, server and role decisions. Metadata wraps on phones; role names remain readable. Existing account settings layout and connection actions remain intact after the logo extraction. No new artwork, package or font is introduced. ENERGY 1 / RHYTHM 2 / MOTION 1.
+
+Verification
+- 225/225 Discord, creator commerce/storefront, production source and Discord entitlement/retirement checks pass.
+- Focused lint and TypeScript pass. Existing known unrelated auth-fixture failures from the original release remain separately documented; this is not full-site certification.
+- Actual component review at 1440, 390 and 320px in Light/Dark: all three creator views passed 18 settled layout observations without document overflow. Phone controls met 44px; the shared desktop close control retains 40px.
+- Selected and saved multiple member roles with the keyboard; preview shows the saved roles. The member-entry link opens the actual community card. The fixture claim completes with Roles synced and Check access. No live Discord actions occurred in these fixture tests.
+- Both the provider mark and identity card use existing site patterns. Empty preview includes the Discord mark and a functional return to setup; existing loading/error/disabled behavior remains available.
+- Console errors: none in the reviewed private app surfaces. Local dev compilation and browser command timing were observed; completion was checked from the final rendered state rather than inferred from a click.
+
+Craft gate: provider marks, role tags, accessible labels, readable wrapping, bounded dialogs and both themes inspected. Purpose gate: service color identifies connection actions and green identifies verified state. Existing community/product data remains real, with labeled fixtures confined to private review. The member and creator cards share their presentation component.
+
+Publication: prepared and verified locally; production build and live visual checks follow. No schema, fee or secret changes are required. External authorization/real member role grant tests retain the original release's consent boundary.

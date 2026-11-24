@@ -258,9 +258,9 @@ test('server inspection blocks a bot without Manage Roles before offering any ro
 test('setup access context reads only the owned community’s bound product',async()=>{
  for(const paid of [false,true]){
   const admin=database(call=>({data:call.table==='creator_products'?{title:'Weekend research',status:'active'}:[],error:null}))
-  const route=compile('src/app/api/groups/[groupId]/discord/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/creatorDiscord':{...coreFixture().core,creatorDiscordIdentity:async()=>discordId,creatorDiscordConfigured:()=>true,creatorBotInvite:()=>null},'@/lib/creatorDiscordAccount':{},'@/lib/creatorDiscordOwner':{creatorDiscordOwner:async()=>({admin,user:{id:user},group:{name:'Club',slug:'club',access_type:paid?'paid':'free',creator_product_id:paid?'product':null}})},'@/lib/creatorDiscordPolicy':policy,'@/lib/serverRateLimit':{},'@/lib/safeApiError':{safeApiError:()=>Response.json({error:'failed'},{status:502})}},{process:{env:{}}})
+  const route=compile('src/app/api/groups/[groupId]/discord/route.ts',{'next/server':{NextResponse:{json:Response.json}},'@/lib/creatorDiscord':{...coreFixture().core,creatorDiscordIdentity:async()=>discordId,creatorDiscordConfigured:()=>true,creatorBotInvite:()=>null},'@/lib/creatorDiscordAccount':{},'@/lib/creatorDiscordOwner':{creatorDiscordOwner:async()=>({admin,user:{id:user,identities:[{provider:'discord',identity_data:{full_name:'club.owner',provider_id:discordId}}]},group:{name:'Club',slug:'club',access_type:paid?'paid':'free',creator_product_id:paid?'product':null}})},'@/lib/creatorDiscordPolicy':policy,'@/lib/serverRateLimit':{},'@/lib/verifiedIdentity':compile('src/lib/verifiedIdentity.ts'),'@/lib/safeApiError':{safeApiError:()=>Response.json({error:'failed'},{status:502})}},{process:{env:{}}})
   const result=await route.GET(new Request('https://www.slipsurge.com/api/setup'),{params:Promise.resolve({groupId:group})})
-  assert.equal(result.status,200);const data=await result.json();assert.equal(data.access.type,paid?'paid':'free')
+  assert.equal(result.status,200);const data=await result.json();assert.equal(data.access.type,paid?'paid':'free');assert.equal(data.accountHandle,'club.owner')
   const product=admin.calls.find(call=>call.table==='creator_products')
   if(paid){assert.deepEqual(product.filters,[['eq','id','product'],['eq','creator_id',user],['maybeSingle']]);assert.equal(data.access.product.title,'Weekend research')}else{assert.equal(product,undefined);assert.equal(data.access.product,null)}
  }
@@ -278,7 +278,9 @@ async function setupUI(options={},run){
   return {configured:true,connected:!options.unlinked,installUrl:'https://discord.com/oauth2/authorize?client_id='+bot,integrations:options.saved?[integration]:[],access:{name:'Club',slug:'club',type:'paid',product:{title:'Weekend research',status:'active'}}}
  }}
  const stub=(tag)=>(props)=>React.createElement(tag,props,props.children)
- const imports={'react':React,'react/jsx-runtime':jsx,'next/link':{default:stub('a')},'lucide-react':{Check:()=>null,ExternalLink:()=>null,Link2:()=>null,RefreshCw:()=>null},'@/components/ui/button':{Button:({variant,...props})=>React.createElement('button',props)},'@/components/ui/FeedbackProvider':{useFeedback:()=>({confirm:async()=>true})},'./creatorDiscordClient':client,'@/lib/creatorDiscordPolicy':policy,'./creatorDiscord.module.css':{default:{}}}
+ const imports={'react':React,'react/jsx-runtime':jsx,'next/link':{default:stub('a')},'next/image':{default:stub('img')},'lucide-react':{Check:()=>null,ExternalLink:()=>null,Hash:()=>null,Users:()=>null,RefreshCw:()=>null},'@/components/ui/SafeImage':{SafeImage:({fallback,...props})=>props.src?React.createElement('img',props):fallback},'@/components/ui/button':{Button:({variant,...props})=>React.createElement('button',props)},'@/components/ui/FeedbackProvider':{useFeedback:()=>({confirm:async()=>true})},'./creatorDiscordClient':client,'@/lib/creatorDiscordPolicy':policy,'./creatorDiscord.module.css':{default:{}}}
+ imports['@/components/brand/DiscordLogo']=compile('src/components/brand/DiscordLogo.tsx',imports)
+ imports['./CreatorDiscordBrand']=compile('src/components/creator/CreatorDiscordBrand.tsx',imports)
  const summary=compile('src/components/creator/CreatorDiscordClaim.tsx',imports)
  const {CreatorDiscordSetup}=compile('src/components/creator/CreatorDiscordSetup.tsx',{...imports,'./CreatorDiscordClaim':summary})
  const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
