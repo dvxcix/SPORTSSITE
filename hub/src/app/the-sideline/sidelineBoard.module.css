@@ -1258,7 +1258,7 @@
 .boardSections{margin:12px 0 8px}
 .page[data-nfl-workspace] .roleTabs{gap:4px;padding:5px;background:var(--surface);border-radius:9px}
 .page[data-nfl-workspace] .roleTabs button{padding-inline:12px}
-.page[data-nfl-workspace] .storyGrid{display:grid;grid-template-columns:1.2fr 1fr 1.2fr 1.4fr;margin-block:12px;border-radius:10px;background:var(--surface)}
+.page[data-nfl-workspace] .storyGrid{display:grid;grid-template-columns:1.2fr 1fr 1.8fr;margin-block:12px;border-radius:10px;background:var(--surface)}
 .page[data-nfl-workspace] .storyGrid>article{min-height:92px;padding:12px;min-width:0;background:transparent}
 .page[data-nfl-workspace] .storyGrid small{font-size:10px;letter-spacing:0;font-weight:500;color:var(--text-2)}
 .page[data-nfl-workspace] .storyGrid strong{font-size:13px;line-height:1.4;font-weight:600;overflow-wrap:anywhere}
