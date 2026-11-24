@@ -46,4 +46,22 @@ Design and verification
 - Existing legacy freeze-suite mock failures remain as recorded in the previous
   QB scorer audit; this is not a claim that every repository test passes.
 
-Production receipt and final live checks follow after rollout.
+Production receipt
+- Functional source b588dea1 plus 0cd94f08 / 6975df1c / 25eec758.
+  GitHub main 25eec75898258dbd5c801ef4cf0f255f026c2e0d deployed as
+  dpl_Bpdhzf5xMQgWhrVhhSDfsuth1xKS, READY on www.slipsurge.com/slipsurge.com.
+- Live IND/HOU member view matches the saved pregame observation: 121,937
+  picks, $4.9M wagers, moneyline bets 19/81 and money 12/88. Spread and Total
+  each have their own observed bets/money bars. Prices retain separate times.
+- Anonymous one-game overview returns 200 JSON for CIN/WAS. A cross-game guest
+  request returns 403. An older replay returns overview:null. Anonymous member
+  resource access redirects 307 to sign-in rather than returning research data.
+- Actual old-frame browser test selected Nov 15 prices and correctly showed
+  public activity unavailable, then recovered the recorded latest split.
+- Last full release suite passes 227/227; final layout subset passes 171/171.
+  Production optimized build/TypeScript pass; focused lint passes. Existing
+  tools, player drawers, sample selectors, watchlist and capture replay retained.
+- Live browser console and new-deployment error/fatal log scan were clean in
+  the short post-release verification window. Original browser viewport and
+  previous NBA preview restored; reported NFL member game remains available.
+- No jobs/captures/replays, database mutations, payments or formula changes.
