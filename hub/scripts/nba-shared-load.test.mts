@@ -379,7 +379,7 @@ test('a stale research board cannot carry stale player or game prices into a new
   const old = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -200 } } as paint.PaintProp
   const provider = await compiled<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => game.date }, './nbaOddsHistory': { nbaAttachOpenings },
-    './nbaBookPropsData':{getNbaBookPropEntries:async()=>[],nbaBookPropsSupplement:()=>({props:[],complete:true})},
+    './nbaBookPropsData':{getNbaBookPropEntries:async()=>[],nbaBookLastSeen:()=>({rows:[],truncated:false}),nbaBookPropsSupplement:()=>({props:[],complete:true})},
     './nbaPrimaryProps': primaryProps, './nbaSupplementalProps': { nbaSupplementalQuote: (quote: { id: number }) => quote.id <= -1_000_000_000_000, getNbaSupplementalProps: async () => ({ props: [], complete: true, accepted: 0, unmatched: 0, stale: 0, eventMatched: true, applicable: true, observedAt: new Date().toISOString(), quota: null }), nbaMergePropSources: (primary: paint.PaintProp[], supplemental: paint.PaintProp[]) => [...primary, ...supplemental] },
     './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaFirstBasketOddsData': { getNbaFirstOddsForMode: async () => { throw Error('fixture') } },
     './nbaOddsMode': { ...oddsMode, nbaPregameOpen: () => true }, './nbaOddsPhaseData': {}, './nbaOddsClockData': { getNbaOddsGame: async (game: paint.PaintGame) => game },
@@ -401,7 +401,7 @@ test('cold board research finishes before current quote reads begin', async () =
   const offer = { game_id: 123, player_id: 434, prop_type: 'points', vendor: 'fanduel', line_value: '15', market: { type: 'milestone', odds: -110 }, updated_at: new Date(now).toISOString() } as paint.PaintProp
   const provider = await compiled<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts', {
     'server-only': {}, 'node:crypto': crypto, '@/lib/balldontlie': { bdlHeaders: {} }, './nbaPaint': { ...paint, nbaToday: () => game.date }, './nbaOddsHistory': { nbaAttachOpenings },
-    './nbaBookPropsData':{getNbaBookPropEntries:async()=>[],nbaBookPropsSupplement:()=>({props:[],complete:true})},
+    './nbaBookPropsData':{getNbaBookPropEntries:async()=>[],nbaBookLastSeen:()=>({rows:[],truncated:false}),nbaBookPropsSupplement:()=>({props:[],complete:true})},
     './nbaPrimaryProps': primaryProps, './nbaSupplementalProps': { nbaSupplementalQuote: (quote: { id: number }) => quote.id <= -1_000_000_000_000, getNbaSupplementalProps: async () => ({ props: [], complete: true, accepted: 0, unmatched: 0, stale: 0, eventMatched: true, applicable: true, observedAt: new Date().toISOString(), quota: null }), nbaMergePropSources: (primary: paint.PaintProp[], supplemental: paint.PaintProp[]) => [...primary, ...supplemental] },
     './nbaOddsHistoryData': { getNbaQuoteOpenings: async () => [] }, './nbaFirstBasketOddsData': { getNbaFirstOddsForMode: async () => ({ rows: [] }) },
     './nbaOddsMode': { ...oddsMode, nbaPregameOpen: () => true }, './nbaOddsPhaseData': {}, './nbaOddsClockData': { getNbaOddsGame: async (game: paint.PaintGame) => game },
@@ -418,6 +418,27 @@ test('cold board research finishes before current quote reads begin', async () =
   const board = await provider.getPaintBoard(game)
   assert.equal(priceReads, 2)
   assert.equal(board.players[0].props[0].market.odds, -110)
+})
+
+test('last observed prices are opt-in, use existing cache reads, and never enter live or player props',async()=>{
+  const now=Date.parse('2026-10-20T12:00:00Z'),game={id:123,date:'2026-10-20',season:2026,datetime:'2026-10-20T23:00:00Z',status:'Scheduled',status_state:'scheduled',period:0} as paint.PaintGame
+  let directReads=0
+  const historical={rows:[{playerId:434,vendor:'betmgm',market:'points',line:20,type:'milestone',side:'over',odds:150,observedAt:'2026-10-20T10:00:00.000Z'}],truncated:false}
+  const provider=await compiled<typeof import('../src/lib/nbaPaintData.ts')>('../src/lib/nbaPaintData.ts',{
+    'server-only':{},'node:crypto':crypto,'@/lib/balldontlie':{bdlHeaders:{}},'./nbaPaint':paint,'./nbaOddsHistory':{nbaAttachOpenings},
+    './nbaBookPropsData':{getNbaBookPropEntries:async()=>{directReads++;return[]},nbaBookLastSeen:()=>historical,nbaBookPropsSupplement:()=>({props:[],complete:true})},
+    './nbaPrimaryProps':primaryProps,'./nbaSupplementalProps':{nbaSupplementalQuote:()=>false},
+    './nbaOddsHistoryData':{getNbaQuoteOpenings:async()=>[]},'./nbaFirstBasketOddsData':{},
+    './nbaOddsMode':{...oddsMode,nbaPregameOpen:()=>true},'./nbaOddsPhaseData':{},'./nbaOddsClockData':{getNbaOddsGame:async(g:paint.PaintGame)=>g},
+    './nbaSharedCache':{nbaSharedCache:async()=>({value:{props:[],gameOdds:[],firstBasket:[],observedAt:new Date(now).toISOString(),issues:[]}})},
+  },{Date:class extends Date{static now(){return now}}})
+  const board={game,players:[{id:434,props:[]}],issues:[]} as unknown as paint.PaintBoard
+  const ordinary=await provider.refreshPaintBoardPrices(board,'pregame')
+  assert.equal(directReads,0);assert.equal(ordinary.lastSeenBook,undefined)
+  const display=await provider.refreshPaintBoardPrices(board,'pregame',true)
+  assert.equal(directReads,1);assert.deepEqual(display.lastSeenBook,historical);assert.deepEqual(display.players[0].props,[])
+  const live=await provider.refreshPaintBoardPrices(board,'live',true)
+  assert.equal(directReads,1);assert.equal(live.lastSeenBook,undefined)
 })
 
 test('concurrent member pick submissions share public validation inputs but still reject a different exact saved price', async () => {

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('game')
   if (!id || !/^\d{1,10}$/.test(id)) return NextResponse.json({ error: 'Choose a matchup' }, { status: 400 })
   try {
-    const board=await getPaintBoard(await getPaintGame(Number(id)), mode)
+    const board=await getPaintBoard(await getPaintGame(Number(id)), mode,{includeLastSeen:mode==='pregame'&&request.nextUrl.searchParams.get('lastSeen')==='1'})
     // Cosmetic fetch/provider timestamps must not resend unchanged historical
     // samples. Every economic quote, identity, stat and coverage flag is hashed.
     const etag='W/"'+createHash('sha256').update(JSON.stringify(board,(key,value)=>key==='fetchedAt'||key==='updated_at'?undefined:value)).digest('hex')+'"'

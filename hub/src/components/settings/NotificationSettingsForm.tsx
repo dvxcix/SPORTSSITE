@@ -35,7 +35,7 @@ const TIMEZONES = [
 
 export function NotificationSettingsForm({ settings, deliverySettings }: { settings: Record<string, boolean>; deliverySettings: NotificationDeliverySettings }) {
   const expected = useRef({
-    notification_settings: Object.fromEntries(SETTINGS.flatMap(item => [item.key, `${item.key}_email`]).filter(key => Object.hasOwn(settings, key)).map(key => [key, settings[key]])),
+    notification_settings: Object.fromEntries([...SETTINGS.flatMap(item => [item.key, `${item.key}_email`]), '_email_suppression_revision'].filter(key => Object.hasOwn(settings, key)).map(key => [key, settings[key]])),
     notification_delivery_settings: Object.fromEntries(['quiet_hours_enabled', 'quiet_start', 'quiet_end', 'timezone', 'live_game_priority'].filter(key => Object.hasOwn(deliverySettings, key)).map(key => [key, deliverySettings[key as keyof NotificationDeliverySettings]])),
   })
   const saveInFlight = useRef(false)

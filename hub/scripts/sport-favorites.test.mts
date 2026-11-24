@@ -164,15 +164,16 @@ test('onboarding persists MLB, NFL and NBA favorites for every account tier', as
     const imports: Record<string, unknown> = {
       'next/server': { NextResponse: { json: (body: unknown, options?: { status?: number }) => ({ body, status: options?.status ?? 200 }) } },
       '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'owner' } } }) } }) },
-      '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: profile }) }) }), update: (value: Record<string, unknown>) => ({ eq: async () => { saved = value; return { error: null } } }) }) }) },
+      '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: profile }) }) }) }), rpc: async (_name: string, value: { p_changes: Record<string, unknown> }) => { saved = value.p_changes; return { data: true, error: null } } }) },
       '@/lib/nbaAccessPolicy': { hasNbaAccess }, '@/lib/sportFavorites': favorites,
       '@/lib/mlbOffseason': { MLB_HIBERNATING: true },
       '@/lib/favoriteCatalog': { getFavoriteCatalog: async () => catalog },
       '@/lib/safeApiError': { safeApiError: () => ({ status: 500 }) },
+      '@/lib/onboardingBaseline': { onboardingBaseline: () => 'a'.repeat(64) },
     }
     const mod = { exports: {} as { POST: (request: Request) => Promise<{ status: number }> } }
     new Function('require', 'exports', 'module', compiled)((key: string) => { assert.ok(key in imports, key); return imports[key] }, mod.exports, mod)
-    const result = await mod.exports.POST(new Request('https://example.com/api/account/onboarding', { method: 'POST', body: JSON.stringify({ displayName: 'Owner', teams: ['NYY', 'NFL:ATL', 'NBA:1'], favoritePlayers: [mlb, nfl, nba] }) }))
+    const result = await mod.exports.POST(new Request('https://example.com/api/account/onboarding', { method: 'POST', body: JSON.stringify({ initialBaseline: 'a'.repeat(64), displayName: 'Owner', teams: ['NYY', 'NFL:ATL', 'NBA:1'], favoritePlayers: [mlb, nfl, nba] }) }))
     assert.equal(result.status, 200)
     assert.ok(saved)
     const values = saved as Record<string, unknown>

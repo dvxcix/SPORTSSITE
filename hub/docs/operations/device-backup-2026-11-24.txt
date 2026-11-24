@@ -1,0 +1,19 @@
+PC source checkpoint, 24 November 2026
+
+This branch saves the 21 tracked local edits from the original PC checkout of
+codex/research-data-performance, baseline d8ed0cb7. It is an unfinished-work
+backup for cross-device recovery, not an approved release or current-main branch.
+No attempt was made to merge it with current production. Review/reconcile each
+change against current main before continuing or releasing any part of it.
+
+The original checkout and its files remain untouched. Copies were verified by
+file hash before staging. A high-confidence token/private-key pattern screen
+found no matches in these source files; this is not a comprehensive secret audit.
+No environment files, browser credentials, generated artifacts, untracked files
+or local Codex conversation databases are included. Other historical worktrees
+are not assumed to be fully backed up. Keep a private machine backup before
+retiring or wiping the original PC.
+
+Areas saved: NBA data loading/UI and their tests, onboarding and account
+preferences/tests, notification-email and webhook source. These edits have not
+been certified against current main and must not be treated as production-ready.

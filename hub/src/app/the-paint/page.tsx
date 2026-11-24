@@ -18,7 +18,7 @@ export default async function PaintPage({ searchParams }: { searchParams: Promis
   const data = await (async () => { try {
     const schedule = await getPaintSchedule(typeof params.date === 'string' ? params.date : undefined)
     const selected = schedule.games.find(g => String(g.id) === params.game) ?? schedule.games[0]
-    const board = selected ? await getPaintBoard(selected, mode) : null
+    const board = selected ? await getPaintBoard(selected, mode, {includeLastSeen:mode==='pregame'&&params.view==='odds'}) : null
     return { schedule, board, selected }
   } catch(error) { console.error('[The Court] page unavailable',{reason:error instanceof Error&&/^NBA /.test(error.message)?error.message.slice(0,180):'NBA source request failed'});return null } })()
   if (!data) return <section className={styles.empty}><span>NBA</span><h1>The Court</h1><p>NBA data is temporarily unavailable.</p><a href={retry}>Try again</a></section>

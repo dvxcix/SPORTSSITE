@@ -5,6 +5,7 @@ import { nbaGameStart, nbaPregameOpen, nbaQuoteInMode } from './nbaOddsMode'
 import { nbaValidOdds } from './nbaOddsHistory'
 import { PAINT_MARKETS, type PaintGame, type PaintProp } from './nbaPaint'
 import { nbaCurrentBookQuotes, type NbaCurrentBookResult } from './nbaBookCurrent'
+import { nbaLastSeenBookQuotes } from './nbaLastSeenBookQuotes'
 
 export type NbaBookPropContract = { market: string; type: 'milestone' | 'over_under'; line: number }
 export type NbaBookPropFrame = { gameId: number; book: 'betmgm'; tipoff: string; contract: NbaBookPropContract; observedAt: string; props: PaintProp[]; complete: boolean }
@@ -129,6 +130,19 @@ export function nbaBookPropsSupplement(game:PaintGame,primary:PaintProp[],entrie
   }
   const result=nbaCurrentBookQuotes(game,primary,frames,now)
   return{...result,complete:complete&&result.complete}
+}
+
+/** Project only verified cache identities. Complete empty frames remain empty;
+ * incomplete frames retain each quote's original time and are never current. */
+export function nbaBookLastSeen(game:PaintGame,current:PaintProp[],entries:{key:string;payload:unknown}[],now=Date.now()){
+  if(!nbaPregameOpen(game,now))return {rows:[],truncated:false}
+  const counts=new Map<string,number>(),quotes:PaintProp[]=[]
+  for(const entry of entries)counts.set(entry.key,(counts.get(entry.key)??0)+1)
+  for(const entry of entries){
+    if(counts.get(entry.key)!==1||!nbaValidBookPropFrame(entry.payload,game)||entry.key!==nbaBookPropKey(game,entry.payload.contract)||Date.parse(entry.payload.observedAt)>now)continue
+    quotes.push(...entry.payload.props)
+  }
+  return nbaLastSeenBookQuotes(quotes,current,game.id,now)
 }
 
 export async function getNbaBookPropEntries(game:PaintGame,fresh=false):Promise<{key:string;payload:unknown}[]>{

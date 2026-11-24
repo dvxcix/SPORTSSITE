@@ -139,6 +139,9 @@ export async function POST(request: Request) {
     idempotencyKey: `notification/${notification.id}`,
     tags: [
       { name: 'category', value: 'member_notification' },
+      // A signed provider event can still be linked if the delivery-receipt
+      // write fails after the provider has accepted the message.
+      { name: 'notification_id', value: notification.id },
       { name: 'notification_type', value: String(notification.type).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 256) },
     ],
     html: brandedEmailHtml({

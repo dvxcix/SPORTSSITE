@@ -5,6 +5,7 @@ import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow'
 import { Spotlight } from '@/components/ui/spotlight'
 import { visibleFavorites } from '@/lib/visibleFavorites'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { onboardingBaseline } from '@/lib/onboardingBaseline'
 
 export default async function OnboardingPage() {
   const supabase = await createClient()
@@ -34,6 +35,7 @@ export default async function OnboardingPage() {
   // into the address bar manually. Send them on instead of re-showing the
   // wizard for a completed account.
   if (profile?.onboarding_completed_at) redirect('/feed')
+  if (!profile) throw new Error('Account setup is temporarily unavailable')
 
   return (
     <div className="ss-onboarding-page">
@@ -42,6 +44,7 @@ export default async function OnboardingPage() {
       <div className="ss-onboarding-content">
         <OnboardingFlow
           userId={user.id}
+          initialBaseline={onboardingBaseline(user.id, profile)}
           initialProfile={profile ? visibleFavorites(profile, !MLB_HIBERNATING || profile.account_type === 'admin') : profile}
           accountType={profile?.account_type === 'creator' ? 'creator' : 'user'}
           suggestedUsers={suggested ?? []}

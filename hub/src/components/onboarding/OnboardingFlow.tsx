@@ -66,6 +66,7 @@ type SuggestedGroup = { id: string; slug: string; name: string; description?: st
 
 export function OnboardingFlow({
   userId,
+  initialBaseline,
   initialProfile,
   accountType,
   suggestedUsers,
@@ -73,6 +74,7 @@ export function OnboardingFlow({
   allowNba = true,
 }: {
   userId: string;
+  initialBaseline: string;
   initialProfile: any;
   accountType: "user" | "creator";
   suggestedUsers: SuggestedUser[];
@@ -131,7 +133,9 @@ export function OnboardingFlow({
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const [bannerUploading, setBannerUploading] = useState(false);
   const draftReady = useRef(false);
-  const draftKey = `slipsurge:onboarding:${userId}`;
+  // A draft belongs to the exact account state from which it was started.
+  // Older drafts remain stored but cannot silently overwrite newer settings.
+  const draftKey = `slipsurge:onboarding:${userId}:${initialBaseline}`;
 
   useEffect(() => {
     let active = true;
@@ -306,6 +310,7 @@ export function OnboardingFlow({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          initialBaseline,
           displayName,
           bio,
           avatarUrl,
@@ -327,6 +332,11 @@ export function OnboardingFlow({
         };
         if (response.status === 401 || result.code === "SESSION_EXPIRED") {
           router.replace("/auth/login?next=/onboarding");
+          return;
+        }
+        if (result.code === "ONBOARDING_STALE") {
+          setSaving(false);
+          setError("Your settings changed elsewhere. Refresh setup to continue.");
           return;
         }
         throw new Error(result.code || "ONBOARDING_SAVE_FAILED");

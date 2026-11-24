@@ -5,6 +5,7 @@ import { favoritePlayerKey, favoritePlayerSport, favoriteUpdates, normalizeFavor
 import { getFavoriteCatalog } from '@/lib/favoriteCatalog'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { safeApiError } from '@/lib/safeApiError'
+import { onboardingBaseline } from '@/lib/onboardingBaseline'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,13 +58,23 @@ export async function POST(request: Request) {
   const admin = createAdminClient()
   const { data: profile, error: profileError } = await admin
     .from('users')
-    .select('id, account_type, tier, discord_advanced_claimed, admin_granted_tier, favorite_teams, favorite_players, favorite_sports, notification_settings, interest_settings')
+    .select('id, account_type, tier, discord_advanced_claimed, admin_granted_tier, favorite_teams, favorite_players, favorite_sports, notification_settings, interest_settings, display_name, bio, avatar_url, banner_url, is_private, hide_win_rate, onboarding_completed_at')
     .eq('id', user.id)
     .maybeSingle()
 
   if (profileError) return safeApiError('account-onboarding-profile', profileError, 'We could not load your account setup.')
   if (!profile) {
     return NextResponse.json({ error: 'Your account profile is not ready yet. Refresh and try again.', code: 'PROFILE_NOT_READY' }, { status: 409 })
+  }
+  if (typeof body.initialBaseline !== 'string' || !/^[a-f0-9]{64}$/.test(body.initialBaseline)
+    || body.initialBaseline !== onboardingBaseline(user.id, profile)) {
+    return NextResponse.json({ error: 'Your settings changed. Refresh setup before saving.', code: 'ONBOARDING_STALE' }, { status: 409, headers: { 'Cache-Control': 'private, no-store, max-age=0' } })
+  }
+  // Do not coerce legacy arrays or scalar JSON into an object. A user must
+  // not lose unrecognized saved state merely by finishing onboarding.
+  const isObject = (value: unknown) => value === null || (!!value && typeof value === 'object' && !Array.isArray(value))
+  if (!isObject(profile.notification_settings) || !isObject(profile.interest_settings)) {
+    return NextResponse.json({ error: 'Your saved preferences need attention before setup can continue.' }, { status: 409 })
   }
 
   if (MLB_HIBERNATING && profile.account_type !== 'admin') {
@@ -96,7 +107,7 @@ export async function POST(request: Request) {
   }
 
   const interests = (profile.interest_settings as Record<string, unknown> | null) ?? {}
-  const { error: updateError } = await admin.from('users').update({
+  const changes = {
     display_name: displayName || undefined,
     bio: bio || undefined,
     avatar_url: safeImageUrl(body.avatarUrl) || undefined,
@@ -108,8 +119,26 @@ export async function POST(request: Request) {
     hide_win_rate: body.hideWinRate === true,
     notification_settings: alerts,
     onboarding_completed_at: new Date().toISOString(),
-  }).eq('id', user.id)
+  }
+  const expected = {
+    favorite_teams: profile.favorite_teams ?? null,
+    favorite_players: profile.favorite_players ?? null,
+    favorite_sports: profile.favorite_sports ?? null,
+    interest_settings: profile.interest_settings ?? null,
+    notification_settings: profile.notification_settings ?? null,
+    display_name: profile.display_name ?? null,
+    bio: profile.bio ?? null,
+    avatar_url: profile.avatar_url ?? null,
+    banner_url: profile.banner_url ?? null,
+    is_private: profile.is_private ?? null,
+    hide_win_rate: profile.hide_win_rate ?? null,
+    onboarding_completed_at: profile.onboarding_completed_at ?? null,
+  }
+  // One guarded write compares the exact source values and writes the whole
+  // onboarding result atomically. Never retry an uncertain database write.
+  const { data: saved, error: updateError } = await admin.rpc('save_account_onboarding', { p_user_id: user.id, p_expected: expected, p_changes: changes })
 
   if (updateError) return safeApiError('account-onboarding-save', updateError, 'We could not save your profile.')
+  if (saved !== true) return NextResponse.json({ error: 'Preferences changed elsewhere. Refresh and try again.' }, { status: 409, headers: { 'Cache-Control': 'private, no-store, max-age=0' } })
   return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } })
 }

@@ -16,6 +16,11 @@ function fixture(options: { userId?: string | null; authError?: Reply; missing?:
     if (options.missing) return { data: false, error: null }
     const changes = args.p_changes as Record<string, Record<string, unknown>>
     const expected = args.p_expected as Record<string, Record<string, unknown> | null>
+    if (args.p_kind === 'notifications') {
+      const storedSettings = current.notification_settings as Record<string, unknown> | null
+      const expectedSettings = expected.notification_settings
+      if (JSON.stringify(storedSettings?._email_suppression_revision ?? null) !== JSON.stringify(expectedSettings?._email_suppression_revision ?? null)) return { data: false, error: null }
+    }
     for (const field of Object.keys(changes)) {
       if (current[field] !== null && (typeof current[field] !== 'object' || Array.isArray(current[field]))) return { data: false, error: null }
       const existing = current[field] && typeof current[field] === 'object' && !Array.isArray(current[field]) ? current[field] as Record<string, unknown> : {}
@@ -93,4 +98,14 @@ test('null settings can be initialized while legacy non-object settings remain u
   const legacy = fixture({ currentOverrides: { interest_settings: ['old'] } })
   assert.equal((await legacy.patch(interests)).status, 409)
   assert.deepEqual(legacy.current().interest_settings, ['old'])
+})
+
+test('a bounce invalidates a stale notification form even when the old email toggle was already false', async () => {
+  const f = fixture({ currentOverrides: { notification_settings: { dm_email: false, _email_suppression_revision: 1 }, notification_delivery_settings: {} } })
+  const stale = { ...notifications, value: { ...notifications.value, settings: { dm_email: true } }, expected: { notification_settings: { dm_email: false }, notification_delivery_settings: {} } }
+  assert.equal((await f.patch(stale)).status, 409)
+  assert.deepEqual(f.current().notification_settings, { dm_email: false, _email_suppression_revision: 1 })
+  const fresh = { ...stale, expected: { ...stale.expected, notification_settings: { dm_email: false, _email_suppression_revision: 1 } } }
+  assert.equal((await f.patch(fresh)).status, 200)
+  assert.deepEqual(f.current().notification_settings, { dm_email: true, _email_suppression_revision: 1 })
 })

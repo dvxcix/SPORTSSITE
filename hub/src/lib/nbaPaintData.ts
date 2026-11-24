@@ -12,7 +12,7 @@ import { getNbaPhaseSnapshot } from './nbaOddsPhaseData'
 import { getNbaOddsGame } from './nbaOddsClockData'
 import { nbaNormalizePrimaryProps } from './nbaPrimaryProps'
 import { getNbaSupplementalProps, nbaMergePropSources, nbaSupplementalQuote, type NbaSupplementalSnapshot } from './nbaSupplementalProps'
-import { getNbaBookPropEntries, nbaBookPropsSupplement } from './nbaBookPropsData'
+import { getNbaBookPropEntries, nbaBookPropsSupplement, nbaBookLastSeen } from './nbaBookPropsData'
 import { nbaPregameResearch, readNbaPregameResearch } from './nbaPregameResearchData'
 
 const BASE = 'https://api.balldontlie.io'
@@ -113,7 +113,8 @@ export async function getPaintPropSnapshot(game: PaintGame, mode: NbaOddsMode = 
   const book=bookEntries.status==='fulfilled'?nbaBookPropsSupplement(game,apiProps,bookEntries.value):{props:[] as PaintProp[],complete:false}
   if(!book.complete){coverage.complete=false;coverage.deferred=false}
   const complete=apiComplete&&book.complete
-  return { props: nbaMergePropSources('retainedPrimary' in book ? book.retainedPrimary ?? apiProps : apiProps,book.props), complete, primaryComplete: primary.status === 'fulfilled', coverage, issues: primary.status === 'fulfilled' && book.complete && (complete || coverage.deferred) ? [] : ['Some sportsbook prices unavailable'] }
+  const props=nbaMergePropSources('retainedPrimary' in book ? book.retainedPrimary ?? apiProps : apiProps,book.props)
+  return { props, complete, primaryComplete: primary.status === 'fulfilled', coverage, issues: primary.status === 'fulfilled' && book.complete && (complete || coverage.deferred) ? [] : ['Some sportsbook prices unavailable'] }
 }
 export async function getPaintProps(gameId: number, fresh = false): Promise<PaintProp[]> {
   const game = await getPaintGame(gameId)
@@ -177,7 +178,7 @@ export async function getPaintProfile(player: number, season: number) {
   ])
   return { shooting: result[0].status === 'fulfilled' ? result[0].value.data[0]?.stats ?? null : null, advanced: result[1].status === 'fulfilled' ? result[1].value.data[0]?.stats ?? null : null }
 }
-export async function getPaintBoard(game: PaintGame, mode: NbaOddsMode = 'pregame'): Promise<PaintBoard> {
+export async function getPaintBoard(game: PaintGame, mode: NbaOddsMode = 'pregame', options: { includeLastSeen?: boolean } = {}): Promise<PaintBoard> {
   game = await getNbaOddsGame(game)
   const load = async () => {
     const cached = await nbaSharedCache(`board:v8:${game.id}:${nbaToday()}`, 60, 300, () => loadPaintBoard(game), 120)
@@ -189,7 +190,7 @@ export async function getPaintBoard(game: PaintGame, mode: NbaOddsMode = 'pregam
     }
     return { value: { ...cached.value, fetchedAt: cached.fetchedAt, issues: [...cached.value.issues, ...(cached.stale ? ['Research refresh delayed'] : [])] }, observedAt: cached.fetchedAt }
   }
-  if (mode === 'live') return refreshPaintBoardPrices({ ...(await load()).value, game }, mode)
+  if (mode === 'live') return refreshPaintBoardPrices({ ...(await load()).value, game }, mode, options.includeLastSeen)
   const snapshot = await nbaPregameResearch(game, 'board:v1', load)
   // On a degraded refresh, retain the saved roster and current-season data but
   // never present an unproven or prior-season average as this season. This
@@ -198,12 +199,12 @@ export async function getPaintBoard(game: PaintGame, mode: NbaOddsMode = 'pregam
   const board = { ...value, game, historical: !nbaPregameOpen(game), fetchedAt: snapshot.observedAt, researchSnapshot: { observedAt: snapshot.observedAt, source: snapshot.source, frozen: snapshot.frozen } }
   // Preserve every archived roster member, average, full-game/quarter log and
   // coverage flag. Only phase-specific quotes attach after research is frozen.
-  const priced = await refreshPaintBoardPrices(board, mode)
+  const priced = await refreshPaintBoardPrices(board, mode, options.includeLastSeen)
   if (snapshot.frozen || nbaPregameOpen(priced.game)) return priced
   // Quotes may finish after tip while another request saved a newer research
   // observation. Resolve the durable winner before returning a closed board.
   const final = await nbaPregameResearch(priced.game, 'board:v1', load)
-  return refreshPaintBoardPrices({ ...final.value, game: priced.game, historical: true, fetchedAt: final.observedAt, researchSnapshot: { observedAt: final.observedAt, source: final.source, frozen: final.frozen } }, mode)
+  return refreshPaintBoardPrices({ ...final.value, game: priced.game, historical: true, fetchedAt: final.observedAt, researchSnapshot: { observedAt: final.observedAt, source: final.source, frozen: final.frozen } }, mode, options.includeLastSeen)
 }
 function boardBaselineIncomplete(board: PaintBoard) {
   return board.issues.some(issue => ['Roster coverage incomplete', 'Season averages unavailable', 'Prior-season averages unavailable'].includes(issue))
@@ -236,19 +237,21 @@ export async function getPaintPrices(game: PaintGame, mode: NbaOddsMode = 'prega
   const current = cached.value.props.filter(fresh), firstBasket = cached.value.firstBasket.filter(fresh)
   return { ...cached.value, props: current, firstBasket, issues: current.length === cached.value.props.length && firstBasket.length === cached.value.firstBasket.length ? cached.value.issues : [...cached.value.issues, 'Some sportsbook prices unavailable'] }
 }
-export async function refreshPaintBoardPrices(board: PaintBoard, mode: NbaOddsMode = board.oddsMode ?? 'pregame'): Promise<PaintBoard> {
+export async function refreshPaintBoardPrices(board: PaintBoard, mode: NbaOddsMode = board.oddsMode ?? 'pregame', includeLastSeen = false): Promise<PaintBoard> {
   const game = await getNbaOddsGame(board.game)
   const issues: string[] = []
   const optional = async <T,>(label: string, promise: Promise<T>, fallback: T): Promise<T> => { try { return await promise } catch { issues.push(label); return fallback } }
-  const [prices, openings] = await Promise.all([
+  const [prices, openings, bookEntries] = await Promise.all([
     optional('Sportsbook prices unavailable', getPaintPrices(game, mode), { props: [] as PaintProp[], gameOdds: [] as PaintGameOdds[], firstBasket: [] as PaintProp[], observedAt: new Date().toISOString(), issues: [] as string[] }),
     optional('Opening prices unavailable', getNbaQuoteOpenings(game.id, mode), []),
+    includeLastSeen&&mode==='pregame'&&nbaPregameOpen(game)?getNbaBookPropEntries(game).catch(()=>null):Promise.resolve(null),
   ])
   // Research may survive an outage; quotes come only from their strict shared
   // TTL and never inherit the research cache's five-minute fallback.
   const quotes = nbaAttachOpenings(game.id, [...prices.props, ...prices.firstBasket], prices.gameOdds, openings)
   const priceIssues = new Set(['Sportsbook prices unavailable', 'Some sportsbook prices unavailable', 'Game lines unavailable', 'Opening prices unavailable', 'First-basket prices unavailable'])
-  return { ...board, oddsMode: mode, game, gameOdds: quotes.gameOdds, players: board.players.map(player => ({ ...player, props: quotes.props.filter(prop => prop.player_id === player.id && prop.game_id === game.id && Number.isFinite(Number(prop.line_value))) })), issues: [...board.issues.filter(issue => !priceIssues.has(issue)), ...issues, ...prices.issues] }
+  const lastSeenBook=includeLastSeen&&mode==='pregame'&&nbaPregameOpen(game)&&bookEntries?nbaBookLastSeen(game,prices.props,bookEntries):undefined
+  return { ...board, oddsMode: mode, game, gameOdds: quotes.gameOdds, lastSeenBook, players: board.players.map(player => ({ ...player, props: quotes.props.filter(prop => prop.player_id === player.id && prop.game_id === game.id && Number.isFinite(Number(prop.line_value))) })), issues: [...board.issues.filter(issue => !priceIssues.has(issue)), ...issues, ...prices.issues] }
 }
 async function loadPaintBoard(game: PaintGame): Promise<PaintBoard> {
   const deadline = Date.now() + 65_000
