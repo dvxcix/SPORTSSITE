@@ -8,4 +8,41 @@ Member claim intent: join the correct server and verify only this community's me
 
 Business admin intent: show actual bot installation/command readiness and creator delivery counts without revealing credentials. Existing administration controls, typography and status colors apply. Details are read-only until the administrator deliberately registers supported commands.
 
-Implementation and release evidence will be appended after verification. No financial or sports-data behavior is part of this change.
+Implemented
+- Existing SlipSurge application reused, with a server-scoped install link requesting Manage Roles, View Channels, Send Messages and Embed Links. No Administrator, presence or message-content permission is requested.
+- Verified Discord identity and real managed-server picker. Guild ownership/management, creator role-management permission and both creator/bot hierarchy are rechecked before configuration.
+- One to five safe member roles per community; separate roles across communities; create a permission-free member role; publish an explicit connect panel in a channel of the verified server.
+- Member connect, consent to join the configured server, membership verification and checked delivery of every configured role. Discord screening, authorization errors and pending delivery remain visible.
+- Existing Discord identities use reauthorization rather than linking the same identity again. Callback verifies the current SlipSurge account, revokes a mismatched exchanged session and restores the original session before any creator/profile/role action.
+- Paid role delivery verifies the exact Whop membership. Local removal, expiry, holds, unlink and previous-account cleanup do not wait on provider availability. Unsafe roles cannot be assigned after external permission changes.
+- Durable leases, version fencing and retry behavior retained. Revocations lead the queue; fresh claims lead routine checks. Twenty jobs are leased with four bounded workers. Unjoined members await their explicit connection without a false success receipt or repeated provider-outage reports.
+- Private /connect, /access, /community and /help handlers. Registration upserts only those commands and preserves unrelated existing commands. Signature format, timestamp, application identity and per-member request limits are checked.
+- Business administration reports real application/installation/command readiness and delivery counts through an admin-only server check; no credentials are exported.
+
+Verification
+- 78/78 focused Discord/creator-commerce tests pass, including linked-identity reauthorization, account mismatch/cancel, scoped server actions, hierarchy, permission escalation, provider outages, membership claims, private replies and signature/replay rejection.
+- 141/141 production source, Discord entitlement and retirement checks pass.
+- Broader auth regression run: 155/166 pass including the same 141 checks. Its eleven old fixture failures reproduce unchanged on an isolated origin/main 185c208f baseline (14/25 pass, 11 fail): missing usePathname fixture export; missing publicBrowsePolicy and publicWorkspaceScope imports. These failures are recorded, not hidden or treated as a new Discord regression.
+- Actual new migration plus prior baseline passed isolated PostgreSQL transaction checks for multi-role configuration, cross-community isolation, owner-only writes, access changes, role replacement/disconnect, new-claim/revocation priority, leases, expiry, retry, admin holds and complete fixture rollback.
+- Focused application lint and TypeScript pass. Git-based preview 526370b6 built successfully (dpl_3fYXVNbu4VQZReQnTtTAkNRnn68n); final reconnection polish is being built separately.
+- Actual components exercised in the in-app browser with isolated fixtures: managed-server/role choices, multi-role save, role creation, channel choice, connect-panel publication, member role claim, consent-error retry, and admin status. Desktop and 320/390px phone sizes, Light/Dark, overflow, contained modal scrolling and touch controls reviewed. Test posts and roles never reached Discord. An actual live install entry reached Discord's login/consent boundary without logging in or granting new access.
+
+UI review gate
+Hard gate PASS for the reviewed surfaces: native controls and existing accessible dialogs; no invented member data outside the labeled private review; no horizontal overflow in the inspected phone layouts; focused tests/build run. Theme-correct error red replaces a fixed semantic alias that was too dark on the dark surface.
+Purpose gate PASS: green indicates membership actions and verified state; status panels group server/role context; neutral surfaces and existing icons support the access task.
+Liveliness PASS: declared direction/dials retained, a single main action per step, and the same Studio controls and community identity in creator/member flows.
+Craft gate PASS for the reviewed surfaces: accessible names, disabled/busy/error states, real native control behavior, and shared site tokens. This is a scoped UI review, not certification of unperformed live Discord operations.
+
+Publication gate
+NOT LIVE. Production remains origin/main 185c208f. Feature is committed on codex/creator-discord-20261124.
+Automatic approval review rejected applying creator_discord_multi_role to production because it requires explicit database authorization. A user approval question is pending. No migration, bot-command registration, external role, creator-server configuration or real Discord message has been applied by this task.
+The separate rejected diagnostic export was replaced with admin-only server-side status checks; no production credentials were copied to a local file.
+After approval: verify live preflight again, apply only the reviewed new migration, verify schema/privileges, finish the final Git-based build, reconcile main, deploy, inspect actual bot installation settings, register supported commands, and verify live creator/member boundaries. Real creators still give Discord consent for their own servers.
+No financial or sports-data behavior is part of this change.
+
+References
+Requested Discord bot skill: https://github.com/claude-office-skills/skills/blob/main/discord-bot/SKILL.md
+Discord OAuth: https://docs.discord.com/developers/topics/oauth2
+Discord permissions: https://docs.discord.com/developers/topics/permissions
+Discord interactions: https://docs.discord.com/developers/interactions/receiving-and-responding
+Supabase identity-linking contract: https://github.com/supabase/auth/blob/master/internal/api/identity.go

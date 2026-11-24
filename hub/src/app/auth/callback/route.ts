@@ -9,6 +9,11 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const next = safeInternalPath(searchParams.get('next'), '/launch')
+  const discordFlow=searchParams.get('discord_community')
+  const discordReauthorize=discordFlow==='reauthorize'
+  const discordCommunity=discordReauthorize||discordFlow==='link'
+  function discordFailure(reason:string){const target=new URL(next,origin);target.searchParams.delete('discord');target.searchParams.set('link_error',reason);return NextResponse.redirect(target.toString())}
+  if(discordCommunity&&!code)return discordFailure('discord_authorization_declined')
   const desktopState = searchParams.get('desktop_state')
   const isDesktop = !!desktopState && /^[0-9a-f-]{36}$/i.test(desktopState)
 
@@ -23,8 +28,18 @@ export async function GET(request: Request) {
     // boot them to the login page.
     const { data: preExisting } = await supabase.auth.getUser()
     const wasAlreadyLoggedIn = !!preExisting.user
+    const originalSession=discordCommunity?(await supabase.auth.getSession()).data.session:null
+    if(discordCommunity&&(!preExisting.user||!originalSession||originalSession.user.id!==preExisting.user.id))return NextResponse.redirect(`${origin}/auth/login?error=discord_reauth_required&next=${encodeURIComponent(next)}`)
 
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    if(discordCommunity&&!error&&data.user&&data.user.id!==preExisting.user!.id){
+      // Revoke only the newly exchanged session, then restore the existing account.
+      // No creator/group write or role delivery may happen for the wrong account.
+      await supabase.auth.signOut({scope:'local'})
+      const restored=await supabase.auth.setSession({access_token:originalSession!.access_token,refresh_token:originalSession!.refresh_token})
+      if(restored.error)return NextResponse.redirect(`${origin}/auth/login?error=discord_account_mismatch`)
+      return discordFailure('discord_account_mismatch')
+    }
     if (!error && data.user) {
       // Whop's callback explicitly detects brand-new accounts and forces
       // them through onboarding (isNewAccount) — this generic OAuth path
@@ -114,6 +129,7 @@ export async function GET(request: Request) {
     }
 
     if (error && wasAlreadyLoggedIn) {
+      if(discordCommunity)return discordFailure('provider_link_failed')
       const failUrl = new URL(next, origin)
       failUrl.searchParams.set('link_error', 'provider_link_failed')
       return NextResponse.redirect(failUrl.toString())

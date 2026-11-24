@@ -11,10 +11,16 @@ export async function discordApi<T>(path:string,init:RequestInit={}):Promise<T>{
  return data as T
 }
 export async function connectCommunityDiscord(next:string,creator=false){
- const {error}=await createClient().auth.linkIdentity({provider:'discord',options:{
-  redirectTo:`${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+ const client=createClient(),{data:{user},error:identityError}=await client.auth.getUser()
+ if(identityError||!user)throw new DiscordClientError('Sign in to SlipSurge before connecting Discord.')
+ const linked=user.identities?.some(identity=>identity.provider==='discord')
+ const credentials={provider:'discord' as const,options:{
+  redirectTo:`${location.origin}/auth/callback?discord_community=${linked?'reauthorize':'link'}&next=${encodeURIComponent(next)}`,
   scopes:creator?'identify guilds':'identify guilds.join',
   queryParams:{prompt:'consent'},
- }})
+ }}
+ // An already-linked identity cannot use linkIdentity again. The callback keeps
+ // reauthorization bound to the currently signed-in SlipSurge account.
+ const {error}=linked?await client.auth.signInWithOAuth(credentials):await client.auth.linkIdentity(credentials)
  if(error)throw new DiscordClientError('Discord could not be authorized. Check Settings → Connected accounts, then try again.')
 }

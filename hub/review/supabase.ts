@@ -134,6 +134,7 @@ export function createClient(_url?:any,_key?:any,options?:any):any{
    getUser:()=>ok({user}),getSession:()=>ok({session}),getUserIdentities:()=>ok({identities:[]}),getClaims:()=>ok({claims:user?{sub:user.id,aal:'aal2'}:null}),refreshSession:()=>ok({session,user}),
    onAuthStateChange:(callback:any)=>{const id=setTimeout(()=>callback('INITIAL_SESSION',session),0);return {data:{subscription:{unsubscribe:()=>clearTimeout(id)}}}},
    signOut:()=>ok(),signInWithPassword:()=>ok({user,session}),signInWithOAuth:()=>ok({url:'/feed'}),signUp:()=>ok({user,session}),
+   linkIdentity:()=>Promise.resolve({data:null,error:{message:'External authorization is disabled in the private design review.'}}),
    updateUser:()=>Promise.resolve({data:null,error:{message:'Account credentials are disabled in the private design review.'}}),resetPasswordForEmail:()=>ok(),
    mfa:{getAuthenticatorAssuranceLevel:()=>ok({currentLevel:'aal2',nextLevel:'aal2',currentAuthenticationMethods:[]}),listFactors:()=>ok({all:[],totp:[],phone:[]}),enroll:()=>ok({id:'review-factor',type:'totp',totp:{qr_code:'',secret:'EXAMPLE-NOT-A-SECRET',uri:''}}),unenroll:()=>ok(),challenge:()=>ok({id:'review-challenge'}),verify:()=>ok()},
    admin:{listUsers:()=>ok({users:table('users')}),getUserById:()=>ok({user}),deleteUser:()=>ok(),updateUserById:()=>ok({user})}

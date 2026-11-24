@@ -1,6 +1,6 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { assignableCreatorRoles, managesDiscordGuild, type DiscordRole } from './creatorDiscordPolicy'
+import { assignableCreatorRoles, creatorAssignableRoles, creatorCanManageRoles, managesDiscordGuild, type DiscordRole } from './creatorDiscordPolicy'
 import { handleCreatorWebhook } from './creatorWebhook'
 import { hasCurrentCreatorAccess } from './creatorCommerce'
 
@@ -36,9 +36,10 @@ export async function inspectCreatorGuild(admin:SupabaseClient,userId:string,gui
  const guild=await (await creatorDiscordRequest(`/guilds/${guildId}`)).json() as {id:string;name:string;owner_id:string;roles:DiscordRole[]}
  const member=await (await creatorDiscordRequest(`/guilds/${guildId}/members/${discordId}`)).json() as {roles:string[]}
  if(!managesDiscordGuild(guild.owner_id,discordId,member.roles,guild.roles,guildId))throw new CreatorDiscordError('You must own or manage this Discord server.',403)
+ if(guild.owner_id!==discordId&&!creatorCanManageRoles(guild.roles,member.roles,guildId))throw new CreatorDiscordError('Manage Server and Manage Roles permissions are required to configure member access. Ask your Discord server owner.',403)
  const bot=await (await creatorDiscordRequest('/users/@me')).json() as {id:string}
  const botMember=await (await creatorDiscordRequest(`/guilds/${guildId}/members/${bot.id}`)).json() as {roles:string[]}
- return {guildId:guild.id,guildName:guild.name,roles:assignableCreatorRoles(guildId,guild.roles,botMember.roles).map(role=>({id:role.id,name:role.name})),canCreateRoles:guild.owner_id===discordId||guild.roles.some(role=>(role.id===guildId||member.roles.includes(role.id))&&!!(BigInt(role.permissions)&BigInt(268435464))),inviteUrl:creatorBotInvite(guildId)}
+ return {guildId:guild.id,guildName:guild.name,roles:creatorAssignableRoles(guildId,guild.roles,botMember.roles,member.roles,guild.owner_id===discordId).map(role=>({id:role.id,name:role.name})),canCreateRoles:true,inviteUrl:creatorBotInvite(guildId)}
 }
 
 export async function creatorGuildAssignableRoles(guildId:string){
@@ -77,10 +78,17 @@ export async function processCreatorDiscordQueue(admin:SupabaseClient,limit=20,u
  const lanes=Array.from({length:Math.min(4,jobs?.length||0)},(_,index)=>(jobs??[]).filter((_:unknown,jobIndex:number)=>jobIndex%4===index))
  await Promise.all(lanes.map(async lane=>{for(const job of lane){
   try{
-   if(job.user_id)await creatorDiscordIdentity(admin,job.user_id,false)
    // Local revocations (unlink, leave, expiry, admin hold) must not depend on Whop being available.
    let {data:access,error:accessError}=await admin.rpc('creator_discord_access',{p_integration_id:job.integration_id,p_user_id:job.user_id})
    if(accessError||!access)throw new Error('Access check unavailable')
+   if(access.allowed&&job.user_id&&(access.discord_id||!job.assigned_discord_id)){
+    await creatorDiscordIdentity(admin,job.user_id,false)
+    const identityAccess=await admin.rpc('creator_discord_access',{p_integration_id:job.integration_id,p_user_id:job.user_id})
+    access=identityAccess.data;accessError=identityAccess.error
+    if(accessError||!access)throw new Error('Access check unavailable')
+   }
+   // A previous account loses its role regardless of whether a new paid grant can be verified.
+   if(access.discord_id&&job.assigned_discord_id&&job.assigned_discord_id!==access.discord_id)await creatorDiscordRequest(`/guilds/${access.guild_id}/members/${job.assigned_discord_id}/roles/${access.role_id}`,'DELETE')
    if(access.allowed&&access.discord_id&&job.user_id){
     await verifyCreatorDiscordMembership(admin,job.integration_id,job.user_id)
     const checked=await admin.rpc('creator_discord_access',{p_integration_id:job.integration_id,p_user_id:job.user_id})
@@ -88,15 +96,22 @@ export async function processCreatorDiscordQueue(admin:SupabaseClient,limit=20,u
    }
    if(accessError||!access)throw new Error('Access check unavailable')
    if(access.discord_id){
-    // Revoke roles for the previous identity as well when a member unlinks or changes Discord accounts.
-    if(job.assigned_discord_id&&job.assigned_discord_id!==access.discord_id){const old=await creatorDiscordRequest(`/guilds/${access.guild_id}/members/${job.assigned_discord_id}/roles/${access.role_id}`,'DELETE');if(!old.ok)throw new Error('Previous role removal failed')}
     if(access.allowed){
      const roles=await creatorGuildAssignableRoles(access.guild_id)
      if(!roles.some(role=>role.id===access.role_id)){
       await creatorDiscordRequest(`/guilds/${access.guild_id}/members/${access.discord_id}/roles/${access.role_id}`,'DELETE')
       throw new CreatorDiscordError('The membership role is no longer safe or below SlipSurge. Ask the creator to update Discord access.')
      }
-     const member=await(await creatorDiscordRequest(`/guilds/${access.guild_id}/members/${access.discord_id}`)).json() as {pending?:boolean}
+     let member:{pending?:boolean}
+     try{member=await(await creatorDiscordRequest(`/guilds/${access.guild_id}/members/${access.discord_id}`)).json() as {pending?:boolean}}
+     catch(cause){
+      if(!(cause instanceof CreatorDiscordError)||cause.code!=='discord_not_found')throw cause
+      // No server membership means no role exists to deliver yet. Await the member's
+      // explicit connect/claim rather than reporting a provider outage on every cron.
+      const finished=await admin.rpc('finish_creator_discord_job',{p_id:job.id,p_version:job.version,p_success:true,p_discord_id:null})
+      if(finished.error)throw new Error('Discord delivery receipt unavailable')
+      completed++;continue
+     }
      if(member.pending)throw new CreatorDiscordError('Accept the server rules before claiming a role.',409,'discord_screening')
     }
     await creatorDiscordRequest(`/guilds/${access.guild_id}/members/${access.discord_id}/roles/${access.role_id}`,access.allowed?'PUT':'DELETE')

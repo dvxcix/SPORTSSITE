@@ -25,13 +25,13 @@ function coreFixture(options={}){
   if(call.table==='creator_entitlements')return {data:{whop_membership_id:'mem_fixture',status:'active',current_period_end:'2099-01-01'},error:null}
   return {data:null,error:null}
  })
- admin.auth={admin:{getUserById:async()=>({data:{user:{identities:options.unlinked?[]:[{provider:'discord',identity_data:{sub:discordId}}]}},error:null})}}
+ admin.auth={admin:{getUserById:async()=>{if(options.authOutage)throw Error('Auth unavailable');return {data:{user:{identities:options.unlinked?[]:[{provider:'discord',identity_data:{sub:discordId}}]}},error:null}}}}
  const fetcher=async(url,init={})=>{
   calls.push({url,method:init.method||'GET',body:init.body})
   if(url.endsWith('/users/@me'))return response({id:bot})
   if(url.endsWith('/guilds/'+guild))return response({id:guild,name:'Creator server',roles:[{id:guild,name:'Everyone',permissions:'0',position:0},{id:bot,name:'SlipSurge',permissions:'268435456',position:4},{id:role,name:'Member',permissions:options.unsafe?'8':'0',position:2}]})
   if(url.endsWith('/members/'+bot))return response({roles:[bot]})
-  if(url.endsWith('/members/'+discordId))return response({pending:!!options.screening,roles:[]})
+  if(url.endsWith('/members/'+discordId))return response({pending:!!options.screening,roles:[]},options.notJoined?404:200)
   return new Response(null,{status:204})
  }
  const core=compile('src/lib/creatorDiscord.ts',{'./creatorDiscordPolicy':policy,'./creatorCommerce':{hasCurrentCreatorAccess:()=>true},'./creatorWebhook':{handleCreatorWebhook:async()=>{providers.push(1);if(options.outage)throw Error('provider down');return true}}},{fetch:fetcher,process:{env:{DISCORD_BOT_TOKEN:'fixture-only',DISCORD_APPLICATION_ID:bot}}})
@@ -40,6 +40,12 @@ function coreFixture(options={}){
 
 test('server choices contain only the verified account’s owned or managed servers',()=>{
  assert.deepEqual(policy.discordGuildChoices([{id:guild,name:'Mine',owner:true},{id:role,name:'Managed',permissions:'32'},{id:bot,name:'Ordinary',permissions:'1024'},{id:discordId,name:'Bad permission',permissions:'bad'}]).map(item=>item.name),['Mine','Managed'])
+})
+test('a delegated server manager cannot use the bot to assign roles above their own',()=>{
+ const roles=[{id:guild,name:'Everyone',permissions:'0',position:0},{id:bot,name:'Bot',permissions:'268435456',position:8},{id:'manager',name:'Manager',permissions:'268435488',position:4},{id:role,name:'Member',permissions:'0',position:2},{id:'higher',name:'Private access',permissions:'0',position:6}]
+ assert.deepEqual(policy.creatorAssignableRoles(guild,roles,[bot],['manager'],false).map(r=>r.id),[role])
+ assert.deepEqual(policy.creatorAssignableRoles(guild,roles,[bot],[],false),[])
+ assert.deepEqual(policy.creatorAssignableRoles(guild,roles,[bot],[],true).map(r=>r.id),[role,'higher'])
 })
 test('install grants only role management and panel permissions, with server installation context',()=>{
  const {core}=coreFixture(),url=new URL(core.creatorBotInvite(guild))
@@ -53,11 +59,11 @@ test('a Whop outage never causes a new paid role grant',async()=>{
  assert.equal(f.admin.calls.at(-1).args.p_success,false)
 })
 test('known membership revocation removes its role even during a Whop outage',async()=>{
- const f=coreFixture({allowed:false,outage:true});assert.deepEqual(await f.core.processCreatorDiscordQueue(f.admin),{completed:1,failed:0})
+ const f=coreFixture({allowed:false,outage:true,authOutage:true});assert.deepEqual(await f.core.processCreatorDiscordQueue(f.admin),{completed:1,failed:0})
  assert.equal(f.providers.length,0);assert.deepEqual(f.calls.map(call=>call.method),['DELETE'])
 })
 test('unlink removes the previous Discord identity without waiting on Whop',async()=>{
- const f=coreFixture({unlinked:true,outage:true,previousId:'123456789012345699'});await f.core.processCreatorDiscordQueue(f.admin)
+ const f=coreFixture({unlinked:true,outage:true,authOutage:true,previousId:'123456789012345699'});await f.core.processCreatorDiscordQueue(f.admin)
  assert.equal(f.providers.length,0);assert.equal(f.calls[0].method,'DELETE');assert.match(f.calls[0].url,/123456789012345699/)
 })
 test('a role that becomes administrative after setup is removed and never granted',async()=>{
@@ -68,9 +74,17 @@ test('a pending Discord rules screen prevents role assignment',async()=>{
  const f=coreFixture({free:true,screening:true});assert.equal((await f.core.processCreatorDiscordQueue(f.admin)).failed,1)
  assert.equal(f.calls.some(call=>call.method==='PUT'),false)
 })
+test('members who have not joined await consent without a false role receipt or hot retries',async()=>{
+ const f=coreFixture({free:true,notJoined:true});assert.deepEqual(await f.core.processCreatorDiscordQueue(f.admin),{completed:1,failed:0})
+ assert.equal(f.calls.some(call=>call.method==='PUT'),false);assert.equal(f.admin.calls.at(-1).args.p_discord_id,null)
+})
 test('changing Discord identity removes old roles before granting the new identity',async()=>{
  const f=coreFixture({free:true,previousId:'123456789012345699'});assert.equal((await f.core.processCreatorDiscordQueue(f.admin)).completed,1)
  assert.equal(f.calls[0].method,'DELETE');assert.match(f.calls[0].url,/123456789012345699/);assert.equal(f.calls.at(-1).method,'PUT')
+})
+test('a paid verification outage cannot keep a role on the old Discord identity',async()=>{
+ const f=coreFixture({outage:true,previousId:'123456789012345699'});assert.equal((await f.core.processCreatorDiscordQueue(f.admin)).failed,1)
+ assert.equal(f.calls.length,1);assert.equal(f.calls[0].method,'DELETE');assert.match(f.calls[0].url,/123456789012345699/)
 })
 function accountFixture(options={}){
  const {core}=coreFixture(),calls=[]
@@ -182,4 +196,51 @@ test('access panel suppresses mentions and links to the exact community, never m
  const message=f.calls.find(call=>call.method==='POST').body
  assert.deepEqual(message.allowed_mentions,{parse:[]});assert.equal(message.components[0].components[0].url,'https://www.slipsurge.com/groups/club?discord=connect')
  assert.equal(JSON.stringify(message).includes('provider-fixture'),false)
+})
+test('bot connection diagnostics require a real administrator before contacting Discord',async()=>{
+ for(const account of [null,'user','admin']){
+  let reads=0
+  const route=compile('src/app/api/admin/discord/creator-health/route.ts',{
+   'next/server':{NextResponse:{json:Response.json}},'@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:account?{id:user}:null}})},from:()=>database(()=>({data:{account_type:account}})).from('users')})},
+   '@/lib/supabase/admin':{createAdminClient:()=>database(()=>({count:0,error:null}))},
+   '@/lib/creatorDiscord':{creatorDiscordConfigured:()=>true,creatorDiscordRequest:async path=>{reads++;return response(path.endsWith('/commands')?[{name:'help'}]:{name:'SlipSurge',bot_public:true,bot_require_code_grant:false,interactions_endpoint_url:'https://www.slipsurge.com/api/discord/interactions'})}},
+   '@/lib/creatorDiscordCommands':{CREATOR_DISCORD_COMMANDS:[{name:'help'},{name:'connect'}]},'@/lib/safeApiError':{safeApiError:()=>response({error:'unavailable'},502)},
+  },{process:{env:{DISCORD_APPLICATION_ID:bot}}})
+  const result=await route.GET();assert.equal(result.status,account==='admin'?200:account?403:401)
+  assert.equal(reads,account==='admin'?2:0)
+  if(account==='admin'){const data=await result.json();assert.deepEqual(data.missingCommands,['connect']);assert.equal(data.connected,true);assert.equal(Object.keys(data).some(key=>/token|secret|key/i.test(key)),false)}
+ }
+})
+test('linked Discord identities reauthorize, while new identities use identity linking',async()=>{
+ for(const linked of [false,true]){
+  const calls=[]
+  const client={auth:{getUser:async()=>({data:{user:{id:user,identities:linked?[{provider:'discord'}]:[]}},error:null}),linkIdentity:async input=>{calls.push(['link',input]);return {error:null}},signInWithOAuth:async input=>{calls.push(['reauthorize',input]);return {error:null}}}}
+  const module=compile('src/components/creator/creatorDiscordClient.ts',{'@/lib/supabase/client':{createClient:()=>client}},{location:{origin:'https://www.slipsurge.com'}})
+  await module.connectCommunityDiscord('/groups/club?discord=claim',false)
+  assert.equal(calls[0][0],linked?'reauthorize':'link');assert.equal(calls[0][1].options.scopes,'identify guilds.join')
+  assert.match(calls[0][1].options.redirectTo,linked?/discord_community=reauthorize/:/discord_community=link/)
+ }
+})
+function callbackFixture(options={}){
+ const calls=[],after=[]
+ const auth={getUser:async()=>({data:{user:options.signedOut?null:{id:user}}}),getSession:async()=>({data:{session:{user:{id:user},access_token:'original-fixture-access',refresh_token:'original-fixture-refresh'}}}),exchangeCodeForSession:async()=>{calls.push('exchange');return {data:{user:{id:options.wrongAccount?group:user,user_metadata:{}}},error:null}},signOut:async input=>{calls.push(['signOut',input]);return {error:null}},setSession:async input=>{calls.push(['restore',input]);return {error:options.restoreFails?new Error('failed'):null}}}
+ const module=compile('src/app/auth/callback/route.ts',{'next/server':{NextResponse:{redirect:url=>new Response(null,{status:307,headers:{location:String(url)}})},after:fn=>after.push(fn)},'@/lib/supabase/server':{createClient:async()=>({auth,from:()=>database(()=>({data:{id:user}})).from('users')})},'@/lib/supabase/admin':{createAdminClient:()=>{calls.push('profile');return database(()=>({data:{id:user},error:null}))}},'@/lib/xConversion':{},'@/lib/discord':{},'@/lib/safeRedirect':{safeInternalPath:path=>path||'/launch'}})
+ return {calls,after,run:(flow='reauthorize',code='fixture')=>module.GET(new Request(`https://www.slipsurge.com/auth/callback?discord_community=${flow}&next=${encodeURIComponent('/groups/club?discord=claim')}${code?'&code='+code:''}`))}
+}
+test('Discord reauthorization restores the original session if another account is chosen',async()=>{
+ for(const flow of ['reauthorize','link']){
+  const f=callbackFixture({wrongAccount:true});const result=await f.run(flow)
+  assert.match(result.headers.get('location'),/link_error=discord_account_mismatch/);assert.equal(result.headers.get('location').includes('discord=claim'),false)
+  assert.deepEqual(f.calls,['exchange',['signOut',{scope:'local'}],['restore',{access_token:'original-fixture-access',refresh_token:'original-fixture-refresh'}]])
+  assert.equal(f.after.length,0)
+ }
+})
+test('reconnect refuses a signed-out callback and does not consume the authorization code',async()=>{
+ const f=callbackFixture({signedOut:true});const result=await f.run();assert.match(result.headers.get('location'),/auth\/login/);assert.deepEqual(f.calls,[])
+})
+test('matching Discord reauthorization preserves the community return and normal account flow',async()=>{
+ const f=callbackFixture();const result=await f.run();assert.equal(result.headers.get('location'),'https://www.slipsurge.com/groups/club?discord=claim');assert.deepEqual(f.calls,['exchange','profile'])
+})
+test('cancelled Discord consent returns to the community without an automatic role claim',async()=>{
+ const f=callbackFixture();const result=await f.run('reauthorize','');assert.match(result.headers.get('location'),/link_error=discord_authorization_declined/);assert.equal(result.headers.get('location').includes('discord=claim'),false);assert.deepEqual(f.calls,[])
 })

@@ -19,6 +19,7 @@ export function CreatorDiscordClaim({groupId,slug,guildName,roleName,inviteUrl}:
    if(controller.signal.aborted)return
    setState(data)
    const url=new URL(location.href)
+   if(url.searchParams.has('link_error')){setError(true);setReconnect(true);setMessage(url.searchParams.get('link_error')==='discord_account_mismatch'?'Authorize the Discord account already linked to this SlipSurge account. Your account was kept unchanged.':'Discord authorization was not completed. You can try connecting again.');return}
    if(url.searchParams.get('discord')==='claim'){
     url.searchParams.delete('discord');history.replaceState(history.state,'',url.pathname+url.search+url.hash)
     await claim()

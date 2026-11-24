@@ -8,6 +8,7 @@
 .number { width:24px; height:24px; display:grid; place-items:center; border-radius:50%; background:var(--surface-3); color:var(--text-2); font-size:12px; flex:none; }
 .step[data-complete] .number { color:var(--accent); background:var(--accent-dim); }
 .actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.panel .actions > button { min-height:44px; height:auto; }
 .actions a,.linkButton { min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:8px 12px; border:1px solid var(--border-2); border-radius:var(--radius-sm); font-size:13px; font-weight:600; color:var(--text-1); cursor:pointer; }
 .actions a:hover,.linkButton:hover { background:var(--surface-3); }
 .field { display:grid; gap:8px; color:var(--text-2); font-size:13px; min-width:0; }
@@ -19,7 +20,7 @@
 .role:has(input:checked) { border-color:var(--accent); background:var(--accent-dim); }
 .role input { width:17px; height:17px; flex:none; accent-color:var(--accent); }
 .status { margin:12px 0 0; padding:12px; background:var(--surface-2); border-radius:var(--radius-sm); font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
-.status[data-error] { color:var(--status-danger); }
+.status[data-error] { color:var(--red); }
 .success { display:flex; align-items:center; gap:8px; color:var(--accent); font-size:13px; font-weight:600; }
 .saved { display:grid; gap:8px; padding:16px; margin:16px 0; border-radius:var(--radius-md); background:var(--accent-dim); }
 .saved strong { font-size:14px; overflow-wrap:anywhere; }

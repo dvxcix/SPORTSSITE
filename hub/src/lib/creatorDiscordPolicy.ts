@@ -8,6 +8,16 @@ export function discordGuildChoices(guilds: { id: string; name: string; icon?: s
  }).map(({ id, name, icon }) => ({ id, name, icon: icon && /^[a-zA-Z0-9_]+$/.test(icon) ? `https://cdn.discordapp.com/icons/${id}/${icon}.png?size=64` : null }))
 }
 const ADMIN = BigInt(8), MANAGE_GUILD = BigInt(32), MANAGE_ROLES = BigInt(268435456)
+export function creatorCanManageRoles(roles:DiscordRole[],memberRoles:string[],guildId:string){
+ return roles.some(role=>(role.id===guildId||memberRoles.includes(role.id))&&!!(BigInt(role.permissions)&(ADMIN|MANAGE_ROLES)))
+}
+export function creatorAssignableRoles(guildId:string,roles:DiscordRole[],botRoles:string[],memberRoles:string[],ownsGuild:boolean){
+ const assignable=assignableCreatorRoles(guildId,roles,botRoles)
+ if(ownsGuild)return assignable
+ if(!creatorCanManageRoles(roles,memberRoles,guildId))return []
+ const highest=Math.max(0,...roles.filter(role=>memberRoles.includes(role.id)).map(role=>role.position))
+ return assignable.filter(role=>role.position<highest)
+}
 export function managesDiscordGuild(ownerId: string, userId: string, memberRoles: string[], roles: DiscordRole[], guildId: string) {
  if (ownerId === userId) return true
  const permissions=roles.filter(role=>role.id===guildId||memberRoles.includes(role.id)).reduce((value,role)=>value|BigInt(role.permissions),BigInt(0))

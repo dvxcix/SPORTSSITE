@@ -25,9 +25,10 @@ export function CreatorDiscordSetup({groupId}:{groupId:string}){
  const load=useCallback(async(signal?:AbortSignal)=>{
   const state=await discordApi<Setup>(endpoint,{signal})
   setSetup(state);setGuildId(state.integrations[0]?.guild_id||'');setSelected(state.integrations.map(role=>role.role_id));setInvite(state.integrations[0]?.invite_url||'')
-  if(state.connected){try{const data=await discordApi<{servers:Server[]}>(endpoint+'?servers=1',{signal});setServers(data.servers);setReconnect(false)}catch(cause){if(cause instanceof DiscordClientError&&cause.code==='discord_reconnect')setReconnect(true);else throw cause}}
+  if(state.connected){try{const data=await discordApi<{servers:Server[]}>(endpoint+'?servers=1',{signal});setServers(data.servers);setReconnect(new URL(location.href).searchParams.has('link_error'))}catch(cause){if(cause instanceof DiscordClientError&&cause.code==='discord_reconnect')setReconnect(true);else throw cause}}
  },[endpoint])
  useEffect(()=>{const controller=new AbortController();Promise.resolve().then(()=>load(controller.signal)).catch(cause=>{if(!controller.signal.aborted){setError(true);setMessage(cause instanceof Error?cause.message:'Discord setup could not be loaded.')}}).finally(()=>{if(!controller.signal.aborted)setBusy('')});return()=>controller.abort()},[load])
+ useEffect(()=>{if(new URL(location.href).searchParams.has('link_error'))Promise.resolve().then(()=>{setError(true);setMessage('Discord authorization was not completed. Authorize the Discord account already linked to SlipSurge and try again.')})},[])
  async function connect(){setBusy('connect');setMessage('');try{await connectCommunityDiscord(`/creators/studio?section=communities&discordGroup=${groupId}`,true)}catch(cause){failure(cause);setBusy('')}}
  async function inspect(){setBusy('inspect');setMessage('');setError(false);setRoles([]);try{
   const data=await discordApi<{guildName:string;roles:Role[];canCreateRoles:boolean}>(endpoint+'?guildId='+encodeURIComponent(guildId))

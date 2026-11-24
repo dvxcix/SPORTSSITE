@@ -61,7 +61,7 @@ export async function creatorJourneyHttp(request:NextRequest,role:ReviewRole){
   return json({checkoutConfigurationId:'ch_reviewonly',url:'https://whop.com/checkout/review-only'})
  }
  if(path==='/api/admin/discord/creator-health')return json({configured:true,connected:true,name:'SlipSurge · private review',publicBot:true,requiresCodeGrant:false,interactionsReady:true,activeRoleMappings:2,pendingDeliveries:0,missingCommands:[]})
- if(/^\/api\/groups\/[^/]+\/discord\/claim$/.test(path))return json({ok:true,connected:true,ready:request.method==='POST',guildName:'NBA Lounge',roles:['Court members','Research'],inviteUrl:null})
+ if(/^\/api\/groups\/[^/]+\/discord\/claim$/.test(path))return json({ok:true,connected:role!=='member'||request.method==='POST',ready:request.method==='POST',guildName:'NBA Lounge',roles:['Court members','Research'],inviteUrl:null})
  if(/^\/api\/groups\/[^/]+\/discord\/actions$/.test(path)){
   const body=await request.json()
   if(body.action==='channels')return json({channels:[{id:'123456789012345688',name:'member-access'},{id:'123456789012345689',name:'general'}]})
