@@ -31,7 +31,7 @@ export function CreatorDiscordClaim({groupId,slug,guildName,roleName,inviteUrl}:
  return <section className={`${styles.panel} ${styles.claim}`} aria-busy={!!busy} aria-labelledby={`discord-claim-${groupId}`}>
   <div className={styles.heading}><div><h2 id={`discord-claim-${groupId}`}>Your Discord access</h2><p className={styles.description}>{state?.guildName||guildName}</p></div>{state?.ready&&<span className={styles.success}><Check size={16}/>Roles synced</span>}</div>
   <p className={styles.note}>{state?.roles.join(' · ')||roleName}</p>
-  <p className={styles.note}>Connect your account to join this server and unlock your member roles. Access follows your community membership.</p>
+  <p className={styles.note}>{state?.ready?'Your roles are synced with your community membership. You can check access again whenever you need.':'Connect your account to join this server and unlock your member roles. Access follows your community membership.'}</p>
   <div className={styles.actions}>{!connected?<Button disabled={!!busy} onClick={connect} className="min-h-11"><Link2 size={15}/>{busy==='load'?'Checking access…':reconnect?'Reconnect Discord':'Connect to Discord'}</Button>:<Button disabled={!!busy} onClick={claim} className="min-h-11"><RefreshCw size={15}/>{busy==='claim'?'Verifying membership…':state?.ready?'Check access':'Join & claim member roles'}</Button>}{(state?.inviteUrl||inviteUrl)&&<a href={state?.inviteUrl||inviteUrl!} target="_blank" rel="noopener noreferrer">Open server <ExternalLink size={14}/></a>}</div>
   {message&&<p role={error?'alert':'status'} className={styles.status} data-error={error||undefined}>{message}</p>}
  </section>

@@ -47,3 +47,24 @@ begin
 end $$;
 revoke all on function public.enqueue_creator_discord_group_access_change() from public,anon,authenticated;
 create trigger creator_discord_group_access_change after update of access_type,creator_product_id,owner_id on public.groups for each row execute function public.enqueue_creator_discord_group_access_change();
+
+-- Claim only the work being leased. Do not mark every periodic check pending:
+-- that creates a backlog ahead of fresh claims/cancellations in a busy installation.
+create or replace function public.claim_creator_discord_jobs(p_limit integer default 20,p_user uuid default null,p_integration uuid default null)
+returns setof public.creator_discord_jobs language plpgsql security invoker set search_path=pg_catalog,public as $$
+begin
+ if current_user<>'service_role' then raise exception using errcode='42501',message='service only';end if;
+ return query with due as (
+  select j.id from public.creator_discord_jobs j
+  where ((j.pending and j.run_after<=now()) or (not j.pending and j.assigned_discord_id is not null and j.last_success_at<now()-interval '5 minutes'))
+   and (p_user is null or j.user_id=p_user) and (p_integration is null or j.integration_id=p_integration)
+   and (j.locked_until is null or j.locked_until<now())
+  order by case when j.assigned_discord_id is not null and
+    (not coalesce((public.creator_discord_access(j.integration_id,j.user_id)->>'allowed')::boolean,false) or j.assigned_discord_id is distinct from (public.creator_discord_access(j.integration_id,j.user_id)->>'discord_id')) then 0
+   when j.pending then 1 else 2 end,
+   case when j.pending then j.run_after else j.last_success_at end,j.id
+  for update of j skip locked limit greatest(1,least(p_limit,20))
+ ) update public.creator_discord_jobs j set locked_until=now()+interval '5 minutes',pending=true,
+  version=case when j.pending then j.version else j.version+1 end
+ from due where j.id=due.id returning j.*;
+end $$;

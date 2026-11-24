@@ -70,11 +70,12 @@ export async function verifyCreatorDiscordMembership(admin:SupabaseClient,integr
 }
 
 /** Queue rows are durable desired-state checks. Always re-read access immediately before touching Discord. */
-export async function processCreatorDiscordQueue(admin:SupabaseClient,limit=8,userId:string|null=null,integrationId:string|null=null){
+export async function processCreatorDiscordQueue(admin:SupabaseClient,limit=20,userId:string|null=null,integrationId:string|null=null){
  const {data:jobs,error}=await admin.rpc('claim_creator_discord_jobs',{p_limit:limit,p_user:userId,p_integration:integrationId})
  if(error)throw new Error('Discord delivery queue unavailable')
  let completed=0,failed=0
- for(const job of jobs??[]){
+ const lanes=Array.from({length:Math.min(4,jobs?.length||0)},(_,index)=>(jobs??[]).filter((_:unknown,jobIndex:number)=>jobIndex%4===index))
+ await Promise.all(lanes.map(async lane=>{for(const job of lane){
   try{
    if(job.user_id)await creatorDiscordIdentity(admin,job.user_id,false)
    // Local revocations (unlink, leave, expiry, admin hold) must not depend on Whop being available.
@@ -104,6 +105,6 @@ export async function processCreatorDiscordQueue(admin:SupabaseClient,limit=8,us
    if(finishError)throw new Error('Discord delivery receipt unavailable')
    completed++
   }catch{failed++;await admin.rpc('finish_creator_discord_job',{p_id:job.id,p_version:job.version,p_success:false,p_discord_id:null})}
- }
+ }}))
  return {completed,failed}
 }

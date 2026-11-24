@@ -1,7 +1,7 @@
 begin;
 set local role service_role;
 do $$
-declare owner_id uuid:='00000000-0000-4000-8000-000000000001';buyer uuid:='00000000-0000-4000-8000-000000000002';space uuid;other_space uuid;ids uuid[];old_job uuid;
+declare owner_id uuid:='00000000-0000-4000-8000-000000000001';buyer uuid:='00000000-0000-4000-8000-000000000002';space uuid;other_space uuid;ids uuid[];picked public.creator_discord_jobs%rowtype;
 begin
  insert into groups(owner_id,name,slug,access_type,is_public)values(owner_id,'Discord multi-role fixture','discord-multi-fixture','free',true) returning id into space;
  insert into groups(owner_id,name,slug,access_type,is_public)values(owner_id,'Separate fixture','discord-other-fixture','free',true) returning id into other_space;
@@ -15,10 +15,17 @@ begin
  begin perform configure_creator_discord_roles(owner_id,other_space,'223456789012345678','Fixture server',array['223456789012345679'],array['Role'],null);raise exception 'Cross-community role reuse accepted';exception when raise_exception then if sqlerrm='Cross-community role reuse accepted' then raise;end if;end;
  begin perform configure_creator_discord_roles(owner_id,space,'223456789012345678','Fixture server',array['223456789012345679','223456789012345679'],array['Role','Role'],null);raise exception 'Duplicate roles accepted';exception when raise_exception then if sqlerrm='Duplicate roles accepted' then raise;end if;end;
  begin perform configure_creator_discord_roles(owner_id,space,'223456789012345678','Fixture server',array['223456789012345679'],null,null);raise exception 'Missing role names accepted';exception when raise_exception then if sqlerrm='Missing role names accepted' then raise;end if;end;
+ update creator_discord_jobs set pending=false,assigned_discord_id='223456789012345677',last_success_at=now()-interval '10 minutes' where user_id=buyer and integration_id=ids[1];
+ select * into picked from claim_creator_discord_jobs(1,buyer,null);
+ if picked.integration_id<>ids[2] then raise exception 'Routine checks delayed a new claim';end if;
+ if (select pending from creator_discord_jobs where user_id=buyer and integration_id=ids[1]) then raise exception 'Unleased periodic check marked pending';end if;
+ perform finish_creator_discord_job(picked.id,picked.version,true,null);
  update creator_discord_jobs set pending=false where integration_id=any(ids);
  update groups set access_type='paid' where id=space;
  if exists(select 1 from creator_discord_jobs where integration_id=any(ids) and not pending) then raise exception 'Access change did not queue rechecks';end if;
  if (creator_discord_access(ids[1],buyer)->>'allowed')::boolean then raise exception 'Paid membership without entitlement granted';end if;
+ select * into picked from claim_creator_discord_jobs(1,buyer,null);
+ if picked.integration_id<>ids[1] then raise exception 'Known revocation did not lead the delivery queue';end if;
  perform configure_creator_discord_roles(owner_id,space,'223456789012345678','Fixture server',array['223456789012345681'],array['Replacement'],null);
  if exists(select 1 from creator_discord_integrations where id=any(ids) and enabled) then raise exception 'Old mappings remain active';end if;
  if (select count(*) from creator_discord_jobs where user_id=buyer and integration_id=any(ids) and pending)<>2 then raise exception 'Old role revocations were lost';end if;
