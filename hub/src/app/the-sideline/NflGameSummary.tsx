@@ -83,10 +83,10 @@ export function NflGameSummary({ game, board, preferredBooks = [], at = null, lo
   return <section className={styles.summary} aria-label="Game markets and public activity">
     <header className={styles.toolbar}>
       <div className={styles.matchup}>{game.away.logo && <Image src={game.away.logo} alt={`${game.away.name} logo`} width={25} height={25} unoptimized/>}<strong>{game.away.abbr}<span>at</span>{game.home.abbr}</strong>{game.home.logo && <Image src={game.home.logo} alt={`${game.home.name} logo`} width={25} height={25} unoptimized/>}</div>
+      <div className={styles.arrows}><button type="button" aria-label="Previous game market" aria-controls={id} disabled={edges.start} onClick={() => move(-1)}><ChevronLeft size={17}/></button><button type="button" aria-label="Next game market" aria-controls={id} disabled={edges.end} onClick={() => move(1)}><ChevronRight size={17}/></button></div>
       <div className={styles.actions}>
         {selectedBook && <label className={styles.book}><BookLogo vendor={selectedBook} size={22}/><select aria-label="Game market sportsbook" value={selectedBook} onChange={event => setBook(event.target.value)}>{books.map(vendor => <option value={vendor} key={vendor}>{bookName(vendor)}</option>)}</select></label>}
         <button type="button" aria-expanded={compare} aria-controls={id + '-books'} onClick={() => setCompare(value => !value)}><Table2 size={16}/><span>Compare books</span></button>
-        <div className={styles.arrows}><button type="button" aria-label="Previous game market" aria-controls={id} disabled={edges.start} onClick={() => move(-1)}><ChevronLeft size={17}/></button><button type="button" aria-label="Next game market" aria-controls={id} disabled={edges.end} onClick={() => move(1)}><ChevronRight size={17}/></button></div>
       </div>
     </header>
     <div className={styles.rail} id={id} ref={rail} role="region" aria-label="Moneyline, spread and total" tabIndex={0} onKeyDown={event => { if (event.target === event.currentTarget && ['ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); move(event.key === 'ArrowLeft' ? -1 : 1) } }}>
