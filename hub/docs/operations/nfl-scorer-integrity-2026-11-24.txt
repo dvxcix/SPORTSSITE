@@ -55,4 +55,21 @@ Release qualification
   and drawer agree on 41 / 11 in both light and dark. Preview console has no
   errors. No sportsbook prices or observation dates were changed by this fix.
 
-Production publication receipt will follow after live verification.
+Production publication
+- Main f21bfdf9 / dpl_9LckKRhvQrNjbY8THo1LvKNs5Rnc published the correction.
+  Caption follow-up bed517fb4e87f8d0a6820fc225fddf32d9ea6e49 /
+  dpl_7VPo9nphdMcVXMM4ymCdm8edVAUa is READY on www.slipsurge.com and
+  slipsurge.com. Released source is on GitHub main; no CLI-only upload.
+- Live member board and drawer verify Burrow's season 41 / volume 11 / RZ 12.
+  L3 comparison and drawer both show 43 / volume 10 / RZ 5; Personal scoring
+  role is present after switching samples. Existing sample controls and tabs
+  remain accessible. These checks use the actual page DOM in the in-app browser.
+  The screenshot service captured a different selected tab, so its image was
+  discarded and is not claimed as visual proof. No new responsive/physical
+  device certification is claimed for this data-only repair.
+- Final 213 release tests pass after the caption follow-up; focused lint passes.
+  Four focused archive-boundary tests pass. The 17 unchanged legacy test-mock
+  failures above remain explicitly outside this release's passing checks.
+- Production browser console and scoped new-deployment error/fatal log scan
+  return no errors at verification time; this is a short post-release window.
+- No database mutations, provider captures, payments or archive replays.
