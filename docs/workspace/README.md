@@ -83,4 +83,5 @@ isolated worktree. Before retiring or wiping this PC, review local-only files an
 make a private backup; do not bulk-upload local logs, credentials or browser data.
 
 See [MacBook instructions](MACBOOK.md), [Cloud setup](CLOUD.md) and the
-[current context](CONTEXT.md).
+[current context](CONTEXT.md). [Workflow skill sources](SKILLS.md) list the
+owner-requested portable design workflows.

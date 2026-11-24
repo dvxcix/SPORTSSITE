@@ -5,6 +5,13 @@ Repository: `dvxcix/SPORTSSITE`. Project folder: repository root. App folder:
 Keep this tested toolchain: a newer npm rejected entries in the current lockfile.
 Do not regenerate the lockfile or add a legacy-peer-deps override to hide that.
 
+**Published and runnable, 24 November 2026:** select **Work in > Cloud > SlipSurge**.
+The private environment has the tested install/start instructions and main
+repository binding. See [the setup receipt](handoffs/2026-11-24-cloud-setup.md)
+for verification and remaining external integration limits. The creation steps
+below are retained for recovery or deliberate rebuilding; do not create a second
+environment just to start a new chat.
+
 ## Reusable setup
 
 Use **Settings > Codex Cloud > Environments > Create environment**, select only
