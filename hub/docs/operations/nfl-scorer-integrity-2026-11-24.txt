@@ -18,6 +18,7 @@ Corrections
   including QB and trick-play passers. Dropbacks do not provide scorer volume.
 - Board and player drawer apply the same context volume; comparison inherits
   the board's sample. Other market contexts retain their tracking volume.
+  QB scorer drawers say Personal scoring role, not their generic Dropback volume.
 - Slate scores call the same corrected scoring function. The open-game cache
   version advances; frozen per-game entries/pools and observation times retain
   their original captured values. No archived model outputs were backfilled or

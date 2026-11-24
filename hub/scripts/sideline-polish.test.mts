@@ -36,7 +36,7 @@ test('comparison separates implied probability from historical payout changes an
  lens.windows.season.players=lens.windows.season.players.map(player=>({...player}))
  lens.windows.l3.players=lens.windows.l3.players.map(player=>({...player}))
  lens.windows.l3.players.find(p=>p.name==='Josh Allen')!.geometry=29
- for(const [sample,share] of [['season',20],['l3',10]] as const){const qb=lens.windows[sample].players.find(p=>p.name==='Josh Allen')!;qb.volume=100;qb.targetShare=0;qb.carryShare=share}
+ for(const [sample,share] of [['season',20],['l3',10]] as const){const qb=lens.windows[sample].players.find(p=>p.name==='Josh Allen')!;qb.volume=100;qb.targetShare=0;qb.carryShare=share;qb.lane='Dropback volume'}
  const ui=await mount(h(module.exports.SidelineBoardClient,{games:nflGames,selectedId:nflGames[0].id,sample:'regular',lens,odds,gameState:storedGameState(),touchdowns:[],timeline:[]}))
  try{
   for(const name of ['Josh Allen','James Cook'])await act(async()=>ui.host.querySelector<HTMLButtonElement>(`button[aria-label="Compare ${name}"]`)!.click())
@@ -58,6 +58,8 @@ test('comparison separates implied probability from historical payout changes an
   assert.equal(geometry.querySelector('b')!.textContent,'29','the drawer and comparison use the same sample and metric value')
   const volume=[...dialog.querySelectorAll('small')].find(el=>el.textContent==='Volume')!.parentElement!
   assert.equal(volume.querySelector('b')!.textContent,'9','the drawer keeps scorer volume instead of restoring raw passing volume')
+  assert.match(dialog.textContent!,/Personal scoring role/)
+  assert.doesNotMatch(dialog.textContent!,/Dropback volume/)
   await act(async()=>dialog.querySelector<HTMLButtonElement>('button[aria-label="Close player details"]')!.click())
   await act(async()=>[...panel.querySelectorAll<HTMLButtonElement>('nav button')].find(button=>button.textContent==='NFL Tracking')!.click())
   for(const label of ['Targets','Receptions','Target share','Carries','Carry share','aDOT','Separation','YACOE','RYOE/A','Explosives','Pass yards','CPOE'])assert.ok(row(label),label)

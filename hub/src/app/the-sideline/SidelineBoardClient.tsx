@@ -1255,6 +1255,7 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
     return {
       ...merged,
       volume: nflContextVolume(merged, player.contextProp ?? 'role'),
+      lane: result.context.family === 'touchdown' && merged.position === 'QB' ? 'Personal scoring role' : merged.lane,
       index: result.score,
       contextLabel: result.context.label,
       contextProp: result.context.propType,
@@ -1785,6 +1786,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         return {
           ...row,
           volume: nflContextVolume(row, scoreProp),
+          lane: result.context.family === 'touchdown' && row.position === 'QB' ? 'Personal scoring role' : row.lane,
           eligible: status.eligible && marketAvailable,
           availabilityEligible: status.eligible,
           marketAvailable,
