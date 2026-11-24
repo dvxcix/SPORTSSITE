@@ -20,7 +20,8 @@ async function requireAdmin() {
 // /api/discord/interactions/route.ts, or Discord will show a command this
 // route doesn't know how to answer.
 
-export async function POST() {
+export async function POST(request:Request) {
+  if(request.headers.get('origin')!==new URL(request.url).origin)return NextResponse.json({error:'Open Discord administration from SlipSurge.'},{status:403})
   const { error } = await requireAdmin()
   if (error) return error
 

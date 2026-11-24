@@ -25,7 +25,7 @@ export async function GET(request:Request,context:Context){
    creatorDiscordIdentity(admin,user.id,false),
   ])
   if(error)throw error
-  return NextResponse.json({configured:creatorDiscordConfigured(),connected:!!discordId,installUrl:creatorBotInvite(),integrations:data||[],integration:data?.[0]||null},{headers})
+  return NextResponse.json({configured:creatorDiscordConfigured(),applicationId:process.env.DISCORD_APPLICATION_ID||null,connected:!!discordId,installUrl:creatorBotInvite(),integrations:data||[],integration:data?.[0]||null},{headers})
  }catch(cause){return failure(cause)}
 }
 export async function POST(request:Request,context:Context){
