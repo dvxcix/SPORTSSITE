@@ -9,6 +9,27 @@ Inspect git status and preserve unrelated local work before editing. New task
 branches use codex/ and start from verified current main or its descendant.
 Read hub/AGENTS.md for framework guidance.
 
+## Shared workspace continuity
+
+Before starting work on any computer or in Codex Cloud, read
+docs/workspace/CONTEXT.md and docs/workspace/README.md. The current page ledger is
+hub/docs/design/page-by-page-checklist.txt; retain its dated evidence and limits.
+Use the repository root as the saved Codex project folder on every host.
+Start from refreshed main in a separate codex/ branch or worktree. Never overwrite
+another task's dirty checkout. Fetch before work and before publishing; use only
+fast-forward pulls and reconcile concurrent main changes before release.
+
+At a device handoff or task finish, commit the task's reviewed files, update a
+task-specific note under docs/workspace/handoffs/, and push its branch. Work in
+progress belongs on its task branch, not main. Record the branch, commit, checks,
+remaining work and blockers. Never stage all local files indiscriminately.
+Keep secrets, browser sessions, local logs and production data out of Git.
+No automatic background pull, force push, hard reset or production replay.
+Cloud work uses the credential-free private UI review by default; collectors,
+payments, production writes and secrets require the current task's authorization.
+Individual Cloud chats and local clones have separate files; Git push/fetch/pull
+or an explicit host handoff provides continuity, not live folder mirroring.
+
 Vercel: hub / prj_ItG1pVUbVbwWHtdoqBgL5qQVqHlK.
 Team: parlaypartys-projects / team_S2ipF2Ok3Pd45nLq8hmCjYs0.
 Supabase primary: hkldweedwnxartkfhror. Legacy MLB emllcbynioctxkbsdlwp is out of scope.
@@ -16,10 +37,10 @@ Existing collectors and recap exports run in cloud services; do not duplicate
 on the laptop. Never print or commit secrets.
 
 Production deployments, database mutations, secret changes and job replays need
-task-specific user authorization. The current task authorizes main reconciliation,
-the reviewed three-file banner fix, and sequential remaining reviewed database
-repair batches with live preflight and verification. Do not infer authorization
-for unrelated jobs, feature enablement, payments or destructive resets.
+task-specific user authorization. Prior main reconciliation, banner-fix and
+database-repair permissions below are historical records, not standing approval
+for a new task. Do not infer authorization for unrelated jobs, feature enablement,
+payments or destructive resets.
 
 Batch 1 is already applied as 20261018004741_restore_member_core_live. Its SQL is
 tracked for history; do not replay it or the entire historical migration tree.
