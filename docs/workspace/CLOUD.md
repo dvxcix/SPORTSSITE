@@ -1,7 +1,9 @@
 # SlipSurge Codex Cloud environment
 
 Repository: `dvxcix/SPORTSSITE`. Project folder: repository root. App folder:
-`hub/`. Runtime: Node 24; tested local patch is recorded in `.node-version`.
+`hub/`. Runtime: Node 24.11.1 with bundled npm 11.6.2, recorded in `.node-version`.
+Keep this tested toolchain: a newer npm rejected entries in the current lockfile.
+Do not regenerate the lockfile or add a legacy-peer-deps override to hide that.
 
 ## Reusable setup
 

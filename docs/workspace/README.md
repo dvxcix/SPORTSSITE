@@ -74,9 +74,12 @@ instructions in the repository; authenticate providers separately.
 
 The original PC checkout was on `codex/research-data-performance`, behind current
 main, with unrelated unfinished tracked changes. It is intentionally preserved
-in place. Old worktrees and untracked review files are not assumed to be
-published or backed up. The Cloud setup starts from verified main in an isolated
-worktree. Before retiring or wiping this PC, review these local-only files and
+in place. All 21 tracked edited files were also hash-checked and saved on GitHub
+branch `codex/device-backup-20261124`, commit `c7ad456d`. This is an old-baseline
+recovery checkpoint, not an approved release. Review/reconcile it against current
+main before reusing it. Old worktrees and untracked review files are not assumed
+to be published or backed up. The Cloud setup starts from verified main in an
+isolated worktree. Before retiring or wiping this PC, review local-only files and
 make a private backup; do not bulk-upload local logs, credentials or browser data.
 
 See [MacBook instructions](MACBOOK.md), [Cloud setup](CLOUD.md) and the

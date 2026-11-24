@@ -12,9 +12,11 @@
 
 ## Install a local checkout for web and iOS development
 
-Install Git (Apple's Command Line Tools provide it) and Node 24.11.1 or a current
-compatible Node 24 patch. The repository's `.node-version` records the tested
-version. Authenticate to GitHub as an account that can access `dvxcix/SPORTSSITE`.
+Install Git (Apple's Command Line Tools provide it) and Node 24.11.1 with its
+bundled npm 11.6.2. The repository's `.node-version` records the tested version.
+A newer npm rejected entries in the existing lockfile during Cloud setup; use
+the tested toolchain rather than regenerating the lockfile or overriding peers.
+Authenticate to GitHub as an account that can access `dvxcix/SPORTSSITE`.
 If HTTPS clone requests credentials, use GitHub's supported browser/credential
 manager flow or GitHub Desktop; do not enter a GitHub password as a Git token.
 
