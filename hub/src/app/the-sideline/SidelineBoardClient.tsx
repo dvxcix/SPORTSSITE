@@ -43,6 +43,7 @@ import { SidelineDesignation } from './SidelineDesignation'
 import { SidelineFinalLine } from './SidelineFinalLine'
 import { useSidelineFinals } from './useSidelineFinals'
 import { MATCHUP_METRICS, TRACKING_METRICS, playerMetricValue } from './playerMetrics'
+import { NflGameSummary } from './NflGameSummary'
 
 const NflSlateEdgeOverlay = dynamic(() => import('./NflSlateEdgeOverlay').then(module => module.NflSlateEdgeOverlay), { ssr: false })
 
@@ -347,22 +348,6 @@ function addNflMmRanks(rows: PlayerRow[]) {
 function oddsLabel(value: number | null | undefined) {
   if (value == null) return '-'
   return value > 0 ? `+${value}` : String(value)
-}
-
-function signedLine(value: number | null | undefined) {
-  return value == null ? '—' : `${value > 0 ? '+' : ''}${value}`
-}
-
-function openOdds(value: number | null | undefined) {
-  return value == null ? '—' : oddsLabel(value)
-}
-
-function spreadValue(line: number | null | undefined, odds: number | null | undefined) {
-  return line == null ? '—' : `${signedLine(line)}${odds == null ? '' : ` ${oddsLabel(odds)}`}`
-}
-
-function totalValue(side: 'O' | 'U', total: number | null | undefined, odds: number | null | undefined) {
-  return total == null ? '—' : `${side} ${total}${odds == null ? '' : ` ${oddsLabel(odds)}`}`
 }
 
 function findMarketPlayer(board: SidelineOddsBoard, player: Pick<SidelinePlayer, 'name' | 'team'>) {
@@ -1128,97 +1113,6 @@ function TeamSummary({ team, opponent, rows, board, selectedWindow, side, savedC
         {signal('Most hidden', hidden, 'hidden')}
       </div>
     </header>
-  )
-}
-
-function GameLines({ game, board, preferredBooks = [] }: { game: SidelineGame; board: SidelineOddsBoard; preferredBooks?: string[] }) {
-  const available=board.gameLines.map(line=>line.vendor)
-  const selection=useResearchBooks(available,preferredBooks)
-  if (!board.gameLines.length) return null
-  return (
-    <section className={styles.gameLines} aria-label="All sportsbook game lines">
-      <header className={styles.gameLinesHeader}>
-        <div>
-          <small>GAME LINES</small>
-          <strong>
-            <span className={styles.matchupLogos}><TeamLogo team={game.away} size={28} /> {game.away.abbr} <span>@</span> <TeamLogo team={game.home} size={28} /> {game.home.abbr}</span>
-          </strong>
-          <p>Compare both sides at every live book.</p>
-        </div>
-        <div className={styles.gameLineMarketKeys} aria-label="Available game markets">
-          <span>Moneyline</span>
-          <span>Spread</span>
-          <span>Total</span>
-        </div>
-        <span className={styles.liveBookCount}>
-          <b>{selection.books.length}</b> captured books
-        </span>
-      </header>
-      <ResearchBookFilter available={available} selected={selection.books} onChange={selection.setBooks}/>
-      <div className={styles.gameLineRail}>
-        {board.gameLines.filter(line=>selection.books.includes(line.vendor)).map(line => (
-          <article className={styles.gameLineCard} data-vendor={normalizeVendor(line.vendor)} data-opening-only={line.isOpeningOnly ? '' : undefined} key={line.vendor}>
-            <header>
-              <span className={styles.bookMark}>
-                <BookLogo vendor={line.vendor} size={24} />
-              </span>
-              <div>
-                <b>{line.vendor}</b>
-                <small>{line.isOpeningOnly ? 'Opening line' : 'Live market'}</small>
-              </div>
-              <i aria-hidden="true" />
-            </header>
-            <dl className={styles.gameLineMarkets}>
-              <div className={styles.gameLineMarket}>
-                <dt>Moneyline</dt>
-                <dd>
-                  <span>
-                    <small className={styles.inlineMarket}><TeamLogo team={game.away} size={20} />{game.away.abbr}</small>
-                    <b>{oddsLabel(line.moneylineAway)}</b>
-                    <em>Open {openOdds(line.opening?.moneylineAway)}</em>
-                  </span>
-                  <span>
-                    <small className={styles.inlineMarket}><TeamLogo team={game.home} size={20} />{game.home.abbr}</small>
-                    <b>{oddsLabel(line.moneylineHome)}</b>
-                    <em>Open {openOdds(line.opening?.moneylineHome)}</em>
-                  </span>
-                </dd>
-              </div>
-              <div className={styles.gameLineMarket}>
-                <dt>Spread</dt>
-                <dd>
-                  <span>
-                    <small className={styles.inlineMarket}><TeamLogo team={game.away} size={20} />{game.away.abbr}</small>
-                    <b>{spreadValue(line.spreadAway, line.spreadAwayOdds)}</b>
-                    <em>Open {spreadValue(line.opening?.spreadAway, line.opening?.spreadAwayOdds)}</em>
-                  </span>
-                  <span>
-                    <small className={styles.inlineMarket}><TeamLogo team={game.home} size={20} />{game.home.abbr}</small>
-                    <b>{spreadValue(line.spreadHome, line.spreadHomeOdds)}</b>
-                    <em>Open {spreadValue(line.opening?.spreadHome, line.opening?.spreadHomeOdds)}</em>
-                  </span>
-                </dd>
-              </div>
-              <div className={styles.gameLineMarket}>
-                <dt>Total</dt>
-                <dd>
-                  <span>
-                    <small>OVER</small>
-                    <b>{totalValue('O', line.total, line.totalOverOdds)}</b>
-                    <em>Open {totalValue('O', line.opening?.total, line.opening?.totalOverOdds)}</em>
-                  </span>
-                  <span>
-                    <small>UNDER</small>
-                    <b>{totalValue('U', line.total, line.totalUnderOdds)}</b>
-                    <em>Open {totalValue('U', line.opening?.total, line.opening?.totalUnderOdds)}</em>
-                  </span>
-                </dd>
-              </div>
-            </dl>
-          </article>
-        ))}
-      </div>
-    </section>
   )
 }
 
@@ -2128,12 +2022,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         </section>
       ) : null}
 
-      {view !== 'odds-board' && <details className={styles.gameLinesDisclosure}>
-        <summary>
-          Sportsbook game lines <span>{board.gameLines.length} books · moneyline, spread, total</span>
-        </summary>
-        <GameLines game={selected} board={board} preferredBooks={initialPreferences.books} />
-      </details>}
+      <NflGameSummary key={selected.id} game={selected} board={board} preferredBooks={initialPreferences.books} at={marketStory.selectedCapture} loadingPrices={marketStory.loading}/>
 
       {toolsOpen ? (
         <section className={styles.toolsPanel}>

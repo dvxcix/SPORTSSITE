@@ -2,7 +2,7 @@ import type { PreviewSport } from './publicResearchPreview'
 
 export const PUBLIC_WORKSPACE_RESOURCES = {
   nba: ['/the-paint/board','/the-paint/profile','/the-paint/shots','/the-paint/scouting','/the-paint/tracking','/the-paint/history','/the-paint/public','/the-paint/results','/the-paint/game-overview','/the-paint/lineups','/the-paint/first-basket','/the-paint/first-basket/odds','/the-paint/odds-board','/the-paint/final-results','/the-paint/schedule','/the-paint/intelligence','/the-paint/divergence','/the-paint/estimate'],
-  nfl: ['/the-sideline/market','/api/the-sideline/odds-board'],
+  nfl: ['/the-sideline/market','/the-sideline/game-overview','/api/the-sideline/odds-board'],
 } as const
 
 /** The server supplies scope, never the visitor. The only historical-game

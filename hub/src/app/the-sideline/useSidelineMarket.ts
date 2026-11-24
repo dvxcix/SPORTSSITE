@@ -157,6 +157,7 @@ export function useSidelineMarket(
   const board = useNflAvailabilityBoard(selectedBoard)
   return {
     board, current, gameState, touchdowns, timeline, index, select, retry, error, oddsBoardPhase:oddsBoardOpen&&oddsBoardPhase?.gameId===gameId?oddsBoardPhase:null,
+    selectedCapture: selectedAt,
     loading: selectedAt != null && frame?.capturedAt !== selectedAt && !error,
     capturedAt: selectedAt == null ? current.capturedAt : frame?.capturedAt ?? current.capturedAt,
   }

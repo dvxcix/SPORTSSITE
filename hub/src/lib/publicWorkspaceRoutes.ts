@@ -24,5 +24,6 @@ export const PUBLIC_WORKSPACE_READERS: Record<string, Reader> = {
   '/the-paint/divergence': () => import('@/app/the-paint/divergence/route'),
   '/the-paint/estimate': () => import('@/app/the-paint/estimate/route'),
   '/the-sideline/market': () => import('@/app/the-sideline/market/route'),
+  '/the-sideline/game-overview': () => import('@/app/the-sideline/game-overview/route'),
   '/api/the-sideline/odds-board': () => import('@/app/api/the-sideline/odds-board/route'),
 }

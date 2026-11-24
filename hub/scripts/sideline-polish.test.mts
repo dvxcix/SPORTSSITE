@@ -20,11 +20,50 @@ const stubs:Record<string,string>={
  '@/lib/nflPolling':'export const callbacks=[];export const startNflPolling=(fn,options)=>{callbacks.push(fn);if(options?.immediate)Promise.resolve(fn(new AbortController().signal)).catch(()=>{});return()=>{}}',
  '@/context/WatchlistContext':'const items=[];export const useWatchlist=()=>({items,add:async()=>{},remove:async()=>{},has:()=>false})',
 }
-const bundle=await build({stdin:{contents:`export {SidelineCheatsheets} from './src/app/the-sideline/SidelineCheatsheets';export {NflSlateEdgeOverlay} from './src/app/the-sideline/NflSlateEdgeOverlay';export {NflMatrixButton} from './src/components/sideline/NflMatrixButton';export {callbacks} from '@/lib/nflPolling';export {NflQuote} from './src/components/sideline/NflQuote';export {ResearchSectionNav} from './src/components/research/ResearchSectionNav';export {SidelinePlayerAvatar} from './src/app/the-sideline/SidelinePlayerAvatar';export {SidelineResearchClient} from './src/app/the-sideline/SidelineResearchClient';export {SidelineBoardClient} from './src/app/the-sideline/SidelineBoardClient';`,resolveDir:resolve('.'),loader:'tsx'},bundle:true,write:false,outfile:'sideline-polish.cjs',platform:'node',format:'cjs',jsx:'automatic',external:['react','react-dom'],tsconfig:'tsconfig.json',loader:{'.css':'empty'},plugins:[{name:'local-boundaries',setup(b){b.onResolve({filter:/.*/},args=>args.path in stubs?{path:args.path,namespace:'stub'}:undefined);b.onLoad({filter:/.*/,namespace:'stub'},args=>({contents:stubs[args.path],loader:'tsx'}))}}]})
+const bundle=await build({stdin:{contents:`export {SidelineCheatsheets} from './src/app/the-sideline/SidelineCheatsheets';export {NflSlateEdgeOverlay} from './src/app/the-sideline/NflSlateEdgeOverlay';export {NflMatrixButton} from './src/components/sideline/NflMatrixButton';export {NflGameSummary} from './src/app/the-sideline/NflGameSummary';export {callbacks} from '@/lib/nflPolling';export {NflQuote} from './src/components/sideline/NflQuote';export {ResearchSectionNav} from './src/components/research/ResearchSectionNav';export {SidelinePlayerAvatar} from './src/app/the-sideline/SidelinePlayerAvatar';export {SidelineResearchClient} from './src/app/the-sideline/SidelineResearchClient';export {SidelineBoardClient} from './src/app/the-sideline/SidelineBoardClient';`,resolveDir:resolve('.'),loader:'tsx'},bundle:true,write:false,outfile:'sideline-polish.cjs',platform:'node',format:'cjs',jsx:'automatic',external:['react','react-dom'],tsconfig:'tsconfig.json',loader:{'.css':'empty'},plugins:[{name:'local-boundaries',setup(b){b.onResolve({filter:/.*/},args=>args.path in stubs?{path:args.path,namespace:'stub'}:undefined);b.onLoad({filter:/.*/,namespace:'stub'},args=>({contents:stubs[args.path],loader:'tsx'}))}}]})
 const module={exports:{} as Record<string,any>}
 new Function('require','module','exports',bundle.outputFiles[0].text)(require,module,module.exports)
 async function mount(component:ReactNode){const host=document.createElement('div');document.body.append(host);const root=createRoot(host);await act(async()=>root.render(component));return{host,rerender:async(node:ReactNode)=>act(async()=>root.render(node)),close:async()=>{await act(async()=>root.unmount());host.remove()}}}
 const quote={vendor:'fanduel',line:70,openingLine:70,type:'milestone',current:{odds:150},opening:{odds:200},updatedAt:null}
+
+test('NFL game header separates bets and money, changes books, and retains the complete comparison',async()=>{
+ const old=globalThis.fetch,game=nflGames[0],odds=makeNflOdds(),calls:string[]=[]
+ globalThis.fetch=async(input)=>{calls.push(String(input));return Response.json({overview:{gameId:game.id,observedAt:'2030-11-20T18:00:00Z',totalBets:500,totalHandleDollars:22000,splits:[{market:'moneyline',side:'away',betShare:.2,moneyShare:.7},{market:'moneyline',side:'home',betShare:.8,moneyShare:.3}]}})}
+ const ui=await mount(h(module.exports.NflGameSummary,{game,board:odds,preferredBooks:['fanduel','draftkings'],at:'2030-11-20T19:00:00Z'}))
+ try{
+  assert.ok(calls.some(url=>url.includes('game='+game.id)&&url.includes('at=')))
+  const split=(label:string)=>ui.host.querySelector(`[aria-label="${label}"]`)!
+  assert.ok(split(`Moneyline bets: ${game.away.abbr} 20%, ${game.home.abbr} 80%`))
+  assert.ok(split(`Moneyline money: ${game.away.abbr} 70%, ${game.home.abbr} 30%`))
+  const moneyline=ui.host.querySelector('article[aria-label="Moneyline"]')!,before=moneyline.textContent
+  const select=ui.host.querySelector<HTMLSelectElement>('select[aria-label="Game market sportsbook"]')!
+  await act(async()=>{select.value='draftkings';select.dispatchEvent(new win.Event('change',{bubbles:true}))})
+  assert.notEqual(moneyline.textContent,before,'book switching changes its actual prices')
+  assert.ok(split(`Moneyline money: ${game.away.abbr} 70%, ${game.home.abbr} 30%`),'public shares do not change with a book')
+  await act(async()=>[...ui.host.querySelectorAll('button')].find(button=>button.textContent?.includes('Compare books'))!.click())
+  const comparison=ui.host.querySelector('section[aria-label="All sportsbook game lines"]')!
+  assert.equal(comparison.querySelectorAll('tbody tr').length,2)
+  assert.match(comparison.textContent!,/2 of 4 books/)
+  assert.equal(select.options.length,4,'all captured sportsbooks remain selectable')
+  assert.ok(ui.host.querySelector('button[aria-label="Next game market"]'))
+ }finally{await ui.close();globalThis.fetch=old}
+})
+
+test('NFL public activity failures can retry and withdrawn game quotes are never revived',async()=>{
+ const old=globalThis.fetch,game=nflGames[0],odds=makeNflOdds();let failed=true
+ for(const line of odds.gameLines)line.isOpeningOnly=true
+ globalThis.fetch=async()=>failed?Response.json({}, {status:503}):Response.json({overview:null})
+ const ui=await mount(h(module.exports.NflGameSummary,{game,board:odds,at:'2030-11-20T19:00:00Z'}))
+ try{
+  assert.match(ui.host.textContent!,/Public activity could not refresh/)
+  assert.match(ui.host.textContent!,/Game prices unavailable/)
+  assert.equal(ui.host.querySelector('select[aria-label="Game market sportsbook"]'),null)
+  assert.doesNotMatch(ui.host.querySelector('article[aria-label="Moneyline"]')!.textContent!,/-175|\+150/)
+  failed=false
+  await act(async()=>[...ui.host.querySelectorAll('button')].find(button=>button.textContent==='Retry')!.click())
+  assert.match(ui.host.textContent!,/Public splits not captured/)
+ }finally{await ui.close();globalThis.fetch=old}
+})
 
 test('comparison separates implied probability from historical payout changes and shares every drawer metric',async()=>{
  const old=globalThis.fetch;globalThis.fetch=async()=>Response.json({matrices:[]})
