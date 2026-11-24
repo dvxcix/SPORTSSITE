@@ -1394,11 +1394,6 @@ function ComparisonPanel({ players, teams, window, board, gameSeason, finalResul
   )
 }
 
-function gameMoneyline(board: SidelineOddsBoard, side: 'away' | 'home') {
-  const book = board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0]
-  return side === 'away' ? book?.moneylineAway : book?.moneylineHome
-}
-
 function gameStatusCopy(game: SidelineGame, state: SidelineGameState | null) {
   if (!state)
     return {
@@ -1970,7 +1965,9 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
         </button>)}
       </div> : null}
 
-      {view !== 'odds-board' && <section className={styles.storyGrid}>
+      <NflGameSummary key={selected.id} game={selected} board={board} preferredBooks={initialPreferences.books} at={marketStory.selectedCapture} loadingPrices={marketStory.loading}/>
+
+      {view !== 'odds-board' && <section className={`${styles.storyGrid} ${styles.marketContext}`}>
         <article className={styles.stadiumCard} style={{ '--home-color': selected.home.color } as CSSProperties}>
           <small>Conditions</small>
           <strong>{selected.stadium ?? 'Stadium TBD'}</strong>
@@ -1982,15 +1979,6 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           <small>Game status</small>
           <strong>{statusCopy.headline}</strong>
           <span>{periodScores ?? statusCopy.detail}</span>
-        </article>
-        <article>
-          <small className={styles.inlineMarket}><BookLogo vendor={(board.gameLines.find(line => normalizedName(line.vendor) === 'fanduel') ?? board.gameLines[0])?.vendor ?? 'fanduel'} size={20} /> Game line</small>
-          <div className={styles.gameLineSummary}>
-            <span><TeamLogo team={selected.away} size={24} />{selected.away.abbr}<b>{oddsLabel(gameMoneyline(board, 'away'))}</b></span>
-            <i>@</i>
-            <span><TeamLogo team={selected.home} size={24} />{selected.home.abbr}<b>{oddsLabel(gameMoneyline(board, 'home'))}</b></span>
-          </div>
-          <span>{board.gameLines.length} sportsbooks captured</span>
         </article>
         <article className={styles.marketStory}>
           <div>
@@ -2021,8 +2009,6 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
           </div>
         </section>
       ) : null}
-
-      <NflGameSummary key={selected.id} game={selected} board={board} preferredBooks={initialPreferences.books} at={marketStory.selectedCapture} loadingPrices={marketStory.loading}/>
 
       {toolsOpen ? (
         <section className={styles.toolsPanel}>

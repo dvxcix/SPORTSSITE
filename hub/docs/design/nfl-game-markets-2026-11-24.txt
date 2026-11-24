@@ -1,0 +1,49 @@
+NFL game markets and public activity — 24 November 2026
+
+Problem and correction
+- NFL collectors already archive game-level public bets and money. The Sideline
+  rendered sportsbook prices only and had no reader/UI for those saved splits.
+- The old two-column game-line grid had a book filter as a third direct child.
+  That moved the wide price rail into the narrow column and left a large gap.
+- One visible market header now presents Moneyline, Spread and Total using the
+  Court's established card hierarchy. A compact comparison retains every book,
+  both sides, current captured prices, opening prices and saved book defaults.
+- The redundant one-line moneyline box is removed. Markets come before weather,
+  game status and the capture slider. All of that context remains accessible.
+
+Data meaning and boundaries
+- Bets and Money have separate labeled bars. Team primary/secondary colors
+  distinguish sides; Over uses SlipSurge green and Under uses the existing red.
+- Public shares belong to a separate observed cohort, never to the selected
+  sportsbook's own wagers. Game-wide totals are never multiplied into side
+  counts. Missing/inconsistent shares remain unavailable, with no complements.
+- A server-only reader validates game ID, both team names, observation time,
+  selected capture time and the earliest available scheduled/durable cutoff.
+  It reads existing pikkit_pregame_overviews only; no provider request, replay,
+  database mutation or snapshot rewrite is part of this release.
+- The member endpoint retains NFL entitlement checks. The one-game guest
+  dispatcher permits only its server-selected matchup and read-only resource.
+- Old/withdrawn opening-only quotes cannot become current prices. Loading,
+  failure/retry and missing public observations have explicit states.
+
+Design and verification
+- Team/league/book artwork and scoring formulas are unchanged. This uses
+  SlipSurge tokens and the existing Court pattern, not a new visual language.
+- Phones get a separate book/control row and a swipeable market rail. Desktop
+  fits three markets; tablet widths show two with the third still accessible.
+- 227 release tests pass, including the actual archive reader, access route,
+  distinct bets/money values, cutoff/replay rejection, retry, stale quote guard,
+  book switching, comparison and prior scorer/drawer/result regressions.
+- Complete TypeScript checking, focused lint and optimized Git preview pass.
+- Real CIN/WAS capture: 132,187 observed picks and $4.7M recorded wagers;
+  moneyline bets 92/8 and money 94/6. IND/HOU also has four saved overview frames.
+- Ten actual in-app browser viewport/theme checks: 320x740, 390x844, 820x1024,
+  844x390, 1440x1000 in light/dark. Header controls fit without overlap and all
+  twelve bar segments are present. Narrow book sizing was corrected after review.
+  This is browser viewport verification, not a physical-device certification.
+- Evidence: review/nfl-game-markets-release-20261124.txt, relevant focused lint /
+  type logs, and nfl-game-markets-layouts-20261124.json in Codex visualizations.
+- Existing legacy freeze-suite mock failures remain as recorded in the previous
+  QB scorer audit; this is not a claim that every repository test passes.
+
+Production receipt and final live checks follow after rollout.
