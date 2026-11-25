@@ -2,7 +2,8 @@ import 'server-only'
 
 const mediaName = /^[0-9a-f-]{36}\.(jpg|png|webp|gif|avif)$/
 
-export function isOwnedNativeMedia(value: unknown, userId: string, kind: 'avatars' | 'banners' | 'posts' | 'messages' | 'stories'): value is string {
+export function isOwnedNativeMedia(value: unknown, userId: string,
+  kind: 'avatars' | 'banners' | 'posts' | 'messages' | 'stories' | 'emojis' | 'badges' | 'badge-cards'): value is string {
   if (typeof value !== 'string' || value.length > 2048) return false
   try {
     const url = new URL(value)

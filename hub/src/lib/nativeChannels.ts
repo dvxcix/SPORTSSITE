@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { isAccountId } from './blocks'
 import { loadChannelHistory, type ChannelHistoryCursor } from './channelHistory'
 import { isNativeSocialGif, isOwnedNativeMedia } from './nativeMedia'
+import { nativeChatReaction } from './nativeChatReaction'
 import { canViewMlb } from './mlbViewerAccess'
 import { requireTier } from './requireTier'
 
@@ -121,8 +122,10 @@ export async function changeNativeChannel(client: SupabaseClient, userId: string
 
   if (!message || message.is_deleted) return input.action === 'delete' && message?.sender_id === userId ? 200 : 404
   if (input.action === 'read') return recordRead(client, userId, channel.id, id, message.created_at)
-  if (input.action === 'react' && typeof input.enabled === 'boolean' && typeof input.emoji === 'string' && input.emoji.trim() && [...input.emoji].length <= 16) {
-    const identity = { target_type: 'message', target_id: id, user_id: userId, emoji: input.emoji.trim() }
+  if (input.action === 'react' && typeof input.enabled === 'boolean' && typeof input.emoji === 'string') {
+    const selection = await nativeChatReaction(client, input.emoji, input.enabled)
+    if (selection.status) return selection.status
+    const identity = { target_type: 'message', target_id: id, user_id: userId, emoji: selection.emoji }
     const result = await (input.enabled ? client.from('reactions').insert(identity) : client.from('reactions').delete().match(identity))
     return !result.error || result.error.code === '23505' ? 200 : 503
   }
