@@ -28,7 +28,9 @@ export async function GET() {
     const priorSports = Array.isArray(auth.profile.favorite_sports) ? auth.profile.favorite_sports.filter((sport: unknown): sport is string => typeof sport === 'string') : []
     const teamIsMlb = (key: string) => resolveFavoriteTeam(key, catalog, priorSports)?.sport === 'mlb' || key.startsWith('MLB:')
     const sports = Array.isArray(auth.profile.favorite_sports) ? auth.profile.favorite_sports.filter((sport: unknown): sport is string => typeof sport === 'string' && (auth.allowMlb || sport.toUpperCase() !== 'MLB')) : []
-    return NextResponse.json({ catalog: auth.allowMlb ? catalog : catalog.filter(team => team.sport !== 'mlb'), teams: normalizeFavoriteTeams(auth.profile.favorite_teams, auth.allowNba).filter(key => auth.allowMlb || !teamIsMlb(key)), players: normalizeFavoritePlayers(auth.profile.favorite_players, auth.allowNba).filter(player => auth.allowMlb || favoritePlayerSport(player) !== 'mlb'), sports }, { headers })
+    const teams = normalizeFavoriteTeams(auth.profile.favorite_teams, auth.allowNba).filter(key => auth.allowMlb || !teamIsMlb(key))
+    const selectedTeamKeys = [...new Set(teams.map(team => resolveFavoriteTeam(team, catalog, priorSports)?.key).filter(Boolean))]
+    return NextResponse.json({ catalog: auth.allowMlb ? catalog : catalog.filter(team => team.sport !== 'mlb'), teams, selectedTeamKeys, players: normalizeFavoritePlayers(auth.profile.favorite_players, auth.allowNba).filter(player => auth.allowMlb || favoritePlayerSport(player) !== 'mlb'), sports }, { headers })
   } catch (error) { return safeApiError('favorites-catalog', error, 'Teams could not be loaded. Please try again.') }
 }
 

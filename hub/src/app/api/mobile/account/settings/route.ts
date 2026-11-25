@@ -33,7 +33,7 @@ export async function PATCH(request: Request) {
   } catch {
     return respond({ error: 'Invalid settings' }, 400)
   }
-  const fields: Record<string, string | boolean> = {}
+  const fields: Record<string, string | boolean | null> = {}
   if (body.kind === 'privacy') {
     for (const [key, column] of [['isPrivate', 'is_private'], ['allowMessages', 'allow_dms'], ['hideWinRate', 'hide_win_rate']]) {
       if (typeof body[key] !== 'boolean') return respond({ error: 'Invalid privacy setting' }, 400)
@@ -45,6 +45,25 @@ export async function PATCH(request: Request) {
       const value = body[key]
       if (typeof value !== 'string' || value.length > limit) return respond({ error: 'Check your profile details' }, 400)
       fields[column] = value.trim()
+    }
+    if (body.username !== undefined) {
+      const username = typeof body.username === 'string' ? body.username.trim().toLowerCase() : ''
+      if (!/^[a-z0-9._]{2,30}$/.test(username)) return respond({ error: 'Use 2–30 letters, numbers, periods or underscores' }, 400)
+      fields.username = username
+    }
+    for (const [key, column, folder] of [['avatarUrl', 'avatar_url', 'avatars'], ['bannerUrl', 'banner_url', 'banners']] as const) {
+      const edit = body[key]
+      if (edit === undefined) continue
+      if (edit === null) { fields[column] = null; continue }
+      try {
+        if (typeof edit !== 'string' || edit.length > 2048) throw Error()
+        const url = new URL(edit)
+        const allowed = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!)
+        const root = `/storage/v1/object/public/media/${folder}/${account.userId}/`
+        if (url.origin !== allowed.origin || url.username || url.password || url.search || url.hash ||
+          !url.pathname.startsWith(root) || !/^[0-9a-f-]{36}\.(?:gif|webp|png|jpe?g)$/i.test(url.pathname.slice(root.length))) throw Error()
+        fields[column] = url.href
+      } catch { return respond({ error: 'Choose an uploaded profile photo' }, 400) }
     }
     if (fields.website && typeof fields.website === 'string') {
       try {
@@ -58,6 +77,7 @@ export async function PATCH(request: Request) {
     return respond({ error: 'Invalid settings type' }, 400)
   }
   const { data, error } = await account.supabase.from('users').update(fields).eq('id', account.userId).select('id').maybeSingle()
+  if (error?.code === '23505' && fields.username) return respond({ error: 'That username is taken' }, 409)
   if (error || !data?.id) return respond({ error: 'Settings could not be saved' }, 503)
   return respond({ ok: true })
 }
