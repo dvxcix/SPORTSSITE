@@ -15,6 +15,7 @@ struct CourtPlayerComparison: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var size
+    @Environment(\.courtResults) private var results
     @State private var expired = false
 
     private var expiry: Date? {
@@ -23,7 +24,7 @@ struct CourtPlayerComparison: View {
     }
 
     private var metrics: [Metric] {
-        [CourtPlayerMarket.points, .rebounds, .assists, .threes, .steals, .blocks].map { metric in
+        let records = [CourtPlayerMarket.points, .rebounds, .assists, .threes, .steals, .blocks].map { metric in
             Metric(id: metric.rawValue, name: metric.label, value: { metric.average($0.average) })
         } + [
             Metric(id: "minutes", name: "Minutes", value: { $0.average?["min"] ?? nil }),
@@ -32,6 +33,10 @@ struct CourtPlayerComparison: View {
                 return values.isEmpty ? nil : values.reduce(0, +) / Double(values.count)
             }),
         ]
+        guard let results, results.gameID == board.game.id else { return records }
+        return [Metric(id: "result", name: "\(results.data.label) \(market.label)", value: { player in
+            results.data.player(player.id)?.stat(market.rawValue)
+        })] + records
     }
 
     var body: some View {

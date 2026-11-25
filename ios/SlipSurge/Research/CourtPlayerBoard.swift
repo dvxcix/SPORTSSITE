@@ -23,6 +23,7 @@ struct CourtPlayerBoard: View {
     var toggleComparison: ((Int) -> Void)?
 
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.courtResults) private var results
 
     private struct Entry: Identifiable {
         let player: CourtBoard.Player
@@ -148,6 +149,9 @@ struct CourtPlayerBoard: View {
                 Image(systemName: "chevron.right").font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .accessibilityHidden(true)
+            }
+            if let results, results.gameID == board.game.id {
+                CourtResultLine(results: results.data, playerID: player.id, market: market, quote: quote, side: side)
             }
             ViewThatFits(in: .horizontal) {
                 Grid(alignment: .topLeading, horizontalSpacing: 10, verticalSpacing: 5) {

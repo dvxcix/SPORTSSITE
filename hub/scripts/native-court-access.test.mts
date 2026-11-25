@@ -30,7 +30,7 @@ const stubs: Record<string, string> = {
   '@/app/the-paint/lineups/route': 'export async function GET() { return Response.json({reader: "lineups"}) }',
   '@/app/the-paint/divergence/route': 'export async function GET() { return Response.json({reader: "divergence"}) }',
   '@/app/the-paint/public/route': 'export async function GET() { return Response.json({reader: "public"}) }',
-  '@/app/the-paint/results/route': 'export async function GET() { return Response.json({reader: "results"}) }',
+  '@/app/the-paint/results/route': 'export async function GET(request) { return Response.json({ reader: "results", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
   '@/app/the-paint/estimate/route': 'export async function GET() { return Response.json({reader: "estimate"}) }',
   ...Object.fromEntries(['shots', 'scouting', 'tracking'].map(tool => [`@/app/the-paint/${tool}/route`,
     `export async function GET(request) {
@@ -38,6 +38,9 @@ const stubs: Record<string, string> = {
         {status:globalThis.nativeCourtFixture.readerStatus})
     }`])),
   '@/lib/nativeCourtCheatsheets': 'export async function getNativeCourtCheatsheets(request) { return Response.json({ reader: "courtCheatsheets", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
+  '@/lib/nativeCourtMovement': 'export async function getNativeCourtMovement() { throw Error("Movement is covered by its own fixture") }',
+  '@/lib/nativeSidelineArchive': 'export async function getNativeSidelineArchive() { throw Error("Capture history is covered by its own fixture") }',
+  '@/lib/nflSidelineFinalsServer': 'export async function readNflVerifiedPlayerResults() { throw Error("Verified final results are covered by their own fixture") }',
   '@/lib/nflPregameResearchData': 'export function nflPregameOpen() { return Boolean(globalThis.nativeCourtFixture.phases?.shift()) }',
   '@/lib/nativeNflResearch': 'export function nativeNflCheatsheets() { return {rows: []} } export function nativeNflMismatch(game, lens, window, board) { return {rows: [lens.windows[window], board.capturedAt]} } export function nativeNflLadders(game, board, rows, market, book, kind, side) { return {rows, kind, side} }',
   '@/lib/nflMatrixData': 'export async function loadNflMatrices(userId) { if (userId !== globalThis.nativeCourtFixture.userId) throw new Error("Wrong Matrix owner"); return {data: []} }',
@@ -153,7 +156,7 @@ test('research tools keep native auth, canonical readers, date scope and kickoff
       { headers: bearer ? { authorization: 'Bearer fixture-token' } : {} }))
 
   const court = { 'first-basket': 'firstBasket', 'first-basket-odds': 'firstBasketOdds', 'slate-edge': 'courtSlateEdge',
-    cheatsheets: 'courtCheatsheets', shots: 'shots', scouting: 'scouting', tracking: 'tracking' }
+    cheatsheets: 'courtCheatsheets', shots: 'shots', scouting: 'scouting', tracking: 'tracking', results: 'results' }
   for (const [tool, reader] of Object.entries(court)) {
     const query = 'tool=' + tool + '&date=' + date + '&game=310'
     set()

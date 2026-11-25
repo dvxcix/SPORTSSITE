@@ -41,6 +41,7 @@ struct CourtPlayerView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.nativeResume) private var resume
     @Environment(\.nativeResumeActive) private var resumeActive
+    @Environment(\.courtResults) private var boardResults
     @State private var sportsbook = ""
     @State private var market = ""
     @State private var expired = false
@@ -51,9 +52,14 @@ struct CourtPlayerView: View {
     @State private var trackingMetric: String?
     @State private var chosenVenue: CourtPlayerMarket.Venue?
     @State private var configured = false
+    @State private var ownResults: CourtObservedResults.Snapshot?
 
     private var panel: CourtLinkContext.Panel { selectedPanel ?? linkedPanel ?? .trends }
     private var venue: CourtPlayerMarket.Venue { chosenVenue ?? initialVenue }
+    private var results: CourtObservedResults? {
+        if let boardResults, boardResults.gameID == game.id { return boardResults.data }
+        return ownResults?.gameID == game.id ? ownResults?.data : nil
+    }
     private var panelOptions: [CourtLinkContext.Panel] {
         CourtLinkContext.Panel.allCases.filter {
             switch $0 {
@@ -130,6 +136,11 @@ struct CourtPlayerView: View {
                let next = NativeResumeLocation.destination(url, title: "\(player.firstName) \(player.lastName)") {
                 resume?.record(next, account: account, interaction: old != nil || linkedPanel == nil)
             }
+        }
+        .task(id: "\(game.id):\(mode.rawValue)") {
+            guard results == nil, let researchScope, CourtObservedResults.allowed(game: game, mode: mode) else { return }
+            let loaded = try? await CourtObservedResults.read(scope: researchScope, game: game, mode: mode)
+            if !Task.isCancelled { ownResults = loaded }
         }
         .task {
             if let expiry {
@@ -290,6 +301,9 @@ struct CourtPlayerView: View {
                     Label("Recorded price for \(lineLabel(line)) is unavailable.", systemImage: "clock.badge.questionmark")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+                if let results {
+                    CourtResultLine(results: results, playerID: player.id, market: metric, quote: reference, side: side)
+                }
                 ResearchToolRail(title: "Side", choices: CourtPlayerMarket.Side.allCases,
                     selection: Binding(get: { side }, set: { side = $0; line = nil }), label: \.rawValue) {
                     $0 == .over ? "arrow.up" : "arrow.down"
@@ -353,6 +367,12 @@ struct CourtPlayerView: View {
             if let observed = SidelineBoard.timestamp(offer.updatedAt) {
                 Text(observed.formatted(date: .abbreviated, time: .shortened))
                     .font(.caption).foregroundStyle(.secondary)
+            }
+            if let results, let metric = CourtPlayerMarket(rawValue: offer.propType), let line = Double(offer.lineValue) {
+                let milestone = offer.market.type == "milestone"
+                let odds = milestone ? (side == .over ? offer.market.odds : nil) : (side == .under ? offer.market.underOdds : offer.market.overOdds)
+                let quote = odds.map { CourtPlayerMarket.Reference(line: line, vendor: offer.vendor, odds: $0, milestone: milestone) }
+                CourtResultLine(results: results, playerID: player.id, market: metric, quote: quote, side: side)
             }
         }
     }

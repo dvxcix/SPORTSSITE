@@ -1915,6 +1915,34 @@ physical-device push are still open.
   purchased-tier and access gates and communicates the possible immediate
   end of trial access when canceling.
 - Signed Simulator build, Hub TypeScript, 134 baseline tests, and 52
-  commerce, provider and billing verification checks passed. Live read
-  checks follow the API deployment. No checkouts, cancellations, provider
-  delivery tests, billing repairs or money movement ran in production QA.
+  commerce, provider and billing verification checks passed. Task
+  `3dd7ba56c4994fec6fdd06e7c96525533f2ff115` is pushed. PR #71 merged as
+  `d19b9c2c2c404be445a88165feef650d2d6f9127`. Preview
+  `dpl_98R68nWVwN85w5SfggDv96ZxzpTt` and production
+  `dpl_AD1cMuMvPXt1jqkLxU8zNzTXtWsQ` were READY. The signed Simulator
+  opened the live merchant ledger, creator payment connection, and the
+  SlipSurge platform fee schedule with the original Card Processing row.
+  Guest billing and merchant routes returned 401 and public Feed returned
+  200. No checkouts, cancellations, provider delivery tests, billing repairs
+  or money movement ran in production QA.
+
+## NBA verified results and cached artwork · 25 November 2026
+
+- The Court shows the existing game-results service next to player rows,
+  trends, sportsbook comparison and ladders. The same observation powers
+  player comparison and The Public sorting. An in-progress box score
+  appears only in Live mode. A verified final appears alongside the saved
+  snapshot, without adding that game to the sample or changing its prices.
+- The signed Simulator opened Wendell Carter Jr.’s November 24 line and
+  showed 13 final rebounds, a Miss for the recorded DraftKings under 7.5
+  at +110, and the previously verified red/green L3, L5, L10 and L20 form.
+  NBA access, replay and archive fixtures passed 33/33. The fixture for
+  the native adapter now exercises the exact results passthrough.
+- Shared logo and portrait views reuse a bounded in-memory image cache and
+  combine concurrent requests for the same asset. Image decoding runs off
+  the main actor. The signed build and compact guest Feed worked with the
+  shared loader. No device-level rendering timing is claimed.
+- The revised Feed save reopened the same anchored Picks post after an
+  app relaunch. The observed viewport differed by roughly six percent of
+  the screen as the anchor aligned the card. The web-compatible scroll
+  offset is still part of the shared record.

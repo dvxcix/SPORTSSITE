@@ -89,6 +89,13 @@ struct CourtView: View {
         let sportsbook: String?
     }
 
+    private struct ResultRequest: Equatable {
+        let gameID: Int
+        let mode: CourtResearchMode
+        let final: Bool
+        let revision: Int
+    }
+
     private struct LinkedPlayerSelection {
         let board: CourtBoard
         let observedAt: Date
@@ -139,6 +146,7 @@ struct CourtView: View {
     @State private var playerSearch = ""
     @State private var slate = Slate.loading
     @State private var state = LoadState.loading
+    @State private var gameResults: CourtObservedResults.Snapshot?
     @State private var rankResult: (RankRequest, [Int: CourtAPI.Rank])?
     @State private var matrices = false
     @State private var matrixRevision = 0
@@ -193,6 +201,17 @@ struct CourtView: View {
 
     private var boardRequest: BoardRequest { .init(slate: slateRequest, gameID: selectedGame?.id, mode: mode) }
 
+    private var resultGame: CourtBoard.Game? {
+        if let selectedGame { return selectedGame }
+        if isPreview, case .loaded(let board, _) = state { return board.game }
+        return nil
+    }
+
+    private var resultRequest: ResultRequest? {
+        guard let game = resultGame, CourtObservedResults.allowed(game: game, mode: mode) else { return nil }
+        return .init(gameID: game.id, mode: mode, final: game.isFinal, revision: revision)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
@@ -226,6 +245,7 @@ struct CourtView: View {
         .tint(Brand.accent(for: scheme))
         .task(id: slateRequest) { await loadSlate() }
         .task(id: boardRequest) { await loadBoard() }
+        .task(id: resultRequest) { await updateResults() }
         .refreshable { revision += 1 }
         .navigationDestination(isPresented: $showLinkedPlayer) { linkedPlayer }
         .safeAreaInset(edge: .bottom, spacing: 6) {
@@ -259,6 +279,26 @@ struct CourtView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { revision += 1 }
         }
+        .environment(\.courtResults, visibleResults)
+    }
+
+    private var visibleResults: CourtObservedResults.Snapshot? {
+        guard let request = resultRequest, let gameResults, request.gameID == gameResults.gameID,
+              !request.final || gameResults.data.isFinal else { return nil }
+        return gameResults
+    }
+
+    private func updateResults() async {
+        guard let game = resultGame, let request = resultRequest else { return }
+        repeat {
+            if let snapshot = try? await CourtObservedResults.read(scope: scope, game: game, mode: request.mode),
+               !Task.isCancelled, resultRequest == request {
+                gameResults = snapshot
+                if snapshot.data.isFinal { return }
+            }
+            guard request.mode == .live, !request.final else { return }
+            do { try await Task.sleep(for: .seconds(30)) } catch { return }
+        } while !Task.isCancelled && scenePhase == .active && request == resultRequest
     }
 
     private var resumeLocation: NativeResumeLocation? {

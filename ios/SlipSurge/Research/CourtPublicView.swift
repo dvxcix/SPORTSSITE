@@ -35,32 +35,28 @@ struct CourtPublicView: View {
         let rows: [Row]
     }
 
-    private struct Results: Decodable {
-        struct Player: Decodable {
-            let id: Int
-            let played: Bool?
-            let values: [String: Double?]
-        }
+    private enum Sort: String, CaseIterable {
+        case picks = "Most picks", fewest = "Fewest picks", share = "Highest share", lowestShare = "Lowest share"
+        case movement = "Largest change", smallestChange = "Smallest change", stat = "Highest game stat", lowestStat = "Lowest game stat"
+        case name = "Player A–Z", reverseName = "Player Z–A"
 
-        let status: String
-        let complete: Bool
-        let players: [Player]
+        var ascending: Bool { [.fewest, .lowestShare, .smallestChange, .lowestStat, .name].contains(self) }
     }
-
-    private enum Sort: String, CaseIterable { case picks = "Most picks", share = "Highest share", movement = "Largest change", name = "Player A–Z" }
 
     let scope: CourtView.Scope
     let board: CourtBoard
     let observedAt: Date
     let revision: Int
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.courtResults) private var observedResults
     @State private var captures: Captures?
-    @State private var results: Results?
     @State private var error: (any Error)?
     @State private var market = ""
     @State private var search = ""
     @State private var sort = Sort.picks
     @State private var retry = 0
+
+    private var results: CourtObservedResults? { observedResults?.gameID == board.game.id ? observedResults?.data : nil }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -93,8 +89,19 @@ struct CourtPublicView: View {
             guard let player = roster[row.playerId] else { return false }
             return (market.isEmpty || row.market == market) && (search.isEmpty || "\(player.firstName) \(player.lastName)".localizedCaseInsensitiveContains(search))
         }.sorted { a, b in
-            if sort == .name { return (roster[a.playerId]?.lastName ?? "") < (roster[b.playerId]?.lastName ?? "") }
-            return order(a, totals: counts, previous: previous) > order(b, totals: counts, previous: previous)
+            if sort == .name || sort == .reverseName {
+                let left = roster[a.playerId].map { "\($0.firstName) \($0.lastName)" } ?? ""
+                let right = roster[b.playerId].map { "\($0.firstName) \($0.lastName)" } ?? ""
+                let order = left.localizedStandardCompare(right)
+                if order != .orderedSame { return sort.ascending ? order == .orderedAscending : order == .orderedDescending }
+                return a.id < b.id
+            }
+            switch (order(a, totals: counts, previous: previous), order(b, totals: counts, previous: previous)) {
+            case let (.some(left), .some(right)) where left != right: return sort.ascending ? left < right : left > right
+            case (.some, nil): return true
+            case (nil, .some): return false
+            default: return a.id < b.id
+            }
         }
         HStack {
             ResearchToolFilter(title: "Market", selection: market.isEmpty ? "All markets" : label(market)) {
@@ -145,9 +152,9 @@ struct CourtPublicView: View {
                         HStack {
                             if let observed { Text(observed.formatted(date: .abbreviated, time: .shortened)) }
                             Spacer()
-                            if let stat = results?.players.first(where: { $0.id == row.playerId }), stat.played == true,
-                               let actual = stat.values[row.market] ?? nil {
-                                Text("\(results?.status == "final" ? "Final" : "Game") \(ResearchFormat.decimal(actual))")
+                            if let results, let stat = results.player(row.playerId) {
+                                if let actual = stat.stat(row.market) { Text("\(results.label) \(ResearchFormat.decimal(actual))") }
+                                else if results.isFinal && stat.played == false { Text("Did not play") }
                             }
                         }.font(.caption2).foregroundStyle(.secondary)
                     }
@@ -168,11 +175,12 @@ struct CourtPublicView: View {
         }
     }
 
-    private func order(_ row: Snapshot.Row, totals: [String: Int], previous: [String: Int]) -> Double {
+    private func order(_ row: Snapshot.Row, totals: [String: Int], previous: [String: Int]) -> Double? {
         switch sort {
-        case .picks, .name: Double(row.picks)
-        case .share: share(row.picks, total: totals[row.market]) ?? -.infinity
-        case .movement: difference(row, previous: previous).map(Double.init) ?? -.infinity
+        case .picks, .fewest, .name, .reverseName: Double(row.picks)
+        case .share, .lowestShare: share(row.picks, total: totals[row.market])
+        case .movement, .smallestChange: difference(row, previous: previous).map(Double.init)
+        case .stat, .lowestStat: results?.player(row.playerId)?.stat(row.market)
         }
     }
 
@@ -190,10 +198,6 @@ struct CourtPublicView: View {
                 throw URLError(.cannotParseResponse)
             }
             captures = data
-            if board.oddsMode == .live, board.game.isInProgress || board.game.isFinal {
-                let current = try? await api.read(Results.self, tool: "results", publicPath: "/the-paint/results", query: query)
-                if !Task.isCancelled { results = current }
-            }
         } catch {
             if !Task.isCancelled { captures = nil; self.error = error }
         }

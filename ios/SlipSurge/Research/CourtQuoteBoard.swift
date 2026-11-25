@@ -29,6 +29,7 @@ struct CourtQuoteBoard: View {
     let ranks: [Int: CourtAPI.Rank]
     @Environment(\.colorScheme) private var scheme
     @Environment(\.memberResearchPreferences) private var preferences
+    @Environment(\.courtResults) private var results
     @State private var selectedBooks: Set<String>?
     @State private var sort = ""
     @State private var ascending = true
@@ -178,6 +179,9 @@ struct CourtQuoteBoard: View {
             ForEach(lines) { line in
                 if let quote = line.offers.first {
                     Text(market.target(quote, side: side)).font(.caption.weight(.semibold)).monospacedDigit()
+                    if let results, results.gameID == board.game.id {
+                        CourtResultLine(results: results.data, playerID: player.id, market: market, quote: quote, side: side)
+                    }
                 }
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
