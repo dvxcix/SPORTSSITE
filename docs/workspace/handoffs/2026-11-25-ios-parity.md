@@ -559,7 +559,9 @@ physical-device push are still open.
   focused source checks were run on the Mac. Native profile and favorites
   writes remain to verify with a designated test account.
   Task checkpoint `4469d92f11799c1c5ad0cb88796f8fd1336c0eac` is on GitHub and
-  PR #20 isolates its API changes for deployment.
+  PR #20 deployed `8788312db103234ba81deb0bd86d98463e4a421f`. Preview
+  `dpl_BC6HhDHgcVRsc2dh49xjowNwEU3Y` and production
+  `dpl_5qUZPCr3APLb2BeLmYyHZoNbCbvo` reported READY.
 
 ## Native connected accounts · 25 November 2026
 
@@ -571,7 +573,31 @@ physical-device push are still open.
   and the same authenticated member. The existing Whop web callback also
   rechecks the initiating member before saving the connection.
 - Signed SwiftUI, Hub TypeScript, and 202 focused checks passed. New tests
-  cover proof expiry, purpose separation and same-account redemption. The API
-  and app still need their deployment and provider start checks. Linking or
-  disconnecting real provider identities and any provider login requiring
-  member credentials remain unverified.
+  cover proof expiry, purpose separation and same-account redemption. Task
+  checkpoint `78d6907ca1a3f2a0b435c1ca4f0d0417747709bb` is pushed. PR #21
+  merged as `1193ea33c5bb0ddeb93ef522355c7f9b2a30a186`. Preview
+  `dpl_66ibbp16xyHyDvPgQrhcgva5Raan` and production
+  `dpl_7rtdFQPfCiLZjkSPSsaVLnVMYQth` reported READY. Production rejected invalid
+  connection, badge sync and Whop unlink requests with 401. A synthetic
+  callback returned 303 to the native scheme and an invalid Whop ticket
+  returned 400. Web sign-in, Feed, Pricing and both previews returned 200.
+  Linking or disconnecting real provider identities and completing provider
+  login with member credentials remain unverified.
+
+## Creator scheduling and native admin queues · 25 November 2026
+
+- Creator Studio now opens the member roster and supports drafting, editing,
+  scheduling, canceling and deleting unpublished posts through the site's
+  existing scheduler. Requests use stable draft IDs and only update the
+  version last seen by the creator. Community destinations use their actual
+  artwork. Existing ownership, creator eligibility and MLB visibility apply.
+- Native admin queue pages cover moderation reports, legacy creator
+  applications and account-deletion reviews with filters and audited existing
+  decision routes. The native gate uses the current admin role and the usual
+  account assurance rules. Content previews respect the original private-post
+  restriction. No live creator or admin decisions were submitted in testing.
+- Signed Xcode Debug, Hub TypeScript and 202 focused tests passed on this
+  milestone. The native app opened a real Green Bay at LA NFL slate, rendered
+  its FanDuel game lines, loaded Ronnie Rivers' MM +11, and showed his colored
+  player trends, exact FanDuel +1900, saved cutoff and game log control. The
+  new creator and admin APIs are pending preview and production checks.

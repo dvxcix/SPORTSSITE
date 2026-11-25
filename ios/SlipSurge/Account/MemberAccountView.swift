@@ -24,6 +24,7 @@ struct MemberAccountView: View {
         let avatar: URL?
         let verified: Bool?
         let role: String?
+        let canOpenStudio: Bool?
         let accessTier: String
         let membership: Membership
     }
@@ -128,7 +129,7 @@ struct MemberAccountView: View {
         }
         .listRowBackground(Brand.surface(for: scheme))
 
-        if details.role == "creator" || details.role == "admin" {
+        if details.canOpenStudio == true || details.role == "creator" || details.role == "admin" {
             Section("Workspaces") {
                 NavigationLink {
                     AccountWorkspaceView(account: account, userID: userID, workspace: .studio)

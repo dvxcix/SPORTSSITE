@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { TRACKED_PIPELINES } from '@/lib/pipelineRegistry'
 import { hasCurrentCreatorAccess } from '@/lib/creatorCommerce'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { hasApprovedCreatorAccess } from '@/lib/creator'
 
 const headers = { 'Cache-Control': 'private, no-store' }
 const respond = (body: unknown, status = 200) => NextResponse.json(body, { status, headers })
@@ -45,7 +46,11 @@ export async function GET(request: Request) {
       queues: { reports: count(reports), applications: count(applications), deletions: count(deletions), webhooks: count(webhooks), delivery: count(delivery) } })
   }
 
-  if (profile.account_type !== 'creator' && profile.account_type !== 'admin') {
+  const { data: ownedGroup, error: groupError } = await supabase.from('groups').select('id').eq('owner_id', userId).limit(1).maybeSingle()
+  if (groupError) return respond({ error: 'Creator Studio could not refresh' }, 503)
+  const studioAllowed = Boolean(ownedGroup) || await hasApprovedCreatorAccess(supabase, userId, profile.account_type).catch(() => null)
+  if (studioAllowed === null) return respond({ error: 'Creator Studio could not refresh' }, 503)
+  if (!studioAllowed) {
     return respond({ error: 'Creator access required' }, 403)
   }
   const [offers, groups, memberships, scheduled, storefront] = await Promise.all([
@@ -54,14 +59,14 @@ export async function GET(request: Request) {
     supabase.from('groups').select('id,name,description,sport,avatar_url,member_count,access_type').eq('owner_id', userId)
       .order('created_at', { ascending: false }).limit(100),
     supabase.from('creator_entitlements').select('id,status,current_period_end').eq('creator_id', userId).limit(1000),
-    supabase.from('creator_scheduled_posts').select('id,content,scheduled_for,status,sport').eq('creator_id', userId)
+    supabase.from('creator_scheduled_posts').select('id,group_id,content,post_type,visibility,scheduled_for,status,sport,updated_at').eq('creator_id', userId)
       .in('status', ['draft', 'scheduled', 'failed']).order('scheduled_for').limit(50),
     admin.from('creator_storefronts').select('name,status,logo_url').eq('creator_id', userId).maybeSingle(),
   ])
   if ([offers, groups, memberships, scheduled, storefront].some(result => result.error)) return respond({ error: 'Creator Studio could not refresh' }, 503)
   const canShowMlb = !MLB_HIBERNATING || profile.account_type === 'admin'
   const visible = (row: { sport: string | null }) => canShowMlb || row.sport?.trim().toUpperCase() !== 'MLB'
-  return respond({ displayName: profile.display_name ?? profile.username, paymentStatus: profile.creator_commerce_status,
+  return respond({ displayName: profile.display_name ?? profile.username, paymentStatus: profile.creator_commerce_status, allowMlb: canShowMlb,
     followers: profile.follower_count, activeMembers: memberships.data?.length === 1000 ? null :
       (memberships.data ?? []).filter(hasCurrentCreatorAccess).length,
     offers: offers.data ?? [], groups: groups.data?.filter(visible) ?? [],

@@ -27,14 +27,6 @@ struct AccountWorkspaceView: View {
             let accessType: String
         }
 
-        struct Draft: Decodable, Identifiable {
-            let id: UUID
-            let content: String?
-            let scheduledFor: String?
-            let status: String
-            let sport: String?
-        }
-
         struct Storefront: Decodable {
             let name: String
             let status: String
@@ -47,8 +39,9 @@ struct AccountWorkspaceView: View {
         let activeMembers: Int?
         let offers: [Offer]
         let groups: [Community]
-        let drafts: [Draft]
+        let drafts: [CreatorScheduledPost]
         let storefront: Storefront?
+        let allowMlb: Bool?
     }
 
     private struct Admin: Decodable {
@@ -77,6 +70,21 @@ struct AccountWorkspaceView: View {
     @State private var adminTab = AdminTab.moderation
     @State private var error: (any Error)?
     @State private var retry = 0
+    @State private var editing: Editor?
+    @State private var removing: Removal?
+    @State private var scheduleProblem: String?
+    @State private var changingSchedule = false
+
+    private struct Editor: Identifiable {
+        let id = UUID()
+        let post: CreatorScheduledPost?
+    }
+    private struct Removal: Identifiable {
+        let post: CreatorScheduledPost
+        let isDelete: Bool
+        var id: UUID { post.id }
+    }
+    private var scheduleAPI: CreatorScheduleAPI { .init(account: account, userID: userID) }
 
     var body: some View {
         ScrollView {
@@ -99,6 +107,17 @@ struct AccountWorkspaceView: View {
         .foregroundStyle(Brand.text(for: scheme))
         .task(id: retry) { await load() }
         .refreshable { await load() }
+        .sheet(item: $editing) { editor in
+            if let studio {
+                CreatorScheduleEditor(api: scheduleAPI, existing: editor.post,
+                    targets: studio.groups.map { .init(id: $0.id, name: $0.name, avatar: $0.avatarUrl) },
+                    allowMLB: studio.allowMlb == true) { await load() }
+            }
+        }
+        .confirmationDialog(removing?.isDelete == true ? "Delete this draft?" : "Cancel this scheduled post?",
+            isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }), titleVisibility: .visible, presenting: removing) { removal in
+            Button(removal.isDelete ? "Delete draft" : "Cancel scheduled post", role: .destructive) { Task { await remove(removal) } }
+        }
     }
 
     private func studioContent(_ studio: Studio) -> some View {
@@ -115,9 +134,13 @@ struct AccountWorkspaceView: View {
             if let state = studio.paymentStatus {
                 Label(pretty(state), systemImage: "creditcard").font(.subheadline)
             }
-            ResearchToolRail(title: "Creator Studio", choices: StudioTab.allCases, selection: $studioTab, label: \.rawValue)
+            ResearchToolRail(title: "Creator Studio", choices: StudioTab.allCases, selection: $studioTab, label: \.rawValue, compact: true)
             switch studioTab {
             case .offers:
+                NavigationLink {
+                    CreatorMembersView(account: account, userID: userID)
+                } label: { Label("View members", systemImage: "person.2") }
+                .buttonStyle(.bordered)
                 if studio.offers.isEmpty { ContentUnavailableView("No membership offers", systemImage: "creditcard") }
                 ForEach(studio.offers) { offer in
                     ResearchToolCard(color: Brand.accent(for: scheme)) {
@@ -137,13 +160,31 @@ struct AccountWorkspaceView: View {
                         count: group.memberCount.map { "\($0.formatted()) members" })
                 }
             case .drafts:
+                Button("New scheduled post", systemImage: "square.and.pencil") { editing = Editor(post: nil) }
+                    .buttonStyle(.borderedProminent).disabled(changingSchedule)
+                if let scheduleProblem { Text(scheduleProblem).font(.subheadline).foregroundStyle(.red) }
                 if studio.drafts.isEmpty { ContentUnavailableView("No drafts or scheduled posts", systemImage: "calendar") }
                 ForEach(studio.drafts) { draft in
                     ResearchToolCard(color: Brand.accent(for: scheme)) {
-                        Text(pretty(draft.status)).font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                        HStack {
+                            Text(pretty(draft.status)).font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                            Spacer()
+                            Menu("Scheduled post actions", systemImage: "ellipsis") {
+                                Button("Edit", systemImage: "pencil") { editing = Editor(post: draft) }
+                                if draft.status == "scheduled" {
+                                    Button("Cancel scheduled post", systemImage: "calendar.badge.minus", role: .destructive) {
+                                        removing = Removal(post: draft, isDelete: false)
+                                    }
+                                } else {
+                                    Button("Delete draft", systemImage: "trash", role: .destructive) {
+                                        removing = Removal(post: draft, isDelete: true)
+                                    }
+                                }
+                            }.labelStyle(.iconOnly).disabled(changingSchedule || draft.updatedAt == nil)
+                        }
                     } content: {
                         if let body = draft.content { Text(body).font(.subheadline) }
-                        if let date = draft.scheduledFor.flatMap(SidelineBoard.timestamp) {
+                        if draft.status != "draft", let date = draft.scheduledFor.flatMap(SidelineBoard.timestamp) {
                             Text(date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary)
                         }
                     }
@@ -164,8 +205,16 @@ struct AccountWorkspaceView: View {
                 ResearchToolCard(color: Brand.accent(for: scheme)) {
                     Text("Awaiting review").font(.headline)
                 } content: {
-                    ForEach([("reports", "Moderation reports"), ("applications", "Creator applications"),
-                        ("deletions", "Deletion requests"), ("webhooks", "Webhook failures"), ("delivery", "Delivery failures")], id: \.0) { key, label in
+                    ForEach(AdminQueue.allCases, id: \.self) { queue in
+                        NavigationLink {
+                            AdminQueueView(account: account, userID: userID, queue: queue)
+                        } label: {
+                            LabeledContent {
+                                Text(count(admin.queues[queue.rawValue] ?? nil)).monospacedDigit()
+                            } label: { Label(queue.title, systemImage: queue.icon) }
+                        }.buttonStyle(.plain)
+                    }
+                    ForEach([("webhooks", "Webhook failures"), ("delivery", "Delivery failures")], id: \.0) { key, label in
                         LabeledContent(label, value: count(admin.queues[key] ?? nil))
                     }
                 }
@@ -188,6 +237,23 @@ struct AccountWorkspaceView: View {
     private func count(_ amount: Int?) -> String { amount?.formatted() ?? "—" }
 
     private func pretty(_ value: String) -> String { value.replacingOccurrences(of: "_", with: " ").capitalized }
+
+    private func remove(_ removal: Removal) async {
+        guard !changingSchedule else { return }
+        changingSchedule = true
+        scheduleProblem = nil
+        defer { changingSchedule = false }
+        do {
+            if removal.isDelete { try await scheduleAPI.delete(removal.post) }
+            else {
+                try await scheduleAPI.save(.init(id: removal.post.id, action: "cancel", expectedUpdatedAt: removal.post.updatedAt))
+            }
+            await load()
+        } catch let error as SlipSurgeHTTP.Status where error.code == 409 {
+            await load()
+            scheduleProblem = "This post changed. Check its current status."
+        } catch { scheduleProblem = "The change couldn’t be confirmed. Try again." }
+    }
 
     private func load() async {
         do {
