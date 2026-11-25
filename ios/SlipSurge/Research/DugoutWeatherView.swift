@@ -13,13 +13,22 @@ struct DugoutWeatherView: View {
     @State private var revision = 0
     @State private var error: (any Error)?
 
+    init(api: DugoutToolsAPI, date: Date, game: Int? = nil) {
+        self.api = api
+        _date = State(initialValue: date)
+        _selectedGame = State(initialValue: game)
+    }
+
     var body: some View {
         let key = SlateDate.key(date)
         ScrollView {
             VStack(alignment: .leading, spacing: 13) {
                 ResearchSlateControls(date: $date)
                 if let slate, slate.date == key {
-                    if let game = slate.games.first(where: { $0.id == selectedGame }) ?? slate.games.first {
+                    if let selectedGame, !slate.games.contains(where: { $0.id == selectedGame }) {
+                        games(slate, selected: selectedGame)
+                        ContentUnavailableView("Matchup unavailable on this slate", systemImage: "calendar")
+                    } else if let game = slate.games.first(where: { $0.id == selectedGame }) ?? slate.games.first {
                         games(slate, selected: game.id)
                         weather(game)
                     } else {

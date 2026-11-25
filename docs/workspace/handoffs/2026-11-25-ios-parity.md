@@ -926,7 +926,9 @@ physical-device push are still open.
 - Task checkpoint `94de6d9467d19f1e4f96a0356b9a5bc91ee6b449` is pushed.
   PR #35 merged as `aac35dd2d452cb01d7ed4b27b3433dd4311d36de`. Preview
   `dpl_CLZihugqNAZWuNDiZQN96aHM6ztY` and production
-  `dpl_5SdVy63HcSgcNcFzQdLYf4gkbkVz` reported READY.
+  `dpl_5SdVy63HcSgcNcFzQdLYf4gkbkVz` reported READY. Both the Dugout and
+  Pitcher Report APIs returned 401 without a native account. Guest Feed
+  returned 200.
 
 ## Native NBA Shot Map, Role & Minutes, and Game Tracking · 25 November 2026
 
@@ -944,3 +946,27 @@ physical-device push are still open.
   coverage, matchup-snapshot, and public-preview checks passed. Preview
   access remains scoped to the featured matchup. Simulator walkthroughs
   of the new NBA panels remain pending production rollout.
+- Task checkpoint `f6f867316b8e030900bdddd4cc1ab4ecc610dd09` is pushed.
+  PR #36 merged as `740c5c08c08309f3f10fceb6aafbb35891b7342c`. Preview
+  `dpl_4dRFeQVwNSoseezJQzSyXUMhBEMT` and production
+  `dpl_Aye8Vo5FmRqVMe52wN3HnJ5X7oqj` reported READY. The new shot,
+  tracking, and scouting reads returned 401 without a native account.
+  Guest Feed and the public NBA preview board returned 200.
+
+## Native research links and Spray Charts verification · 25 November 2026
+
+- Research notifications can open the matching native board. The app handles
+  validated SlipSurge research paths and registers `slipsurge-research://` for
+  explicit device routing. Sports dates, MLB matchup and Spray filters, and
+  exact NFL/NBA matchup identifiers use the normal signed-in views and gates.
+  Public HTTPS delivery still requires the production Associated Domains setup.
+- On the signed iPhone 18 Pro Simulator, the September 25 link loaded the exact
+  Cubs–Red Sox matchup `824703` at Fenway, with 111 batted balls and two near
+  home runs. Selecting a marker showed the recorded 110.8 mph exit velocity.
+  Image export opened the native share sheet and generated a 1040 × 667 PNG.
+- The signed Simulator loaded the September 25 Weather Lab and open-roof Fenway
+  park card. The Public opened on the same date, showed missing pregame pick
+  snapshots, and reported no matching rows for the selected market.
+- Remaining after this checkpoint include the MLB pick builder and Watchlist,
+  MLB Matrix editing, Odds Movement Terminal, Synergy, native message history
+  and typing, and full role and provider walkthroughs.

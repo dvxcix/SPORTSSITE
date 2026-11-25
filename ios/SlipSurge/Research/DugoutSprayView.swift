@@ -26,13 +26,26 @@ struct DugoutSprayView: View {
     @State private var exportFile: URL?
     @State private var exportFailed = false
 
+    init(api: DugoutToolsAPI, date: Date, game: Int? = nil, players: Set<Int>? = nil,
+        result: DugoutSpraySlate.Result = .all, heat: Bool = false) {
+        self.api = api
+        _date = State(initialValue: date)
+        _selectedGame = State(initialValue: game)
+        _selectedPlayers = State(initialValue: players)
+        _result = State(initialValue: result)
+        _style = State(initialValue: heat ? .heat : .points)
+    }
+
     var body: some View {
         let key = SlateDate.key(date)
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 13) {
                 ResearchSlateControls(date: $date)
                 if let slate, slate.date == key {
-                    if let game = slate.games.first(where: { $0.id == selectedGame }) ?? slate.games.first {
+                    if let selectedGame, !slate.games.contains(where: { $0.id == selectedGame }) {
+                        gameRail(slate, selected: selectedGame)
+                        ContentUnavailableView("Matchup unavailable on this slate", systemImage: "calendar")
+                    } else if let game = slate.games.first(where: { $0.id == selectedGame }) ?? slate.games.first {
                         gameRail(slate, selected: game.id)
                         chart(slate, game: game)
                     } else {

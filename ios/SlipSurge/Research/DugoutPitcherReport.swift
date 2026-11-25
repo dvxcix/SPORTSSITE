@@ -73,6 +73,7 @@ struct DugoutPitcherReport: View {
     let api: DugoutAPI
     @State var date: Date
     var linkedStarter: String? = nil
+    var linkedPitcher: Int? = nil
     @Environment(\.colorScheme) private var scheme
     @State private var slate: DugoutBoard?
     @State private var selection = ""
@@ -326,8 +327,13 @@ struct DugoutPitcherReport: View {
             let loaded = try await api.board(date: key, mode: .pregame)
             guard !Task.isCancelled, key == SlateDate.key(date) else { return }
             slate = loaded
-            if selection.isEmpty, let linkedStarter, starters(on: loaded).contains(where: { $0.id == linkedStarter }) {
-                selection = linkedStarter
+            if selection.isEmpty {
+                let all = starters(on: loaded)
+                if let linkedStarter, all.contains(where: { $0.id == linkedStarter }) {
+                    selection = linkedStarter
+                } else if let linkedPitcher, let matching = all.first(where: { $0.pitcher.id == linkedPitcher }) {
+                    selection = matching.id
+                }
             }
             boardError = nil
         } catch {

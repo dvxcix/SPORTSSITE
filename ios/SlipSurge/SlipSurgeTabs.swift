@@ -3,6 +3,7 @@ import SwiftUI
 struct SlipSurgeTabs: View {
     let account: AccountStore
     @Binding var appearance: Appearance
+    @Binding var researchLink: ResearchDeepLink?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var phase
     private enum Destination { case feed, research, discover, account }
@@ -18,7 +19,7 @@ struct SlipSurgeTabs: View {
             .tag(Destination.feed)
 
             NavigationStack {
-                ResearchHome(account: account)
+                ResearchHome(account: account, researchLink: $researchLink)
             }
             .id(account.memberID)
             .tabItem { Label("Research", systemImage: "chart.bar.xaxis") }
@@ -44,6 +45,9 @@ struct SlipSurgeTabs: View {
         .onChange(of: account.user?.id) { _, signedIn in
             if signedIn != nil, !account.onboardingComplete { selected = .account }
         }
+        .onChange(of: researchLink, initial: true) {
+            if researchLink != nil { selected = .research }
+        }
         .onChange(of: phase) { _, phase in
             if phase == .active { Task { await account.restore() } }
         }
@@ -52,6 +56,7 @@ struct SlipSurgeTabs: View {
 
 private struct ResearchHome: View {
     let account: AccountStore
+    @Binding var researchLink: ResearchDeepLink?
     @Environment(\.colorScheme) private var scheme
     @State private var dugoutAvailable = false
 
@@ -116,6 +121,7 @@ private struct ResearchHome: View {
         .navigationTitle("Research")
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
+        .navigationDestination(item: $researchLink) { link in LinkedResearchView(account: account, link: link).id(link) }
         .task(id: account.memberID) {
             guard let userID = account.memberID else { dugoutAvailable = false; return }
             let allowed = (try? await DugoutAPI(account: account, userID: userID).available()) == true

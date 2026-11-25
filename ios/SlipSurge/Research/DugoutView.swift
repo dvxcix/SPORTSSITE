@@ -47,6 +47,12 @@ struct DugoutView: View {
     @State private var showComparison = false
     @State private var tool: Tool?
 
+    init(api: DugoutAPI, date: Date = .now, linkedGame: Int? = nil) {
+        self.api = api
+        _date = State(initialValue: date)
+        _selectedGameID = State(initialValue: linkedGame)
+    }
+
     private var request: Load { .init(date: SlateDate.key(date), mode: mode, revision: revision) }
 
     var body: some View {
@@ -107,7 +113,13 @@ struct DugoutView: View {
 
     @ViewBuilder
     private func slate(_ games: [DugoutBoard.Game]) -> some View {
-        if let game = games.first(where: { $0.id == selectedGameID }) ?? games.first {
+        if let selectedGameID, !games.contains(where: { $0.id == selectedGameID }) {
+            ContentUnavailableView {
+                Label("Matchup unavailable on this slate", systemImage: "calendar")
+            } actions: {
+                if !games.isEmpty { Button("Show this slate") { selectGame(nil) } }
+            }
+        } else if let game = games.first(where: { $0.id == selectedGameID }) ?? games.first {
             let matchupCounts = Dictionary(grouping: games) { [$0.away.code, $0.home.code] }.mapValues(\.count)
             ScrollView(.horizontal) {
                 HStack(spacing: 9) {

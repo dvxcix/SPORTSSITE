@@ -15,6 +15,16 @@
                 <string>slipsurge-ios-email</string>
             </array>
         </dict>
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>CFBundleURLName</key>
+            <string>com.slipsurge.ios.research</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>slipsurge-research</string>
+            </array>
+        </dict>
     </array>
     <key>SlipSurgeSupabasePublishableKey</key>
     <string>$(SLIPSURGE_SUPABASE_PUBLISHABLE_KEY)</string>

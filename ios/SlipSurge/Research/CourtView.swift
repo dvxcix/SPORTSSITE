@@ -44,6 +44,8 @@ struct CourtView: View {
     }
 
     let scope: Scope
+    private let linkedGame: Int?
+    private let linkedDate: String
     private let api = CourtAPI()
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
@@ -64,6 +66,14 @@ struct CourtView: View {
     @State private var matrices = false
     @State private var matrixRevision = 0
 
+    init(scope: Scope, date: Date = .now, linkedGame: Int? = nil) {
+        self.scope = scope
+        self.linkedGame = linkedGame
+        linkedDate = SlateDate.key(date)
+        _date = State(initialValue: date)
+        _selectedGameID = State(initialValue: linkedGame)
+    }
+
     private var isPreview: Bool {
         if case .preview = scope { return true }
         return false
@@ -77,7 +87,12 @@ struct CourtView: View {
     }
 
     private var selectedGame: CourtBoard.Game? {
-        games.first { $0.id == selectedGameID } ?? games.first
+        games.first { $0.id == selectedGameID } ?? (missingLinkedGame ? nil : games.first)
+    }
+
+    private var missingLinkedGame: Bool {
+        guard let linkedGame, linkedGame == selectedGameID, slateRequest.date == linkedDate else { return false }
+        return !games.contains { $0.id == linkedGame }
     }
 
     private var boardRequest: BoardRequest { .init(slate: slateRequest, gameID: selectedGame?.id, mode: mode) }
@@ -139,6 +154,12 @@ struct CourtView: View {
         case .games(let key, let list):
             if key != slateRequest.date {
                 loading("Loading slate")
+            } else if missingLinkedGame {
+                ContentUnavailableView {
+                    Label("Matchup unavailable on this slate", systemImage: "calendar")
+                } actions: {
+                    if let first = list.first { Button("Show this slate") { selectedGameID = first.id } }
+                }
             } else if list.isEmpty {
                 ContentUnavailableView("No games on this date", systemImage: "calendar")
             } else {
@@ -427,7 +448,8 @@ struct CourtView: View {
             let list = try await api.slate(date: request.date, account: account, userID: userID)
             try Task.checkCancellation()
             guard request == slateRequest else { return }
-            if !list.contains(where: { $0.id == selectedGameID }) {
+            if !(linkedGame != nil && linkedGame == selectedGameID && request.date == linkedDate),
+                !list.contains(where: { $0.id == selectedGameID }) {
                 selectedGameID = list.first?.id
                 mode = .pregame
             }

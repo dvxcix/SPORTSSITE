@@ -43,6 +43,8 @@ struct SidelineView: View {
     }
 
     let api: SidelineAPI
+    private let linkedGame: String?
+    private let linkedDate: String?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -57,6 +59,15 @@ struct SidelineView: View {
     @State private var schedule = ScheduleState.loading
     @State private var useDefaultDate = true
     @State private var matrices = false
+
+    init(api: SidelineAPI, date: Date? = nil, linkedGame: String? = nil) {
+        self.api = api
+        self.linkedGame = linkedGame
+        linkedDate = date.map(SlateDate.key)
+        _date = State(initialValue: date ?? .now)
+        _selectedGameID = State(initialValue: linkedGame)
+        _useDefaultDate = State(initialValue: date == nil)
+    }
 
     private var dayRequest: DayRequest { .init(date: SlateDate.key(date), revision: revision) }
 
@@ -144,6 +155,13 @@ struct SidelineView: View {
         case .loaded(let slate):
             if slate.date != dayRequest.date {
                 loading("Loading slate")
+            } else if let linkedGame, selectedGameID == linkedGame, dayRequest.date == linkedDate,
+                      !slate.games.contains(where: { $0.id == linkedGame }) {
+                ContentUnavailableView {
+                    Label("Matchup unavailable on this slate", systemImage: "calendar")
+                } actions: {
+                    if let first = slate.games.first { Button("Show this slate") { selectedGameID = first.id } }
+                }
             } else if let game = slate.games.first(where: { $0.id == selectedGameID }) ?? slate.games.first {
                 if tool != .slateEdge { matchupPicker(slate, selected: game.id) }
                 toolPicker
@@ -367,7 +385,8 @@ struct SidelineView: View {
             try Task.checkCancellation()
             guard requested == dayRequest else { return }
             useDefaultDate = false
-            if !slate.games.contains(where: { $0.id == selectedGameID }) { selectedGameID = slate.games.first?.id }
+            if !(linkedGame != nil && selectedGameID == linkedGame && requested.date == linkedDate),
+               !slate.games.contains(where: { $0.id == selectedGameID }) { selectedGameID = slate.games.first?.id }
             schedule = .loaded(slate)
             if slate.date != requested.date, let nextDate = SlateDate.fromKey(slate.date) { date = nextDate }
         } catch let error as SlipSurgeHTTP.Status where error.code == 403 {

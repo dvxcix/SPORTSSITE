@@ -60,6 +60,7 @@ struct ActivityView: View {
             case .discovery: DiscoverView(api: DiscoverAPI(account: api.account, userID: api.userID))
             case .community(let id): DiscoverView(api: DiscoverAPI(account: api.account, userID: api.userID), opensCommunity: id)
             case .profile(let id): MemberProfileView(api: DiscoverAPI(account: api.account, userID: api.userID), target: id.uuidString.lowercased())
+            case .research(let link): LinkedResearchView(account: api.account, link: link)
             }
         }
         .scrollContentBackground(.hidden)
