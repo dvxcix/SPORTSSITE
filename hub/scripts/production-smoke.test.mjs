@@ -1143,6 +1143,7 @@ test('group conversations are private, bounded, realtime, and integrated with th
   const room = await read('src/components/chat/GroupDMRoom.tsx')
   const page = await read('src/app/messages/group/[id]/page.tsx')
   const inbox = await read('src/app/messages/page.tsx')
+  const inboxLoader = await read('src/lib/messageInboxServer.ts')
   assert.ok(migration.includes('alter table public.group_conversations enable row level security'))
   assert.ok(migration.includes('alter table public.group_conversation_members enable row level security'))
   assert.ok(migration.includes('alter table public.group_messages enable row level security'))
@@ -1159,7 +1160,8 @@ test('group conversations are private, bounded, realtime, and integrated with th
   assert.match(room, /\.channel\(`group-dm:\$\{conversation\.id\}`\)/)
   assert.match(room, /\.from\(["']group_messages["']\)\s*\.insert/)
   assert.match(room, /uploadMedia\(file, ["']messages["']\)/)
-  assert.ok(inbox.includes(".from('group_conversation_members')"))
+  assert.ok(inbox.includes('loadMessageInbox(supabase, user.id)'))
+  assert.ok(inboxLoader.includes(".from('group_conversation_members')"))
   assert.ok(inbox.includes('<GroupConversationInbox'))
 })
 
@@ -1370,11 +1372,13 @@ test('social security-definer helpers and read cursors are hardened for producti
 
 test('direct messages separate and persist unfamiliar conversation requests', async () => {
   const page = await read('src/app/messages/page.tsx')
+  const inboxLoader = await read('src/lib/messageInboxServer.ts')
   const inbox = await read('src/components/social/MessageInbox.tsx')
   const room = await read('src/components/chat/DMRoom.tsx')
   const migration = await read('supabase/migrations/20260912213000_dm_conversation_preferences.sql')
-  assert.ok(page.includes("from('dm_conversation_preferences')"))
-  assert.ok(page.includes('isRequest:'))
+  assert.ok(page.includes('loadMessageInbox(supabase, user.id)'))
+  assert.ok(inboxLoader.includes("from('dm_conversation_preferences')"))
+  assert.ok(inboxLoader.includes('isRequest:'))
   assert.ok(inbox.includes("section === 'requests'"))
   assert.ok(inbox.includes("setRequestStatus(conversation, 'accepted')"))
   assert.ok(room.includes("status: 'accepted'"))
