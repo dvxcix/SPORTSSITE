@@ -1,7 +1,13 @@
 import SwiftUI
 
+struct NativeFeedSelection: Hashable {
+    let filter: FeedFilter
+    let sport: String
+}
+
 struct FeedView: View {
     let api: FeedAPI
+    @Binding var opensSelection: NativeFeedSelection?
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -33,6 +39,11 @@ struct FeedView: View {
     }
 
     private var selection: Selection { Selection(filter: filter, sport: sport, revision: revision) }
+
+    init(api: FeedAPI, opensSelection: Binding<NativeFeedSelection?> = .constant(nil)) {
+        self.api = api
+        _opensSelection = opensSelection
+    }
 
     var body: some View {
         List {
@@ -125,6 +136,12 @@ struct FeedView: View {
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))
+        .onChange(of: opensSelection, initial: true) {
+            guard let entry = opensSelection else { return }
+            filter = entry.filter == .following && api.userID == nil ? .latest : entry.filter
+            sport = entry.sport
+            opensSelection = nil
+        }
         .task(id: selection) { await firstPage() }
         .refreshable { await firstPage() }
     }

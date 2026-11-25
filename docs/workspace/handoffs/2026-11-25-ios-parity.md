@@ -1449,7 +1449,35 @@ physical-device push are still open.
   and the Polymarket brand-kit icon are bundled, with source provenance from
   [Kalshi](https://docs.kalshi.com/) and the
   [Polymarket brand kit](https://polymarket.com/uk/brand).
-- Signed Xcode Simulator, 26 focused tests and 134 source checks passed.
-  Verify the signed settings read and initial sportsbook on the released
-  routes. Continue the remaining Explore, search, launch destinations and
-  admin operations work.
+- Signed Xcode Simulator, Hub TypeScript, 26 focused tests and 134 source
+  checks passed. Task `36d0bd4ac39f100a432255fd2e2cd0b8d445bd40` is pushed.
+  PR #54 merged as `22bf135298f5168d9fa20dd06116d599a2ecde67`, with preview
+  `dpl_CV3yEJJYq8tXdmGRAcgepvZr9Sat` and production
+  `dpl_AfwFpKF5zt8pNBrzyVR66KntCmC9` READY. The signed Simulator loaded the
+  live preferences and sportsbook artwork, then separately verified a Court
+  link opened the Odds Board with DraftKings selected. No production account
+  preferences were changed for QA. Both Feed entry points returned 200.
+
+## Native Explore, search and league profiles · 25 November 2026
+
+- Native Explore and topics use Basic gating, audience visibility, original
+  feature switches and live site data. Explore includes current league score
+  cards, research entry points, trending posts and picks, publications,
+  communities and member spotlights with follow controls.
+- Search includes the original members, posts and picks, topics, communities,
+  live rooms and events, and the canonical NBA, NFL and MLB directories when
+  allowed. Saved searches use the existing account-owned store and local
+  recent searches stay scoped to the member. Pick search includes stored
+  player names inside tracked picks and parlays. Feed filter links open the
+  native picks or trending selection.
+- NFL player profiles and team rosters use the existing team and player
+  routes, headshots and team artwork. The SwiftUI player screen includes NFL
+  game logs, last 3/5/10 bars, bio and Next Gen tracking. Native NBA profiles
+  use the canonical directory, team roster, team and player history, and
+  favorites. Specific NBA matchups use the verified game and canonical
+  Court snapshot.
+- Signed Xcode Simulator, unsigned arm64 iPhone Release, Hub TypeScript and
+  all 134 source smoke checks passed. The unsigned device build emitted the
+  existing supported-orientations warning. Verify live Explore, private
+  saved searches and NBA team/player reads after deployment. Continue
+  direct score links, MLB score detail and remaining admin operations.

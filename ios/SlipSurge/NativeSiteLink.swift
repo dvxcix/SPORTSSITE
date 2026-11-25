@@ -1,12 +1,15 @@
 import Foundation
 
 enum NativeSiteLink: Hashable {
-    case feed, account, discover(DiscoverDestination), information(InformationPage)
+    case feed(NativeFeedSelection), account, discover(DiscoverDestination), information(InformationPage)
     case post(UUID), profile(String), community(String, CommunitySection)
     case notifications, bookmarks, picks, messages, newMessage, directMessage(String), groupMessage(UUID)
     case channels, channel(String), pricing, preview(Preview), registration, passwordRecovery
     case settings(Settings), creatorStudio, creatorPayouts, communityCreator, researchWorkspace, admin
     case activityReplay, missions, launch
+    case search(String), topic(String), explore
+    case nbaEntity(NbaDirectoryEntityView.Kind, Int, game: Int?, mode: CourtResearchMode)
+    case nflEntity(NflDirectoryEntityView.Kind, String)
 
     enum CommunitySection: Hashable {
         case posts, picks, settings, channels(String?)
@@ -44,12 +47,17 @@ enum NativeSiteLink: Hashable {
         }
 
         switch segments {
-        case [], ["home"], ["feed"]: self = .feed
+        case [], ["home"], ["feed"]:
+            let filter = Self.queryValue(query, named: "filter", pattern: #"^(latest|top|picks|following)$"#)
+                .flatMap(FeedFilter.init(rawValue:)) ?? .latest
+            let sport = Self.queryValue(query, named: "sport", pattern: #"^(?i:mlb|nba|nfl)$"#)?.uppercased() ?? ""
+            self = .feed(.init(filter: filter, sport: sport))
         case ["account"], ["settings"], ["auth", "login"]: self = .account
         case ["auth", "register"]: self = .registration
         case ["auth", "forgot-password"]: self = .passwordRecovery
         case ["pricing"]: self = .pricing
-        case ["discover"], ["explore"], ["groups"], ["community"]: self = .discover(.communities)
+        case ["discover"], ["groups"], ["community"]: self = .discover(.communities)
+        case ["explore"]: self = .explore
         case ["creators"]: self = .discover(.creators)
         case ["leaderboard"]: self = .discover(.leaderboard)
         case ["scores"], ["sports"]: self = .discover(.scores)
@@ -62,6 +70,12 @@ enum NativeSiteLink: Hashable {
         case ["pages"]: self = .discover(.pages(category ?? "", create: false))
         case ["pages", "create"]: self = .discover(.pages(category ?? "", create: true))
         case ["notifications"]: self = .notifications
+        case ["search"]:
+            let values = query.filter { $0.name == "q" }
+            let value = values.first?.value ?? ""
+            guard values.count <= 1, value.utf8.count <= 256,
+                  !value.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else { return nil }
+            self = .search(String(value.prefix(64)))
         case ["activity"]: self = .activityReplay
         case ["missions"]: self = .missions
         case ["bookmarks"]: self = .bookmarks
@@ -101,6 +115,9 @@ enum NativeSiteLink: Hashable {
                 case "events":
                     guard let id = UUID(uuidString: name) else { return nil }
                     self = .discover(.events(id))
+                case "hashtag":
+                    guard Self.matches(name, #"^[a-zA-Z0-9_-]{1,50}$"#) else { return nil }
+                    self = .topic(name)
                 case "forum":
                     guard name != "thread", Self.matches(name, #"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$"#) else { return nil }
                     self = .discover(.discussionCategory(name))
@@ -122,6 +139,22 @@ enum NativeSiteLink: Hashable {
                     case "forum": self = .discover(.discussion(id))
                     default: self = .discover(.articleEditor(id, assistant: false))
                     }
+                case ["nba", "players"], ["nba", "teams"]:
+                    guard let id = Self.entityID(name) else { return nil }
+                    let games = query.filter { $0.name == "game" }
+                    let modes = query.filter { $0.name == "mode" }
+                    let game = games.first?.value.flatMap(Self.entityID)
+                    let mode = modes.first?.value.flatMap(CourtResearchMode.init(rawValue:))
+                    guard games.count <= 1, games.isEmpty || game != nil,
+                          modes.count <= 1, modes.isEmpty || mode != nil else { return nil }
+                    self = .nbaEntity(segments[1] == "players" ? .player : .team, id, game: game, mode: mode ?? .pregame)
+                case ["nfl", "players"]:
+                    guard Self.matches(name, #"^00-[0-9]{7}$"#) else { return nil }
+                    self = .nflEntity(.player, name)
+                case ["nfl", "teams"]:
+                    let team = name.uppercased()
+                    guard Self.matches(team, #"^[A-Z]{2,3}$"#) else { return nil }
+                    self = .nflEntity(.team, team)
                 default:
                     guard name == "settings" else { return nil }
                     let slug = segments[1]
@@ -135,14 +168,19 @@ enum NativeSiteLink: Hashable {
 
     var needsMember: Bool {
         switch self {
-        case .notifications, .activityReplay, .missions, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
-            .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .communityCreator, .researchWorkspace, .admin,
+        case .notifications, .activityReplay, .missions, .search, .topic, .explore, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
+            .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .communityCreator, .researchWorkspace, .admin, .nbaEntity, .nflEntity,
             .community(_, .settings), .community(_, .channels): true
         default: false
         }
     }
 
     private static let slugPattern = #"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,159}$"#
+
+    private static func entityID(_ value: String) -> Int? {
+        guard matches(value, #"^[0-9]{1,10}$"#), let id = Int(value), id > 0 else { return nil }
+        return id
+    }
 
     private static func matches(_ value: String, _ pattern: String) -> Bool {
         value != "." && value != ".." && value.range(of: pattern, options: .regularExpression) != nil

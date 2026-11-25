@@ -17,6 +17,7 @@ struct SlipSurgeTabs: View {
     @State private var sitePresentation: SitePresentation?
     @State private var researchLink: ResearchDeepLink?
     @State private var discoverDestination: DiscoverDestination?
+    @State private var feedSelection: NativeFeedSelection?
     @State private var emojiLibrary = NativeEmojiLibrary()
     @State private var researchPreferences = MemberResearchPreferenceStore()
     @State private var choseDestination = false
@@ -36,7 +37,7 @@ struct SlipSurgeTabs: View {
             selected = tab
         })) {
             NavigationStack {
-                FeedView(api: FeedAPI(account: account, userID: account.memberID))
+                FeedView(api: FeedAPI(account: account, userID: account.memberID), opensSelection: $feedSelection)
             }
             .id(account.memberID)
             .tabItem { Label("Feed", systemImage: "bubble.left.and.bubble.right") }
@@ -187,8 +188,9 @@ struct SlipSurgeTabs: View {
         guard let link = NativeSiteLink(url) else { return .systemAction }
         choseDestination = true
         switch link {
-        case .feed:
+        case .feed(let feed):
             sitePresentation = nil
+            feedSelection = feed
             selected = .feed
         case .account:
             sitePresentation = nil

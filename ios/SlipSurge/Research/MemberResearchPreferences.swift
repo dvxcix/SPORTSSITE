@@ -28,7 +28,7 @@ struct MemberResearchOptions: Decodable {
         let eligible: Bool
 
         var destination: URL? {
-            guard id != "explore", href.hasPrefix("/"), !href.hasPrefix("//"), !href.contains("\\"),
+            guard href.hasPrefix("/"), !href.hasPrefix("//"), !href.contains("\\"),
                   let url = URL(string: "https://" + SlipSurgeHTTP.site + href) else { return nil }
             if ResearchDeepLink(url) != nil { return url }
             guard let route = NativeSiteLink(url), route != .launch else { return nil }

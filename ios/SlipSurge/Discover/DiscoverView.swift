@@ -50,6 +50,16 @@ struct DiscoverView: View {
                     scoresEntry
                 }
                 .buttonStyle(SlipSurgePressStyle())
+                if api.userID != nil {
+                    NavigationLink {
+                        NativeExploreView(api: api)
+                    } label: {
+                        Label("Explore", systemImage: "safari")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    }
+                    .buttonStyle(SlipSurgePressStyle())
+                }
                 communityDestinations
                 ResearchToolRail(title: "Discover", choices: Section.allCases, selection: $section, label: \.rawValue, glyph: {
                     switch $0 {
@@ -75,6 +85,15 @@ struct DiscoverView: View {
         }
         .navigationTitle("Discover")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if api.userID != nil {
+                ToolbarItem(placement: .primaryAction) {
+                    NavigationLink {
+                        NativeSearchView(api: .init(viewer: api))
+                    } label: { Label("Search", systemImage: "magnifyingglass") }
+                }
+            }
+        }
         .navigationDestination(item: $routedCommunity) { id in
             if let data = communities, let group = (data.invitations + data.groups).first(where: { $0.id == id }) {
                 CommunityDetailView(api: api, group: group, initialMember: data.joinedIds.contains(id))
