@@ -165,3 +165,20 @@ export async function fetchParkHrCounts(homeAbbr: string, currentSeason: number)
   }
   return map
 }
+
+export async function loadParkHomeRunHistory(gamePk: string) {
+  const lineups = await fetchGameLineups(gamePk)
+  const season = new Date().getFullYear()
+  const counts = await fetchParkHrCounts(lineups.homeAbbr, season)
+  const batters = [...lineups.home.map(batter => ({ ...batter, team: lineups.homeAbbr })),
+    ...lineups.away.map(batter => ({ ...batter, team: lineups.awayAbbr }))]
+    .map(batter => ({
+      mlbId: batter.mlbId, name: batter.name, team: batter.team, position: batter.position,
+      career: counts.get(batter.mlbId)?.total ?? 0, season: counts.get(batter.mlbId)?.season ?? 0,
+    }))
+    .sort((first, second) => second.career - first.career || second.season - first.season || first.name.localeCompare(second.name))
+  return {
+    confirmed: lineups.confirmed, homeTeam: lineups.homeTeam, awayTeam: lineups.awayTeam,
+    homeAbbr: lineups.homeAbbr, awayAbbr: lineups.awayAbbr, season, batters,
+  }
+}
