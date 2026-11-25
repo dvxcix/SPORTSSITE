@@ -1,16 +1,12 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
+import { adminDecisionActor } from '@/lib/supabase/adminDecisionActor'
 import { writeAdminAudit } from '@/lib/adminAudit'
 import { safeApiError } from '@/lib/safeApiError'
 
 export async function POST(request: Request, context: { params: Promise<{ requestId: string }> }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
-  const admin = createAdminClient()
-  const { data: operator } = await admin.from('users').select('account_type').eq('id', user.id).maybeSingle()
-  if (operator?.account_type !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const actor = await adminDecisionActor(request)
+  if (actor.error) return actor.error
+  const { admin, user } = actor
 
   const { requestId } = await context.params
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) return NextResponse.json({ error: 'Request changed or no longer exists' }, { status: 404 })
@@ -19,6 +15,9 @@ export async function POST(request: Request, context: { params: Promise<{ reques
   if (!['reviewing', 'blocked', 'scheduled', 'canceled'].includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
   const scheduledFor = status === 'scheduled' && body.scheduledFor ? new Date(body.scheduledFor) : null
   if (scheduledFor && Number.isNaN(scheduledFor.getTime())) return NextResponse.json({ error: 'Invalid schedule date' }, { status: 400 })
+  if (actor.native && status === 'scheduled' && (!scheduledFor || scheduledFor.getTime() <= Date.now())) {
+    return NextResponse.json({ error: 'Choose a future schedule date' }, { status: 400 })
+  }
 
   const { data: row, error } = await admin.from('account_deletion_requests').update({
     status,
