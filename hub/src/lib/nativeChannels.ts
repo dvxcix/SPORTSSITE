@@ -60,6 +60,16 @@ export async function openNativeChannel(client: SupabaseClient, userId: string, 
   return !channel.group_id || permission.view ? { room: { channel, permission } } : { status: 404 as const }
 }
 
+export async function resolveNativeChannel(client: SupabaseClient, userId: string, slug: string, groupId: string | null) {
+  let query = client.from('channels').select('id').eq('slug', slug)
+  query = groupId ? query.eq('group_id', groupId) : query.is('group_id', null).eq('channel_type', 'public')
+  const { data, error } = await query.maybeSingle()
+  if (error) throw Error('Channel unavailable')
+  if (!data) return { status: 404, id: null }
+  const opened = await openNativeChannel(client, userId, data.id)
+  return opened.room ? { status: 200, id: opened.room.channel.id } : { status: opened.status, id: null }
+}
+
 export async function loadNativeChannel(client: SupabaseClient, userId: string, room: Room, before?: ChannelHistoryCursor) {
   const history = await loadChannelHistory(client, room.channel.id, 81, AbortSignal.timeout(12_000), before)
   const hasMore = history.length === 81
