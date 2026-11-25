@@ -5,7 +5,7 @@ import type { SidelineRosterPlayer, SidelineWindow } from '@/app/the-sideline/ty
 import { requireNflAccess } from '@/lib/nflAccess'
 import { defaultNflSample, nflSampleReference, parseNflSample } from '@/lib/nflSample'
 import { nflPregameOpen } from '@/lib/nflPregameResearchData'
-import { nativeNflCheatsheets, nativeNflMismatch } from '@/lib/nativeNflResearch'
+import { nativeNflCheatsheets, nativeNflLadders, nativeNflMismatch } from '@/lib/nativeNflResearch'
 import { loadNflMatrices } from '@/lib/nflMatrixData'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 
@@ -33,9 +33,11 @@ export async function GET(request: NextRequest) {
   const id = params.get('game') ?? '', exactDate = params.get('date') ?? ''
   const tool = params.get('tool'), market = params.get('market') ?? 'anytime_td', book = params.get('book') ?? 'fanduel'
   const window = params.get('window') ?? 'season', sample = params.get('sample')
+  const kind = params.get('kind') ?? 'milestone', side = params.get('side') ?? 'over'
   if (!/^[\w-]{1,64}$/.test(id) || !validDate(exactDate) ||
-    (tool !== 'mm' && tool !== 'cheatsheets') || !/^[a-z0-9_]{1,60}$/.test(market) ||
+    (tool !== 'mm' && tool !== 'cheatsheets' && tool !== 'ladders') || !/^[a-z0-9_]{1,60}$/.test(market) ||
     !/^[a-z0-9_]{1,30}$/.test(book) || !windows.includes(window as SidelineWindow) ||
+    (kind !== 'milestone' && kind !== 'over_under') || (side !== 'over' && side !== 'under') || (kind === 'milestone' && side === 'under') ||
     !validSample(sample)) {
     return NextResponse.json({ error: 'Invalid NFL research filters' }, { status: 400, headers })
   }
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
     const game = schedule.date === exactDate ? schedule.games.find(item => item.id === id) : undefined
     if (!game) return NextResponse.json({ error: 'Matchup not found' }, { status: 404, headers })
     const reference = sample == null ? defaultNflSample(game) : parseNflSample(sample)
-    const matricesPromise = tool === 'mm' ? loadNflMatrices(account.userId) : null
+    const matricesPromise = tool !== 'cheatsheets' ? loadNflMatrices(account.userId) : null
     const marketView = async () => (await getSidelineOddsBundle(game)).odds
     const load = async () => {
       const board = await marketView()
@@ -59,7 +61,8 @@ export async function GET(request: NextRequest) {
       }))
       const [lens, matrixResult] = await Promise.all([getCachedSidelineBoardLens(game, roster, reference), matricesPromise])
       const projection = nativeNflMismatch(game, lens, window as SidelineWindow, board, market, matrixResult?.data ?? [])
-      return { board, lens, projection: { ...projection, matricesUnavailable: Boolean(matrixResult?.error) } }
+      const toolResult = tool === 'ladders' ? nativeNflLadders(game, board, projection.rows, market, book, kind, side) : projection
+      return { board, lens, projection: { ...toolResult, matricesUnavailable: Boolean(matrixResult?.error) } }
     }
     const beganOpen = nflPregameOpen(game)
     let result = await load()
@@ -69,6 +72,7 @@ export async function GET(request: NextRequest) {
       sampleLabel: nflSampleReference(game.season, reference).label,
       status: result.lens.status, availabilityStale: result.board.availabilityStale === true,
       cutoffAt: result.board.availabilityCutoffAt ?? null, capturedAt: result.board.capturedAt,
+      ...(tool === 'ladders' ? { canPost: nflPregameOpen(game) } : {}),
       ...result.projection,
     }, { headers })
   } catch {
