@@ -23,7 +23,7 @@ export async function GET(request: Request) {
       canViewMlb(supabase, userId),
     ])
     if (!profile.data || [profile, store, offers, groups].some(result => result.error)) throw Error('Owner data unavailable')
-    return respond({ store: ownerStore(store.data), storeName: profile.data.display_name ?? profile.data.username,
+    return respond({ store: ownerStore(store.data), username: profile.data.username, storeName: profile.data.display_name ?? profile.data.username,
       paymentStatus: profile.data.creator_commerce_status, paymentConnected: Boolean(profile.data.whop_connected_company_id),
       canOnboard: profile.data.username.toLowerCase() !== 'slipsurge', sports: CREATOR_SPORTS.filter(sport => sport !== 'MLB' || mlb), tags: CREATOR_TAGS,
       offers: (offers.data ?? []).map(({ whop_plan_id, ...offer }) => ({ ...offer, providerReady: Boolean(whop_plan_id) })),

@@ -8,7 +8,7 @@ import { creatorMembershipState, type CreatorMembership } from '@/lib/creatorMem
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 
 export async function POST(request: Request) {
-  const auth = await creatorAdminAuth()
+  const auth = await creatorAdminAuth(request)
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
   const { user, admin } = auth
   const body = await request.json().catch(() => null)
