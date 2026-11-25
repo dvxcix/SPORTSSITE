@@ -1,5 +1,7 @@
 import 'server-only'
 import { createClient } from '@supabase/supabase-js'
+import { mlbHeadshot } from '@slipsurge/core/mlb-api'
+import { MLB_TEAM_COLORS, MLB_TEAM_SECONDARY_COLORS, getTeamLogoPngUrl } from '@slipsurge/core/mlbTeamColors'
 import type { FeedPost } from './feedQuery'
 import { nbaPortraitFallback } from './nbaPlayerPortraits'
 import { sportTeamColors, sportTeamLogoUrl } from './sportTeamArtwork'
@@ -20,7 +22,13 @@ type PickLeg = NonNullable<Pick['legs']>[number]
 
 function displayPick(value: Pick | PickLeg, fallbackSport?: string) {
   const sport = value.sport ?? fallbackSport
-  const palette = sportTeamColors(sport, value.team)
+  const league = sport?.toLowerCase()
+  const team = value.team?.trim().toUpperCase() ?? ''
+  const palette = league === 'mlb' && Object.hasOwn(MLB_TEAM_COLORS, team)
+    ? [MLB_TEAM_COLORS[team], MLB_TEAM_SECONDARY_COLORS[team]] : sportTeamColors(sport, value.team)
+  const portrait = league === 'nba' ? nbaPortraitFallback(value.player_id)
+    : league === 'mlb' && typeof value.mlb_id === 'number' && Number.isSafeInteger(value.mlb_id) && value.mlb_id > 0
+      ? mlbHeadshot(value.mlb_id) : null
   return {
     label: value.player_name ?? value.team,
     line: value.prop_label ?? value.line ?? null,
@@ -28,9 +36,9 @@ function displayPick(value: Pick | PickLeg, fallbackSport?: string) {
     result: value.result ?? null,
     sport: sport ?? null,
     team: value.team ?? null,
-    teamLogo: sportTeamLogoUrl(sport, value.team),
+    teamLogo: league === 'mlb' ? getTeamLogoPngUrl(team) ?? null : sportTeamLogoUrl(sport, value.team),
     colors: palette ?? [],
-    portraits: [...new Set([value.headshot_url, sport?.toLowerCase() === 'nba' ? nbaPortraitFallback(value.player_id) : null]
+    portraits: [...new Set([value.headshot_url, portrait]
       .filter((url): url is string => typeof url === 'string' && url.length > 0))],
   }
 }

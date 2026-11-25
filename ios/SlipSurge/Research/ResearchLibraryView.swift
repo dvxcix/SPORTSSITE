@@ -51,7 +51,7 @@ struct ResearchLibraryView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
                 if let data {
-                    ResearchToolRail(title: "Saved research", choices: Section.allCases, selection: $section, label: \.rawValue, glyph: \.glyph)
+                    ResearchToolRail(title: "Saved research", choices: Section.allCases, selection: $section, label: \.rawValue, glyph: \.glyph, compact: true)
                     if section != .notes { workspaceControls(data.workspaces) }
                     if let notice { Text(notice).font(.footnote).foregroundStyle(.secondary) }
                     switch section {
@@ -107,15 +107,15 @@ struct ResearchLibraryView: View {
             }
             Spacer(minLength: 0)
             Button("New workspace", systemImage: "plus") { newWorkspace = true }
-                .labelStyle(.iconOnly).buttonStyle(.bordered).disabled(busy)
+                .labelStyle(.iconOnly).buttonStyle(.bordered).controlSize(.large).disabled(busy)
             if let workspace {
                 NavigationLink {
                     ResearchCollaborationView(api: api, workspace: workspace)
                 } label: { Label("Collaborate", systemImage: "person.2") }
-                    .labelStyle(.iconOnly).buttonStyle(.bordered)
+                    .labelStyle(.iconOnly).buttonStyle(.bordered).controlSize(.large)
                 if workspace.userId == api.userID {
                     Button("Delete workspace", systemImage: "trash", role: .destructive) { deleteWorkspace = true }
-                        .labelStyle(.iconOnly).buttonStyle(.bordered).disabled(busy)
+                        .labelStyle(.iconOnly).buttonStyle(.bordered).controlSize(.large).disabled(busy)
                 }
             }
         }

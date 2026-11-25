@@ -48,10 +48,30 @@ struct NativeSettings: View {
 
     private struct ProfileEdit: Encodable {
         let kind = "profile"
+        var username = ""
         var displayName = ""
         var bio = ""
         var location = ""
         var website = ""
+
+        var avatarUrl: URL?
+        var bannerUrl: URL?
+        var changedAvatar = false
+        var changedBanner = false
+
+        private enum CodingKeys: String, CodingKey { case kind, username, displayName, bio, location, website, avatarUrl, bannerUrl }
+
+        func encode(to encoder: any Encoder) throws {
+            var values = encoder.container(keyedBy: CodingKeys.self)
+            try values.encode(kind, forKey: .kind)
+            try values.encodeIfPresent(username.isEmpty ? nil : username, forKey: .username)
+            try values.encode(displayName, forKey: .displayName)
+            try values.encode(bio, forKey: .bio)
+            try values.encode(location, forKey: .location)
+            try values.encode(website, forKey: .website)
+            if changedAvatar { try values.encode(avatarUrl, forKey: .avatarUrl) }
+            if changedBanner { try values.encode(bannerUrl, forKey: .bannerUrl) }
+        }
     }
 
     private struct PrivacyEdit: Encodable {
@@ -93,15 +113,17 @@ struct NativeSettings: View {
     @State private var feedback: String?
     @State private var retry = 0
     @State private var saving = false
+    @State private var uploadingAvatar = false
+    @State private var uploadingBanner = false
 
     private static let path = "/api/mobile/account/settings"
 
     var body: some View {
         Form {
-            if let source {
+            if source != nil {
                 switch section {
                 case .profile:
-                    profileFields(source.profile)
+                    profileFields
                 case .privacy:
                     privacyFields
                 case .alerts:
@@ -120,7 +142,8 @@ struct NativeSettings: View {
         .toolbar {
             if source != nil {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { Task { await save() } }.disabled(saving)
+                    Button("Save") { Task { await save() } }
+                        .disabled(saving || uploadingAvatar || uploadingBanner || (section == .profile && profile.username.count < 2))
                 }
             }
         }
@@ -128,17 +151,59 @@ struct NativeSettings: View {
         .refreshable { await load() }
     }
 
-    private func profileFields(_ identity: SettingsPayload.Profile) -> some View {
+    @ViewBuilder
+    private var profileFields: some View {
         SwiftUI.Section {
-            ResearchArtwork(urls: identity.avatarUrl.map { [$0] } ?? [], fallback: "person.crop.circle.fill")
-                .frame(width: 58, height: 58).clipShape(.circle)
-            LabeledContent("Username", value: "@\(identity.username)")
+            profileArtwork
+                .listRowInsets(EdgeInsets())
+            HStack {
+                NativePhotoPicker(title: "Profile photo", upload: {
+                    try await NativeMediaUpload.upload($0, kind: .avatars, account: account, userID: userID)
+                }, url: Binding(get: { profile.avatarUrl }, set: { profile.avatarUrl = $0; profile.changedAvatar = true }), uploading: $uploadingAvatar)
+                Spacer()
+                if profile.avatarUrl != nil && !uploadingAvatar {
+                    Button("Remove profile photo", systemImage: "xmark.circle", role: .destructive) {
+                        profile.avatarUrl = nil
+                        profile.changedAvatar = true
+                    }.labelStyle(.iconOnly).buttonStyle(.borderless)
+                }
+            }.disabled(uploadingBanner)
+            HStack {
+                NativePhotoPicker(title: "Cover photo", upload: {
+                    try await NativeMediaUpload.upload($0, kind: .banners, account: account, userID: userID)
+                }, url: Binding(get: { profile.bannerUrl }, set: { profile.bannerUrl = $0; profile.changedBanner = true }), uploading: $uploadingBanner)
+                Spacer()
+                if profile.bannerUrl != nil && !uploadingBanner {
+                    Button("Remove cover photo", systemImage: "xmark.circle", role: .destructive) {
+                        profile.bannerUrl = nil
+                        profile.changedBanner = true
+                    }.labelStyle(.iconOnly).buttonStyle(.borderless)
+                }
+            }.disabled(uploadingAvatar)
+        }.listRowBackground(Brand.surface(for: scheme))
+        SwiftUI.Section {
+            TextField("Username", text: $profile.username).textContentType(.username)
+                .textInputAutocapitalization(.never).autocorrectionDisabled()
             TextField("Display name", text: $profile.displayName).textContentType(.name)
             TextField("Bio", text: $profile.bio, axis: .vertical).lineLimit(3...6)
             TextField("Location", text: $profile.location)
             TextField("Website", text: $profile.website).keyboardType(.URL).textContentType(.URL)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
         }.listRowBackground(Brand.surface(for: scheme))
+    }
+
+    private var profileArtwork: some View {
+        ZStack(alignment: .bottomLeading) {
+            Rectangle().fill(Brand.accent(for: scheme).opacity(0.18))
+            GeometryReader { geometry in
+                AsyncImage(url: profile.bannerUrl) { image in
+                    image.resizable().scaledToFill().frame(width: geometry.size.width, height: geometry.size.height).clipped()
+                } placeholder: { Color.clear }
+            }.frame(height: 128)
+            ResearchArtwork(urls: profile.avatarUrl.map { [$0] } ?? [], fallback: "person.crop.circle.fill")
+                .frame(width: 56, height: 56).clipShape(.circle)
+                .padding(3).background(Brand.surface(for: scheme), in: .circle).padding(12)
+        }.accessibilityHidden(true).frame(height: 128)
     }
 
     private var privacyFields: some View {
@@ -201,8 +266,8 @@ struct NativeSettings: View {
             let value = try JSONDecoder().decode(SettingsPayload.self, from: data)
             guard !Task.isCancelled else { return }
             source = value
-            profile = .init(displayName: value.profile.displayName ?? "", bio: value.profile.bio ?? "",
-                location: value.profile.location ?? "", website: value.profile.website ?? "")
+            profile = .init(username: value.profile.username, displayName: value.profile.displayName ?? "", bio: value.profile.bio ?? "",
+                location: value.profile.location ?? "", website: value.profile.website ?? "", avatarUrl: value.profile.avatarUrl, bannerUrl: value.profile.bannerUrl)
             privacy = .init(isPrivate: value.privacy.isPrivate ?? false, allowMessages: value.privacy.allowMessages ?? true,
                 hideWinRate: value.privacy.hideWinRate ?? false)
             delivery = value.notifications.delivery.defaults
@@ -221,7 +286,11 @@ struct NativeSettings: View {
         defer { saving = false }
         do {
             switch section {
-            case .profile: try await patch(Self.path, body: profile)
+            case .profile:
+                var edit = profile
+                if edit.username == source?.profile.username { edit.username = "" }
+                try await patch(Self.path, body: edit)
+                await load()
             case .privacy: try await patch(Self.path, body: privacy)
             case .alerts:
                 guard let baseline else { return }
@@ -230,7 +299,7 @@ struct NativeSettings: View {
             }
             feedback = "Saved"
         } catch let error as SlipSurgeHTTP.Status where error.code == 409 {
-            feedback = "Preferences changed on another device. Refresh to load the saved values."
+            feedback = section == .profile ? "That username is already taken." : "Preferences changed on another device. Refresh to load the saved values."
         } catch {
             feedback = "Changes couldn’t be confirmed. Your edits are still here."
         }

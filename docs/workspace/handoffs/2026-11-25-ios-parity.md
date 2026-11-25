@@ -514,9 +514,11 @@ physical-device push are still open.
   build was installed and launched on the Mac's iPhone 17e simulator. The
   task checkpoint `6e5fc4d527f14adfd9b132054712fc46d646e13d` is pushed. PR #18
   merged as `d15d2eb4a92a0714a99ffd292b8c522303a26eda`. Preview
-  `dpl_9E8f9M3CN4rj376owxL9NbYoyAGp` is READY and production
-  `dpl_8H6QVeooxiN21rLoWa1TfM9tqooB` was building at this checkpoint. No live
-  member data was changed as part of QA.
+  `dpl_9E8f9M3CN4rj376owxL9NbYoyAGp` and production
+  `dpl_8H6QVeooxiN21rLoWa1TfM9tqooB` reported READY. Invalid and unauthenticated
+  reads and writes returned 401. An existing account opened its saved Workspace
+  and both My Picks tabs on the Mac's iPhone 18 Pro. The All tab returned a real
+  graded archived parlay. No live member data was changed as part of QA.
 
 ## Native account security and data · 25 November 2026
 
@@ -530,5 +532,27 @@ physical-device push are still open.
   cancel action where the current workflow permits it.
 - Signed Xcode Debug, Hub TypeScript, and the 199 focused checks passed. The
   built app was installed and launched on iPhone 17e. These API changes have
-  not yet deployed. Tests did not change real passwords, connect identities,
-  revoke accounts, download private exports, or request account deletion.
+  deployed through PR #19 from `8a6f19898b84523dd2e455096d6271f250970acb`.
+  Preview `dpl_5FoRUEbQAmVRCWgsLQ4sSsoTvDnV` and production
+  `dpl_HAJWXS3BZ3RoSjpkPq6Lj2GCXZU6` reported READY. Invalid and anonymous
+  requests to export status, creation, download, deletion, and the password
+  alert returned 401. Public login, Pricing, Feed and both previews returned
+  200. Tests did not change passwords, revoke sessions, download account
+  exports, or request account deletion. Task checkpoint
+  `5c3441a3d689b59f9d3a0058d43ffd747f971220` is on GitHub and was sent to Cloud.
+
+## Profile photos, favorites, and compact Workspace · 25 November 2026
+
+- Native Edit Profile adds username, avatar and cover changes with a live
+  preview. Uploaded photos must use the signed-in member's own storage path.
+  Existing custom imagery stays in place while unrelated fields are edited.
+  Favorites uses the canonical league and player directories and existing
+  mutation paths with the same MLB visibility and eight-player limit. The
+  Workspace now shows Watchlist, Compare, Notes and Evidence together at
+  standard text sizes. Legacy MLB pick rows use saved IDs and original team
+  palettes and marks when those values are available.
+- The signed iPhone 18 Pro Feed visibly rendered real NFL portraits, team
+  palettes, both team marks, the Fanatics mark and colored result glyphs. This
+  checkpoint adds coverage for older MLB cards. Signed SwiftUI, TypeScript and
+  focused source checks were run on the Mac. Native profile and favorites
+  writes remain to verify with a designated test account.

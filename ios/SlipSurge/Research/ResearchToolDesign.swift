@@ -6,41 +6,35 @@ struct ResearchToolRail<Choice: Hashable>: View {
     @Binding var selection: Choice
     let label: (Choice) -> String
     var glyph: (Choice) -> String = { _ in "chart.bar" }
+    var compact = false
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var textSize
     @Namespace private var transition
 
     var body: some View {
+        Group {
+            if compact && !textSize.isAccessibilitySize {
+                HStack(spacing: 3) {
+                    ForEach(choices, id: \.self) { tool($0, stacked: true) }
+                }
+                .padding(4)
+            } else {
+                slidingRail
+            }
+        }
+        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 17))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(title)
+        .sensoryFeedback(.selection, trigger: selection)
+    }
+
+    private var slidingRail: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
-                    ForEach(choices, id: \.self) { choice in
-                        Button {
-                            withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { selection = choice }
-                        } label: {
-                            Label(label(choice), systemImage: glyph(choice))
-                                .font(.subheadline.weight(.semibold))
-                                .padding(.horizontal, 13)
-                                .frame(minHeight: 44)
-                                .foregroundStyle(selection == choice ? Brand.accent(for: scheme) : Brand.text(for: scheme))
-                                .background {
-                                    if selection == choice {
-                                        RoundedRectangle(cornerRadius: 13)
-                                            .fill(Brand.accent(for: scheme).opacity(0.15))
-                                            .overlay {
-                                                RoundedRectangle(cornerRadius: 13)
-                                                    .strokeBorder(Brand.accent(for: scheme).opacity(0.35))
-                                            }
-                                            .matchedGeometryEffect(id: "selection", in: transition, isSource: true)
-                                    }
-                                }
-                                .contentShape(.rect(cornerRadius: 13))
-                        }
-                        .buttonStyle(SlipSurgePressStyle())
-                        .id(choice)
-                        .accessibilityAddTraits(selection == choice ? .isSelected : [])
-                    }
+                    ForEach(choices, id: \.self) { tool($0, stacked: false) }
                 }
                 .padding(4)
             }
@@ -49,10 +43,42 @@ struct ResearchToolRail<Choice: Hashable>: View {
                 withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { proxy.scrollTo(value, anchor: .center) }
             }
         }
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 17))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(title)
-        .sensoryFeedback(.selection, trigger: selection)
+    }
+
+    private func tool(_ choice: Choice, stacked: Bool) -> some View {
+        Button {
+            withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { selection = choice }
+        } label: {
+            Group {
+                if stacked {
+                    VStack(spacing: 4) {
+                        Image(systemName: glyph(choice))
+                        Text(label(choice)).lineLimit(1).minimumScaleFactor(0.75)
+                    }
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                } else {
+                    Label(label(choice), systemImage: glyph(choice))
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 13)
+                        .frame(minHeight: 44)
+                }
+            }
+            .foregroundStyle(selection == choice ? Brand.accent(for: scheme) : Brand.text(for: scheme))
+            .background {
+                if selection == choice {
+                    RoundedRectangle(cornerRadius: 13)
+                        .fill(Brand.accent(for: scheme).opacity(0.15))
+                        .overlay { RoundedRectangle(cornerRadius: 13).strokeBorder(Brand.accent(for: scheme).opacity(0.35)) }
+                        .matchedGeometryEffect(id: "selection", in: transition, isSource: true)
+                }
+            }
+            .contentShape(.rect(cornerRadius: 13))
+        }
+        .buttonStyle(SlipSurgePressStyle())
+        .id(choice)
+        .accessibilityLabel(label(choice))
+        .accessibilityAddTraits(selection == choice ? .isSelected : [])
     }
 }
 

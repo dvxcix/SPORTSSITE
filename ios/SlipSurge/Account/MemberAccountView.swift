@@ -77,6 +77,11 @@ struct MemberAccountView: View {
                 Label("Edit profile", systemImage: "person.crop.circle")
             }
             NavigationLink {
+                AccountFavoritesView(account: account, userID: userID)
+            } label: {
+                Label("Favorites", systemImage: "star")
+            }
+            NavigationLink {
                 NativeSettings(account: account, userID: userID, section: .privacy)
             } label: {
                 Label("Privacy", systemImage: "lock")
