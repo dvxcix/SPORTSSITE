@@ -5,6 +5,7 @@ struct CommunityDetailView: View {
         let canView: Bool
         let canJoin: Bool
         let canLeave: Bool
+        let canManage: Bool?
         let role: String?
         let posts: [FeedPost]
         let nextCursor: String?
@@ -47,6 +48,12 @@ struct CommunityDetailView: View {
                     invitationActions(invitation)
                 } else if let page {
                     membershipActions(page)
+                    if page.canView, page.role != nil, let userID = api.userID {
+                        NavigationLink {
+                            ChannelDirectoryView(api: .init(account: api.account, userID: userID), group: group.id)
+                        } label: { Label("Channels", systemImage: "number") }
+                        .buttonStyle(.bordered)
+                    }
                     if page.canView {
                         ResearchToolRail(title: "Community", choices: Feed.allCases, selection: $feed, label: \.rawValue) {
                             $0 == .posts ? "text.bubble" : "chart.line.uptrend.xyaxis"
@@ -78,6 +85,15 @@ struct CommunityDetailView: View {
         .foregroundStyle(Brand.text(for: scheme))
         .navigationTitle(group.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if page?.canManage == true, let userID = api.userID {
+                ToolbarItem(placement: .primaryAction) {
+                    NavigationLink {
+                        CommunitySettingsView(api: .init(account: api.account, userID: userID, groupID: group.id))
+                    } label: { Label("Community settings", systemImage: "gearshape") }
+                }
+            }
+        }
         .task(id: feed) { await load(feed) }
         .refreshable { await load(feed) }
         .sheet(item: $selected) { post in

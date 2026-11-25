@@ -31,6 +31,12 @@ struct DiscoverView: View {
                     scoresEntry
                 }
                 .buttonStyle(SlipSurgePressStyle())
+                if let userID = api.userID {
+                    NavigationLink {
+                        ChannelDirectoryView(api: .init(account: api.account, userID: userID))
+                    } label: { Label("Live Rooms", systemImage: "dot.radiowaves.left.and.right") }
+                    .buttonStyle(.bordered)
+                }
                 ResearchToolRail(title: "Discover", choices: Section.allCases, selection: $section, label: \.rawValue) {
                     switch $0 {
                     case .communities: "person.2"

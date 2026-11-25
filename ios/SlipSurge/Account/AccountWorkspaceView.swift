@@ -155,9 +155,13 @@ struct AccountWorkspaceView: View {
             case .groups:
                 if studio.groups.isEmpty { ContentUnavailableView("No communities", systemImage: "person.2") }
                 ForEach(studio.groups) { group in
-                    DiscoverIdentityCard(title: group.name, subtitle: group.sport.map(LeagueArtwork.label) ?? pretty(group.accessType),
-                        detail: group.description, avatar: group.avatarUrl, banner: nil, symbol: "person.2",
-                        count: group.memberCount.map { "\($0.formatted()) members" })
+                    NavigationLink {
+                        CommunitySettingsView(api: .init(account: account, userID: userID, groupID: group.id))
+                    } label: {
+                        DiscoverIdentityCard(title: group.name, subtitle: group.sport.map(LeagueArtwork.label) ?? pretty(group.accessType),
+                            detail: group.description, avatar: group.avatarUrl, banner: nil, symbol: "person.2",
+                            count: group.memberCount.map { "\($0.formatted()) members" })
+                    }.buttonStyle(SlipSurgePressStyle())
                 }
             case .drafts:
                 Button("New scheduled post", systemImage: "square.and.pencil") { editing = Editor(post: nil) }

@@ -1,7 +1,7 @@
 import Foundation
 
 struct MessageDestination: Hashable {
-    enum Kind: String, Hashable { case direct, group }
+    enum Kind: String, Hashable { case direct, group, channel }
     let kind: Kind
     let id: UUID
 
@@ -87,11 +87,23 @@ struct MessageThread: Decodable {
     let reactions: [Reaction]
     let messages: [Note]
     let canSend: Bool
+    let canModerate: Bool?
+    let channelId: UUID?
     let muted: Bool
     let owner: Bool
 }
 
 struct MessagesAPI {
+    struct Channel: Decodable, Identifiable {
+        let id: UUID
+        let name: String
+        let description: String?
+        let icon: String?
+        let channelKind: String?
+        let isPinned: Bool?
+        let memberCount: Int?
+    }
+
     struct Change: Encodable {
         let action: String
         var message: String?
@@ -117,10 +129,18 @@ struct MessagesAPI {
         return try await read(Matches.self, query: [.init(name: "view", value: "search"), .init(name: "q", value: query)]).users
     }
 
+    func channels(group: UUID?) async throws -> [Channel] {
+        struct Catalog: Decodable { let channels: [Channel] }
+        var query = [URLQueryItem(name: "view", value: "channels")]
+        if let group { query.append(.init(name: "group", value: group.uuidString.lowercased())) }
+        return try await read(Catalog.self, query: query).channels
+    }
+
     func thread(_ destination: MessageDestination) async throws -> MessageThread {
         let thread = try await read(MessageThread.self, query: [.init(name: "view", value: "thread")] + destination.query)
         guard thread.messages.count <= 200, thread.partner?.id == (destination.kind == .direct ? destination.id : nil),
-              destination.kind == .direct || thread.members.contains(where: { $0.id == userID }) else {
+              destination.kind != .group || thread.members.contains(where: { $0.id == userID }),
+              destination.kind != .channel || thread.channelId == destination.id else {
             throw URLError(.cannotParseResponse)
         }
         return thread

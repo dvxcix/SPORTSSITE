@@ -600,7 +600,11 @@ physical-device push are still open.
   milestone. The native app opened a real Green Bay at LA NFL slate, rendered
   its FanDuel game lines, loaded Ronnie Rivers' MM +11, and showed his colored
   player trends, exact FanDuel +1900, saved cutoff and game log control. The
-  new creator and admin APIs are pending preview and production checks.
+  creator and admin APIs deployed through PR #22 from
+  `f2ba2772bc578fac35d9518da1b562526e459616`. Preview
+  `dpl_9yW3VezKFqra1n6MP3GjxqrP4GXy` and production
+  `dpl_Gr1sm6rALR1RHB2PGZoS8n638Gwn` reported READY. All ten unauthenticated
+  creator and admin checks returned 401.
   Task checkpoint `5b2bd7e8ef479b556d29a950db362f9a2662bf3b` was pushed and
   sent to the existing Cloud chat.
 
@@ -620,5 +624,24 @@ physical-device push are still open.
   Gambling (9), About (5), FAQ (8), Support (4), and the 10-feature membership
   comparison. FAQ preview and connected-account links and the support email
   were preserved. Unknown pages returned 404. Signed Xcode Debug, TypeScript
-  and 203 focused checks passed. The public endpoint still needs its
-  production deployment and Simulator walkthrough.
+  and 203 focused checks passed. PR #23 merged as
+  `b0636692bb4bbecbda4e23971205a025439b48d6` after preview
+  `dpl_GKyqY2tXP6BiGxYrGbjfedVs6NHt` reported READY. Production response and
+  Simulator walkthrough checks follow.
+
+## Native Live Rooms and community settings · 25 November 2026
+
+- Discover opens Live Rooms and community detail opens the member's accessible
+  channels. The native thread uses existing message history and permissions
+  for images, replies, reactions, edit, delete and moderation. The last-read
+  marker advances against the server's message order. Group channels are
+  filtered against the same view and send permissions used by the site.
+- Community and Creator Studio open native group settings for authorized
+  accounts. Changes use existing RPCs for profile, rules, channels, invites,
+  member roles, custom roles and per-channel overrides. Private communities
+  and MLB keep their existing visibility checks. The roster currently shows
+  at most 500 members. Channel history currently shows the latest 80 messages.
+- Signed Xcode Debug and TypeScript passed. Native group and Live Rooms
+  production walkthroughs, chat typing, channel mentions and older message
+  pagination remain to verify or implement. No member or community changes
+  were submitted in QA.

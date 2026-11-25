@@ -57,7 +57,7 @@ struct MessageThreadView: View {
                         Button(searching ? "Close search" : "Search messages", systemImage: "magnifyingglass") { searching.toggle(); query = "" }
                         if destination.kind == .direct {
                             Button("Pinned messages", systemImage: "pin") { showPins = true }
-                        } else {
+                        } else if destination.kind == .group {
                             Button("Participants", systemImage: "person.2") { showPeople = true }
                             Button(thread.muted ? "Unmute" : "Mute", systemImage: thread.muted ? "bell" : "bell.slash") {
                                 Task { await mutate(.init(action: "mute", enabled: !thread.muted)) }
@@ -170,9 +170,12 @@ struct MessageThreadView: View {
             if mine { Spacer(minLength: 38) }
             if !mine, destination.kind == .group {
                 MessageAvatar(person: thread.members.first(where: { $0.id == message.senderId })?.user, size: 26)
+            } else if !mine, destination.kind == .channel {
+                ResearchArtwork(urls: message.sender?.avatarUrl.map { [$0] } ?? [], fallback: "person.crop.circle.fill")
+                    .frame(width: 26, height: 26).clipShape(.circle)
             }
             VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
-                if !mine, destination.kind == .group, let sender = message.sender {
+                if !mine, destination.kind != .direct, let sender = message.sender {
                     Text(sender.displayName ?? sender.username).font(.caption2.weight(.medium)).foregroundStyle(.secondary)
                 }
                 VStack(alignment: .leading, spacing: 6) {
@@ -192,7 +195,9 @@ struct MessageThreadView: View {
                 .background(mine ? Brand.accent(for: scheme).opacity(scheme == .dark ? 0.22 : 0.17) : Brand.surface(for: scheme), in: .rect(cornerRadius: 17))
                 .contextMenu {
                     if message.isDeleted != true {
-                        Button("Reply", systemImage: "arrowshape.turn.up.left") { editing = nil; responding = message; focused = true }
+                        if thread.canSend {
+                            Button("Reply", systemImage: "arrowshape.turn.up.left") { editing = nil; responding = message; focused = true }
+                        }
                         if destination.kind == .direct {
                             Button(pinned ? "Unpin" : "Pin", systemImage: pinned ? "pin.slash" : "pin") {
                                 Task { await mutate(.init(action: "pin", message: messageID, enabled: !pinned)) }
@@ -203,8 +208,10 @@ struct MessageThreadView: View {
                                 Button(symbol) { react(symbol, on: messageID, enabled: !reactions.contains { $0.emoji == symbol && $0.mine }) }
                             }
                         }
-                        if mine {
+                        if mine && (destination.kind != .channel || thread.canSend) {
                             Button("Edit", systemImage: "pencil") { responding = nil; editing = message; draft = message.content; focused = true }
+                        }
+                        if mine || thread.canModerate == true {
                             Button("Delete", systemImage: "trash", role: .destructive) { deleting = message }
                         }
                     }
@@ -281,7 +288,8 @@ struct MessageThreadView: View {
                     sendControl
                 }
             } else {
-                Label("This member has direct messages turned off", systemImage: "lock").font(.footnote).foregroundStyle(.secondary)
+                Label(destination.kind == .channel ? "Read-only channel" : "This member has direct messages turned off", systemImage: "lock")
+                    .font(.footnote).foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
