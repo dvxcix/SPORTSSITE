@@ -8,17 +8,22 @@ struct NativePhotoPicker: View {
     let upload: (NativeMediaUpload.Photo) async throws -> URL
     @Binding var url: URL?
     @Binding var uploading: Bool
+    var minimumHitHeight: CGFloat? = nil
     @State private var photo: PhotosPickerItem?
     @State private var failed = false
 
     var body: some View {
         let pending = uploading, labelTitle = title
         PhotosPicker(selection: $photo, matching: .images, preferredItemEncoding: .current) {
-            if pending {
-                ProgressView("Uploading photo")
-            } else {
-                Label(labelTitle, systemImage: "photo")
+            Group {
+                if pending {
+                    ProgressView("Uploading photo")
+                } else {
+                    Label(labelTitle, systemImage: "photo.on.rectangle")
+                }
             }
+            .frame(minHeight: minimumHitHeight)
+            .contentShape(.rect)
         }
         .disabled(uploading)
         .task(id: photo) {

@@ -358,7 +358,8 @@ struct MessageThreadView: View {
         if let member = thread.members.first(where: { $0.id == message.senderId })?.user { return member }
         guard let sender = message.sender else { return nil }
         return .init(id: message.senderId, username: sender.username, displayName: sender.displayName,
-            avatarUrl: sender.avatarUrl, isVerified: nil)
+            avatarUrl: sender.avatarUrl, isVerified: sender.isVerified,
+            avatarRingStyle: sender.avatarRingStyle, avatarRingColor: sender.avatarRingColor)
     }
 
     private func replyPreview(_ text: String, author: String?) -> some View {
@@ -395,15 +396,28 @@ struct MessageThreadView: View {
                 }
             }
             if let roomPicture = draftData.picture, draftData.editing == nil {
-                HStack {
-                    if NativeGIFSource.canPlay(roomPicture) {
-                        NativeGIFPlayback(url: roomPicture, maxHeight: 63, maxWidth: 104).clipShape(.rect(cornerRadius: 7))
-                    } else {
-                        ResearchArtwork(urls: [roomPicture], fallback: "photo").frame(width: 82, height: 56).clipShape(.rect(cornerRadius: 7))
+                let gif = NativeGIFSource.canPlay(roomPicture)
+                HStack(spacing: 10) {
+                    Group {
+                        if gif { NativeGIFPlayback(url: roomPicture, maxHeight: 54, maxWidth: 76) }
+                        else { ResearchArtwork(urls: [roomPicture], fallback: "photo", contentMode: .fill) }
                     }
-                    Button("Remove attachment", systemImage: "xmark.circle.fill") { draftData.picture = nil }.labelStyle(.iconOnly)
-                    Spacer()
+                    .frame(width: 76, height: 54)
+                    .clipShape(.rect(cornerRadius: 9))
+                    .accessibilityHidden(true)
+                    Text(gif ? "GIF attached" : "Photo attached").font(.subheadline.weight(.medium))
+                    Spacer(minLength: 4)
+                    Button {
+                        draftData.picture = nil
+                    } label: {
+                        Image(systemName: "xmark.circle.fill").font(.title3).frame(width: 44, height: 44)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Remove attachment")
                 }
+                .padding(6)
+                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
             }
             if !draftData.unsent.isEmpty, draftData.editing == nil {
                 Menu("Unsent drafts (\(draftData.unsent.count))", systemImage: "doc.badge.clock") {
@@ -413,34 +427,8 @@ struct MessageThreadView: View {
                 .disabled(draftData.text.utf16.count >= 999)
             }
             if thread.canSend || draftData.editing != nil {
-                HStack(alignment: .bottom, spacing: 9) {
-                    if draftData.editing == nil {
-                        NativePhotoPicker(title: "Attach a photo", upload: { photo in
-                            try await NativeMediaUpload.upload(photo, kind: .messages, account: api.account, userID: api.userID)
-                        }, url: draftBinding.picture, uploading: draftBinding.uploading)
-                        .labelStyle(.iconOnly).disabled(draftData.composing)
-                        .padding(.vertical, 7)
-                        NativeGIFPickerButton(account: api.account, userID: api.userID, uploadKind: .messages, compact: true) { draftData.picture = $0 }
-                            .disabled(draftData.composing || draftData.uploading)
-                    }
-                    NativeEmojiButton(compact: true) { value in
-                        let next = draftData.text.isEmpty ? value : draftData.text + " " + value
-                        if next.utf16.count <= 1_000 { draftData.text = next }
-                    }
-                    .disabled(draftData.composing)
-                    TextField("Message", text: draftBinding.text, axis: .vertical)
-                        .lineLimit(1...5).padding(.horizontal, 12).padding(.vertical, 9)
-                        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 17))
-                        .focused($focused)
-                        .onChange(of: draftData.text) { _, value in
-                            draftData.revision += 1
-                            if value.utf16.count > 1_000 { draftData.text = String(value.prefix(1_000)) }
-                            if draftData.editing == nil, thread.canSend, focused {
-                                typingPresence.didType(hasText: !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            }
-                        }
-                    sendControl
-                }
+                messageInput(thread)
+                composerTools
             } else {
                 Label(destination.kind == .channel ? "Read-only channel" : "This member has direct messages turned off", systemImage: "lock")
                     .font(.footnote).foregroundStyle(.secondary)
@@ -448,19 +436,85 @@ struct MessageThreadView: View {
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
         .background(.bar)
+        .overlay(alignment: .top) { Rectangle().fill(Color(uiColor: .separator)).frame(height: 0.5).accessibilityHidden(true) }
+    }
+
+    private func messageInput(_ thread: MessageThread) -> some View {
+        HStack(alignment: .bottom, spacing: 9) {
+            TextField("Message", text: draftBinding.text, axis: .vertical)
+                .font(.body)
+                .lineLimit(1...5)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
+                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 21))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 21).strokeBorder(
+                        focused ? Brand.accent(for: scheme).opacity(0.62) : .secondary.opacity(0.22))
+                }
+                .focused($focused)
+                .accessibilityIdentifier("chat-message-input")
+                .onChange(of: draftData.text) { _, value in
+                    draftData.revision += 1
+                    if value.utf16.count > 1_000 { draftData.text = String(value.prefix(1_000)) }
+                    if draftData.editing == nil, thread.canSend, focused {
+                        typingPresence.didType(hasText: !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+            sendControl
+        }
+    }
+
+    private var composerTools: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 12) {
+                if draftData.editing == nil {
+                    NativePhotoPicker(title: "Photo", upload: { photo in
+                        try await NativeMediaUpload.upload(photo, kind: .messages, account: api.account, userID: api.userID)
+                    }, url: draftBinding.picture, uploading: draftBinding.uploading, minimumHitHeight: 44)
+                        .accessibilityLabel(draftData.uploading ? "Uploading photo" : "Attach a photo")
+                        .disabled(draftData.composing)
+                    NativeGIFPickerButton(account: api.account, userID: api.userID, uploadKind: .messages, compact: true) {
+                        draftData.picture = $0
+                    }
+                    .disabled(draftData.composing || draftData.uploading)
+                }
+                NativeEmojiButton(title: "Emoji") { value in
+                    let next = draftData.text.isEmpty ? value : draftData.text + " " + value
+                    if next.utf16.count <= 1_000 { draftData.text = next }
+                }
+                .disabled(draftData.composing)
+            }
+            .padding(.horizontal, 4)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Brand.accent(for: scheme))
+            .buttonStyle(SlipSurgePressStyle())
+        }
+        .scrollIndicators(.hidden)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Message attachments and emoji")
     }
 
     private var sendControl: some View {
-        let button = Button(draftData.editing == nil ? "Send" : "Save", systemImage: draftData.editing == nil ? "arrow.up" : "checkmark") {
+        let canSend = !draftData.composing && !draftData.uploading && draftData.text.utf16.count <= 1_000 &&
+            (!draftData.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || draftData.picture != nil && draftData.editing == nil)
+        return Button {
             Task { await send() }
+        } label: {
+            Group {
+                if draftData.composing { ProgressView() }
+                else { Image(systemName: draftData.editing == nil ? "arrow.up" : "checkmark").font(.body.weight(.bold)) }
+            }
+            .frame(width: 46, height: 46)
+            .foregroundStyle(canSend ? (scheme == .dark ? Color(rgb: 0x18240B) : .white) : .secondary)
+            .background(canSend ? Brand.accent(for: scheme) : Brand.surface(for: scheme), in: .circle)
+            .contentShape(.circle)
         }
-        .labelStyle(.iconOnly)
-        .tint(Brand.accent(for: scheme))
-        .disabled(draftData.composing || draftData.uploading || (draftData.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (draftData.picture == nil || draftData.editing != nil)) || draftData.text.utf16.count > 1_000)
-        return Group {
-            if #available(iOS 26, *) { button.buttonStyle(.glassProminent) }
-            else { button.buttonStyle(.borderedProminent).buttonBorderShape(.circle) }
-        }
+        .buttonStyle(SlipSurgePressStyle())
+        .accessibilityLabel(draftData.editing == nil ? "Send message" : "Save edit")
+        .accessibilityIdentifier("chat-send-message")
+        .disabled(!canSend)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: canSend)
     }
 
     private func read(_ id: UUID?) {

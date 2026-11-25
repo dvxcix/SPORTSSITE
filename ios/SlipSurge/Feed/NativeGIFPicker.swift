@@ -7,14 +7,21 @@ struct NativeGIFPickerButton: View {
     var compact = false
     let choose: (URL) -> Void
     @State private var open = false
+    @State private var detent = PresentationDetent.large
 
     var body: some View {
         Button {
+            detent = .large
             open = true
         } label: {
             Group {
-                if compact { Image(systemName: "gif") }
-                else { Label("GIF", systemImage: "gif") }
+                if compact {
+                    Text("GIF")
+                        .font(.system(.caption2, design: .rounded, weight: .heavy))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 3)
+                        .overlay { RoundedRectangle(cornerRadius: 4).strokeBorder(.foreground, lineWidth: 1) }
+                } else { Label("GIF", systemImage: "play.rectangle") }
             }
             .frame(minWidth: compact ? 38 : nil, minHeight: 44)
         }
@@ -26,7 +33,7 @@ struct NativeGIFPickerButton: View {
                     open = false
                 }
             }
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.medium, .large], selection: $detent)
             .presentationDragIndicator(.visible)
         }
     }
@@ -129,6 +136,9 @@ private struct NativeGIFPicker: View {
                     ContentUnavailableView {
                         Label(searchFailed ? "GIFs couldn’t load" : "No GIFs found", systemImage: "magnifyingglass")
                     } actions: { Button("Try again") { count = nil; searchFailed = false; revision += 1 } }
+                } else if count == nil {
+                    ProgressView("Loading GIFs")
+                        .controlSize(.regular)
                 }
             }
             .padding(.horizontal, 14)

@@ -11,6 +11,8 @@ const catalog = JSON.parse(await readFile(new URL('../../hub/src/lib/avatarDecor
 const destination = new URL('../SlipSurge/', import.meta.url)
 const size = 144
 const columns = 8
+const framesPerSecond = 24
+const frameLimit = framesPerSecond * 12
 const inputs = await Promise.all(catalog.map(async ({ id }) => {
   assert.match(id, /^[a-z0-9-]+$/)
   const svg = await readFile(new URL(`${id}.svg`, source), 'utf8')
@@ -27,8 +29,13 @@ if (process.argv.includes('--check')) {
   const [raw, sprites] = await Promise.all([readFile(metadataURL, 'utf8'), readFile(spritesURL)])
   const metadata = JSON.parse(raw)
   assert.equal(metadata.hash, digest(sprites))
+  assert.equal(metadata.framesPerSecond, framesPerSecond)
   assert.deepEqual(Object.keys(metadata.items), inputs.map(({ id }) => id))
-  for (const { id, sha256 } of inputs) assert.equal(metadata.items[id].sha256, sha256, `Regenerate ${id}`)
+  for (const { id, sha256 } of inputs) {
+    const item = metadata.items[id]
+    assert.equal(item.sha256, sha256, `Regenerate ${id}`)
+    assert.equal(item.frames, Math.min(frameLimit, Math.ceil(item.duration * 1000 * framesPerSecond / 1000)))
+  }
 } else {
   const browser = await chromium.launch()
   const rendered = new Array(inputs.length)
@@ -56,7 +63,7 @@ if (process.argv.includes('--check')) {
   const sprites = Buffer.concat(rendered.map(item => item.bytes))
   await Promise.all([
     writeFile(spritesURL, sprites),
-    writeFile(metadataURL, JSON.stringify({ size, columns, hash: digest(sprites), items }) + '\n'),
+    writeFile(metadataURL, JSON.stringify({ size, columns, framesPerSecond, hash: digest(sprites), items }) + '\n'),
   ])
 }
 
@@ -82,7 +89,7 @@ async function render(page, { id, svg, sha256 }) {
     }
     return longest
   })
-  const frames = Math.min(144, Math.ceil(duration * 12 / 1000))
+  const frames = Math.min(frameLimit, Math.ceil(duration * framesPerSecond / 1000))
   const frameTime = duration / frames
   const tiles = []
   for (let frame = 0; frame < frames; frame++) {

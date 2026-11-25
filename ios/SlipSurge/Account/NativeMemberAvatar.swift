@@ -29,14 +29,9 @@ enum AvatarArtwork {
     static let items = catalog?.items ?? []
     private static let byId = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
 
-    private static let tiles: [String: CGImage] = {
-        guard let catalog, let atlas = UIImage(named: "AvatarDecorations")?.cgImage else { return [:] }
-        let size = catalog.atlasSize
-        return Dictionary(uniqueKeysWithValues: catalog.items.enumerated().compactMap { offset, entry in
-            let rect = CGRect(x: offset % catalog.columns * size, y: offset / catalog.columns * size, width: size, height: size)
-            return atlas.cropping(to: rect).map { (entry.id, $0) }
-        })
-    }()
+    private static let stillAtlas = UIImage(named: "AvatarDecorations")?.cgImage
+    private static let tileOffsets = Dictionary(uniqueKeysWithValues: items.enumerated().map { ($0.element.id, $0.offset) })
+    private static var tiles: [String: CGImage] = [:]
 
     static func decoration(_ value: String?) -> Decoration? {
         guard let value, value.hasPrefix("deco:") else { return nil }
@@ -47,7 +42,15 @@ enum AvatarArtwork {
         decoration(value)?.name ?? (value.flatMap(Ring.init(rawValue:)) ?? .surge).title
     }
 
-    static func still(_ item: Decoration) -> CGImage? { tiles[item.id] }
+    static func still(_ item: Decoration) -> CGImage? {
+        if let tile = tiles[item.id] { return tile }
+        guard let catalog, let stillAtlas, let offset = tileOffsets[item.id] else { return nil }
+        let size = catalog.atlasSize
+        let tile = stillAtlas.cropping(to: CGRect(x: offset % catalog.columns * size,
+            y: offset / catalog.columns * size, width: size, height: size))
+        tiles[item.id] = tile
+        return tile
+    }
 }
 struct NativeMemberAvatar: View {
     let url: URL?
@@ -89,52 +92,65 @@ struct NativeMemberAvatar: View {
     }
 
     @ViewBuilder private var ornament: some View {
-        let motion = animated && style != nil && !reduceMotion && phase == .active
+        let wantsMotion = animated && style != nil && !reduceMotion
         if let item = AvatarArtwork.decoration(style) {
+            let decorationSize = size * 240 / 184
             Group {
-                if motion {
-                    MovingAvatarDecoration(item: item)
+                if wantsMotion {
+                    MovingAvatarDecoration(item: item, size: decorationSize, playing: phase == .active)
                 } else if let still = AvatarArtwork.still(item) {
                     Image(decorative: still, scale: 1).resizable().scaledToFit()
                 }
             }
-            .frame(width: size * 240 / 184, height: size * 240 / 184)
-            .shadow(color: .black.opacity(0.24), radius: size > 55 ? 1.5 : 0.7, y: 1)
+            .frame(width: decorationSize, height: decorationSize)
         } else {
             let ring = style.flatMap(AvatarArtwork.Ring.init(rawValue:)) ?? .surge
-            if motion && ring != .solid && ring != .none {
-                TimelineView(.animation(minimumInterval: 1 / 24)) { timeline in
-                    ringView(ring, time: timeline.date.timeIntervalSinceReferenceDate)
-                }
+            if wantsMotion && phase == .active && ring != .solid && ring != .none {
+                ringView(ring).modifier(AvatarRingMotion(ring: ring))
             } else {
-                ringView(ring, time: 0)
+                ringView(ring)
             }
         }
     }
 
-    @ViewBuilder private func ringView(_ ring: AvatarArtwork.Ring, time: TimeInterval) -> some View {
+    @ViewBuilder private func ringView(_ ring: AvatarArtwork.Ring) -> some View {
         let width = size < 45 ? 1.5 : 2.5
         let color = ringColor
         switch ring {
         case .surge, .orbit:
             let orbit = ring == .orbit
-            let period = orbit ? 3.2 : 4.8
-            let angle = time.truncatingRemainder(dividingBy: period) / period * 360
             let stops: [Gradient.Stop] = orbit
                 ? [.init(color: .clear, location: 0.58), .init(color: color, location: 0.72), .init(color: color, location: 0.86), .init(color: .clear, location: 1)]
                 : [.init(color: .clear, location: 0.10), .init(color: color, location: 0.3), .init(color: color.opacity(0.82), location: 0.44), .init(color: .clear, location: 0.64)]
             Circle().strokeBorder(AngularGradient(gradient: Gradient(stops: stops), center: .center,
-                angle: .degrees(angle + (orbit ? 0 : 120))), lineWidth: width)
+                angle: .degrees(orbit ? 0 : 120)), lineWidth: width)
                 .frame(width: size + (orbit ? 8 : 5), height: size + (orbit ? 8 : 5))
         case .solid, .pulse:
-            let pulse = ring == .pulse ? (1 - cos(time / 2.2 * 2 * .pi)) / 2 : 0
             Circle().strokeBorder(color, lineWidth: width)
                 .frame(width: size + 5, height: size + 5)
-                .scaleEffect(1 + pulse * 0.045)
-                .opacity(ring == .pulse ? 0.55 + pulse * 0.45 : 1)
                 .shadow(color: color.opacity(0.35), radius: 3)
         case .none:
             EmptyView()
         }
+    }
+}
+
+private struct AvatarRingMotion: ViewModifier {
+    let ring: AvatarArtwork.Ring
+    @State private var progress: Double = 0
+
+    func body(content: Content) -> some View {
+        let pulse = ring == .pulse
+        content
+            .rotationEffect(.degrees(pulse ? 0 : 360 * progress))
+            .scaleEffect(pulse ? 1 + progress * 0.045 : 1)
+            .opacity(pulse ? 0.55 + progress * 0.45 : 1)
+            .task(id: ring) {
+                progress = 0
+                await Task.yield()
+                guard !Task.isCancelled else { return }
+                let animation: Animation = pulse ? .easeInOut(duration: 1.1) : .linear(duration: ring == .orbit ? 3.2 : 4.8)
+                withAnimation(animation.repeatForever(autoreverses: pulse)) { progress = 1 }
+            }
     }
 }

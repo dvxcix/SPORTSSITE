@@ -2444,3 +2444,27 @@ physical-device push are still open.
   Picks Room showed adjacent room chips and a visible Message composer. The
   main tabs returned when opening the group again. The phone was left in
   Picks Room, which has an existing message available for trying the preview.
+
+## Chat composer and avatar motion · 25 November 2026
+
+- Chat now has a full-width multiline input with a separate send button and a
+  row for Photo, GIF and Emoji. The GIF button uses a visible wordmark.
+  GIPHY opens at the large detent with a loading state, search and attribution.
+  GIF and photo attachments have an in-draft preview and removal control.
+  Room and message permissions, existing draft behavior and the existing
+  upload and message APIs are preserved.
+- Rebuilt the 50 original decoration assets at a 24 fps sampling target.
+  Frames are cropped and downsampled off the main thread and cached by
+  asset and resolution. A shared display driver changes the visible
+  decoration layers without making SwiftUI rebuild the avatar every frame.
+  Simple rings use transform animations. Reduce Motion uses still art, and
+  playback pauses when the scene goes inactive or the avatar disappears.
+  Channel avatars now use the ring and color already returned by the server.
+- The final Xcode build ran on the physical iPhone 16 Plus with the new
+  composer visible in Picks Room. Two physical captures confirmed movement
+  in a chat avatar and the You tab, with stable adjacent control regions.
+  The signed simulator loaded the GIPHY catalog, attached a selected GIF,
+  opened the system photo picker and inserted a custom emoji into the draft.
+  Photo upload and sending were outside this verification. The asset integrity
+  check and 286 native and production checks passed. The phone was left in
+  Picks Room.

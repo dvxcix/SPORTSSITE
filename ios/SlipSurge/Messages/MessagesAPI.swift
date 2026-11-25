@@ -64,6 +64,9 @@ struct MessageThread: Decodable {
             let username: String
             let displayName: String?
             let avatarUrl: URL?
+            let avatarRingStyle: String?
+            let avatarRingColor: String?
+            let isVerified: Bool?
         }
 
         struct Reply: Decodable, Equatable {

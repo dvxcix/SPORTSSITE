@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NativeEmojiButton: View {
     var compact = false
+    var title = "Add emoji"
     let select: (String) -> Void
     @State private var open = false
 
@@ -11,7 +12,7 @@ struct NativeEmojiButton: View {
         } label: {
             Group {
                 if compact { Image(systemName: "face.smiling") }
-                else { Label("Add emoji", systemImage: "face.smiling") }
+                else { Label(title, systemImage: "face.smiling") }
             }
             .frame(minWidth: compact ? 34 : nil, minHeight: 44)
         }
