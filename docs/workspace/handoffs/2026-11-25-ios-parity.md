@@ -2384,5 +2384,7 @@ physical-device push are still open.
   Xcode if needed. Distribution signing, APNs and universal-link verification
   are separate from this run.
 - Device Hub manages this phone and reports that its live screen sharing
-  requires iOS 27. The installed apps include SlipSurge and Real. The reference
-  review and signed-in feature checks on the physical phone are pending.
+  requires iOS 27. CoreDevice successfully captured stills over USB at
+  1290 × 2796. SlipSurge, X, Discord and Real are all installed. X reached
+  its sign-in flow on the phone. The signed-in feature review is pending.
+  Use USB stills while the owner navigates Feed, reactions, profiles and Inbox.
