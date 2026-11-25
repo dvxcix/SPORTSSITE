@@ -6,6 +6,8 @@ struct CreatorMembershipView: View {
     let offer: CreatorMembershipOffer
     let creatorID: UUID?
     var artwork: URL? = nil
+    var community: DiscoverAPI.Communities.Community? = nil
+    var creatorUsername: String? = nil
     @AppStorage("appearance") private var appearance = Appearance.system
     @Environment(\.colorScheme) private var scheme
     @Environment(\.openURL) private var openURL
@@ -26,16 +28,30 @@ struct CreatorMembershipView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 13) {
                 DiscoverIdentityCard(title: offer.title, subtitle: offer.productType == "one_time" ? "Access pass" : "Creator membership",
-                    detail: offer.description, avatar: artwork, banner: nil, symbol: "person.crop.circle", count: nil)
+                    detail: offer.description, avatar: artwork, banner: community?.bannerUrl, symbol: "person.crop.circle", count: nil)
+                if let creatorUsername {
+                    NavigationLink {
+                        CreatorDetailView(api: client, username: creatorUsername)
+                    } label: { Label("@\(creatorUsername)", systemImage: "storefront") }
+                        .buttonStyle(.bordered)
+                }
+                if access?.active != true, !owner, let community {
+                    DiscoverIdentityCard(title: community.name, subtitle: "Included community", detail: community.description,
+                        avatar: community.avatarUrl, banner: nil, symbol: "person.2", count: nil)
+                }
                 ResearchToolCard(color: Brand.accent(for: scheme)) { Text("Member access").font(.headline) } content: {
-                    if let access, access.active {
+                    if offer.status == "paused", access?.active != true, !owner {
+                        Text("New purchases are paused. Current members can still verify and open their community.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    if access?.active == true || owner {
                         Label("Access active", systemImage: "checkmark.seal.fill").foregroundStyle(Brand.accent(for: scheme))
-                        if let group = access.group {
+                        if let group = access?.group ?? community {
                             NavigationLink {
                                 CommunityDetailView(api: client, group: group, initialMember: true)
                             } label: { Label("Open \(group.name)", systemImage: "person.2") }.buttonStyle(.borderedProminent)
                         }
-                    } else if let price = offer.price {
+                    } else if offer.status != "paused", let price = offer.price {
                         Text(price.formatted(.currency(code: offer.currency?.uppercased() ?? "USD"))).font(.title3.weight(.semibold))
                         if let days = offer.billingPeriodDays {
                             Text(offer.productType == "one_time" ? "\(days) days · one payment" : "Every \(days) days").font(.caption).foregroundStyle(.secondary)

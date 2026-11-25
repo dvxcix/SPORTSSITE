@@ -28,6 +28,8 @@ struct NativeLinkedSiteView: View {
         switch target {
         case .post(let id): FeedThreadView(api: .init(account: account, userID: account.memberID), id: id).id(viewer.userID)
         case .profile(let username): MemberProfileView(api: viewer, target: username).id(viewer.userID)
+        case .creatorStorefront(let username, let section): CreatorDetailView(api: viewer, username: username, section: section).id(viewer.userID)
+        case .creatorOffer(let id): LinkedCreatorOfferView(api: .init(client: viewer), id: id).id(viewer.userID)
         case .community(let slug, let section): linkedCommunity(slug, section: section)
         case .pricing: NativeMembershipOverview(account: account)
         case .preview(.nba): CourtView(scope: .preview)
@@ -65,6 +67,7 @@ struct NativeLinkedSiteView: View {
         case .settings(let section): settings(section, userID: userID)
         case .creatorStudio: AccountWorkspaceView(account: account, userID: userID, workspace: .studio)
         case .creatorPayouts: CreatorWalletView(api: .init(account: account, userID: userID))
+        case .creatorAccess(let id, let outcome): CreatorAccessCompletionView(api: .init(client: viewer), offerID: id, outcome: outcome)
         case .communityCreator: CreatorStoreView(api: .init(account: account, userID: userID))
         case .researchWorkspace: ResearchLibraryView(api: .init(account: account, userID: userID))
         case .marketplace(let target): NativeMarketplaceView(api: viewer, userID: userID, target: target)

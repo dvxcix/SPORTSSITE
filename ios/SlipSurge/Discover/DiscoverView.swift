@@ -295,7 +295,7 @@ struct DiscoverView: View {
         LazyVStack(spacing: 9) {
             ForEach(people) { creator in
                 NavigationLink {
-                    CreatorDetailView(api: api, creator: creator)
+                    CreatorDetailView(api: api, username: creator.username, preview: creator)
                 } label: {
                     DiscoverIdentityCard(title: creator.title, subtitle: "@\(creator.username)",
                         detail: creator.storefront?.bio ?? creator.bio, avatar: creator.storefront?.logoUrl ?? creator.avatarUrl,

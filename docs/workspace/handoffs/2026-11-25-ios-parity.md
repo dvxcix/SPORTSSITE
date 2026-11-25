@@ -1530,7 +1530,8 @@ physical-device push are still open.
   #57 merged as `c2607be083611b7585969ee052565b507b0c2afb`; preview
   `dpl_4TpZm3Hfi4sqsrK1tCQMSVzQmT8i` and production
   `dpl_7GNGJxv9iYRsNSewmjaTfVhj8jcB` were READY. The signed app opened a
-  published listing detail and guest exact lookup returned 401. No live
+  published listing through its exact native URL, showing the stored rules
+  and Import and Share controls. Guest exact lookup returned 401. No live
   listing was published, imported or removed for QA.
 
 ## Native MLB Research Workspace · 25 November 2026
@@ -1553,5 +1554,26 @@ physical-device push are still open.
   place. No database change or historical replay was needed.
 - Hub TypeScript, 134 production source checks, nine focused Research,
   Slate Breakdown and Odds History tests, and signed Xcode Simulator build
-  passed. Signed Simulator validation of a released historical date is
-  next, along with exact native creator storefront, offer and access links.
+  passed. Task checkpoint `21d300e8d9c0ed3ac3908f8ee4f8f0f39448bb74` is
+  pushed. PR #58 merged as `58757bc195db4282b5bccc68b2b1489189a2a6c0`;
+  preview `dpl_G1exJ62XW6azkyN7XTQkuNqKArrd` and production
+  `dpl_9q1qVoxFuzYPjFkeAmCpQ6xm8xr6` were READY. Guest returned 401. The
+  signed Simulator opened the exact October 28 slate and confirmed
+  matchup `849799`. No qualifying mechanics were saved for that game,
+  and the workspace explained the missing sample.
+
+## Native creator storefront, offer and access links · 25 November 2026
+
+- Exact public creator links open Storefront, Research & Picks, Communities
+  or About in SwiftUI. The creator identity, artwork, public posts,
+  published offers, joined communities and signed access come from the
+  existing backend. Block checks and MLB visibility also apply.
+- Exact offer links open the existing branded Whop membership screen.
+  Paused offers remain visible to signed-in members for access recovery.
+  The checkout completion link shows the returned outcome, polls the
+  original access endpoint for a pending payment, and opens the
+  eligible member community or the existing billing management flow.
+- Signed Xcode Simulator build, Hub TypeScript, two storefront endpoint
+  fixtures and all 134 production source checks passed. No live purchase,
+  restore, follow, billing or membership change was performed. Deploy
+  and verify with the existing public storefront and a published offer.

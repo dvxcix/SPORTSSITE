@@ -10,6 +10,8 @@ enum NativeSiteLink: Hashable {
     case search(String), topic(String), explore
     case scoreGame(String, String)
     case marketplace(NativeMarketplaceTarget)
+    case creatorStorefront(String, CreatorDetailView.Section), creatorOffer(UUID)
+    case creatorAccess(UUID, CreatorAccessCompletionView.Outcome?)
     case nbaEntity(NbaDirectoryEntityView.Kind, Int, game: Int?, mode: CourtResearchMode)
     case nflEntity(NflDirectoryEntityView.Kind, String)
 
@@ -132,6 +134,9 @@ enum NativeSiteLink: Hashable {
                 case "marketplace":
                     guard let id = UUID(uuidString: name) else { return nil }
                     self = .marketplace(.init(league: .mlb, listing: id))
+                case "creators":
+                    guard Self.matches(name, #"^[A-Za-z0-9._-]{1,80}$"#) else { return nil }
+                    self = .creatorStorefront(name, parts.fragment.flatMap(CreatorDetailView.Section.init(rawValue:)) ?? .memberships)
                 case "settings":
                     guard let section = Settings(rawValue: name) else { return nil }
                     self = .settings(section)
@@ -165,6 +170,15 @@ enum NativeSiteLink: Hashable {
                     case "forum": self = .discover(.discussion(id))
                     default: self = .discover(.articleEditor(id, assistant: false))
                     }
+                case ["creators", "offers"]:
+                    guard let id = UUID(uuidString: name) else { return nil }
+                    self = .creatorOffer(id)
+                case ["creators", "access"]:
+                    let products = query.filter { $0.name == "product" }
+                    let states = query.filter { $0.name == "status" }
+                    guard name == "complete", products.count == 1, states.count <= 1,
+                          let rawID = products.first?.value, let id = UUID(uuidString: rawID) else { return nil }
+                    self = .creatorAccess(id, states.first?.value.flatMap(CreatorAccessCompletionView.Outcome.init(rawValue:)))
                 case ["nba", "players"], ["nba", "teams"]:
                     guard let id = Self.entityID(name) else { return nil }
                     let games = query.filter { $0.name == "game" }
@@ -203,7 +217,7 @@ enum NativeSiteLink: Hashable {
         switch self {
         case .notifications, .activityReplay, .missions, .search, .topic, .explore, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
             .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .communityCreator, .researchWorkspace, .admin,
-            .marketplace, .nbaEntity, .nflEntity,
+            .marketplace, .nbaEntity, .nflEntity, .creatorAccess,
             .community(_, .settings), .community(_, .channels): true
         default: false
         }
