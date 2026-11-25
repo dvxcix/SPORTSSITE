@@ -76,3 +76,12 @@ test('native Resume rejects private URLs and leaves a racing browser write intac
   assert.equal((await write({ ...draft, path: '/feed', expectedVersion: original })).status, 409)
   assert.equal((await (await read('member')).json()).saved.path, path)
 })
+
+test('native Resume retains a Feed post anchor and the web-compatible scroll offset together', async () => {
+  const path = '/feed?filter=picks&iosPost=ca33e20a-e874-42b8-9ff8-dd6e964dd082'
+  const response = await write({ path, pageTitle: 'Feed · Picks', scrollY: 1326 }, 'another-member')
+  assert.equal(response.status, 200)
+  const record = await (await read('another-member')).json()
+  assert.equal(record.saved.path, path)
+  assert.equal(record.saved.scroll_y, 1326)
+})
