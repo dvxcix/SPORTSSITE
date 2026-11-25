@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendContactAlertCanary } from '@/lib/contactAlertOutbox'
 import { safeApiError } from '@/lib/safeApiError'
 import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
+import { discordAdminActor } from '@/lib/discordAdminActor'
+import { writeAdminAudit } from '@/lib/adminAudit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,23 +12,14 @@ export const maxDuration = 300
 
 const OPERATION = 'contact_alert_media'
 
-async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
-  const { data: profile } = await supabase.from('users').select('account_type').eq('id', user.id).single()
-  if (profile?.account_type !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  return null
-}
-
 function channelSummary(value: unknown) {
   if (typeof value !== 'string' || !value) return null
   return `...${value.slice(-4)}`
 }
 
-export async function GET() {
-  const authError = await requireAdmin()
-  if (authError) return authError
+export async function GET(request: Request) {
+  const actor = await discordAdminActor(request)
+  if (actor.error) return actor.error
   const admin = createAdminClient()
   const [configResult, pendingResult, processingResult, failedResult, succeededResult, recentResult] = await Promise.all([
     admin.from('discord_config').select('enabled,alert_channels,updated_at').eq('id', 1).maybeSingle(),
@@ -87,8 +79,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const authError = await requireAdmin()
-  if (authError) return authError
+  const actor = await discordAdminActor(request)
+  if (actor.error) return actor.error
   if (MLB_HIBERNATING) return mlbPausedResponse(503)
   const body = await request.json().catch(() => null) as { kind?: 'hr' | 'near_hr' } | null
   if (body?.kind !== 'hr' && body?.kind !== 'near_hr') {
@@ -96,6 +88,8 @@ export async function POST(request: Request) {
   }
   try {
     const result = await sendContactAlertCanary(body.kind)
+    if (actor.native) await writeAdminAudit(actor.admin, { actorUserId: actor.id, action: 'discord_contact_alert_canary',
+      targetType: 'discord', details: { kind: body.kind }, request })
     return NextResponse.json({ result })
   } catch (error) {
     return safeApiError('admin-discord-contact-alert-test', error)
