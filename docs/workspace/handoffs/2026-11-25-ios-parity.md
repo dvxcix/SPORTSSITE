@@ -2095,8 +2095,12 @@ physical-device push are still open.
   release. No live profile appearance was saved in this checkpoint.
 - Task `d43bbd5b9da9913fc456dc6d54871081e6b866c8` is pushed. PR #77 merged
   as `e5add08181b377cb6cc50c52b13daf2ace5f4025` after preview
-  `dpl_6aRhZLqrrtEw5ySHyjcWLSiRWrqE` was READY. Signed app checks follow the
-  production rollout.
+  `dpl_6aRhZLqrrtEw5ySHyjcWLSiRWrqE` was READY. Production reported READY for
+  this commit. The compact guest Simulator rendered the saved animated
+  Seams decoration and both public FanDuel and BetMGM logos. The signed
+  Simulator previewed Tight Spiral and applied it to the local draft. The
+  draft closed without saving to the member account. Public Feed and Profile
+  returned 200 with the updated projections.
 
 ## MLB admin archive · 25 November 2026
 
@@ -2114,3 +2118,16 @@ physical-device push are still open.
   frame, 31-frame cap, cutoff and access failure cases on both entry points.
   Hub TypeScript, 140 checks and signed Simulator Debug passed. The archived
   live screen follows the reviewed Hub release.
+- Task `df0db0042d27a7600f1f57f57a8b80a3eb5c1da8` is pushed. PR #78 preview
+  `dpl_HibUZ7AtnYj5qWGke2i5GHbUjWph` reported READY and merged as
+  `612bd3470ccfbe351b4d4819d50c10bf0c841697`.
+
+## Profile edits from multiple devices · 25 November 2026
+
+- Native profile saves now include only the edited text fields and compare
+  each original field value. An appearance-only save leaves concurrently
+  edited names, bios, locations and websites intact. The server still accepts
+  the text format already used by older app builds. Its fixture exercises
+  nullable values, omitted fields, empty edits, and stale edits.
+- Signed Simulator Debug, Hub TypeScript and 135 targeted and baseline
+  checks passed. None of the fixture edits reached a live profile.

@@ -78,6 +78,7 @@ struct NativeSettings: View {
         var changedBanner = false
         var links: [String: String] = [:]
         var socialChanges: [String: LinkChange] = [:]
+        var textChanges: [CodingKeys: Change<String?>] = [:]
         var ringStyle = AvatarArtwork.Ring.surge.rawValue
         var ringColor = AvatarArtwork.defaultColor
         var books: [String] = []
@@ -85,7 +86,7 @@ struct NativeSettings: View {
         var colorChange: Change<String>?
         var bookChange: Change<[String]>?
 
-        private enum CodingKeys: String, CodingKey {
+        enum CodingKeys: String, CodingKey {
             case kind, username, displayName, bio, location, website, avatarUrl, bannerUrl, socialLinks, avatarRingStyle, avatarRingColor, sportsbooks
         }
 
@@ -93,10 +94,7 @@ struct NativeSettings: View {
             var values = encoder.container(keyedBy: CodingKeys.self)
             try values.encode(kind, forKey: .kind)
             try values.encodeIfPresent(username.isEmpty ? nil : username, forKey: .username)
-            try values.encode(displayName, forKey: .displayName)
-            try values.encode(bio, forKey: .bio)
-            try values.encode(location, forKey: .location)
-            try values.encode(website, forKey: .website)
+            for (key, change) in textChanges { try values.encode(change, forKey: key) }
             if changedAvatar { try values.encode(avatarUrl, forKey: .avatarUrl) }
             if changedBanner { try values.encode(bannerUrl, forKey: .bannerUrl) }
             if !socialChanges.isEmpty { try values.encode(socialChanges, forKey: .socialLinks) }
@@ -414,13 +412,21 @@ struct NativeSettings: View {
         do {
             switch section {
             case .profile:
+                guard let previous = source?.profile else { return }
                 var edit = profile
-                if edit.username == source?.profile.username { edit.username = "" }
-                if let before = source?.profile.avatarRingStyle, before != edit.ringStyle { edit.styleChange = .init(before: before, value: edit.ringStyle) }
-                if let before = source?.profile.avatarRingColor, before != edit.ringColor { edit.colorChange = .init(before: before, value: edit.ringColor) }
-                if let before = source?.profile.sportsbooks, before != edit.books { edit.bookChange = .init(before: before, value: edit.books) }
-                for platform in source?.profile.socialPlatforms ?? [] {
-                    let before = source?.profile.socialLinks?[platform.key] ?? ""
+                if edit.username == previous.username { edit.username = "" }
+                let details: [(ProfileEdit.CodingKeys, String?, String)] = [
+                    (.displayName, previous.displayName, edit.displayName), (.bio, previous.bio, edit.bio),
+                    (.location, previous.location, edit.location), (.website, previous.website, edit.website),
+                ]
+                for (key, before, value) in details where value != (before ?? "") {
+                    edit.textChanges[key] = .init(before: before, value: value)
+                }
+                if let before = previous.avatarRingStyle, before != edit.ringStyle { edit.styleChange = .init(before: before, value: edit.ringStyle) }
+                if let before = previous.avatarRingColor, before != edit.ringColor { edit.colorChange = .init(before: before, value: edit.ringColor) }
+                if let before = previous.sportsbooks, before != edit.books { edit.bookChange = .init(before: before, value: edit.books) }
+                for platform in previous.socialPlatforms ?? [] {
+                    let before = previous.socialLinks?[platform.key] ?? ""
                     let handle = edit.links[platform.key, default: ""].trimmingCharacters(in: .whitespacesAndNewlines)
                     if before != handle { edit.socialChanges[platform.key] = .init(before: before, handle: handle) }
                 }
