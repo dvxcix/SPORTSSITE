@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getBlockedEitherWayIds, isAccountId } from '@/lib/blocks'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { nativeSavedMarket } from '@/lib/nativeWatchlist'
+import { nativeMlbResearchWatchlist } from '@/lib/nativeMlbResearchWatchlist'
+import { getTeamLogoPngUrl, MLB_TEAM_COLORS, MLB_TEAM_SECONDARY_COLORS } from '@slipsurge/core/mlbTeamColors'
 import { loadResearchWorkspace } from '@/lib/researchWorkspaceServer'
 import { isSlateEdgeEvidence } from '@/lib/slateEdgeEvidence'
 import { sportTeamColors, sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
@@ -65,7 +67,10 @@ export async function GET(request: Request) {
         const amount = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : null
         return amount != null && Number.isFinite(amount) ? [{ book, price: amount }] : []
       }),
-      teamLogo: sportTeamLogoUrl(item.sport, item.team), colors: sportTeamColors(item.sport, item.team),
+      teamLogo: item.sport?.toLowerCase() === 'mlb' ? getTeamLogoPngUrl(item.team) : sportTeamLogoUrl(item.sport, item.team),
+      colors: item.sport?.toLowerCase() === 'mlb' && item.team
+        ? [MLB_TEAM_COLORS[item.team.toUpperCase()], MLB_TEAM_SECONDARY_COLORS[item.team.toUpperCase()]].filter(Boolean)
+        : sportTeamColors(item.sport, item.team),
     })), evidence: evidence.flatMap(item => {
       const value = item.payload
       return isSlateEdgeEvidence(value) ? [{ id: item.id, workspaceId: item.workspace_id, title: item.title, capturedAt: value.capturedAt,
@@ -121,7 +126,7 @@ export async function POST(request: Request) {
       const prior = await supabase.from('watchlist_items').select('id').eq('id', id).eq('user_id', userId).maybeSingle()
       if (prior.error) return unavailable()
       if (prior.data) return confirmed()
-      const market = await nativeSavedMarket(action.market)
+      const market = action.mlbQuote == null ? await nativeSavedMarket(action.market) : await nativeMlbResearchWatchlist(request, action.mlbQuote)
       if ('response' in market && market.response) return market.response
       if ('error' in market && market.error) return respond({ error: market.error }, market.status)
       const result = await supabase.from('watchlist_items').insert({ ...market.value, id, user_id: userId })
