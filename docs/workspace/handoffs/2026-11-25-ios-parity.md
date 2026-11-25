@@ -1380,6 +1380,7 @@ physical-device push are still open.
   `dpl_9iXYjktks4K2KD4WAhqKH3AsSAHb` and production
   `dpl_2HnDM7QTFHTaze4bjFdrrCnm1isn` were READY. Guest requests to all five
   admin resources returned 401 and both Feed entry points returned 200.
+  The signed Simulator opened the live Manage posts screen with search.
   Remaining operations, account-provider consent and physical device delivery
   and purchase checks stay open.
 
@@ -1401,6 +1402,26 @@ physical-device push are still open.
 - Signed Debug Simulator, Hub TypeScript, 23 focused tests, 134 source smoke
   checks and Info.plist validation passed. Signed Simulator opened Connected
   accounts with real provider rows through the registered site scheme.
-  Check empty or unavailable targets, direct groups and room access through
-  the released routes. Muted and blocked accounts and native research launch
-  preferences are the next settings work.
+  Task checkpoint `0c6ad3c2bff5f68dadb0c48befc9fe1ab707f72e` is pushed.
+  PR #52 merged as `db77916aff7ce4debfbfc25fe337b0e6d52555ed`. Preview
+  `dpl_2CEyNtBzbgUJKeFNHtqDYp18AJiY` and production
+  `dpl_14XsYEgJQcP5vuqGaQkLcXfmeGzS` were READY. Exact unknown community
+  returned 404, anonymous channel resolution returned 401, and Feed and
+  desktop Groups were 200. Live signed room access and external universal
+  links remain open.
+
+## Native member controls and progress · 25 November 2026
+
+- Profile & membership now opens native Muted and blocked settings with
+  current account lists, artwork, paging and explicit unmute and unblock.
+  Reads use the existing member RLS rules. Reversal is scoped to the
+  verified member and exact target. An ambiguous response reloads the list.
+- Account has Missions and Activity Replay. Missions uses the same
+  account-bound mastery computation and achievement catalog as the site.
+  Activity Replay shows the existing 150 newest events grouped by local day.
+  Tap an event to reopen its supported native destination. No historical
+  capture or migration was replayed.
+- Signed Xcode Simulator build, Hub TypeScript, 19 focused checks and all
+  134 source smoke checks passed. Mutations used fixtures. Next steps are
+  checking live read routes, adding launch pages and sportsbook preferences,
+  and continuing the native research and social parity work.

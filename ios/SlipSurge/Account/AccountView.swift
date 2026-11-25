@@ -54,6 +54,16 @@ struct AccountView: View {
                         } label: {
                             Label("Bookmarks", systemImage: "bookmark")
                         }
+                        NavigationLink {
+                            ActivityReplayView(api: .init(account: account, userID: userID))
+                        } label: {
+                            Label("Activity Replay", systemImage: "clock.arrow.circlepath")
+                        }
+                        NavigationLink {
+                            MemberProgressView(api: .init(account: account, userID: userID))
+                        } label: {
+                            Label("Missions", systemImage: "trophy")
+                        }
                     }
                     if !account.onboardingComplete {
                         NavigationLink {

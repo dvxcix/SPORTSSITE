@@ -42,6 +42,8 @@ struct NativeLinkedSiteView: View {
         let messages = MessagesAPI(account: account, userID: userID)
         switch target {
         case .notifications: ActivityView(api: .init(account: account, userID: userID))
+        case .activityReplay: ActivityReplayView(api: viewer)
+        case .missions: MemberProgressView(api: viewer)
         case .bookmarks: FeedBookmarksView(api: .init(account: account, userID: userID))
         case .picks: MyPicksView(api: viewer)
         case .messages, .newMessage: MessagesView(api: messages, startsComposing: target == .newMessage)
@@ -74,6 +76,7 @@ struct NativeLinkedSiteView: View {
         case .notifications: NativeSettings(account: account, userID: userID, section: .alerts)
         case .interests: AccountFavoritesView(account: account, userID: userID)
         case .membership: MembershipBillingView(account: account, userID: userID, refreshAccount: {})
+        case .blocked: MutedAndBlockedView(api: viewer)
         }
     }
 

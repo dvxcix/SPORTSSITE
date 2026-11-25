@@ -6,6 +6,7 @@ enum NativeSiteLink: Hashable {
     case notifications, bookmarks, picks, messages, newMessage, directMessage(String), groupMessage(UUID)
     case channels, channel(String), pricing, preview(Preview), registration, passwordRecovery
     case settings(Settings), creatorStudio, creatorPayouts, communityCreator, researchWorkspace, admin
+    case activityReplay, missions
 
     enum CommunitySection: Hashable {
         case posts, picks, settings, channels(String?)
@@ -14,7 +15,7 @@ enum NativeSiteLink: Hashable {
     enum Preview: String { case nba, nfl }
 
     enum Settings: String {
-        case account, profile, connections, security, privacy, notifications, interests, membership
+        case account, profile, connections, security, privacy, notifications, interests, membership, blocked
     }
 
     init?(_ url: URL) {
@@ -61,6 +62,8 @@ enum NativeSiteLink: Hashable {
         case ["pages"]: self = .discover(.pages(category ?? "", create: false))
         case ["pages", "create"]: self = .discover(.pages(category ?? "", create: true))
         case ["notifications"]: self = .notifications
+        case ["activity"]: self = .activityReplay
+        case ["missions"]: self = .missions
         case ["bookmarks"]: self = .bookmarks
         case ["picks"]: self = .picks
         case ["messages"]: self = .messages
@@ -131,7 +134,7 @@ enum NativeSiteLink: Hashable {
 
     var needsMember: Bool {
         switch self {
-        case .notifications, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
+        case .notifications, .activityReplay, .missions, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
             .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .communityCreator, .researchWorkspace, .admin,
             .community(_, .settings), .community(_, .channels): true
         default: false

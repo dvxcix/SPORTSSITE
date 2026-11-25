@@ -88,6 +88,11 @@ struct MemberAccountView: View {
                 Label("Privacy", systemImage: "lock")
             }
             NavigationLink {
+                MutedAndBlockedView(api: .init(account: account, userID: userID))
+            } label: {
+                Label("Muted and blocked", systemImage: "speaker.slash")
+            }
+            NavigationLink {
                 NativeSettings(account: account, userID: userID, section: .alerts)
             } label: {
                 Label("Alert preferences", systemImage: "bell.badge")
