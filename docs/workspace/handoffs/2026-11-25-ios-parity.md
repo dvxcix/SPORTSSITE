@@ -773,7 +773,10 @@ physical-device push are still open.
   PR #29 merged as `9e82b9f9cf35637bb48ab9c5163107962b3e8044`.
   Preview `dpl_5Hm2o24MrJjigc3JYfXbwCXx3AFd` and production
   `dpl_FvNntvgXXCs3xk5jzLwSbFdtxJ5L` reported READY. Invalid member ladder
-  requests returned 401. Public Feed returned 200.
+  requests returned 401. Public Feed and NFL preview returned 200. On the
+  signed iPhone 18 Pro Simulator the production receiving-yards ladder loaded
+  for Green Bay at Los Angeles with team and FanDuel marks, and a 25+ contract
+  displayed the posted FanDuel +550 and its distinct opening quote.
 
 ## Native community posting and preferences · 25 November 2026
 
@@ -792,3 +795,29 @@ physical-device push are still open.
   saved draft fails on retry. Real community publishing and preference
   writes still need an appropriate test community. Discord claims, older
   room history and typing remain in the community backlog.
+- Task checkpoint `ba869b43a3a2f060e38f0448c820a20b94a2dbbf` is pushed.
+  PR #30 merged as `da7b70554db77bb080d1eb50fa89bdb233137d05`.
+  Preview `dpl_GZsCJkhZ6gjAmUv4fJPCrt35dskp` and production
+  `dpl_FezXZHkysKUnPJowemvrxGxPXSN3` reported READY. Invalid community
+  detail, preferences, post and pick requests returned 401. Guest Feed
+  returned 200.
+
+## Native MLB Dugout board · 25 November 2026
+
+- An eligible member can open The Dugout from Research and select an exact
+  date, matchup and explicit Pregame or Live mode. SwiftUI renders confirmed
+  and projected lineups, probable pitchers, team colors and art, batter
+  headshots, actual outcomes, market filters with sportsbook marks, opening
+  and posted quotes, and the existing MM, Matrix matches, and Statcast
+  windows. The team and book pickers carry their marks. Up to four batters
+  can be compared, with signed MM bars across L1, L3, L5 and L10.
+- The mobile route delegates to the canonical tier-scoped Dugout pipeline.
+  Hibernation eligibility and same-account membership are checked before data
+  loads. Frozen games with missing research do not use a projected roster or
+  current Statcast as historical data. Opening-only prices are labeled.
+- Signed Xcode Debug, Hub TypeScript and 23 focused freeze, access, slate
+  and favorites tests passed. A broader run also found three legacy failures
+  in the responsive Slate Edge and MLB route-guard tests. The changed
+  files do not implement those asserted browser components or route guards.
+  A dated, eligible production walkthrough remains pending, along with
+  editing MLB Matrices and the other standalone MLB tools.

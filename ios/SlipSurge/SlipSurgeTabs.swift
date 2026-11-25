@@ -53,6 +53,7 @@ struct SlipSurgeTabs: View {
 private struct ResearchHome: View {
     let account: AccountStore
     @Environment(\.colorScheme) private var scheme
+    @State private var dugoutAvailable = false
 
     var body: some View {
         ScrollView {
@@ -74,6 +75,13 @@ private struct ResearchHome: View {
                     }
                 } label: {
                     destination("The Court", league: "NBA", logo: "nba")
+                }
+                if let userID = account.memberID, dugoutAvailable {
+                    NavigationLink {
+                        DugoutView(api: .init(account: account, userID: userID))
+                    } label: {
+                        destination("The Dugout", league: "MLB", logo: "mlb")
+                    }
                 }
                 if account.memberID == nil {
                     NavigationLink {
@@ -108,13 +116,18 @@ private struct ResearchHome: View {
         .navigationTitle("Research")
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
+        .task(id: account.memberID) {
+            guard let userID = account.memberID else { dugoutAvailable = false; return }
+            let allowed = (try? await DugoutAPI(account: account, userID: userID).available()) == true
+            if !Task.isCancelled, userID == account.memberID { dugoutAvailable = allowed }
+        }
     }
 
     private func destination(_ title: String, league: String, logo: String) -> some View {
         HStack(spacing: 15) {
             ResearchArtwork(
                 urls: LeagueArtwork.logo(logo).map { [$0] } ?? [],
-                fallback: logo == "nfl" ? "football" : "basketball"
+                fallback: ["nfl": "football", "nba": "basketball", "mlb": "baseball"][logo] ?? "sportscourt"
             )
             .frame(width: 39, height: 39)
             VStack(alignment: .leading, spacing: 5) {
