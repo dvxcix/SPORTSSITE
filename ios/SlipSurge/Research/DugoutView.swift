@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DugoutView: View {
+    private enum Tool: Hashable { case weather, spray }
     private enum Board: String, CaseIterable {
         case lineup = "Lineups", mismatch = "MM", odds = "Odds Board", matrices = "Matrix Matches"
 
@@ -44,6 +45,7 @@ struct DugoutView: View {
     @State private var playerSelection: PlayerSelection?
     @State private var comparisonIDs: Set<Int> = []
     @State private var showComparison = false
+    @State private var tool: Tool?
 
     private var request: Load { .init(date: SlateDate.key(date), mode: mode, revision: revision) }
 
@@ -67,12 +69,22 @@ struct DugoutView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Menu("Research mode", systemImage: mode == .live ? "dot.radiowaves.left.and.right" : "clock") {
+                Menu("Dugout tools", systemImage: mode == .live ? "dot.radiowaves.left.and.right" : "square.grid.2x2") {
+                    Button("Weather Lab", systemImage: "cloud.sun") { tool = .weather }
+                    Button("Spray Charts", systemImage: "scope") { tool = .spray }
+                    Divider()
                     Picker("Research mode", selection: $mode) {
                         Label("Pregame", systemImage: "clock").tag(DugoutMode.pregame)
                         Label("Live", systemImage: "dot.radiowaves.left.and.right").tag(DugoutMode.live)
                     }
                 }
+            }
+        }
+        .navigationDestination(item: $tool) { destination in
+            let tools = DugoutToolsAPI(account: api.account, userID: api.userID)
+            switch destination {
+            case .weather: DugoutWeatherView(api: tools, date: date)
+            case .spray: DugoutSprayView(api: tools, date: date)
             }
         }
         .task(id: request) { await load(request) }

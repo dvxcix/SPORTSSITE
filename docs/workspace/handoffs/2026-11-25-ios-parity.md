@@ -870,4 +870,27 @@ physical-device push are still open.
   loaded all 85 entries without duplication and returned 404 after access
   was removed. The separate Channels directory browser fixture failed to
   bundle its existing CSS module and was excluded from the 145. A live room
-  with more than 80 messages still needs a Simulator walkthrough.
+  with more than 80 messages still needs a Simulator walkthrough. A read-only
+  production count found no public room above that threshold.
+- Task checkpoint `35a28da6e9bcda652f462c4a9c6fbca0c4fe249c` is pushed.
+  PR #33 merged as `7a5efa5dd23e858428473d05c647b2eeacadccf2`. Preview
+  `dpl_9EMo21EtY7StRWpd9HFzNJK1HweQ` and production
+  `dpl_DR4iW3zPj8ZH8LASfwpsaa1cUJBn` reported READY. Invalid latest and
+  earlier channel requests returned 401. Guest Feed returned 200.
+
+## Native Weather Lab and Spray Charts · 25 November 2026
+
+- The Dugout opens native Weather Lab and Spray Charts for the selected
+  date. Weather Lab uses the same venue orientation, roof status, forecast
+  and current conditions, wind direction, carry calculation, and park home
+  run history as the site. The native field uses the existing traced park
+  geometry and honors Reduce Motion.
+- Spray Charts plots the recorded MLB and Statcast coordinates by game,
+  supports multiple batters and result filters, animates selected contact,
+  labels projected coordinates, and exposes the contact and archived odds
+  inspector. Points and heat views share the chart and can export a PNG or
+  share the existing deep link.
+- Signed Xcode Debug, Hub TypeScript and 30 focused tests passed, including
+  retained Basic and Ultimate floors, indoor carry, actual recorded
+  coordinates and park geometry. Production replay, chart interaction and
+  PNG export still need Simulator verification after release.
