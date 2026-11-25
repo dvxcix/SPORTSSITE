@@ -151,8 +151,23 @@ test('partial delivery never reports that all roles are ready',async()=>{
 })
 test('a connected Discord account cannot authorize another creator’s server',async()=>{
  const {core}=coreFixture()
- const module=compile('src/lib/creatorDiscordOwner.ts',{'./supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:user}}})}})},'./supabase/admin':{createAdminClient:()=>database(()=>({data:{owner_id:'other'},error:null}))},'./creatorDiscord':core})
+ let browserReads=0,nativeReads=0
+ const module=compile('src/lib/creatorDiscordOwner.ts',{
+  './supabase/server':{createClient:async()=>{browserReads++;return {auth:{getUser:async()=>({data:{user:{id:user}}})}}}},
+  './supabase/admin':{createAdminClient:()=>database(()=>({data:{owner_id:'other'},error:null}))},
+  './supabase/accountSettingsActor':{accountSettingsActor:async request=>{
+   nativeReads++
+   return request.headers.get('authorization')==='Bearer fixture'?{supabase:{},user:{id:user}}:{error:{status:401}}
+  }},
+  './mlbViewerAccess':{canViewMlb:async()=>false},
+  './creatorDiscord':core,
+ })
  await assert.rejects(module.creatorDiscordOwner(group),error=>error.status===403)
+ const native=token=>new Request('https://www.slipsurge.com/api/action',{headers:{authorization:`Bearer ${token}`}})
+ await assert.rejects(module.creatorDiscordOwner(group,native('invalid')),error=>error.status===401)
+ await assert.rejects(module.creatorDiscordOwner(group,native('fixture')),error=>error.status===403)
+ assert.equal(browserReads,1)
+ assert.equal(nativeReads,2)
  assert.throws(()=>module.requireDiscordSameOrigin(new Request('https://www.slipsurge.com/api/action',{headers:{origin:'https://evil.invalid'}})),error=>error.status===403)
 })
 test('signed interactions reject forged, replayed, malformed and wrong-application requests',async()=>{
