@@ -5,9 +5,11 @@ import { POST as importCode } from '@/app/api/matrices/import/route'
 import { GET as marketplace, POST as publishListing } from '@/app/api/matrix-marketplace/route'
 import { DELETE as removeListing } from '@/app/api/matrix-marketplace/[id]/route'
 import { POST as importListing } from '@/app/api/matrix-marketplace/[id]/import/route'
-import { isAccountId } from '@/lib/blocks'
+import { isAccountId, isBlockedEitherWay } from '@/lib/blocks'
+import { readMarketplaceSnapshot } from '@/lib/matrixMarketplace'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { requireTier } from '@/lib/requireTier'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 
 export const maxDuration = 60
@@ -32,8 +34,37 @@ function scoped(response: Response) {
 export async function GET(request: Request) {
   const account = await access(request)
   if (account.error) return account.error
-  const op = new URL(request.url).searchParams.get('op') ?? 'list'
-  if (op === 'marketplace') return scoped(await marketplace(request))
+  const query = new URL(request.url).searchParams
+  const op = query.get('op') ?? 'list'
+  if (op === 'marketplace') {
+    const author = query.get('author')
+    if (author !== null && (!isAccountId(author) || query.getAll('author').length !== 1)) {
+      return reply({ error: 'Invalid Matrix author' }, 400)
+    }
+    return scoped(await marketplace(request))
+  }
+  if (op === 'listing') {
+    const id = query.get('id')
+    if (!id || !isAccountId(id) || query.getAll('id').length !== 1) return reply({ error: 'Listing not found' }, 404)
+    try {
+      const admin = createAdminClient()
+      const { data, error } = await admin.from('matrix_marketplace_listings')
+        .select('id,author_id,title,description,tags,matrix_type,color,snapshot,copy_count')
+        .eq('id', id).eq('status', 'published').maybeSingle()
+      if (error) throw Error()
+      if (!data || (data.author_id !== account.userId && await isBlockedEitherWay(account.supabase, account.userId, data.author_id))) {
+        return reply({ error: 'Listing not found' }, 404)
+      }
+      const snapshot = readMarketplaceSnapshot(data.snapshot)
+      if (!snapshot) return reply({ error: 'Listing not found' }, 404)
+      const author = await admin.from('users').select('id,username,display_name,avatar_url,is_verified')
+        .eq('id', data.author_id).maybeSingle()
+      if (author.error) throw Error()
+      return reply({ listing: { ...data, snapshot, author: author.data, is_owner: data.author_id === account.userId } })
+    } catch {
+      return reply({ error: 'Matrix listing is temporarily unavailable' }, 503)
+    }
+  }
   if (op === 'list') return scoped(await matrixList())
   return reply({ error: 'Choose a valid Matrices view' }, 400)
 }
