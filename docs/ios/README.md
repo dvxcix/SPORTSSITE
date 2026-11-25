@@ -244,3 +244,27 @@ public Feed and selected authenticated research, profile, Workspace and
 security reads. Testing notes distinguish live reads from sample fixtures and
 from member writes. Provider login completion and real-device push remain
 open verification items.
+
+### Apple device signing and universal links
+
+The Mac Simulator keeps its existing development bundle identifier. For a
+provisioned iPhone or TestFlight build, set `SLIPSURGE_IOS_DEVELOPMENT_TEAM`
+and `SLIPSURGE_IOS_BUNDLE_IDENTIFIER` in the Mac’s ignored
+`ios/LocalAuth.xcconfig`, or pass them as Xcode build settings in release CI.
+Use the identifier registered for this app in Apple Developer and enable
+Associated Domains and Push Notifications on that identifier. Configure
+`SLIPSURGE_DEVICE_ENTITLEMENTS = SlipSurgeDistribution.entitlements` and the
+matching `SLIPSURGE_APNS_ENVIRONMENT` for the provisioned build. The separate
+`SlipSurgeDevice.entitlements` remains available for push-only device tests.
+
+Set the corresponding full application identifier (`TEAMID.bundle.id`) as
+`SLIPSURGE_IOS_APP_IDS` on the server hosting `www.slipsurge.com`. The public
+Apple association route returns an association only for configured app IDs.
+OAuth callback, API, admin and creator checkout return paths remain eligible
+for their established browser and custom-scheme flows. Verify a supported
+feed or matchup link from Notes on a signed physical iPhone and check the
+Apple domain diagnostics before recording universal links as verified.
+
+The native target includes the required-reason entries for app-owned settings
+and the elapsed-time check used for research freshness. App Store Connect
+privacy disclosures and third-party SDK declarations require a release review.

@@ -1945,4 +1945,26 @@ physical-device push are still open.
 - The revised Feed save reopened the same anchored Picks post after an
   app relaunch. The observed viewport differed by roughly six percent of
   the screen as the anchor aligned the card. The web-compatible scroll
-  offset is still part of the shared record.
+  offset is still part of the shared record. Task
+  `99ee412fdd0fc81ab6f04de726f701f9f54e912f` is pushed. This checkpoint
+  adds iOS presentation and fixture coverage using the existing live API.
+
+## Apple association, device signing and privacy manifest · 25 November 2026
+
+- Canonical `www.slipsurge.com` has a configurable universal-link association
+  route for native product content. It publishes only explicit registered
+  Apple app IDs and keeps OAuth, API, admin and creator checkout returns
+  with their established handling. The route is inactive with no app IDs.
+- Xcode has device-only bundle-ID and signing-team settings and a distribution
+  entitlement file for Associated Domains and APNs. The Simulator keeps the
+  same signed development identity. Both build products package the native
+  required-reason manifest for app preferences and the research timer.
+- The association fixture, Hub TypeScript and all 134 baseline checks passed.
+  The signed Simulator compiled and packaged the manifest. An unsigned
+  generic arm64 iPhone Release compiled and honored the test bundle-ID
+  override. The test override was passed on the command line only.
+- This Mac reported zero valid signing identities and only simulated devices.
+  Apple’s actual app ID, matched provisioning, AASA configuration and a
+  physical iPhone are still needed to verify universal links and real APNs.
+  Fresh social-provider consent, StoreKit purchasing and privacy disclosures
+  also remain open release checks.
