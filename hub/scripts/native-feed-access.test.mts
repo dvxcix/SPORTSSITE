@@ -59,6 +59,12 @@ test('only the exact native guest reads reach their public handlers', () => {
   assert.equal(isNativePublicRead('/api/feed', 'GET'), false)
   assert.equal(isNativePublicRead('/api/mobile/discover', 'GET'), true)
   assert.equal(isNativePublicRead('/api/mobile/scores', 'GET'), true)
+  assert.equal(isNativePublicRead('/api/mobile/scores/game', 'GET'), true)
+  assert.equal(isNativePublicRead('/api/mobile/scores/game/room', 'GET'), false)
+  assert.equal(isNativePublicRead('/api/mobile/scores/game', 'POST'), false)
+  assert.equal(isNativePublicRead('/api/mobile/profiles', 'GET'), true)
+  assert.equal(isNativePublicRead('/api/mobile/profiles', 'POST'), false)
+  assert.equal(isNativePublicRead('/api/mobile/profiles/admin', 'GET'), false)
   const post = '/api/mobile/posts/00000000-0000-4000-8000-000000000301'
   assert.equal(isNativePublicRead(post, 'GET'), true)
   for (const path of ['/api/mobile/feed', '/api/mobile/discover', '/api/mobile/scores', post]) {

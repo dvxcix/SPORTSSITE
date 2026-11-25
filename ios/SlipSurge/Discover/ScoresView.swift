@@ -1,6 +1,6 @@
 import SwiftUI
 
-private struct Scoreboard: Decodable {
+struct Scoreboard: Decodable {
     struct League: Decodable, Identifiable {
         let id: String
         let available: Bool
@@ -41,6 +41,7 @@ private struct Scoreboard: Decodable {
 }
 
 struct ScoresView: View {
+    let api: DiscoverAPI
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var phase
@@ -113,13 +114,7 @@ struct ScoresView: View {
             LazyVStack(spacing: 9) {
                 ForEach(league.games.sorted { $0.live && !$1.live }) { match in
                     NavigationLink {
-                        ScrollView {
-                            scoreCard(match, expanded: true)
-                                .padding(16)
-                        }
-                        .navigationTitle("\(match.away.abbreviation) at \(match.home.abbreviation)")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .background(Brand.background(for: scheme))
+                        GameCenterView(api: api, game: match, date: day)
                     } label: {
                         scoreCard(match)
                     }
@@ -129,24 +124,19 @@ struct ScoresView: View {
         }
     }
 
-    private func scoreCard(_ match: Scoreboard.Match, expanded: Bool = false) -> some View {
+    private func scoreCard(_ match: Scoreboard.Match) -> some View {
         ResearchToolCard(color: Color(hex: match.home.color) ?? Brand.accent(for: scheme)) {
             HStack {
                 Label(match.label, systemImage: match.live ? "waveform" : "clock")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(match.live ? Brand.signal(-1, for: scheme) : .secondary)
                 Spacer()
-                if !expanded {
-                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary).accessibilityHidden(true)
-                }
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary).accessibilityHidden(true)
             }
         } content: {
             scoreTeam(match.away)
             Divider()
             scoreTeam(match.home)
-            if let venue = match.venue, expanded {
-                Label(venue, systemImage: "location").font(.caption).foregroundStyle(.secondary)
-            }
         }
     }
 

@@ -59,6 +59,7 @@ struct ActivityView: View {
             case .conversation(let room): MessageThreadView(api: MessagesAPI(account: api.account, userID: api.userID), destination: room)
             case .discovery: DiscoverView(api: DiscoverAPI(account: api.account, userID: api.userID))
             case .community(let id): DiscoverView(api: DiscoverAPI(account: api.account, userID: api.userID), opensCommunity: id)
+            case .profile(let id): MemberProfileView(api: DiscoverAPI(account: api.account, userID: api.userID), target: id.uuidString.lowercased())
             }
         }
         .scrollContentBackground(.hidden)

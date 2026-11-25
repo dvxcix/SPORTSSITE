@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { isReportReason } from '@/lib/reportReasons'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { POST_WITH_AUTHOR, type FeedPost } from '@/lib/feedQuery'
 import { getBlockedEitherWayIds, isAccountId } from '@/lib/blocks'
@@ -85,6 +86,40 @@ export async function POST(request: Request, context: Context) {
     const notifications = { actorId: userId, link, targetId: id, targetType: 'post' }
 
     switch (action.kind) {
+      case 'post-edit':
+      case 'post-delete': {
+        if (post.author_id !== userId) return problem('Only the author can change this post', 403)
+        const current = { id, author_id: userId }
+        const content = typeof action.text === 'string' ? action.text.trim() : ''
+        if (action.kind === 'post-edit') {
+          const editable = Date.parse(post.created_at) + 600_000
+          if (!Number.isFinite(editable) || editable <= Date.now()) return problem('This post can no longer be edited', 403)
+          if (typeof action.text !== 'string' || content.length > 500 || (!content && post.post_type === 'text' && !post.media_urls?.length)) {
+            return problem('Check your post text', 400)
+          }
+        }
+        const result = action.kind === 'post-delete' ? await supabase.from('posts').delete().match(current).select('id')
+          : await supabase.from('posts').update({ content, updated_at: new Date().toISOString() }).match(current).select('id')
+        if (result.error || result.data?.length !== 1) return problem('Post change could not be saved', 409)
+        break
+      }
+      case 'post-hide':
+      case 'author-mute': {
+        if (post.author_id === userId) return problem('Use your own post actions', 400)
+        const target_type = action.kind === 'post-hide' ? 'post' : 'author'
+        const target_id = target_type === 'post' ? id : post.author_id
+        const result = await supabase.from('feed_suppressions').insert({ target_type, target_id, user_id: userId })
+        if (result.error && result.error.code !== '23505') return problem('Feed preference could not be saved', 503)
+        break
+      }
+      case 'post-report': {
+        const details = typeof action.text === 'string' ? action.text.trim() : ''
+        if (post.author_id === userId || !isReportReason(action.reason) || details.length > 2000) return problem('Check your report', 400)
+        const result = await supabase.from('reports').insert({ reporter_id: userId, target_type: 'post', target_id: id,
+          reason: action.reason, details: details || null, status: 'pending' })
+        if (result.error) return problem('Report could not be submitted', 503)
+        break
+      }
       case 'react': {
         const emoji = typeof action.emoji === 'string' ? action.emoji.trim() : ''
         if (!emoji || emoji.length > 32 || typeof action.enabled !== 'boolean') return problem('Invalid reaction', 400)

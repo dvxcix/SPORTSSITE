@@ -97,8 +97,10 @@ struct DiscoverAPI {
     let userID: UUID?
 
     func read<Value: Decodable>(_ type: Value.Type, resource: String) async throws -> Value {
-        let path = "/api/mobile/discover"
-        let query = [URLQueryItem(name: "resource", value: resource)]
+        try await readPublic(type, path: "/api/mobile/discover", query: [.init(name: "resource", value: resource)])
+    }
+
+    func readPublic<Value: Decodable>(_ type: Value.Type, path: String, query: [URLQueryItem] = []) async throws -> Value {
         let data: Data
         if let userID {
             data = try await SlipSurgeHTTP.memberData(path, query: query, account: account, userID: userID)
@@ -132,9 +134,9 @@ extension DiscoverAPI {
         return try JSONDecoder().decode(type, from: response)
     }
 
-    func write<Body: Encodable, Response: Decodable>(_ type: Response.Type, path: String, body: Body) async throws -> Response {
+    func write<Body: Encodable, Response: Decodable>(_ type: Response.Type, path: String, query: [URLQueryItem] = [], body: Body) async throws -> Response {
         guard let userID else { throw URLError(.userAuthenticationRequired) }
-        var request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: path)
+        var request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: path, query: query)
         let access = try await account.accessToken(for: userID)
         request.httpMethod = "POST"
         request.httpBody = try JSONEncoder().encode(body)

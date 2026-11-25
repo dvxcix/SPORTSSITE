@@ -151,6 +151,7 @@ extension FeedAPI {
         var id: String?
         var text: String?
         var parent: String?
+        var reason: String?
     }
 
     func thread(_ id: UUID) async throws -> FeedThread {

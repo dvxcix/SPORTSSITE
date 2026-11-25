@@ -20,7 +20,7 @@ struct ActivityNotification: Decodable, Identifiable {
     let targetType: String?
 
     enum Destination: Hashable {
-        case post(UUID), conversation(MessageDestination), discovery, community(UUID)
+        case post(UUID), conversation(MessageDestination), discovery, community(UUID), profile(UUID)
     }
 
     var destination: Destination? {
@@ -42,6 +42,7 @@ struct ActivityNotification: Decodable, Identifiable {
             if targetType == "group", let targetId { return .community(targetId) }
             return .discovery
         }
+        if type == "follow", let profile = actorId ?? targetId { return .profile(profile) }
         return nil
     }
 

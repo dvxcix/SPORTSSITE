@@ -26,7 +26,7 @@ struct DiscoverView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 13) {
                 NavigationLink {
-                    ScoresView()
+                    ScoresView(api: api)
                 } label: {
                     scoresEntry
                 }

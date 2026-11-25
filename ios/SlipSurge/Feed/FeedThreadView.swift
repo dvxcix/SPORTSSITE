@@ -7,6 +7,7 @@ struct FeedThreadView: View {
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dismiss) private var dismiss
     @State private var thread: FeedThread?
     @State private var unavailable = false
     @State private var pending = false
@@ -14,6 +15,7 @@ struct FeedThreadView: View {
     @State private var deleted: FeedThread.Comment?
     @State private var replyTo: FeedThread.Comment?
     @State private var editing: FeedThread.Comment?
+    @State private var member: String?
     @State private var comment = ""
     @State private var draft = UUID()
     @FocusState private var composerFocused: Bool
@@ -28,6 +30,9 @@ struct FeedThreadView: View {
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Post")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $member) { name in
+            MemberProfileView(api: DiscoverAPI(account: api.account, userID: api.userID), target: name)
+        }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .task(id: id) { await load() }
@@ -46,7 +51,11 @@ struct FeedThreadView: View {
         VStack(alignment: .leading, spacing: 13) {
             if let post {
                 let operation: ((FeedAPI.Mutation) -> Void)? = api.userID == nil ? nil : { value in action(value) }
-                FeedPostCard(post: post, operation: operation, showDiscussionButton: false)
+                FeedPostCard(post: post, operation: operation, showDiscussionButton: false,
+                    showAuthor: post.author.map { author in { member = author.username } }, actionsAPI: api,
+                    postChanged: { removed in
+                        if removed { dismiss() } else { Task { await load() } }
+                    })
                     .padding(14).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
             }
             if let notice {

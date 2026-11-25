@@ -6,6 +6,9 @@ struct FeedPostCard: View {
     var operation: ((FeedAPI.Mutation) -> Void)?
     var showDiscussionButton = true
     var discussion: (() -> Void)?
+    var showAuthor: (() -> Void)?
+    var actionsAPI: FeedAPI?
+    var postChanged: ((Bool) -> Void)?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var revealed = false
@@ -18,7 +21,19 @@ struct FeedPostCard: View {
                 Label("\(reposter) reposted", systemImage: "arrow.2.squarepath")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            author
+            HStack(alignment: .top) {
+                if let showAuthor, let author = post.author {
+                    Button(action: showAuthor) { authorLabel }
+                        .buttonStyle(SlipSurgePressStyle())
+                        .accessibilityLabel("View \(author.displayName ?? author.username)’s profile")
+                } else {
+                    authorLabel
+                }
+                Spacer(minLength: 3)
+                if let actionsAPI, actionsAPI.userID != nil, let postChanged {
+                    FeedPostActions(api: actionsAPI, post: post, changed: postChanged)
+                }
+            }
             if post.spoiler && !revealed {
                 Button("Reveal spoiler", systemImage: "eye.slash") {
                     withAnimation(reduceMotion ? nil : .smooth(duration: 0.24)) { revealed = true }
@@ -60,7 +75,7 @@ struct FeedPostCard: View {
         }
     }
 
-    private var author: some View {
+    private var authorLabel: some View {
         HStack(spacing: 10) {
             let portrait = post.author?.avatar.flatMap { Self.allowedMedia($0) ? $0 : nil }
             ResearchArtwork(urls: portrait.map { [$0] } ?? [], fallback: "person.crop.circle")

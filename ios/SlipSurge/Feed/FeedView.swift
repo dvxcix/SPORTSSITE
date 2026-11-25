@@ -17,6 +17,7 @@ struct FeedView: View {
     @State private var availableSports = ["NBA", "NFL"]
     @State private var composing = false
     @State private var discussion: FeedPost?
+    @State private var member: String?
     @State private var pending = Set<UUID>()
     @State private var postUpdates: [UUID: FeedPost] = [:]
     @State private var actionError = false
@@ -73,6 +74,9 @@ struct FeedView: View {
         }
         .navigationTitle("Feed")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $member) { name in
+            MemberProfileView(api: DiscoverAPI(account: api.account, userID: api.userID), target: name)
+        }
         .toolbar {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 6) {
@@ -134,7 +138,12 @@ struct FeedView: View {
             Section {
                 FeedPostCard(post: postUpdates[post.postID] ?? post, operation: api.userID == nil ? nil : { action in
                     Task { await apply(action, to: post.postID) }
-                }, discussion: { discussion = postUpdates[post.postID] ?? post })
+                }, discussion: { discussion = postUpdates[post.postID] ?? post },
+                showAuthor: post.author.map { author in { member = author.username } }, actionsAPI: api,
+                postChanged: { removed in
+                    if removed { posts.removeAll { $0.postID == post.postID } }
+                    Task { await firstPage() }
+                })
                 .disabled(pending.contains(post.postID))
             }
             .listRowBackground(Brand.surface(for: scheme))

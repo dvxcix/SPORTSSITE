@@ -458,3 +458,34 @@ physical-device push are still open.
   source. Production tracked-pick schema inspection confirmed the current web
   writer is service-only, atomic across posts/picks, rate-limited and preserves
   spoilers. Native draft and APNs tables were absent before these changes.
+
+## Native member profiles and Game Center · 25 November 2026
+
+- Composer checkpoint `4430c9dc3c25689d9ef15f7b8c0c5e6f008b764a` is on the task
+  branch. PR #16 merged as `d0798dca1574255100c08790933dff780646f16b`. Preview
+  `dpl_2TY3LPrEaDpiMv8juKUR3A4cBL7P` and production
+  `dpl_7wKnas9dZZPSiyANdzbaBtff7WqC` reported READY. Production rejected invalid
+  credentials for both composer leagues, tracked picks, upload, mobile push,
+  the push trigger, and targeted Activity. Public Feed, sign-in, Pricing and
+  both research previews still returned 200.
+- Supabase applied `20261125045717_native_tracked_pick_requests` and
+  `20261125045900_native_apple_push` individually. Those are the canonical
+  repository filenames. Both storage paths have RLS with service-role access,
+  ordinary clients cannot execute the new pick writer, and the original
+  writer hash stayed `50adf6918216aeea6609b576f2fc8fee`. APNs provider settings
+  require a signed device configuration and authorized Apple credentials.
+  No provider delivery, uploads, live picks, or account mutations were used
+  in testing.
+- New task-branch work adds native member profiles with authentic profile art,
+  records, badges, favorites, verified socials, post/repost/media/reply and
+  community tabs, Follow, Message, Block and Report. Feed authors and follow
+  alerts can open the profile in app. Posts support editing in the same
+  ten-minute window, deletion by the author, hide, mute, block and reporting.
+  Read routes use the original block, privacy, membership and MLB visibility.
+- Live Scores now opens a native game detail with Summary, Play-by-play,
+  Box Score, exact-game Picks and Game Room. It reuses the same ESPN and
+  stored NFL feeds, canonical NBA pick crosswalk, and room storage. It retains
+  the MLB offseason pause. Team and player art comes from those data sources.
+  The native reactions and room writes require existing member permissions.
+  SwiftUI, TypeScript and the focused checks were run locally. Publishing and
+  testing this checkpoint against live read data is the next step.
