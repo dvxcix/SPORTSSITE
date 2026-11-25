@@ -10,7 +10,7 @@ task's context or remember Git commands to transfer a reviewed checkpoint.
 | Location | Role | Continuity |
 | --- | --- | --- |
 | Windows local checkout | Existing website and Android work | Keep its current work safe; use a dedicated task branch and pushed handoff. Current local state cannot be inferred from Cloud. |
-| Mac local checkout | iOS source, Xcode, Simulator and device checks | Same GitHub repository; a separate task branch. Xcode must run here. Local setup is not yet verified from this conversation. |
+| Mac local checkout | Native iOS development, Xcode, Device Hub and device checks | Same GitHub repository on the iOS task branch. Xcode Run and the iPhone 18 Pro simulator view are verified on this Mac. |
 | This Cloud chat | Shared Cloud task files and conversation | Opening this same chat from either computer accesses this same remote workspace, not the local Windows/Mac files. |
 | GitHub | Saved source, context, task handoffs and checkpoint history | Pushing makes a checkpoint available; the other session must fetch/read it before claiming it has received it. |
 
@@ -55,9 +55,11 @@ jobs and messaging retain their separate authorization boundaries in AGENTS.md.
 - Audit checkpoint: `9dcf9d43cd0b9c6183952dc47fd027fb632d7e7c`
 - Handoff: `docs/workspace/handoffs/2026-11-25-ios-parity.md`
 - Product baseline and source inventory: `docs/ios/README.md`
-- Status: source/parity audit completed; no native app build verified. The owner
-  reports downloading/opening Xcode. Framework choice and local Mac build setup
-  still need resolution in the Mac session.
+- First native build checkpoint: `5dbfa649fa8fc9432a541efc82ddd0bd637af4e0`
+- Status: `ios/SlipSurge.xcodeproj` builds and runs from Xcode on this Mac.
+  Device Hub displays the signed-out Sideline preview and the sportsbook
+  picker has been exercised. The full website remains the iOS parity scope.
+  See the task handoff for remaining work.
 
 For an agent on another branch, read the iOS handoff without changing that
 checkout. The explicit fetch also works when the clone fetches only main:

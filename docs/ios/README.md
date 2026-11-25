@@ -157,8 +157,11 @@ needed for this source audit or an isolated UI foundation.
 
 The first native target is [SlipSurge.xcodeproj](../../ios/SlipSurge.xcodeproj),
 with a shared `SlipSurge` scheme and a minimum deployment target of iOS 17.
-Select an installed iOS Simulator in Xcode and run the scheme. From the
-repository root, an unsigned Simulator build can also be run with:
+Open the project in Xcode, choose the `SlipSurge` scheme and an installed
+iPhone simulator, then press Run. On the verified Mac with Xcode 27.2, the
+interactive iPhone view is in Device Hub, available from Xcode's
+**Open Developer Tool** menu. From the repository root, an unsigned Simulator
+build can also be run with:
 
 ```sh
 xcodebuild -project ios/SlipSurge.xcodeproj -scheme SlipSurge \

@@ -97,3 +97,30 @@ routing and real delivery still need implementation and physical-device
 verification. The installed SwiftUI UI Patterns and iOS Debugger Agent skills
 guided this slice. The owner-listed web design skills were absent from the
 Mac's personal skill directory and were not applied to this native screen.
+
+## Xcode and Device Hub review · 25 November 2026
+
+- Mac-local branch `codex/ios-parity-20261125`, app source checkpoint
+  `5dbfa649fa8fc9432a541efc82ddd0bd637af4e0`. Opened
+  `ios/SlipSurge.xcodeproj` in the Xcode GUI, used Run with the SlipSurge
+  scheme and iPhone 18 Pro destination, and verified the debugger attached.
+  Opened the iPhone simulator window in Device Hub for owner review. The
+  earlier build used `xcodebuild` and `simctl` from the terminal.
+- Verified the sportsbook interaction in Device Hub. Switching TB–CHI
+  receiving yards from FanDuel to DraftKings kept the matchup and changed
+  Colston Loveland's 20-yard price from −1450 to −720. Timed refresh,
+  denied/unavailable states and accessibility still need coverage.
+- Installed the owner-requested local Codex skills from their named upstream
+  repositories: `swiftui-pro`, `developing-ios-apps` and `mobile-ios-design`.
+  Verified that each installed directory contains its `SKILL.md`.
+- GitHub read/write, primary Supabase project metadata read and Vercel
+  production deployment read were verified from the Mac Codex session.
+  Mobbin screen, flow and collection tools are available in this session.
+  Apple team signing and APNs delivery are independent follow-ups.
+- The Mac is the iOS development and interactive review workstation. Cloud
+  and Windows can retrieve the pushed checkpoint and handoff. Windows stays
+  the web/Android development workstation. The full site remains in scope for
+  native parity, including accounts, access rules, live and frozen research,
+  saved work, social/creator features and notifications. The next code
+  milestone is native session handling and one member-only research flow.
+  This review checkpoint changes documentation only.
