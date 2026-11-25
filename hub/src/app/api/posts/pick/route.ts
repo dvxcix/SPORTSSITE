@@ -22,6 +22,7 @@ import { mlbCaptureOpen } from '@/lib/mlbCaptureWindow'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { findNativeMlbPick, nativeMlbPickSlate } from '@/lib/nativeMlbPickMarkets'
 import { nativeCommunityPublishing } from '@/lib/nativeCommunityPublishing'
+import { nativePagePublishing } from '@/lib/nativePagePublishing'
 
 export const revalidate = 0
 
@@ -71,6 +72,7 @@ export async function POST(req: Request) {
   if (sport === 'NBA') { const gate = await requirePaintAccess(); if (gate.error) return gate.error }
   if (visibility === 'private' && sport !== 'NBA') return NextResponse.json({ error: 'Only-me picks are currently available in The Court.' }, { status: 403 })
   if (visibility === 'private' && (groupId || pageId)) return NextResponse.json({ error: 'Only-me picks belong in your personal picks.' }, { status: 400 })
+  if (native && groupId && pageId) return NextResponse.json({ error: 'Choose one destination for this pick.' }, { status: 400 })
   if (native && groupId) {
     const access = await nativeCommunityPublishing(supabase, user.id, groupId)
     if (access.error) return NextResponse.json({ error: access.error }, { status: access.status })
@@ -78,8 +80,13 @@ export async function POST(req: Request) {
   }
 
   if (pageId) {
-    const { data: ownedPage } = await supabase.from('pages').select('id').eq('id', pageId).eq('owner_id', user.id).maybeSingle()
-    if (!ownedPage) return NextResponse.json({ error: 'You cannot publish to this page.' }, { status: 403 })
+    if (native) {
+      const access = await nativePagePublishing(supabase, user.id, pageId)
+      if (access.error) return NextResponse.json({ error: access.error }, { status: access.status })
+    } else {
+      const { data: ownedPage } = await supabase.from('pages').select('id').eq('id', pageId).eq('owner_id', user.id).maybeSingle()
+      if (!ownedPage) return NextResponse.json({ error: 'You cannot publish to this page.' }, { status: 403 })
+    }
   }
 
   if (!legs.length) return NextResponse.json({ error: 'No pick legs provided' }, { status: 400 })
