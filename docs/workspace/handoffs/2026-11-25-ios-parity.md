@@ -1759,3 +1759,27 @@ physical-device push are still open.
 - Signed SwiftUI compilation, Hub TypeScript, 134 baseline source checks
   and seven targeted replay and Watchlist checks passed. Live changes
   to Watchlist or published picks were not necessary for this checkpoint.
+  Task `68fbfc0c90bcd1e45d7989a8f2e8cb95f61ff80d` is pushed. PR #65
+  merged as `168bced12b3d5be75e0ded35e6a6b4986362937e`, preview
+  `dpl_GexF6rsEyfaWZnALLeGLJkgMtd1z` and production
+  `dpl_7WfFsuEfSRTPBYUpG53jffT9UsnW` were READY. The signed Simulator
+  opened DraftKings rebounds on the selected matchup and showed the
+  branded matchup controls in the Odds Board filter sheet. The exact
+  guest Watchlist query returned 401 and public Feed returned 200.
+
+## Native Discord administration · 25 November 2026
+
+- Admin has native server enablement, configured alert channels, tier
+  role mappings, app and creator delivery status, delivery queue history,
+  command inspection and the original confirmed operation controls.
+- Post to Discord includes the channel, message, title, body, color,
+  hyperlinks, author, footer, Photos attachments, live draft preview and
+  explicit confirmation for the posting channel. The existing handler
+  restricts posting to the configured guild. The native audit record
+  contains the operation and channel without the message body.
+- Bearer admin routes require existing account assurance. Discord settings
+  save against their observed version. Browser callers retain their
+  existing session and origin checks. Xcode signed Simulator build and
+  the 134 production source checks passed. Write QA used a fixture channel
+  and modeled configuration versions, with no real Discord posts, role
+  synchronization, command changes or delivery canary requests.

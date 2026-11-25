@@ -377,6 +377,14 @@ struct AccountWorkspaceView: View {
                 NavigationLink { AdminPipelineHealthView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Pipeline health", systemImage: "waveform.path") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink { AdminDiscordView(api: .init(viewer: .init(account: account, userID: userID))) } label: {
+                    ResearchToolCard(color: Color(rgb: 0x5865F2)) {
+                        HStack(spacing: 8) {
+                            Image("sign-in-discord").resizable().scaledToFit().frame(width: 23, height: 23).accessibilityHidden(true)
+                            Text("Discord Bot")
+                        }
+                    } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
                 ForEach(admin.pipelines) { pipeline in
                     ResearchToolCard(color: Brand.accent(for: scheme)) {
                         Text(pipeline.label).font(.headline)

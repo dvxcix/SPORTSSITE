@@ -1,18 +1,10 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { getDiscordConfig, getGuildChannels, postToChannelChecked } from '@/lib/discord'
 import { safeApiError } from '@/lib/safeApiError'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
-
-async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
-  const { data: profile } = await supabase.from('users').select('account_type').eq('id', user.id).single()
-  if (profile?.account_type !== 'admin') return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  return { adminId: user.id }
-}
+import { discordAdminActor } from '@/lib/discordAdminActor'
+import { writeAdminAudit } from '@/lib/adminAudit'
 
 const boundedString = (v: unknown, max: number): string | undefined => {
   if (typeof v !== 'string') return undefined
@@ -36,10 +28,10 @@ const httpsUrl = (v: unknown): string | undefined => {
 // directly rather than going through postAlert's discord_config.alert_channels
 // lookup.
 export async function POST(req: Request) {
-  const { error, adminId } = await requireAdmin()
-  if (error) return error
+  const actor = await discordAdminActor(req)
+  if (actor.error) return actor.error
 
-  const rateLimit = await consumeServerRateLimit(adminId!, 'admin_discord_compose', 60, 3600)
+  const rateLimit = await consumeServerRateLimit(actor.id, 'admin_discord_compose', 60, 3600)
   if (!rateLimit.available) return NextResponse.json({ error: 'Posting is temporarily unavailable' }, { status: 503 })
   if (!rateLimit.allowed) return NextResponse.json({ error: 'Too many posts. Try again later.' }, { status: 429 })
 
@@ -97,6 +89,8 @@ export async function POST(req: Request) {
       ...(embed ? { embeds: [embed] } : {}),
     })
     if (!result.ok) return NextResponse.json({ error: 'Discord post failed' }, { status: 502 })
+    if (actor.native) await writeAdminAudit(admin, { actorUserId: actor.id, action: 'discord_embed_sent',
+      targetType: 'discord_channel', targetId: channelId, details: { hasEmbed: Boolean(embed) }, request: req })
     return NextResponse.json({ ok: true })
   } catch (cause) {
     return safeApiError('admin-discord-compose', cause, 'Discord post failed', 502)

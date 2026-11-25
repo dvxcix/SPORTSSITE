@@ -15,7 +15,7 @@ enum NativeSiteLink: Hashable {
     case nbaEntity(NbaDirectoryEntityView.Kind, Int, game: Int?, mode: CourtResearchMode)
     case nflEntity(NflDirectoryEntityView.Kind, String)
     case mlbTeam(Int)
-    case adminMarketplace, adminCreatorBusiness, adminPipelineHealth
+    case adminMarketplace, adminCreatorBusiness, adminPipelineHealth, adminDiscord, adminDiscordComposer
     case eventCreate, threadCreate(String?), storyCreate
 
     enum CommunitySection: Hashable {
@@ -134,6 +134,8 @@ enum NativeSiteLink: Hashable {
         case ["admin", "marketplace"]: self = .adminMarketplace
         case ["admin", "creators"], ["admin", "jobs"]: self = .adminCreatorBusiness
         case ["admin", "pipeline-health"]: self = .adminPipelineHealth
+        case ["admin", "discord"]: self = .adminDiscord
+        case ["admin", "discord", "compose"]: self = .adminDiscordComposer
         default:
             if segments.count == 2 {
                 let name = segments[1]
@@ -241,6 +243,7 @@ enum NativeSiteLink: Hashable {
         case .notifications, .activityReplay, .missions, .search, .topic, .explore, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
             .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .creatorStoreSetup, .communityCreator, .researchWorkspace, .admin,
             .marketplace, .nbaEntity, .nflEntity, .mlbTeam, .creatorAccess, .adminMarketplace, .adminCreatorBusiness, .adminPipelineHealth,
+            .adminDiscord, .adminDiscordComposer,
             .eventCreate, .threadCreate, .storyCreate,
             .community(_, .settings), .community(_, .channels): true
         default: false
