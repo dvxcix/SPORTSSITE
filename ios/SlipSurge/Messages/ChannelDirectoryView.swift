@@ -57,7 +57,8 @@ struct ChannelDirectoryView: View {
                 }
             }
             Spacer()
-            if channel.isPinned == true { Image(systemName: "pin.fill").font(.caption).accessibilityLabel("Pinned") }
+            if channel.preferred == true { Image(systemName: "star.fill").font(.caption).accessibilityLabel("Favorite channel") }
+            else if channel.isPinned == true { Image(systemName: "pin.fill").font(.caption).accessibilityLabel("Pinned") }
         }
     }
 

@@ -101,6 +101,7 @@ struct MessagesAPI {
         let icon: String?
         let channelKind: String?
         let isPinned: Bool?
+        let preferred: Bool?
         let memberCount: Int?
     }
 

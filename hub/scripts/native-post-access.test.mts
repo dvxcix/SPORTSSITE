@@ -8,6 +8,8 @@ const state = {
   inserts: 0,
   mentions: 0,
   rows: new Map<string, Record<string, unknown>>(),
+  communities: new Map<string, { sport: string; is_public: boolean; access_type: string }>(),
+  memberships: new Set<string>(),
 }
 Object.assign(globalThis, { nativePostFixture: state })
 
@@ -19,7 +21,13 @@ const stubs: Record<string, string> = {
     export async function requireNativeAccount(request) {
       const state = globalThis.nativePostFixture
       if (!request.headers.has('authorization')) return { error: Response.json({}, {status:401}) }
-      return { userId: state.userId, supabase: { from() {
+      return { userId: state.userId, supabase: { from(table) {
+        if (table === 'groups') return { select() { return { eq(column, id) { return { maybeSingle() {
+          return { data: column === 'id' ? state.communities.get(id) ?? null : null }
+        } } } } } }
+        if (table === 'group_members') return { select() { return { eq(groupField, group) { return { eq(userField, user) { return { maybeSingle() {
+          return { data: groupField === 'group_id' && userField === 'user_id' && state.memberships.has(group + ':' + user) ? {user_id:user} : null }
+        } } } } } } } }
         return {
           insert(draft) { return { select() { return { single() {
             if (state.rows.has(draft.id)) return { error: { code: '23505' } }
@@ -102,4 +110,24 @@ test('native image posts accept only their authenticated owner’s uploaded obje
   assert.equal((await send(photo)).status, 201)
   assert.deepEqual(state.rows.get(id)?.media_urls, [image])
   assert.equal((await send(photo)).status, 200)
+})
+
+test('private community posts require membership and keep their destination across retries', async () => {
+  const group = '00000000-0000-4000-8000-000000000101'
+  const second = '00000000-0000-4000-8000-000000000102'
+  const id = '00000000-0000-4000-8000-000000000008'
+  const community = { sport: 'NBA', is_public: false, access_type: 'paid' }
+  state.communities.set(group, community)
+  state.communities.set(second, community)
+  const scoped = { ...draft, id, groupId: group }
+  const mentionsBefore = state.mentions
+  assert.equal((await send(scoped)).status, 403)
+  state.memberships.add(group + ':' + state.userId)
+  state.memberships.add(second + ':' + state.userId)
+  assert.equal((await send(scoped)).status, 201)
+  assert.equal(state.rows.get(id)?.group_id, group)
+  assert.equal(state.rows.get(id)?.visibility, 'public')
+  assert.equal((await send(scoped)).status, 200)
+  assert.equal((await send({ ...scoped, groupId: second })).status, 409)
+  assert.equal(state.mentions, mentionsBefore)
 })

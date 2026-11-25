@@ -109,6 +109,7 @@ struct TrackedPickAPI {
         let isSpoiler: Bool
         let wager: Double?
         let imageUrl: URL?
+        var groupId: String? = nil
     }
 
     let account: AccountStore

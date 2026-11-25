@@ -1,11 +1,20 @@
 import SwiftUI
 
 struct FeedComposerView: View {
+    struct Community {
+        let id: UUID
+        let name: String
+        let preferredSport: String?
+        let artwork: URL?
+        let memberOnly: Bool
+    }
+
     let account: AccountStore
     let userID: UUID
     let allowMLB: Bool
     var startWithPick = false
     var initialPick: TrackedPickAPI.Leg? = nil
+    var community: Community? = nil
     let onPost: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -25,6 +34,7 @@ struct FeedComposerView: View {
     @State private var posting = false
     @State private var notice: String?
     @State private var attempted = false
+    @State private var initialized = false
 
     private enum Kind: String, CaseIterable, Encodable {
         case text, analysis, poll, pick
@@ -58,6 +68,7 @@ struct FeedComposerView: View {
         let spoiler: Bool
         let image: URL?
         let poll: Poll?
+        let groupId: String?
     }
 
     private var pollChoices: [String] {
@@ -78,11 +89,22 @@ struct FeedComposerView: View {
         return amount
     }
 
-    private var personalAllowed: Bool { kind == .pick && legs.first?.sport == "NBA" }
+    private var personalAllowed: Bool { community == nil && kind == .pick && legs.first?.sport == "NBA" }
+    private var destination: String? { community?.id.uuidString.lowercased() }
+    private var finalAudience: Audience { community?.memberOnly == true ? .everyone : audience }
 
     var body: some View {
         NavigationStack {
             Form {
+                if let community {
+                    Section {
+                        HStack(spacing: 8) {
+                            ResearchArtwork(urls: [community.artwork].compactMap { $0 }, fallback: "person.2")
+                                .frame(width: 25, height: 25)
+                            Text(community.name).font(.subheadline.weight(.semibold))
+                        }
+                    }
+                }
                 Section {
                     Picker("Post type", selection: $kind) {
                         ForEach(Kind.allCases, id: \.self) { Text($0.label).tag($0) }
@@ -142,8 +164,11 @@ struct FeedComposerView: View {
                             .init(id: $0, title: LeagueArtwork.label($0), url: LeagueArtwork.logo($0), icon: "sportscourt")
                         }, selection: $sport)
                     }
-                    Picker("Audience", selection: $audience) {
-                        ForEach(Audience.allCases.filter { $0 != .personal || personalAllowed }, id: \.self) { Text($0.label).tag($0) }
+                    if community?.memberOnly == true { Label("Community members", systemImage: "person.2") }
+                    else {
+                        Picker("Audience", selection: $audience) {
+                            ForEach(Audience.allCases.filter { $0 != .personal || personalAllowed }, id: \.self) { Text($0.label).tag($0) }
+                        }
                     }
                     Toggle("Contains a spoiler", isOn: $spoiler)
                 }
@@ -153,6 +178,11 @@ struct FeedComposerView: View {
             .navigationTitle("Compose")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
+                guard !initialized else { return }
+                initialized = true
+                if let preferred = community?.preferredSport, ["NFL", "NBA", "NHL", "Soccer", "MMA", "CFB", "CBB"].contains(preferred) || allowMLB && preferred == "MLB" {
+                    sport = preferred
+                }
                 if startWithPick && !attempted && legs.isEmpty {
                     kind = .pick
                     if let initialPick { legs = [initialPick]; sport = initialPick.sport }
@@ -183,7 +213,7 @@ struct FeedComposerView: View {
         defer { posting = false }
         if kind == .pick, let sport = legs.first?.sport {
             let pick = TrackedPickAPI.Draft(draftId: draftID, sport: sport, content: content, legs: legs,
-                visibility: audience.rawValue, isSpoiler: spoiler, wager: parsedWager, imageUrl: image)
+                visibility: finalAudience.rawValue, isSpoiler: spoiler, wager: parsedWager, imageUrl: image, groupId: destination)
             do {
                 _ = try await TrackedPickAPI(account: account, userID: userID).post(pick)
                 onPost()
@@ -197,8 +227,8 @@ struct FeedComposerView: View {
             return
         }
         let draft = Draft(
-            id: draftID, content: content, kind: kind, sport: sport, visibility: audience, spoiler: spoiler, image: image,
-            poll: kind == .poll ? .init(options: pollChoices, duration: duration) : nil
+            id: draftID, content: content, kind: kind, sport: sport, visibility: finalAudience, spoiler: spoiler, image: image,
+            poll: kind == .poll ? .init(options: pollChoices, duration: duration) : nil, groupId: destination
         )
         do {
             let token = try await account.accessToken(for: userID)

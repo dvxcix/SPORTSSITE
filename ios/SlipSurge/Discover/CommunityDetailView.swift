@@ -6,6 +6,8 @@ struct CommunityDetailView: View {
         let canJoin: Bool
         let canLeave: Bool
         let canManage: Bool?
+        let allowMlb: Bool?
+        let publicAudience: Bool?
         let role: String?
         let posts: [FeedPost]
         let nextCursor: String?
@@ -30,6 +32,10 @@ struct CommunityDetailView: View {
     @State private var confirmLeave = false
     @State private var responseComplete = false
     @State private var selected: FeedPost?
+    @State private var memberPreferences = false
+    @State private var composing = false
+    @State private var memberProfile: String?
+    @State private var pending = Set<UUID>()
 
     private var path: String { "/api/mobile/communities/\(group.id.uuidString.lowercased())" }
     private var feedAPI: FeedAPI { FeedAPI(account: api.account, userID: api.userID) }
@@ -49,10 +55,16 @@ struct CommunityDetailView: View {
                 } else if let page {
                     membershipActions(page)
                     if page.canView, page.role != nil, let userID = api.userID {
-                        NavigationLink {
-                            ChannelDirectoryView(api: .init(account: api.account, userID: userID), group: group.id)
-                        } label: { Label("Channels", systemImage: "number") }
-                        .buttonStyle(.bordered)
+                        HStack(spacing: 7) {
+                            NavigationLink {
+                                ChannelDirectoryView(api: .init(account: api.account, userID: userID), group: group.id)
+                            } label: { Label("Channels", systemImage: "number") }
+                            .buttonStyle(.bordered)
+                            Button("Preferences", systemImage: "slider.horizontal.3") { memberPreferences = true }
+                                .buttonStyle(.bordered)
+                        }
+                        Button(feed == .picks ? "Share a pick" : "Write a post", systemImage: "square.and.pencil") { composing = true }
+                            .buttonStyle(SlipSurgePrimaryButtonStyle())
                     }
                     if page.canView {
                         ResearchToolRail(title: "Community", choices: Feed.allCases, selection: $feed, label: \.rawValue) {
@@ -63,8 +75,11 @@ struct CommunityDetailView: View {
                         }
                         LazyVStack(spacing: 9) {
                             ForEach(posts) { post in
-                                FeedPostCard(post: post, discussion: { selected = post })
+                                FeedPostCard(post: post, operation: { action in Task { await apply(action, post: post) } },
+                                    discussion: { selected = post }, showAuthor: post.author.map { author in { memberProfile = author.username } },
+                                    actionsAPI: feedAPI, postChanged: { _ in Task { await load(feed) } })
                                     .padding(13).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
+                                    .disabled(pending.contains(post.postID))
                             }
                         }
                         if page.hasMore, let cursor = page.nextCursor {
@@ -103,6 +118,18 @@ struct CommunityDetailView: View {
                 FeedThreadView(api: feedAPI, id: post.postID, original: post)
             }
         }
+        .sheet(isPresented: $memberPreferences) {
+            CommunityMemberPreferences(api: api, group: group) { feedback = "Preferences saved." }
+        }
+        .sheet(isPresented: $composing) {
+            if let userID = api.userID, let page, page.role != nil {
+                FeedComposerView(account: api.account, userID: userID, allowMLB: page.allowMlb == true, startWithPick: feed == .picks,
+                    community: .init(id: group.id, name: group.name, preferredSport: group.sport, artwork: group.avatarUrl, memberOnly: page.publicAudience != true)) {
+                    Task { await load(feed) }
+                }
+            }
+        }
+        .navigationDestination(item: $memberProfile) { MemberProfileView(api: api, target: $0) }
         .confirmationDialog("Leave \(group.name)?", isPresented: $confirmLeave, titleVisibility: .visible) {
             Button("Leave community", role: .destructive) { Task { await changeMembership(false) } }
         } message: {
@@ -176,6 +203,7 @@ struct CommunityDetailView: View {
         do {
             let reply = try await api.write(Membership.self, path: path, body: ["join": join])
             feedback = reply.member ? "You joined \(group.name)." : "You left \(group.name)."
+            if join && reply.member { memberPreferences = true }
         } catch {
             feedback = "The membership change couldn’t be confirmed."
         }
@@ -193,9 +221,19 @@ struct CommunityDetailView: View {
                 body: Request(inviteId: invite.uuidString.lowercased(), accept: accept))
             responseComplete = true
             feedback = accept ? "Invitation accepted." : "Invitation declined."
-            if accept { await load(feed) }
+            if accept { await load(feed); if page?.role != nil { memberPreferences = true } }
         } catch {
             feedback = "The response couldn’t be confirmed."
+        }
+    }
+
+    private func apply(_ action: FeedAPI.Mutation, post: FeedPost) async {
+        guard pending.insert(post.postID).inserted else { return }
+        defer { pending.remove(post.postID) }
+        do { try await feedAPI.mutate(post.postID, action: action) }
+        catch { feedback = "The post change couldn’t be confirmed." }
+        if let latest = try? await feedAPI.thread(post.postID), let position = posts.firstIndex(where: { $0.id == post.id }) {
+            posts[position] = latest.post
         }
     }
 }

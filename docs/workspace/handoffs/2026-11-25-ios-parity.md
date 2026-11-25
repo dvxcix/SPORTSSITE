@@ -765,6 +765,30 @@ physical-device push are still open.
 - Signed Xcode Debug, Hub TypeScript and 51 focused checks passed. The iPhone
   18 Pro loaded the personal NFL Matrix editor and saved a disposable private
   Matrix. The app now percent-encodes plus signs in query values so exact
-  timestamp versions survive deletion. The cleanup and production ladder
-  walkthrough are being verified. Matrix primary controls also now use the
-  SlipSurge lime fill and dark text for contrast.
+  timestamp versions survive deletion. The app showed no saved Matrices after
+  deleting the fixture, and a read-only database check counted zero remaining
+  rows for that fixture. Matrix primary controls use the SlipSurge lime fill
+  and dark text for contrast.
+- Task checkpoint `4afcc4b10b7ddc2d74e19007428b28b98bc4a33a` is pushed.
+  PR #29 merged as `9e82b9f9cf35637bb48ab9c5163107962b3e8044`.
+  Preview `dpl_5Hm2o24MrJjigc3JYfXbwCXx3AFd` and production
+  `dpl_FvNntvgXXCs3xk5jzLwSbFdtxJ5L` reported READY. Invalid member ladder
+  requests returned 401. Public Feed returned 200.
+
+## Native community posting and preferences · 25 November 2026
+
+- Members can review the rules and choose their community display name,
+  role flair, and favorite channels. A new member can finish these details
+  after joining or accepting an invitation. Favorites rise to the top of
+  the channel directory after channel permissions have been checked.
+- Members can compose analysis, polls, photos, and tracked picks inside a
+  community. Server-side membership and the existing group policies govern
+  posting and viewing. Retries retain the original destination. Private
+  community posts avoid broad mention and follower notifications while
+  recipient-level eligibility is pending.
+- Signed Xcode Debug, Hub TypeScript, and 146 focused social, message,
+  access, and production checks passed. The private-scope fixture verifies
+  that a nonmember cannot post and that changing the destination of a
+  saved draft fails on retry. Real community publishing and preference
+  writes still need an appropriate test community. Discord claims, older
+  room history and typing remain in the community backlog.

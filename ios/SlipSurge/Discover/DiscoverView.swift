@@ -142,6 +142,12 @@ struct DiscoverView: View {
     private func communitiesView(_ data: DiscoverAPI.Communities) -> some View {
         let joined = Set(data.joinedIds)
         let groups = data.groups.filter { (!yours || joined.contains($0.id)) && matches($0.sport, texts: [$0.name, $0.description]) }
+        if let userID = api.userID, search.isEmpty {
+            NavigationLink {
+                CreatorStoreView(api: .init(account: api.account, userID: userID))
+            } label: { Label("Create community", systemImage: "plus.circle") }
+            .buttonStyle(.bordered)
+        }
         if !data.invitations.isEmpty, search.isEmpty {
             Text("Invitations").font(.headline).accessibilityAddTraits(.isHeader)
             ForEach(data.invitations) { group in

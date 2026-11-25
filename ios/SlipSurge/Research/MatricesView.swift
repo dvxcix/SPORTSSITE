@@ -67,11 +67,11 @@ struct MatricesView: View {
         }
         .confirmationDialog("Delete \(api.league.title) Matrix?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
             titleVisibility: .visible, presenting: deleting) { matrix in
-            Button("Delete \(matrix.name)", role: .destructive) { Task { await mutate { try await api.delete(matrix) } } }
+            Button("Delete \(matrix.name)", role: .destructive) { Task { await mutate(success: "Matrix deleted.") { try await api.delete(matrix) } } }
         }
         .confirmationDialog("Add this \(api.league.title) Matrix?", isPresented: Binding(get: { adding != nil }, set: { if !$0 { adding = nil } }),
             titleVisibility: .visible, presenting: adding) { listing in
-            Button("Add \(listing.title)") { Task { await mutate { try await api.importListing(listing.id) } } }
+            Button("Add \(listing.title)") { Task { await mutate(success: "Matrix added.") { try await api.importListing(listing.id) } } }
         }
     }
 
@@ -152,12 +152,12 @@ struct MatricesView: View {
         didChange()
     }
 
-    private func mutate(_ change: () async throws -> Void) async {
+    private func mutate(success: String = "Saved.", _ change: () async throws -> Void) async {
         guard !busy else { return }
         busy = true
         notice = nil
         defer { busy = false }
-        do { try await change(); await changed(); notice = "Saved" }
+        do { try await change(); await changed(); notice = success }
         catch let status as SlipSurgeHTTP.Status {
             struct Details: Decodable { let error: String }
             notice = (try? JSONDecoder().decode(Details.self, from: status.data))?.error ?? "The Matrix change couldn’t be confirmed."
