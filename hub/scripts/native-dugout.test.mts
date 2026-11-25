@@ -9,6 +9,7 @@ const batter = {
   props: { sa: { fanduel: 255, caesars: 40 }, open: { saFd: 300, saCz: 310 } },
   statcast: { l3: { avgEv: 94.2 } },
   mechanics: { l3: { index: 88, rank: 1 } },
+  pregameInputs: { saAvg: { fd: 300 } },
   research: { mmByWindow: { l3: 2 }, bookRankByWindow: { l3: 4 }, paperRankByWindow: { l3: 2 } },
 }
 const state = {
@@ -42,7 +43,12 @@ const stubs: Record<string, string> = {
         awayAbbr:'SEA', awayTeam:'Seattle Mariners', awayScore:2, homeAbbr:'LAD', homeTeam:'Los Angeles Dodgers', homeScore:4,
         awayLineup:[], homeLineup:[batter,{...batter,mlb_id:600001,projected:true}],
         homeLineupConfirmed:true, awayLineupConfirmed:false, homePitcher:null, awayPitcher:null, noHr:null,
-        researchSnapshot:state.snapshot, outcomes:{600000:{h:1}}, _bdlDebug:{ private:'excluded' }
+        researchSnapshot:state.snapshot, outcomes:{600000:{h:1}}, _bdlDebug:{ private:'excluded' },
+        pregameInputs:{communityPicks:[
+          {player_name:batter.name,game_key:'SEA@LAD-G2',prop_type:'home_runs',picks:99},
+          {player_name:batter.name,game_key:'SEA@LAD',prop_type:'home_runs',picks:30,movement:{previous:25,delta:5,capturedAt:'2026-10-04T18:00:00Z'}},
+          {player_name:batter.name,game_key:'',prop_type:'home_runs',picks:10}
+        ]}
       }
       return Response.json({date:query.date,games:[game]})
     }`,
@@ -90,6 +96,9 @@ test('exact dated quotes and branding come from the canonical tier-scoped projec
     { book: 'caesars', price: null, opening: 310, line: null },
   ])
   assert.deepEqual(game.homeLineup[0].mm, { l3: 2 })
+  assert.equal(game.homeLineup[0].crowd.home_runs.count, 30)
+  assert.equal(game.homeLineup[0].crowd.home_runs.movement.delta, 5)
+  assert.equal(game.homeLineup[0].cost.homeRunVsSeason, -0.15)
   const live = await get('date=2026-10-04&mode=live')
   assert.equal((await live.json()).mode, 'live')
   assert.equal(state.calls.at(-1)?.query.mode, 'live')
@@ -103,6 +112,21 @@ test('missing historical inputs never yield a projected lineup, form, or Matrix 
   assert.equal(player.mm, null)
   assert.equal(player.statcast, null)
   assert.equal(player.mechanics, null)
+  assert.equal(player.cost.homeRunVsSeason, null)
   assert.deepEqual(player.matrixMatches, [])
   assert.equal(player.markets[0].quotes[0].opening, 300)
+})
+
+test('public activity and cost use distinct tier floors before exposing any figures', async () => {
+  state.tier = 'basic'
+  const basic = await (await get('date=2026-10-04')).json()
+  assert.equal(basic.publicAccess, false)
+  assert.equal(basic.games[0].homeLineup[0].crowd, null)
+  assert.equal(basic.games[0].homeLineup[0].cost, null)
+  state.tier = 'advanced'
+  const advanced = await (await get('date=2026-10-04')).json()
+  assert.equal(advanced.publicAccess, true)
+  assert.equal(advanced.games[0].homeLineup[0].crowd.home_runs.count, 30)
+  assert.equal(advanced.batterCostAccess, false)
+  assert.equal(advanced.games[0].homeLineup[0].cost, null)
 })
