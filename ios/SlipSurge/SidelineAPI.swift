@@ -151,13 +151,8 @@ struct SidelineAPI {
             )
         case .member(let account, let userID):
             let query = [URLQueryItem(name: "date", value: date)] + filters
-            let token = try await account.accessToken(for: userID)
-            do {
-                board = try await SlipSurgeHTTP.get(resource, query: query, token: token)
-            } catch let error as SlipSurgeHTTP.Status where error.code == 401 {
-                let refreshed = try await account.accessToken(for: userID, replacing: token)
-                board = try await SlipSurgeHTTP.get(resource, query: query, token: refreshed)
-            }
+            let data = try await SlipSurgeHTTP.memberData(resource, query: query, account: account, userID: userID)
+            board = try JSONDecoder().decode(SidelineBoard.self, from: data)
         }
 
         let gameIDs = Set(board.games.map(\.id))

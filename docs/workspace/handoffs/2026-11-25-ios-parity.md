@@ -163,3 +163,46 @@ Mac's personal skill directory and were not applied to this native screen.
   pagination endpoint responds 401 for signed-out callers. Reuse its existing
   RLS, filtering and spoiler rules in a bounded native read interface before
   certifying the guest or member feed.
+
+## Native feed, providers and account surfaces · 25 November 2026
+
+- Continued from account and research checkpoint
+  `e37930f0fe70c70b09f940612ef2e74439aefd01`. Added a native Feed with Latest,
+  Top and Picks for guests, Following and cursor pagination for signed-in
+  members, and NBA/NFL selection. Preserves the source visibility and
+  two-way-block filtering, stable repost identity, spoiler reveal, real
+  post counts and public share links. Added native text, analysis and poll
+  composition with a stable draft ID, plus server validation of audience,
+  ownership and retry identity. Pick and media composition, votes, reactions
+  and native post detail remain open.
+- Local end-to-end guest check: Next 16.4.6 on loopback with the primary
+  publishable client key returned HTTP 200, 12 public posts across text,
+  poll and parlay, no guest cursor, and HTTP 401 for Following. A separate
+  build displayed real rows in Device Hub and switched from Latest to Picks.
+  The guest Picks route returned eight visible parlay posts.
+  The local transport override is outside the task branch. No fixture or
+  collected feed data is committed.
+- Added the SwiftUI system-browser sign-in handoff for Discord, X and Whop.
+  The existing website provider flows remain intact. The server seals a
+  short-lived, proof-bound handoff and uses a one-use Supabase exchange. The
+  app then performs its existing MFA and onboarding checks. Live provider
+  sign-in still depends on the reviewed server release, an authorized
+  handoff-key configuration and provider/account tests.
+- Added the native Profile & Membership read view and basic-tier Notifications
+  inbox, with read, filter, mark and confirmed removal actions. Their adapters
+  reuse the server's verified account, MFA, completed onboarding and existing
+  subscription access policy. No production membership, payment or inbox was
+  altered. Creator/admin action screens and device push are still open.
+- Ran the signed build directly from Xcode. The Court opened Detroit–Orlando
+  in saved Pregame research, showed the observed 89–73 score only after
+  selecting Live, and returned to the score-free frozen snapshot. Added the
+  existing SlipSurge app icon to the native target. Hub TypeScript and 165
+  focused and production-source checks passed. Live checks were scoped to public read data and
+  synthetic rejected login. Local auth status correctly reported unavailable
+  without its server key, exchange returned 503, and guest notifications
+  returned 401. These checks do not certify authenticated or payment flows.
+- Next: verify provider and member flows through an authorized staging setup.
+  Continue native composition and social interactions, onboarding and recovery,
+  full research/tool parity, and creator/admin UI. Commerce needs actual Apple
+  products and a reviewed entitlement bridge for the existing Whop accounts.
+  See the acceptance table and Apple guidelines link in `docs/ios/README.md`.

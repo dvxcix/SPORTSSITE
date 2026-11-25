@@ -16,6 +16,22 @@ struct AccountAPI {
         return key
     }
 
+    func providersAvailable() async -> Bool {
+        struct Availability: Decodable { let available: Bool }
+        let response: Availability? = try? await SlipSurgeHTTP.get("/auth/native/status")
+        return response?.available == true
+    }
+
+    func exchange(handoff: String, attempt: ProviderSignIn) async throws -> AccountSession {
+        var request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: "/auth/native/exchange")
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode([
+            "code": handoff, "state": attempt.state, "verifier": attempt.verifier,
+        ])
+        return try JSONDecoder().decode(AccountSession.self, from: await SlipSurgeHTTP.send(request))
+    }
+
     func signIn(email: String, password: String) async throws -> AccountSession {
         try await token(grant: "password", payload: ["email": email, "password": password])
     }

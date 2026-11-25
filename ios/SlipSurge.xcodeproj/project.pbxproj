@@ -129,6 +129,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = A0000000000000000000000F /* Auth.xcconfig */;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.slipsurge.ios.development;
@@ -141,6 +142,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = A0000000000000000000000F /* Auth.xcconfig */;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.slipsurge.ios.development;

@@ -37,7 +37,6 @@ struct HomeView: View {
             .listRowBackground(Brand.surface(for: scheme))
 
             Section("On the web") {
-                SiteLink("Community feed", path: "/feed")
                 SiteLink("Communities", path: "/groups")
                 SiteLink("Creators", path: "/creators")
                 SiteLink("Scores", path: "/sports")

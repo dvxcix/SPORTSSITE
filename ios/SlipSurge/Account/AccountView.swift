@@ -1,8 +1,10 @@
+import AuthenticationServices
 import SwiftUI
 
 struct AccountView: View {
     let account: AccountStore
     @Binding var appearance: Appearance
+    @Environment(\.webAuthenticationSession) private var browser
     @Environment(\.colorScheme) private var scheme
     @State private var email = ""
     @State private var password = ""
@@ -26,6 +28,18 @@ struct AccountView: View {
                     if let address = user.email {
                         Text(address).textContentType(.emailAddress)
                     }
+                    if let userID = account.memberID {
+                        NavigationLink {
+                            MemberAccountView(account: account, userID: userID)
+                        } label: {
+                            Label("Profile & membership", systemImage: "person.text.rectangle")
+                        }
+                        NavigationLink {
+                            ActivityView(api: ActivityAPI(account: account, userID: userID))
+                        } label: {
+                            Label("Notifications", systemImage: "bell")
+                        }
+                    }
                     if !account.onboardingComplete {
                         SiteLink("Finish account setup on the web", path: "/onboarding")
                         Button("Check account setup") { Task { await account.recheckOnboarding() } }
@@ -38,6 +52,29 @@ struct AccountView: View {
                 }
                 .listRowBackground(Brand.surface(for: scheme))
             } else {
+                if account.providersAvailable {
+                    Section("Continue with") {
+                        ForEach(SignInProvider.allCases) { provider in
+                            Button(provider.title) {
+                                Task {
+                                    await account.signIn(provider: provider) { url in
+                                        if #available(iOS 17.4, *) {
+                                            return try await browser.authenticate(
+                                                using: url, callback: .customScheme(ProviderSignIn.scheme),
+                                                preferredBrowserSession: .ephemeral, additionalHeaderFields: [:]
+                                            )
+                                        }
+                                        return try await browser.authenticate(
+                                            using: url, callbackURLScheme: ProviderSignIn.scheme, preferredBrowserSession: .ephemeral
+                                        )
+                                    }
+                                }
+                            }
+                            .disabled(account.isBusy)
+                        }
+                    }
+                    .listRowBackground(Brand.surface(for: scheme))
+                }
                 signInFields
                 Section("Account help on the web") {
                     SiteLink("Forgot password?", path: "/auth/forgot-password")
@@ -64,6 +101,7 @@ struct AccountView: View {
             .listRowBackground(Brand.surface(for: scheme))
         }
         .navigationTitle("Account")
+        .task { await account.checkProviders() }
         .scrollContentBackground(.hidden)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))

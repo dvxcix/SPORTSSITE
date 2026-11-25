@@ -22,14 +22,21 @@ struct CourtPlayerIdentity: View {
 struct CourtPlayerView: View {
     let player: CourtBoard.Player
     let game: CourtBoard.Game
+    let mode: CourtResearchMode
     let frozen: Bool
     let tip: Date?
+    let observedAt: Date
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
     @State private var sportsbook = ""
     @State private var market = ""
     @State private var expired = false
+
+    private var expiry: Date? {
+        if mode == .live { return game.isFinal ? nil : observedAt.addingTimeInterval(30) }
+        return frozen ? nil : (tip ?? .distantPast)
+    }
 
     private var offers: [CourtBoard.Prop] {
         player.props.filter { $0.gameId == game.id && $0.playerId == player.id }
@@ -44,8 +51,8 @@ struct CourtPlayerView: View {
         List {
             CourtPlayerIdentity(player: player)
                 .listRowBackground(Brand.surface(for: scheme))
-            if expired || (!frozen && !(tip.map { $0 > Date.now } ?? false)) {
-                Text("Return to The Court to load the saved pregame snapshot.")
+            if expired || (expiry.map { $0 <= .now } ?? false) {
+                Text(mode == .live ? "Return to The Court for a fresh live observation." : "Return to The Court to load the saved pregame snapshot.")
                     .listRowBackground(Brand.surface(for: scheme))
             } else {
                 if let average = player.average {
@@ -56,7 +63,7 @@ struct CourtPlayerView: View {
                     }
                     .listRowBackground(Brand.surface(for: scheme))
                 }
-                Section("Pregame odds") {
+                Section(mode == .live ? (game.isFinal ? "Saved live odds" : "Live odds") : "Pregame odds") {
                     if books.isEmpty {
                         Text("No recorded offers for this player.")
                     } else {
@@ -88,12 +95,12 @@ struct CourtPlayerView: View {
         }
         .onChange(of: sportsbook) { _, _ in selectMarket() }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active && !frozen { expired = !(tip.map { $0 > Date.now } ?? false) }
+            if phase == .active { expired = expiry.map { $0 <= .now } ?? false }
         }
         .task {
-            if !frozen, let tip {
+            if let expiry {
                 do {
-                    try await Task.sleep(for: .seconds(max(0, tip.timeIntervalSinceNow)))
+                    try await Task.sleep(for: .seconds(max(0, expiry.timeIntervalSinceNow)))
                     expired = true
                 } catch {
                     // Navigation removed the screen.

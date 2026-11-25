@@ -184,11 +184,11 @@ their native implementations open in this ledger.
 
 | Flow | Current native coverage | Still open |
 | --- | --- | --- |
-| Visitor and discovery | SwiftUI Home and Research tabs, one featured matchup for NBA and NFL, external entry points for public browsing and legal pages | Native public feed, creator and community discovery, profiles, scores, records, pricing and remaining external pages |
-| Identity | Native email/password form, Keychain session storage, refresh and local sign-out, authenticator code and onboarding-status logic | Positive account, refresh, logout and TOTP device tests, provider sign-in for Discord/X/Whop, Apple-equivalent login for distribution, registration, recovery, onboarding and linked accounts |
-| Research | Sideline's featured NFL odds and authenticated slate client, Court's featured NBA roster, frozen averages and player odds. Both use website artwork and team colors | Authenticated role testing, Court endpoint release, remaining NBA/NFL tools and Live views, MLB, score tools, histories, saved research, watchlists and resume |
-| Social | Public website entry points from Home | Native feed, composer, picks, reactions, comments, reposts, polls, bookmarks, reports, blocking, moderation, communities, channels, messages and notifications |
-| Membership, creators and admins | Existing server tier checks retained for research requests | StoreKit and region-specific checkout and restore, Whop entitlement continuity, creator and admin workspaces and their role/assurance checks |
+| Visitor and discovery | SwiftUI Home and Research tabs, one featured matchup for NBA and NFL, external entry points for public browsing and legal pages | Native creator and community discovery, profiles, scores, records, pricing and remaining external pages |
+| Identity | Native email/password, Keychain, refresh/sign-out and TOTP/onboarding checks. Discord/X/Whop browser handoff code is available on the task branch | Positive member tests, enable and exercise the provider handoffs, Apple-equivalent login for distribution, registration, recovery, onboarding and linked accounts |
+| Research | Sideline's featured NFL odds and authenticated slate client, Court's featured NBA roster, frozen averages and player odds, plus explicit Live mode and scores. Both use website artwork and team colors | Authenticated role testing, Court endpoint release, remaining NBA/NFL tools and Live views, MLB, score tools, histories, saved research, watchlists and resume |
+| Social | Native guest/member feed reads, filters, member pagination, pick/parlay cards, spoiler reveal and share. Text, analysis and poll composition, plus inbox read, mark and clear use member-scoped routes | Release and role-test endpoints. Native post detail, pick and media composition, reactions, comments, reposts, poll voting, bookmarks, blocking, moderation, communities, channels, messages and APNs delivery |
+| Membership, creators and admins | Native profile and read-only membership status, with existing server role/tier checks for research. Creator and admin links remain available on the web | StoreKit and region-specific checkout and restore, native creator/admin workspaces, role/action testing and App Store signing |
 
 ### Local account configuration
 
@@ -209,3 +209,27 @@ Apple's [App Review Guidelines](https://developer.apple.com/app-store/review/gui
 sections 3.1 and 4.8 apply to the subscription and third-party login work.
 Verify the eligible storefront, payment/restore test environments and account
 linkage before certifying those flows.
+
+### Provider sign-in and local feed review
+
+iOS uses an ephemeral system web authentication session for Discord, X and Whop.
+The existing provider callbacks still own profile setup and Whop access checks.
+The native callback contains a short-lived sealed handoff, and its redemption
+requires the verifier held by the initiating device. The app processes the
+result through the same Keychain, MFA and onboarding checks as email sign-in.
+
+The server reports native provider sign-in as available only with a valid
+server-only `SLIPSURGE_NATIVE_OAUTH_HANDOFF_KEY` (32 random bytes in unpadded
+base64url). Provision and rotate that value using the approved release
+workflow. Verify that the hosted OAuth redirect configuration accepts the
+native state parameter on the existing SlipSurge callback and exercise all
+three providers using consenting test accounts after configuration. The local
+unit tests cover wrong proof/state, expiry and tampering.
+
+The guest Feed was exercised using a separate Simulator review build pointed
+at a Mac-loopback Next server. This used the primary project's anonymous
+client key and real public rows. That build and its local network override
+stay outside Git. Release the reviewed `/api/mobile/feed`,
+`/api/mobile/account`, `/api/mobile/posts` and `/api/mobile/notifications` adapters before certifying
+their use from the standard app against production. Member mutations, real
+provider login and Apple push remain open verification items.

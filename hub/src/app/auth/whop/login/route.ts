@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { generatePkce, randomToken, buildAuthorizeUrl } from '@/lib/whop'
 import { safeInternalPath } from '@/lib/safeRedirect'
+import { readNativeOAuthRequest, nativeOAuthFailure } from '@/lib/nativeOAuth'
 
 const STATE_COOKIE = 'whop_oauth_state'
 
@@ -26,6 +27,11 @@ export async function GET(request: Request) {
   const mode = searchParams.get('mode') === 'link' ? 'link' as const : undefined
   const next = safeInternalPath(searchParams.get('next'), mode === 'link' ? '/settings/membership' : '/launch')
   const desktopState = searchParams.get('desktop_state')
+  const nativeState = searchParams.get('native_state')
+  if (nativeState !== null) {
+    const nativeRequest = await readNativeOAuthRequest(nativeState)
+    if (mode || desktopState || nativeRequest?.provider !== 'whop') return nativeOAuthFailure(nativeState)
+  }
 
   let linkUserId: string | undefined
   if (mode === 'link') {
@@ -43,7 +49,7 @@ export async function GET(request: Request) {
   const authorizeUrl = buildAuthorizeUrl({ redirectUri, state, codeChallenge, nonce })
 
   const cookieStore = await cookies()
-  cookieStore.set(STATE_COOKIE, JSON.stringify({ state, codeVerifier, nonce, next, mode, linkUserId, desktopState }), {
+  cookieStore.set(STATE_COOKIE, JSON.stringify({ state, codeVerifier, nonce, next, mode, linkUserId, desktopState, nativeState }), {
     httpOnly: true,
     secure: new URL(origin).protocol === 'https:',
     sameSite: 'lax',

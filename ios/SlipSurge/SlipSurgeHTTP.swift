@@ -10,12 +10,31 @@ enum SlipSurgeHTTP {
 
     static func get<Response: Decodable>(
         _ path: String,
-        query: [URLQueryItem] = [],
-        token: String? = nil
+        query: [URLQueryItem] = []
     ) async throws -> Response {
-        var request = try request(host: site, path: path, query: query, timeout: 120)
-        if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        let request = try request(host: site, path: path, query: query, timeout: 120)
         return try JSONDecoder().decode(Response.self, from: await send(request))
+    }
+
+    @MainActor
+    static func memberData(
+        _ path: String, query: [URLQueryItem] = [],
+        account: AccountStore, userID: UUID
+    ) async throws -> Data {
+        var request = try request(host: site, path: path, query: query, timeout: 120)
+        let token = try await account.accessToken(for: userID)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let data: Data
+        do {
+            data = try await send(request)
+        } catch let error as Status where error.code == 401 {
+            let renewed = try await account.accessToken(for: userID, replacing: token)
+            request.setValue("Bearer \(renewed)", forHTTPHeaderField: "Authorization")
+            data = try await send(request)
+        }
+        try Task.checkCancellation()
+        guard account.memberID == userID else { throw URLError(.userAuthenticationRequired) }
+        return data
     }
 
     static func request(

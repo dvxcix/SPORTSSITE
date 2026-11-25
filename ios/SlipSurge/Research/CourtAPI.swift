@@ -1,5 +1,9 @@
 import Foundation
 
+enum CourtResearchMode: String, CaseIterable, Decodable {
+    case pregame, live
+}
+
 struct CourtBoard: Decodable {
     struct Team: Decodable {
         let id: Int
@@ -18,8 +22,16 @@ struct CourtBoard: Decodable {
         let id: Int
         let date: String
         let datetime: String?
+        let status: String
+        let statusState: String?
+        let period: Int?
+        let homeTeamScore: Int?
+        let visitorTeamScore: Int?
         let visitorTeam: Team
         let homeTeam: Team
+
+        var isFinal: Bool { statusState == "final" || status.lowercased().hasPrefix("final") }
+        var isInProgress: Bool { !isFinal && (statusState == "in_progress" || (period ?? 0) > 0) }
     }
 
     struct Snapshot: Decodable {
@@ -65,7 +77,7 @@ struct CourtBoard: Decodable {
     let game: Game
     let players: [Player]
     let issues: [String]
-    let oddsMode: String
+    let oddsMode: CourtResearchMode
     let historical: Bool
     let researchSnapshot: Snapshot?
 
@@ -75,7 +87,8 @@ struct CourtBoard: Decodable {
     var hasUsableResearch: Bool {
         // The server's frozen snapshot is required at and after tip. If the
         // clock is unknown, fail closed for any non-frozen research.
-        oddsMode == "pregame" && (isFrozen || (!historical && (tip.map { $0 > Date.now } ?? false)))
+        if oddsMode == .live { return game.isInProgress || game.isFinal }
+        return isFrozen || (!historical && (tip.map { $0 > Date.now } ?? false))
     }
 }
 
@@ -85,18 +98,18 @@ struct CourtAPI {
         let games: [CourtBoard.Game]
     }
 
-    func featuredBoard() async throws -> CourtBoard {
+    func featuredBoard(mode: CourtResearchMode) async throws -> CourtBoard {
         let request = try SlipSurgeHTTP.request(
             host: SlipSurgeHTTP.site,
             path: "/preview/nba/data",
-            query: [.init(name: "resource", value: "/the-paint/board")],
+            query: [.init(name: "resource", value: "/the-paint/board"), .init(name: "mode", value: mode.rawValue)],
             timeout: 120
         )
-        return try await board(request, matching: nil)
+        return try Self.validatedBoard(await SlipSurgeHTTP.send(request), matching: nil, mode: mode)
     }
 
     func slate(date: String, account: AccountStore, userID: UUID) async throws -> [CourtBoard.Game] {
-        let data = try await memberData(
+        let data = try await SlipSurgeHTTP.memberData(
             "/api/mobile/court/schedule", query: [.init(name: "date", value: date)], account: account, userID: userID
         )
         let schedule = try Self.decode(Schedule.self, from: data)
@@ -106,34 +119,21 @@ struct CourtAPI {
         return schedule.games
     }
 
-    func memberBoard(game: CourtBoard.Game, account: AccountStore, userID: UUID) async throws -> CourtBoard {
-        let data = try await memberData(
-            "/api/mobile/court/board", query: [.init(name: "game", value: String(game.id)), .init(name: "slate_date", value: game.date)],
+    func memberBoard(game: CourtBoard.Game, mode: CourtResearchMode, account: AccountStore, userID: UUID) async throws -> CourtBoard {
+        let data = try await SlipSurgeHTTP.memberData(
+            "/api/mobile/court/board", query: [
+                .init(name: "game", value: String(game.id)), .init(name: "slate_date", value: game.date),
+                .init(name: "mode", value: mode.rawValue),
+            ],
             account: account, userID: userID
         )
-        return try Self.validatedBoard(data, matching: game)
+        return try Self.validatedBoard(data, matching: game, mode: mode)
     }
 
-    private func board(_ request: URLRequest, matching game: CourtBoard.Game?) async throws -> CourtBoard {
-        try Self.validatedBoard(await SlipSurgeHTTP.send(request), matching: game)
-    }
-
-    private func memberData(_ path: String, query: [URLQueryItem], account: AccountStore, userID: UUID) async throws -> Data {
-        var request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: path, query: query, timeout: 120)
-        let token = try await account.accessToken(for: userID)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        do {
-            return try await SlipSurgeHTTP.send(request)
-        } catch let error as SlipSurgeHTTP.Status where error.code == 401 {
-            let refreshed = try await account.accessToken(for: userID, replacing: token)
-            request.setValue("Bearer \(refreshed)", forHTTPHeaderField: "Authorization")
-            return try await SlipSurgeHTTP.send(request)
-        }
-    }
-
-    private static func validatedBoard(_ data: Data, matching game: CourtBoard.Game?) throws -> CourtBoard {
+    private static func validatedBoard(_ data: Data, matching game: CourtBoard.Game?, mode: CourtResearchMode) throws -> CourtBoard {
         let board = try decode(CourtBoard.self, from: data)
-        guard (game.map { $0.id == board.game.id && $0.date == board.game.date } ?? true),
+        guard board.oddsMode == mode,
+              (game.map { $0.id == board.game.id && $0.date == board.game.date } ?? true),
               Set(board.players.map(\.id)).count == board.players.count,
               board.players.allSatisfy({ player in
                   [board.game.homeTeam.id, board.game.visitorTeam.id].contains(player.team.id)

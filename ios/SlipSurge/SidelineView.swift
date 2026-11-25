@@ -21,7 +21,7 @@ struct SidelineView: View {
     var body: some View {
         List {
             if !api.isFeatured {
-                DatePicker("Slate date", selection: $slateDate, in: ...Date.now, displayedComponents: .date)
+                DatePicker("Slate date", selection: $slateDate, displayedComponents: .date)
                     .environment(\.timeZone, SlateDate.zone)
                     .listRowBackground(Brand.surface(for: scheme))
             }

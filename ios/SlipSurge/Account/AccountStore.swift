@@ -1,3 +1,4 @@
+import AuthenticationServices
 import Foundation
 import Observation
 
@@ -10,13 +11,15 @@ final class AccountStore {
     private var pendingVerification: AccountSession?
     @ObservationIgnored private var renewal: Task<AccountSession, Error>?
     private(set) var isBusy = false
+    private var isSigningOut = false
     private(set) var notice: String?
+    private(set) var providersAvailable = false
     private(set) var onboardingComplete = false
     private var restored = false
 
     var isConfigured: Bool { api.isConfigured }
     var user: AccountSession.User? { session?.user }
-    var memberID: UUID? { onboardingComplete ? user?.id : nil }
+    var memberID: UUID? { onboardingComplete && !isSigningOut ? user?.id : nil }
     var needsVerification: Bool { pendingVerification != nil }
 
     func restore() async {
@@ -49,6 +52,31 @@ final class AccountStore {
             notice = "Check your email and password, then try again."
         } catch {
             notice = message(for: error, fallback: "Sign-in could not finish. Check your connection and try again.")
+        }
+    }
+
+    func checkProviders() async {
+        if isConfigured { providersAvailable = await api.providersAvailable() }
+    }
+
+    func signIn(provider: SignInProvider, authenticate: @MainActor (URL) async throws -> URL) async {
+        guard !isBusy, isConfigured, providersAvailable, session == nil, pendingVerification == nil else { return }
+        isBusy = true
+        notice = nil
+        defer { isBusy = false }
+        do {
+            let attempt = try ProviderSignIn(provider: provider)
+            let callback = try await authenticate(attempt.url)
+            let handoff = try attempt.handoff(from: callback)
+            try await accept(api.exchange(handoff: handoff, attempt: attempt))
+        } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
+            // Cancellation returns to the unchanged account screen.
+        } catch let error as ProviderSignIn.CallbackError where error.code == "whop_no_access" {
+            notice = "That Whop account doesn’t have SlipSurge access."
+        } catch let error as ProviderSignIn.CallbackError where error.code == "email-required" {
+            notice = "This provider account needs a verified email address to sign in."
+        } catch {
+            notice = "Sign-in with \(provider.title) could not finish. Try again."
         }
     }
 
@@ -102,9 +130,13 @@ final class AccountStore {
 
     func signOut() async {
         guard !isBusy, let original = session else { return }
+        isSigningOut = true
         isBusy = true
         notice = nil
-        defer { isBusy = false }
+        defer {
+            isBusy = false
+            isSigningOut = false
+        }
 
         do {
             if let renewal { _ = try? await renewal.value }

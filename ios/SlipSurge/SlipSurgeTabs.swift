@@ -20,8 +20,15 @@ struct SlipSurgeTabs: View {
             .tabItem { Label("Research", systemImage: "chart.bar.xaxis") }
 
             NavigationStack {
+                FeedView(api: FeedAPI(account: account, userID: account.memberID))
+            }
+            .id(account.memberID)
+            .tabItem { Label("Feed", systemImage: "bubble.left.and.bubble.right") }
+
+            NavigationStack {
                 AccountView(account: account, appearance: $appearance)
             }
+            .id(account.user?.id)
             .tabItem { Label("Account", systemImage: "person.crop.circle") }
         }
         .tint(Brand.accent(for: scheme))

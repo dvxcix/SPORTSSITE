@@ -22,3 +22,8 @@ export function isPublicFeatureRequest(pathname:string, method:string) {
 export function usesVisitorBrowseFrame(pathname:string) {
   return isPublicBrowsePath(pathname) || publicInfoPages.has(pathname)
 }
+
+/** A bounded visitor projection. The handler independently authenticates every bearer request. */
+export function isNativeFeedRequest(pathname: string, method: string) {
+  return pathname === '/api/mobile/feed' && method === 'GET'
+}

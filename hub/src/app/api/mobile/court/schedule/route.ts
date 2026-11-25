@@ -5,7 +5,7 @@ import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 export const maxDuration = 30
 
 export async function GET(request: NextRequest) {
-  const rejected = await requireNativeAccount(request)
+  const { error } = await requireNativeAccount(request)
   // The reader still enforces NBA access for the verified account.
-  return rejected ?? await readCourtSchedule(request)
+  return error ?? await readCourtSchedule(request)
 }

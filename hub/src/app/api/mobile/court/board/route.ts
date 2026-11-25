@@ -5,7 +5,7 @@ import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 export const maxDuration = 120
 
 export async function GET(request: NextRequest) {
-  const rejected = await requireNativeAccount(request)
+  const { error } = await requireNativeAccount(request)
   // The standard Court reader owns the tier gate, capture and archive policy.
-  return rejected ?? await readCourtBoard(request)
+  return error ?? await readCourtBoard(request)
 }
