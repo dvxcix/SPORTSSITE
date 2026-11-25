@@ -952,6 +952,9 @@ physical-device push are still open.
   `dpl_Aye8Vo5FmRqVMe52wN3HnJ5X7oqj` reported READY. The new shot,
   tracking, and scouting reads returned 401 without a native account.
   Guest Feed and the public NBA preview board returned 200.
+- The signed iPhone 18 Pro Simulator loaded the November 25 NBA slate and
+  rendered Role & Minutes with L5, L10, L20, minutes change and points per 36.
+  Game Tracking and player Shot Map still need their own signed walkthrough.
 
 ## Native research links and Spray Charts verification · 25 November 2026
 
@@ -989,3 +992,29 @@ physical-device push are still open.
   opening and removing a disposable saved market remain the runtime checks.
 - MLB posting remains paused at the source. The native archive view preserves the
   existing seasonal visibility, and no change to baseball jobs is part of this release.
+- Task checkpoint `b8322c29a4f109448fb89b9169d875ebfb5f4e16` is pushed and was sent
+  to the existing Cloud chat. PR #37 merged as `7a3e4b66a6562e85e907773f5fa47642d46ed5b0`.
+  Preview `dpl_H5SByLhuLnn8Nyb9Q2pQDLwJe3H5` and production
+  `dpl_JCofGSS1xERRweuHMyJoQBBpMNtN` reported READY. Invalid MLB picks and research
+  library requests returned 401. Guest Feed returned 200.
+- On the signed iPhone 18 Pro Simulator, Pete Crow-Armstrong’s September 25
+  Anytime Home Run quote saved privately from The Dugout and appeared in
+  Workspace at the exact BetRivers +500 with club art. Cleanup of that single
+  temporary quote follows. The signed Pitcher Report correctly displayed an
+  unavailable archived window and its three sample sizes for the same date.
+
+## Native Odds Movement Terminal and Synergy · 25 November 2026
+
+- The native Odds Movement Terminal uses the original dated, first-pitch
+  bounded archive and validates both the matchup and its roster. The chart
+  shows exact saved timestamps, odds, implied probability and movement from
+  open. Team and sportsbook controls use the existing artwork. Filters include
+  players, markets, sportsbooks and time windows, with a capture inspector,
+  line pins, sorting, and six device-local presets.
+- Native Synergy keeps the original batter and starter pairing, both affinity
+  scores, matchup sorting and per-pitch home run evidence. During the baseball
+  offseason, the app presents the provider pause. In season it reads changing
+  inputs only after the member opens Live. The app does not synthesize a
+  pregame archive for this tool.
+- Signed Xcode Debug, Hub TypeScript, and 29 focused archive, identity, freeze,
+  and access checks passed. Production and signed runtime checks follow.

@@ -130,7 +130,7 @@ struct ResearchLibraryView: View {
         }
         if visible.isEmpty { ContentUnavailableView("No saved markets", systemImage: "star") }
         ForEach(visible) { market in
-            marketCard(market)
+            marketCard(market, canRemove: true)
                 .contextMenu {
                     Button("Remove from Watchlist", systemImage: "star.slash", role: .destructive) { removingMarket = market }
                 }
@@ -169,27 +169,37 @@ struct ResearchLibraryView: View {
         }.disabled(workspace?.canEdit != true || busy)
     }
 
-    private func marketCard(_ market: ResearchLibraryData.SavedMarket) -> some View {
+    private func marketCard(_ market: ResearchLibraryData.SavedMarket, canRemove: Bool = false) -> some View {
         let colors = (market.colors ?? []).compactMap { Color(hex: $0) }
         let primary = colors.first ?? Brand.accent(for: scheme), secondary = colors.dropFirst().first ?? Brand.surface(for: scheme)
         let included = selected.contains(market.id)
+        let line = market.line.flatMap { $0.isEmpty ? nil : $0 } ?? market.propLabel
+        let selectedBook = market.book.map(Sportsbook.normalized)
+        let alternateOffers = market.offers.filter {
+            Sportsbook.normalized($0.book) != selectedBook || market.odds.map(Double.init) != $0.price
+        }
         return ResearchToolCard(color: primary) {
             HStack {
-                ResearchToolPortrait(name: market.playerName, subtitle: [market.team, market.propLabel, market.line].compactMap { $0 }.joined(separator: " · "),
+                ResearchToolPortrait(name: market.playerName, subtitle: [market.team, line].compactMap { $0 }.joined(separator: " · "),
                     portraits: [market.headshotUrl].compactMap { $0 }.filter(FeedPostCard.allowedMedia), teamLogo: market.teamLogo, primary: primary, secondary: secondary)
                 Spacer(minLength: 4)
                 Button(included ? "Remove from comparison" : "Add to comparison", systemImage: included ? "minus.circle" : "plus.circle") {
                     if included { selected.removeAll { $0 == market.id } }
                     else if selected.count < 4 { selected.append(market.id) }
                 }.labelStyle(.iconOnly).buttonStyle(.bordered).disabled(workspace?.canEdit == false || !included && selected.count >= 4)
+                if canRemove {
+                    Menu("Saved market actions", systemImage: "ellipsis") {
+                        Button("Remove from Watchlist", systemImage: "star.slash", role: .destructive) { removingMarket = market }
+                    }.labelStyle(.iconOnly).buttonStyle(.borderless)
+                }
             }
         } content: {
             if let book = market.book { ResearchToolBook(book: Sportsbook.normalized(book), price: market.odds) }
             if let date = market.gameDate.flatMap(SlateDate.fromKey) { Text(SlateDate.label(date, year: true)).font(.caption).foregroundStyle(.secondary) }
-            if !market.offers.isEmpty {
+            if !alternateOffers.isEmpty {
                 ScrollView(.horizontal) {
                     HStack(spacing: 10) {
-                        ForEach(market.offers) { offer in
+                        ForEach(alternateOffers) { offer in
                             ResearchToolBook(book: Sportsbook.normalized(offer.book), price: offer.price.rounded().isWithinInt ? Int(offer.price.rounded()) : nil)
                         }
                     }

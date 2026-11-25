@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DugoutView: View {
-    private enum Tool: Hashable { case weather, spray, pitcher, publicPicks, batterCost }
+    private enum Tool: Hashable { case weather, spray, pitcher, publicPicks, batterCost, oddsMovement, synergy }
     private enum Board: String, CaseIterable {
         case lineup = "Lineups", mismatch = "MM", odds = "Odds Board", matrices = "Matrix Matches"
 
@@ -81,6 +81,8 @@ struct DugoutView: View {
                     Button("Batter Cost", systemImage: "chart.line.uptrend.xyaxis") { tool = .batterCost }
                     Button("Weather Lab", systemImage: "cloud.sun") { tool = .weather }
                     Button("Spray Charts", systemImage: "scope") { tool = .spray }
+                    Button("Odds Movement Terminal", systemImage: "chart.line.uptrend.xyaxis") { tool = .oddsMovement }
+                    Button("Synergy", systemImage: "sparkles") { tool = .synergy }
                     Divider()
                     Picker("Research mode", selection: $mode) {
                         Label("Pregame", systemImage: "clock").tag(DugoutMode.pregame)
@@ -97,6 +99,8 @@ struct DugoutView: View {
             case .pitcher: DugoutPitcherReport(api: api, date: date)
             case .publicPicks: DugoutMarketSlateView(api: api, date: date, mode: .publicPicks)
             case .batterCost: DugoutMarketSlateView(api: api, date: date, mode: .cost)
+            case .oddsMovement: DugoutOddsTerminal(api: api, date: date, selectedGame: selectedGameID)
+            case .synergy: DugoutSynergy(api: api)
             }
         }
         .task(id: request) { await load(request) }
