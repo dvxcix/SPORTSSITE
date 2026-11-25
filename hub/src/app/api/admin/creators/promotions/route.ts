@@ -5,8 +5,8 @@ import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 
 export async function POST(request:NextRequest){
  const headers={'Cache-Control':'private, no-store'}
- if(request.headers.get('origin')!==request.nextUrl.origin)return NextResponse.json({error:'Open promotions from SlipSurge admin.'},{status:403,headers})
- const auth=await creatorAdminAuth()
+ if(!request.headers.has('authorization')&&request.headers.get('origin')!==request.nextUrl.origin)return NextResponse.json({error:'Open promotions from SlipSurge admin.'},{status:403,headers})
+ const auth=await creatorAdminAuth(request)
  if('error'in auth)return NextResponse.json({error:auth.error},{status:auth.status,headers})
  const body=await request.json().catch(()=>null)
  if(!body||Object.keys(body).some(key=>!['creatorId','featured','rank'].includes(key))||typeof body.creatorId!=='string'||!/^[0-9a-f-]{36}$/i.test(body.creatorId)||typeof body.featured!=='boolean'||!Number.isInteger(body.rank)||body.rank<0||body.rank>999)return NextResponse.json({error:'Choose a valid store and placement from 0 to 999.'},{status:400,headers})
