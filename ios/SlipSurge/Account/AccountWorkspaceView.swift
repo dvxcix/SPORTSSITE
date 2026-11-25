@@ -363,6 +363,9 @@ struct AccountWorkspaceView: View {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Recent sign-ins", systemImage: "clock.badge.checkmark") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
             } else if adminTab == .settings {
+                NavigationLink { AdminDesignSystemView() } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Design system", systemImage: "swatchpalette") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
                 ForEach(AdminPlatformSettingsView.Page.allCases) { page in
                     NavigationLink { AdminPlatformSettingsView(api: .init(account: account, userID: userID), page: page) } label: {
                         ResearchToolCard(color: Brand.accent(for: scheme)) { Label(page.title, systemImage: page.icon) } content: {}

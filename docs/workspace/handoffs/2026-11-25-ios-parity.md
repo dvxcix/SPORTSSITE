@@ -2193,5 +2193,28 @@ physical-device push are still open.
   Community rows retain visible member roles and the existing MLB gate.
 - Signed Simulator Debug, Hub TypeScript and 148 checks passed. The fixture
   covers guest/member reply visibility, private records, scoped counts and
-  offers, and spoiler and block behavior. Production profile rendering and
-  storefront navigation follow the narrow Hub release.
+  offers, and spoiler and block behavior.
+- Task `42ba1220526822bb12322b441756b55d82343b4f` is pushed. PR #82 preview
+  `dpl_2h8bzSbpFWPZSswoq8UWE86JejMU` and production
+  `dpl_6S4A9DRGW5kwddyAvma491ALPFmi` reported READY. Main is
+  `c39b51d7d0f7d87fdb629533e3aea56167279f8b` at this checkpoint. On the compact
+  guest Simulator, the live ParlayParty profile showed the joining month,
+  activity counts and both saved sportsbook logos. Its visible $1 offer
+  opened the native membership detail with the sign-in gate.
+
+## Native design system · 25 November 2026
+
+- Admin → Settings and the existing design-system link open a SwiftUI
+  component lab. It uses app colors, sportsbook artwork, shared touch
+  feedback, native status examples, a live toggle, and native sheet controls.
+  The direct link verifies administrator access with the existing workspace
+  endpoint. The demonstration has no account or notification writes.
+- Signed Simulator Debug passed. The existing administrator account opened
+  the live-gated screen and used the Liquid Glass Preview button to open the
+  native sheet. Earlier supported iOS versions use a bordered action.
+- Primary database inspection found the canonical Market DNA archive and
+  Contact Recap job table. The existing Market DNA player analogs, older
+  game fallback and Contact Recap near-home-run input call the separate
+  legacy MLB project, which workspace instructions place outside this task.
+  Complete native versions of those reads still depend on equivalent
+  approved primary sources. No legacy connection or job replay was used.
