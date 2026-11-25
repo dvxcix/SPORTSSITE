@@ -38,6 +38,7 @@ struct FeedView: View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 8) {
+                    StoriesRail(api: .init(account: api.account, userID: api.userID), sports: availableSports, revision: revision) { member = $0 }
                     ResearchToolRail(title: "Feed", choices: FeedFilter.allCases.filter { $0 != .following || api.userID != nil },
                         selection: $filter, label: { $0.rawValue.capitalized }) {
                         switch $0 {

@@ -675,7 +675,9 @@ physical-device push are still open.
   where 75 of 92 passed. The task checkpoint was
   `533bd3f5321c7779fc869a9bcb8a3a29bb10a83d`. PR #25 preview
   `dpl_8oW7QWBdqeKWgf37Xd2YUYu9zEeX` reported READY and merged as
-  `c71145c7c6cd155c582eefbfaf1903165cd16321`.
+  `c71145c7c6cd155c582eefbfaf1903165cd16321`. Production
+  `dpl_4qNiLgrDzRc3eiDuuNdCksRExRZk` reported READY. All six invalid
+  Matrix requests returned 401 and NFL preview returned 200.
 
 ## Native NBA Matrices · 25 November 2026
 
@@ -690,4 +692,22 @@ physical-device push are still open.
   the saved Matrix definitions and supports version-aware edits and deletion.
 - Signed Xcode Debug, Hub TypeScript, and all 31 focused NBA/NFL Matrix
   checks passed. Backend deployment, signed-in Simulator evaluation on an
-  existing or disposable Matrix, and slate-wide displays follow.
+  existing or disposable Matrix, and slate-wide displays follow. Task
+  checkpoint `062c46b19390ad2239b315095d86857c008da1d0` is pushed. PR #26
+  preview `dpl_7tVdHcrv85VqKabkdo2NE5y8mjZf` reported READY.
+
+## Native Stories · 25 November 2026
+
+- Feed reads active Stories behind the existing member-aware Stories rollout.
+  It groups them by author and uses their photos, logo and ring color. The
+  full-screen viewer supports progress, pause, previous and next, swipe,
+  retry, and profile navigation. Basic and eligible members can compose
+  text or photo stories with the site's background palette and league marks.
+  Native writes use the existing 24-hour retention and owner-scoped rows.
+- The native API respects account blocks and MLB visibility. It uses existing
+  upload ownership and allows only the exact guest read route. Stories are
+  currently disabled for public visitors by the live feature flag. The
+  website rollout was preserved. No real Stories were published in QA.
+- Signed Xcode Debug, Hub TypeScript and 203 focused checks passed. The prior
+  NFL research fixture was updated to test the new same-member Matrix check
+  while retaining its verification of frozen kickoff-time data.
