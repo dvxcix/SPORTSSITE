@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { safeApiError } from '@/lib/safeApiError'
+import { accountSettingsActor } from '@/lib/supabase/accountSettingsActor'
 
 async function readRows(admin: ReturnType<typeof createAdminClient>, table: string, select: string, column: string, userId: string) {
   const rows: unknown[] = []
@@ -13,10 +13,10 @@ async function readRows(admin: ReturnType<typeof createAdminClient>, table: stri
   }
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ requestId: string }> }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.json({ error: 'Not signed in' }, { status: 401 })
+export async function GET(request: Request, context: { params: Promise<{ requestId: string }> }) {
+  const account = await accountSettingsActor(request)
+  if (account.error) return account.error
+  const { user, native } = account
 
   const { requestId } = await context.params
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) {
@@ -26,7 +26,9 @@ export async function GET(_request: Request, context: { params: Promise<{ reques
   const { data: exportRequest, error: requestError } = await admin.from('data_export_requests')
     .select('id,status,expires_at').eq('id', requestId).eq('user_id', user.id).maybeSingle()
   if (requestError) return safeApiError('data-export-download-request', requestError, 'Export is not available', 404)
-  if (!exportRequest || exportRequest.status !== 'ready') return Response.json({ error: 'Export is not available' }, { status: 404 })
+  if (!exportRequest || (exportRequest.status !== 'ready' && !(native && exportRequest.status === 'delivered'))) {
+    return Response.json({ error: 'Export is not available' }, { status: 404 })
+  }
   if (exportRequest.expires_at && new Date(exportRequest.expires_at) < new Date()) {
     return Response.json({ error: 'Export link has expired. Request a new copy.' }, { status: 410 })
   }
@@ -76,7 +78,10 @@ export async function GET(_request: Request, context: { params: Promise<{ reques
     warnings,
   }
 
-  await admin.from('data_export_requests').update({ status: 'delivered' }).eq('id', requestId)
+  if (exportRequest.status === 'ready') {
+    await admin.from('data_export_requests').update({ status: 'delivered' })
+      .eq('id', requestId).eq('user_id', user.id).eq('status', 'ready')
+  }
   const filename = `slipsurge-data-${new Date().toISOString().slice(0, 10)}.json`
   return new Response(JSON.stringify(payload, null, 2), {
     headers: {

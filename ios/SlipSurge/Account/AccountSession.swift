@@ -6,10 +6,12 @@ struct AccountSession: Codable {
             let id: UUID
             let factorType: String
             let status: String
+            let friendlyName: String?
 
             enum CodingKeys: String, CodingKey {
                 case id, status
                 case factorType = "factor_type"
+                case friendlyName = "friendly_name"
             }
         }
 

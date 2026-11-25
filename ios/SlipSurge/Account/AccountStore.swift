@@ -322,6 +322,31 @@ final class AccountStore {
         }
     }
 
+    func withSecuritySession<Value>(for userID: UUID, action: (AccountSession) async throws -> Value) async throws -> Value {
+        guard !isBusy, memberID == userID else { throw URLError(.userAuthenticationRequired) }
+        isBusy = true
+        defer { isBusy = false }
+        _ = try await accessToken(for: userID)
+        guard let session, memberID == userID else { throw URLError(.userAuthenticationRequired) }
+        let result = try await action(session)
+        guard memberID == userID else { throw URLError(.userAuthenticationRequired) }
+        return result
+    }
+
+    func setupAuthenticator(for userID: UUID) async throws -> AuthenticatorEnrollment {
+        try await withSecuritySession(for: userID) { try await api.enrollAuthenticator(session: $0) }
+    }
+
+    func verifyAuthenticator(_ code: String, id: UUID, for userID: UUID) async throws {
+        try await withSecuritySession(for: userID) { current in
+            let verified = try await api.verifyTOTP(code, factorID: id, session: current)
+            guard memberID == userID else { throw URLError(.userAuthenticationRequired) }
+            try AccountKeychain.write(verified)
+            session = verified
+            rotatedSession = nil
+        }
+    }
+
     private func refreshSavedSession(_ previous: AccountSession) async throws -> AccountSession {
         let rotated = try await api.refresh(previous)
         // Keep the new refresh token if a later profile or onboarding read fails.
@@ -347,9 +372,11 @@ final class AccountStore {
             return
         }
         let completed = try await api.onboardingComplete(updated)
-        try AccountKeychain.write(updated)
+        let validated = AccountSession(accessToken: updated.accessToken, refreshToken: updated.refreshToken,
+            expiresAt: updated.expiresAt, user: verified)
+        try AccountKeychain.write(validated)
         onboardingComplete = completed
-        session = updated
+        session = validated
         rotatedSession = nil
         pendingVerification = nil
         restored = true

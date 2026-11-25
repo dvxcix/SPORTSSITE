@@ -89,6 +89,16 @@ struct MemberAccountView: View {
         }
         .listRowBackground(Brand.surface(for: scheme))
 
+        Section("Account") {
+            NavigationLink {
+                AccountSecurityView(account: account, userID: userID)
+            } label: { Label("Account security", systemImage: "lock.shield") }
+            NavigationLink {
+                AccountDataView(account: account, userID: userID, hasPaidPlan: ["basic", "advanced", "ultimate"].contains(details.membership.purchasedTier))
+            } label: { Label("Your data", systemImage: "archivebox") }
+        }
+        .listRowBackground(Brand.surface(for: scheme))
+
         Section("Membership") {
             LabeledContent("Access", value: tierLabel(details.accessTier))
             LabeledContent("Purchased plan", value: tierLabel(details.membership.purchasedTier))

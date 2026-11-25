@@ -91,8 +91,8 @@ struct AccountAPI {
         return try await SlipSurgeHTTP.send(request)
     }
 
-    func signOut(_ current: AccountSession) async throws {
-        var request = try authRequest("/auth/v1/logout", query: [.init(name: "scope", value: "local")])
+    func signOut(_ current: AccountSession, otherDevices: Bool = false) async throws {
+        var request = try authRequest("/auth/v1/logout", query: [.init(name: "scope", value: otherDevices ? "others" : "local")])
         request.setValue("Bearer \(current.accessToken)", forHTTPHeaderField: "Authorization")
         _ = try await SlipSurgeHTTP.send(request)
     }

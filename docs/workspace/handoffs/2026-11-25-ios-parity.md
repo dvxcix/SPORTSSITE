@@ -512,5 +512,23 @@ physical-device push are still open.
   Direct Matrix creation and editing still need native screens.
 - Signed Xcode Debug, Hub TypeScript, and 199 focused checks passed. The signed
   build was installed and launched on the Mac's iPhone 17e simulator. The
-  Workspace and My Picks backend is pending its separate branch preview and
-  production read checks. No live member data was changed as part of QA.
+  task checkpoint `6e5fc4d527f14adfd9b132054712fc46d646e13d` is pushed. PR #18
+  merged as `d15d2eb4a92a0714a99ffd292b8c522303a26eda`. Preview
+  `dpl_9E8f9M3CN4rj376owxL9NbYoyAGp` is READY and production
+  `dpl_8H6QVeooxiN21rLoWa1TfM9tqooB` was building at this checkpoint. No live
+  member data was changed as part of QA.
+
+## Native account security and data · 25 November 2026
+
+- Account now includes email and password changes, the existing password
+  change alert, authenticator setup, QR and manual key, authentication code
+  verification, factor removal, and revoking other device sessions. Supabase
+  owns validation, factor state, and session rotation. Native export and
+  deletion use the existing owner-scoped request workflows. Files saves the
+  private JSON export and permits re-export of a delivered request before its
+  existing expiry. The deletion screen shows state, billing guidance, and the
+  cancel action where the current workflow permits it.
+- Signed Xcode Debug, Hub TypeScript, and the 199 focused checks passed. The
+  built app was installed and launched on iPhone 17e. These API changes have
+  not yet deployed. Tests did not change real passwords, connect identities,
+  revoke accounts, download private exports, or request account deletion.

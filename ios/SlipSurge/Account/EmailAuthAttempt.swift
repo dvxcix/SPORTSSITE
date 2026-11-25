@@ -84,14 +84,21 @@ extension AccountAPI {
         try await token(grant: "pkce", payload: ["auth_code": code, "code_verifier": attempt.verifier])
     }
 
-    func updatePassword(_ password: String, session: AccountSession) async throws {
+    func updatePassword(_ password: String, nonce: String? = nil, session: AccountSession) async throws {
+        var payload = ["password": password]
+        if let nonce { payload["nonce"] = nonce }
+        _ = try await updateUser(payload, session: session)
+    }
+
+    func updateUser(_ payload: [String: String], session: AccountSession) async throws -> AccountSession.User {
         var request = try authRequest("/auth/v1/user", query: [])
         request.httpMethod = "PUT"
         request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(["password": password])
+        request.httpBody = try JSONEncoder().encode(payload)
         let user = try JSONDecoder().decode(AccountSession.User.self, from: await SlipSurgeHTTP.send(request))
         guard user.id == session.user.id else { throw URLError(.cannotParseResponse) }
+        return user
     }
 
     private func openEmail(_ path: String, payload: EmailRequest, attempt: EmailAuthAttempt) async throws -> AccountSession? {
