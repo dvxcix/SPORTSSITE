@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { adminMemberOperator } from '@/lib/supabase/adminMemberOperator'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail, brandedEmailHtml } from '@/lib/email'
 import { reconcileWhopMain } from '@/lib/whopMainReconcile'
@@ -15,15 +15,6 @@ function escapeHtml(value: string) {
   })[character] ?? character)
 }
 
-async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
-  const { data: profile } = await supabase.from('users').select('account_type').eq('id', user.id).single()
-  if (profile?.account_type !== 'admin') return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  return { adminId: user.id }
-}
-
 // Live-support actions for /admin/users — the goal is a support rep in an
 // active chat with a member being able to fix their auth issue in one click
 // instead of walking them through the site themselves. Every action here
@@ -34,7 +25,7 @@ async function requireAdmin() {
 // transactional email through Resend, not Supabase's built-in SMTP, which
 // is rate-limited and untemplated on the free tier).
 export async function POST(req: Request) {
-  const auth = await requireAdmin()
+  const auth = await adminMemberOperator(req)
   if (auth.error) return auth.error
 
   const { userId, action, value } = await req.json().catch(() => ({}))
