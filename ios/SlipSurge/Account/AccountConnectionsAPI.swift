@@ -97,15 +97,20 @@ struct AccountConnectionsAPI {
 }
 
 extension AccountAPI {
-    func connectionAuthorization(provider: SignInProvider, attempt: ConnectionAttempt, session: AccountSession) async throws -> URL {
+    func connectionAuthorization(provider: SignInProvider, attempt: ConnectionAttempt, session: AccountSession,
+        discordScope: String? = nil) async throws -> URL {
         struct Result: Decodable { let url: URL }
         guard provider != .whop, let callback = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: "/auth/callback",
             query: [.init(name: "native_connection_state", value: attempt.state)]).url else { throw URLError(.badURL) }
-        var request = try authRequest("/auth/v1/user/identities/authorize", query: [
+        var query: [URLQueryItem] = [
             .init(name: "provider", value: provider.rawValue), .init(name: "redirect_to", value: callback.absoluteString),
             .init(name: "skip_http_redirect", value: "true"), .init(name: "code_challenge", value: attempt.challenge),
             .init(name: "code_challenge_method", value: "s256"),
-        ])
+        ]
+        if provider == .discord, let discordScope {
+            query += [.init(name: "scopes", value: discordScope), .init(name: "prompt", value: "consent")]
+        }
+        var request = try authRequest("/auth/v1/user/identities/authorize", query: query)
         request.httpMethod = "GET"
         request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
         let url = try JSONDecoder().decode(Result.self, from: await SlipSurgeHTTP.send(request)).url

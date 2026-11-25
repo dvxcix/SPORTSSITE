@@ -821,3 +821,28 @@ physical-device push are still open.
   files do not implement those asserted browser components or route guards.
   A dated, eligible production walkthrough remains pending, along with
   editing MLB Matrices and the other standalone MLB tools.
+- Task checkpoint `d66fc4c9543cf234b7a18f52a687a6fcb1d77a86` is pushed and
+  was sent to the existing Cloud chat. PR #31 merged as
+  `8d0ef7d6acae583362df6b70895e0c1dacd85b2e`. Preview
+  `dpl_3UxeGASE4mRqoa2zxZkqc8y1eZEk` and production
+  `dpl_7UbHsEXbtRvmsXwrfh1X5Jk5A6K7` reported READY. Invalid access,
+  Pregame, and Live requests returned 401. Guest Feed returned 200.
+
+## Native community Discord · 25 November 2026
+
+- Eligible members can view community Discord roles, authorize the required
+  Discord scope, join or open the server invitation, and claim or recheck
+  member access. The flow binds the Discord proof to the active SlipSurge
+  user and keeps provider credentials in memory for the request.
+- Community owners can see server icons, check managed servers and bot
+  permissions, create and select member roles, validate a server invite,
+  publish an access panel to a chosen text channel, and disconnect the
+  mapping. The app uses the existing provider proofs, owner and role gates,
+  delivery queue, and site endpoints. Browser writes retain same-origin
+  checks and native bearer requests must pass account verification.
+- Signed Xcode Debug, Hub TypeScript and 181 focused Discord, account,
+  creator and production checks passed. The owner test checks that invalid
+  bearer requests cannot fall back to browser credentials and that another
+  creator’s community remains unavailable. Discord consent, bot installation,
+  role delivery and access-panel publishing still require a suitable
+  dedicated Discord server and authorized provider interaction to verify.

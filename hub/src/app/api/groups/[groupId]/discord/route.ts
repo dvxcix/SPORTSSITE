@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { creatorBotInvite, creatorDiscordConfigured, creatorDiscordIdentity, creatorDiscordRequest, CreatorDiscordError, inspectCreatorGuild } from '@/lib/creatorDiscord'
-import { creatorDiscordGuildChoices } from '@/lib/creatorDiscordAccount'
+import { creatorDiscordGuildChoices, nativeDiscordToken } from '@/lib/creatorDiscordAccount'
 import { creatorDiscordOwner, requireDiscordSameOrigin } from '@/lib/creatorDiscordOwner'
 import { MAX_COMMUNITY_DISCORD_ROLES } from '@/lib/creatorDiscordPolicy'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
@@ -13,12 +13,13 @@ type Context={params:Promise<{groupId:string}>}
 function failure(cause:unknown){return cause instanceof CreatorDiscordError?NextResponse.json({error:cause.message,code:cause.code},{status:cause.status,headers}):safeApiError('creator-discord-setup',cause,'Discord setup could not be completed. Try again.',502)}
 export async function GET(request:Request,context:Context){
  try{
-  const {groupId}=await context.params,{admin,client,user,group}=await creatorDiscordOwner(groupId)
+  const {groupId}=await context.params,{admin,client,user,group,native}=await creatorDiscordOwner(groupId,request)
   const query=new URL(request.url).searchParams,guildId=query.get('guildId')
   if(guildId||query.get('servers')==='1'){
    const rate=await consumeServerRateLimit(user.id,'creator_discord_inspect',60,3600)
    if(!rate.available||!rate.allowed)throw new CreatorDiscordError('Please wait before checking again.',rate.available?429:503)
    if(guildId)return NextResponse.json(await inspectCreatorGuild(admin,user.id,guildId),{headers})
+   if(native)throw new CreatorDiscordError('Authorize Discord to load your managed servers.',409,'discord_reconnect')
    return NextResponse.json({servers:await creatorDiscordGuildChoices(client,admin,user.id)},{headers})
   }
   const [{data,error},discordId]=await Promise.all([
@@ -35,8 +36,19 @@ export async function GET(request:Request,context:Context){
 }
 export async function POST(request:Request,context:Context){
  try{
-  requireDiscordSameOrigin(request)
-  const {groupId}=await context.params,{admin,user}=await creatorDiscordOwner(groupId),body=await request.json().catch(()=>null)
+  if(!request.headers.has('authorization'))requireDiscordSameOrigin(request)
+  const {groupId}=await context.params,{admin,client,user,native}=await creatorDiscordOwner(groupId,request)
+  const raw=await request.text()
+  if(raw.length>4096)throw new CreatorDiscordError('Discord setup details are too long.',400)
+  let body
+  try{body=JSON.parse(raw||'null')}catch{throw new CreatorDiscordError('Discord setup details are invalid.',400)}
+  if(native&&body?.action==='servers'){
+   const rate=await consumeServerRateLimit(user.id,'creator_discord_inspect',60,3600)
+   if(!rate.available||!rate.allowed)throw new CreatorDiscordError('Please wait before checking again.',rate.available?429:503)
+   const token=nativeDiscordToken(body.providerToken)
+   if(!token)throw new CreatorDiscordError('Authorize Discord to load your managed servers.',409,'discord_reconnect')
+   return NextResponse.json({servers:await creatorDiscordGuildChoices(client,admin,user.id,token)},{headers})
+  }
   const rate=await consumeServerRateLimit(user.id,'creator_discord_setup',30,3600)
   if(!rate.available||!rate.allowed)throw new CreatorDiscordError('Please wait before changing Discord setup again.',rate.available?429:503)
   const roleIds:unknown[]=Array.isArray(body?.roleIds)?body.roleIds:[body?.roleId]
@@ -59,8 +71,8 @@ export async function POST(request:Request,context:Context){
 }
 export async function DELETE(request:Request,context:Context){
  try{
-  requireDiscordSameOrigin(request)
-  const {groupId}=await context.params,{admin,user}=await creatorDiscordOwner(groupId)
+  if(!request.headers.has('authorization'))requireDiscordSameOrigin(request)
+  const {groupId}=await context.params,{admin,user}=await creatorDiscordOwner(groupId,request)
   const {error}=await admin.rpc('configure_creator_discord',{p_creator:user.id,p_group:groupId,p_guild:null,p_guild_name:null,p_role:null,p_role_name:null,p_invite:null})
   if(error)throw error
   return NextResponse.json({ok:true},{headers})

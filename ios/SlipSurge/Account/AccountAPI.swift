@@ -98,10 +98,14 @@ struct AccountAPI {
     }
 
     func token(grant: String, payload: [String: String]) async throws -> AccountSession {
+        try JSONDecoder().decode(AccountSession.self, from: await tokenData(grant: grant, payload: payload))
+    }
+
+    func tokenData(grant: String, payload: [String: String]) async throws -> Data {
         var request = try authRequest("/auth/v1/token", query: [.init(name: "grant_type", value: grant)])
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(payload)
-        return try JSONDecoder().decode(AccountSession.self, from: await SlipSurgeHTTP.send(request))
+        return try await SlipSurgeHTTP.send(request)
     }
 
     func authRequest(_ path: String, query: [URLQueryItem]) throws -> URLRequest {

@@ -16,6 +16,12 @@ struct CommunitySettingsView: View {
                         CommunityOverviewEditor(api: api, initial: settings) { await load() }
                     } label: { Label("Overview and rules", systemImage: "square.and.pencil") }
                     .listRowBackground(Brand.surface(for: scheme))
+                    NavigationLink {
+                        CommunityDiscordSetupView(api: .init(account: api.account, userID: api.userID, groupID: api.groupID))
+                    } label: {
+                        CommunityDiscordIdentity(title: "Discord setup", detail: nil)
+                    }
+                    .listRowBackground(Brand.surface(for: scheme))
                 }
                 if settings.channelManagement {
                     NavigationLink {

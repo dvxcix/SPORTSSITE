@@ -35,6 +35,7 @@ struct CommunityDetailView: View {
     @State private var memberPreferences = false
     @State private var composing = false
     @State private var memberProfile: String?
+    @State private var discordAccess: CommunityDiscordAPI.Membership?
     @State private var pending = Set<UUID>()
 
     private var path: String { "/api/mobile/communities/\(group.id.uuidString.lowercased())" }
@@ -62,6 +63,17 @@ struct CommunityDetailView: View {
                             .buttonStyle(.bordered)
                             Button("Preferences", systemImage: "slider.horizontal.3") { memberPreferences = true }
                                 .buttonStyle(.bordered)
+                        }
+                        if let discordAccess {
+                            NavigationLink {
+                                CommunityDiscordView(api: .init(account: api.account, userID: userID, groupID: group.id))
+                            } label: {
+                                CommunityDiscordIdentity(title: discordAccess.guildName, detail: "Discord access")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(10)
+                                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+                            }
+                            .buttonStyle(SlipSurgePressStyle())
                         }
                         Button(feed == .picks ? "Share a pick" : "Write a post", systemImage: "square.and.pencil") { composing = true }
                             .buttonStyle(SlipSurgePrimaryButtonStyle())
@@ -112,6 +124,11 @@ struct CommunityDetailView: View {
             }
         }
         .task(id: feed) { await load(feed) }
+        .task(id: page?.role) {
+            guard let userID = api.userID, page?.role != nil else { discordAccess = nil; return }
+            let membership = try? await CommunityDiscordAPI(account: api.account, userID: userID, groupID: group.id).membership()
+            if !Task.isCancelled, page?.role != nil { discordAccess = membership }
+        }
         .refreshable { await load(feed) }
         .sheet(item: $selected) { post in
             NavigationStack {
