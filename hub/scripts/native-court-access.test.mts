@@ -34,7 +34,7 @@ const stubs: Record<string, string> = {
   '@/app/the-paint/estimate/route': 'export async function GET() { return Response.json({reader: "estimate"}) }',
   '@/lib/nativeCourtCheatsheets': 'export async function getNativeCourtCheatsheets(request) { return Response.json({ reader: "courtCheatsheets", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
   '@/lib/nflPregameResearchData': 'export function nflPregameOpen() { return Boolean(globalThis.nativeCourtFixture.phases?.shift()) }',
-  '@/lib/nativeNflResearch': 'export function nativeNflCheatsheets() { return {rows: []} } export function nativeNflMismatch(game, lens, window, board) { return {rows: [lens.windows[window], board.capturedAt]} }',
+  '@/lib/nativeNflResearch': 'export function nativeNflCheatsheets() { return {rows: []} } export function nativeNflMismatch(game, lens, window, board) { return {rows: [lens.windows[window], board.capturedAt]} } export function nativeNflLadders(game, board, rows, market, book, kind, side) { return {rows, kind, side} }',
   '@/lib/nflMatrixData': 'export async function loadNflMatrices(userId) { if (userId !== globalThis.nativeCourtFixture.userId) throw new Error("Wrong Matrix owner"); return {data: []} }',
   '@/lib/nflAccess': 'export async function requireNflAccess() { const fixture = globalThis.nativeCourtFixture; return fixture.readerStatus === 403 ? { error: new Response(null, {status: 403}) } : { userId: fixture.nflUserId ?? fixture.userId } }',
   '@/app/the-sideline/data': `export async function getSidelineGames() { const fixture = globalThis.nativeCourtFixture; if (!fixture.schedule) throw new Error("Schedule unavailable"); return fixture.schedule }
@@ -172,4 +172,10 @@ test('research tools keep native auth, canonical readers, date scope and kickoff
   const response = await request('sidelineResearch', mm + date)
   assert.equal(response.headers.get('cache-control'), 'private, no-store')
   assert.deepEqual((await response.json()).rows, ['l5', 'frozen'])
+  const ladders = 'tool=ladders&game=nfl-match&date=' + date
+  assert.equal((await request('sidelineResearch', ladders + '&kind=milestone&side=under')).status, 400)
+  set({ phases: [true, false], captures: ['in-flight', 'frozen'] })
+  const ladderResponse = await (await request('sidelineResearch', ladders + '&kind=over_under&side=under')).json()
+  assert.deepEqual(ladderResponse.rows, ['season', 'frozen'])
+  assert.equal(ladderResponse.side, 'under')
 })

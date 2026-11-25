@@ -5,6 +5,7 @@ struct FeedComposerView: View {
     let userID: UUID
     let allowMLB: Bool
     var startWithPick = false
+    var initialPick: TrackedPickAPI.Leg? = nil
     let onPost: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -151,7 +152,12 @@ struct FeedComposerView: View {
             .disabled(posting)
             .navigationTitle("Compose")
             .navigationBarTitleDisplayMode(.inline)
-            .onAppear { if startWithPick && !attempted && legs.isEmpty { kind = .pick } }
+            .onAppear {
+                if startWithPick && !attempted && legs.isEmpty {
+                    kind = .pick
+                    if let initialPick { legs = [initialPick]; sport = initialPick.sport }
+                }
+            }
             .onChange(of: personalAllowed) { _, allowed in if !allowed, audience == .personal { audience = .everyone } }
             .onChange(of: kind) { _, _ in notice = nil }
             .sheet(isPresented: $pickBuilder) {

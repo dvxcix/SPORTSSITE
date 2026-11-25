@@ -744,3 +744,27 @@ physical-device push are still open.
   They exercise native buyer identity and return state, denied native wallet
   authorization, and the existing cookie workflows. No actual checkout,
   provider enrollment, withdrawal or storefront publication was submitted.
+  Task checkpoint `58c56d9e747935a6fd9c8e1e42186720c0e3f56e` is pushed and
+  was sent to the existing Cloud chat. PR #28 merged as
+  `3be11d042c43ddfcff732f38bba496cf7db9457f`. Preview
+  `dpl_FxDMA2kLqBWJNUCqT3ULjZd4cs7A` and production
+  `dpl_GosnpX68PYHSyXGdDLbTWpyAMHRr` reported READY. All 13 invalid requests
+  returned 401. Creators, Feed, Pricing and both previews returned 200.
+
+## Native NFL prop ladders · 25 November 2026
+
+- The Sideline opens a native, per-game ladder with branded team and book
+  filters, milestones, Over and Under, grouped line thresholds, opening odds,
+  movement, anytime-TD ratio, observed and estimated picks, and Matrix
+  highlights. Player cards open their existing trend screen. Exact contract
+  details can save to Watchlist or prefill a tracked pick when pregame is open.
+- The server uses the same canonical NFL ladder and archived market inputs.
+  Missing or opening-only observations stay distinct from posted odds.
+  Different opening thresholds suppress probability movement. A stale
+  availability observation yields no actionable current selection.
+- Signed Xcode Debug, Hub TypeScript and 51 focused checks passed. The iPhone
+  18 Pro loaded the personal NFL Matrix editor and saved a disposable private
+  Matrix. The app now percent-encodes plus signs in query values so exact
+  timestamp versions survive deletion. The cleanup and production ladder
+  walkthrough are being verified. Matrix primary controls also now use the
+  SlipSurge lime fill and dark text for contrast.

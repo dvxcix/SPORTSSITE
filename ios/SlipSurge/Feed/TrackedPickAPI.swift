@@ -62,7 +62,7 @@ struct TrackedPickAPI {
         let odds: Int
     }
 
-    struct Leg: Identifiable, Encodable {
+    struct Leg: Identifiable, Codable {
         let sport: String
         let player_id: String
         let mlb_id: Int?

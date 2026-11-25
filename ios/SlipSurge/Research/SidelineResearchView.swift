@@ -79,7 +79,7 @@ struct SidelineResearchView: View {
             .sheet(item: $selectedRow) { row in
                 NavigationStack {
                     if mismatch {
-                        SidelineMMPlayerView(api: api, row: row, visual: visual(row.player.team), date: date, game: game,
+                        SidelineMMPlayerView(api: api, player: row.player, mm: row.mm, score: row.score, visual: visual(row.player.team), date: date, game: game,
                             market: market == "completions" ? "passing_completions" : market, sample: sample, initialBook: book)
                     } else {
                         SidelinePlayerTrendView(row: row, visual: visual(row.player.team), market: market, book: book)

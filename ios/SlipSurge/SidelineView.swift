@@ -7,7 +7,7 @@ struct SidelineView: View {
 
     private enum Workspace: String, CaseIterable {
         case matchup = "The Sideline", mismatch = "MM", cheatsheets = "Cheatsheets", slateEdge = "Slate Edge"
-        case publicActivity = "The Public", sportsbooks = "Sportsbooks"
+        case publicActivity = "The Public", sportsbooks = "Sportsbooks", ladders = "Prop Ladders"
 
         var glyph: String {
             switch self {
@@ -17,6 +17,7 @@ struct SidelineView: View {
             case .slateEdge: "chart.line.uptrend.xyaxis"
             case .publicActivity: "person.2"
             case .sportsbooks: "chart.bar"
+            case .ladders: "line.3.horizontal.decrease"
             }
         }
     }
@@ -191,6 +192,9 @@ struct SidelineView: View {
                 .id("\(gameID):\(tool.rawValue)")
         case .slateEdge:
             SidelineSlateEdgeView(api: api, date: date, teams: slateTeams, revision: revision)
+        case .ladders:
+            SidelineLaddersView(api: api, date: date, game: gameID, teams: selectedTeams, revision: revision)
+                .id(gameID)
         }
     }
 

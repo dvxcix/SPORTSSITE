@@ -79,7 +79,9 @@ private struct SidelineTrendCard: View {
 
 struct SidelineMMPlayerView: View {
     let api: SidelineAPI
-    let row: SidelineResearchPayload.Row
+    let player: SidelineResearchPayload.Player
+    let mm: Int?
+    let score: Double?
     let visual: SidelineMarketTools.Visual
     let date: String
     let game: String
@@ -102,13 +104,13 @@ struct SidelineMMPlayerView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 ResearchToolCard(color: visual.primary) {
-                    ResearchToolPortrait(name: row.player.name,
-                        subtitle: [visual.code, row.player.position, SidelineResearchMarket.title(market)].compactMap { $0 }.joined(separator: " · "),
-                        portraits: row.player.portraits, teamLogo: visual.logo, primary: visual.primary, secondary: visual.secondary ?? visual.primary)
+                    ResearchToolPortrait(name: player.name,
+                        subtitle: [visual.code, player.position, SidelineResearchMarket.title(market)].compactMap { $0 }.joined(separator: " · "),
+                        portraits: player.portraits, teamLogo: visual.logo, primary: visual.primary, secondary: visual.secondary ?? visual.primary)
                 } content: {
                     ResearchToolValues(items: [
-                        .init(label: "MM", text: ResearchFormat.signed(row.mm), tone: Brand.signal(row.mm.map(Double.init), for: scheme)),
-                        .init(label: "SlipSurge Score", text: ResearchFormat.decimal(row.score)),
+                        .init(label: "MM", text: ResearchFormat.signed(mm), tone: Brand.signal(mm.map(Double.init), for: scheme)),
+                        .init(label: "SlipSurge Score", text: ResearchFormat.decimal(score)),
                     ])
                 }
                 if !books.isEmpty {
@@ -146,7 +148,7 @@ struct SidelineMMPlayerView: View {
                 throw URLError(.cannotParseResponse)
             }
             books = Set((payload.books ?? []) + [requested]).sorted()
-            trend = payload.rows.first { candidate in candidate.id == row.id && candidate.gameLog?.isEmpty == false }
+            trend = payload.rows.first { candidate in candidate.id == player.id && candidate.gameLog?.isEmpty == false }
             ready = true
         } catch {
             if !Task.isCancelled, requested == book { self.error = error }

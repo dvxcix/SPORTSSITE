@@ -48,6 +48,9 @@ enum SlipSurgeHTTP {
         url.host = host
         url.path = path
         url.queryItems = query.isEmpty ? nil : query
+        // URLComponents leaves literal plus signs in query values. Next.js uses
+        // form-style query decoding, which would read those signs as spaces.
+        url.percentEncodedQuery = url.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
         guard let endpoint = url.url else { throw URLError(.badURL) }
         var request = URLRequest(url: endpoint, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: timeout)
         request.setValue("application/json", forHTTPHeaderField: "Accept")

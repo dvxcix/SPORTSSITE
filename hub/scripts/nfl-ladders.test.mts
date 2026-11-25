@@ -5,6 +5,8 @@ import { validateNflMatrixDefinition, type NflMatrixFactor } from '../src/lib/nf
 import type { NflOddsPlayer } from '../src/lib/nflOddsTypes'
 import { packSidelineBoard, unpackSidelineBoard } from '../src/lib/sidelineWire'
 import type { SidelineOddsBoard } from '../src/lib/nflOddsTypes'
+import type { SidelineGame } from '../src/app/the-sideline/types'
+import { nativeNflLadders } from '../src/lib/nativeNflResearch'
 test('wire format preserves every contract and null through JSON transport',()=>{
  const board={players:Array.from({length:20},(_,id)=>({...player(),id})),capturedAt:null} as unknown as SidelineOddsBoard
  const packed=packSidelineBoard(board)
@@ -39,4 +41,26 @@ test('matrix preserves exact contract, side and estimate opt-in through validati
  const p=player();p.markets[2].offers[0].openingLine=3.5
  assert.equal(ladderMatrixValue(p,{...factor,marketValue:'move'}),null)
  assert.equal(ladderMatrixValue(p,{...factor,marketValue:'probability_move'}),null)
+})
+
+test('native ladders retain exact sides, opening lines, and observed counts without turning open-only quotes into picks', () => {
+ const sample = player()
+ sample.publicPicks!.push({ propType: 'receptions', label: 'Under 4', rawMarket: 'Under 4', picks: 27,
+  capturedAt: '2026-09-09', line: 4, side: 'under', kind: 'over_under' })
+ sample.markets[2].offers[0].openingLine = 4.5
+ sample.markets[3].offers[0].isOpeningOnly = true
+ const game = { id: 'nfl-fixture', gameday: '2026-09-09' } as SidelineGame
+ const board = { players: [sample] } as SidelineOddsBoard
+ const under = nativeNflLadders(game, board, [], 'receptions', 'fanduel', 'over_under', 'under').rows[0].contracts[0]
+ assert.equal(under.current, -110)
+ assert.equal(under.openingLine, 4.5)
+ assert.equal(under.movement, null)
+ assert.equal(under.picks, 27)
+ assert.equal(under.estimated, false)
+ assert.equal(under.leg?.market_side, 'under')
+ const milestones = nativeNflLadders(game, board, [], 'receptions', 'fanduel', 'milestone', 'over').rows[0].contracts
+ const open = milestones.find(contract => contract.line === 5)!
+ assert.equal(open.openingOnly, true)
+ assert.equal(open.current, null)
+ assert.equal(open.leg, null)
 })

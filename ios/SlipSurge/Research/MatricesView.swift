@@ -35,7 +35,7 @@ struct MatricesView: View {
                 }
                 if tab == .mine, let matrices {
                     Button("New \(api.league.title) Matrix", systemImage: "plus") { editing = Edit(matrix: nil) }
-                        .buttonStyle(.borderedProminent).disabled(catalog == nil || busy || matrices.count >= 20)
+                        .buttonStyle(SlipSurgePrimaryButtonStyle()).disabled(catalog == nil || busy || matrices.count >= 20)
                     ForEach(matrices, content: matrixCard)
                     if matrices.isEmpty { ContentUnavailableView("No saved Matrices", systemImage: "square.grid.3x3") }
                     importField
@@ -86,7 +86,8 @@ struct MatricesView: View {
                 }.labelStyle(.iconOnly).buttonStyle(.bordered).disabled(busy)
             }
         } content: {
-            Text("\(matrix.conditionCount) \(matrix.matrixType == "pipeline" ? "steps" : "conditions")")
+            let rule = matrix.matrixType == "pipeline" ? "step" : "condition"
+            Text("\(matrix.conditionCount) \(matrix.conditionCount == 1 ? rule : rule + "s")")
                 .font(.footnote).foregroundStyle(.secondary)
             HStack(spacing: 9) {
                 Button("Edit", systemImage: "slider.horizontal.3") { editing = Edit(matrix: matrix) }.disabled(catalog == nil)
@@ -122,7 +123,7 @@ struct MatricesView: View {
                         let submitted = code
                         await mutate { try await api.importCode(submitted); self.code = "" }
                     }
-                }.buttonStyle(.borderedProminent).disabled(busy || !code.uppercased().hasPrefix("\(api.league.title)-"))
+                }.buttonStyle(SlipSurgePrimaryButtonStyle()).disabled(busy || !code.uppercased().hasPrefix("\(api.league.title)-"))
             }
         }
     }
@@ -157,6 +158,10 @@ struct MatricesView: View {
         notice = nil
         defer { busy = false }
         do { try await change(); await changed(); notice = "Saved" }
+        catch let status as SlipSurgeHTTP.Status {
+            struct Details: Decodable { let error: String }
+            notice = (try? JSONDecoder().decode(Details.self, from: status.data))?.error ?? "The Matrix change couldn’t be confirmed."
+        }
         catch { notice = "The Matrix change couldn’t be confirmed. Try again." }
     }
 }
