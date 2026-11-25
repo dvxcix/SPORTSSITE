@@ -357,6 +357,11 @@ struct AccountWorkspaceView: View {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Badge studio", systemImage: "rosette") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
             } else if adminTab == .settings {
+                ForEach(AdminPlatformSettingsView.Page.allCases) { page in
+                    NavigationLink { AdminPlatformSettingsView(api: .init(account: account, userID: userID), page: page) } label: {
+                        ResearchToolCard(color: Brand.accent(for: scheme)) { Label(page.title, systemImage: page.icon) } content: {}
+                    }.buttonStyle(SlipSurgePressStyle())
+                }
                 NavigationLink {
                     AdminFeatureRollouts(account: account, userID: userID)
                 } label: {

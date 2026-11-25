@@ -27,12 +27,20 @@ final class AccountStore {
         recoverySession.map { $0.user.hasVerifiedFactor && !$0.isMFAAuthenticated } ?? false
     }
 
+    func registrationAvailability() async throws -> AccountAPI.RegistrationAvailability {
+        try await api.registrationAvailability()
+    }
+
     func beginEmail(_ registration: AccountAPI.Registration) async -> Bool {
         guard !isBusy, isConfigured, session == nil, pendingVerification == nil, recoverySession == nil else { return false }
         isBusy = true
         notice = nil
         defer { isBusy = false }
         do {
+            guard try await registrationAvailability().open else {
+                notice = "Registration is closed. Existing members can still sign in."
+                return false
+            }
             let attempt = try EmailAuthAttempt(.registration)
             try AccountKeychain.storeEmailAttempt(attempt)
             if let active = try await api.register(registration, attempt: attempt) {
@@ -211,12 +219,16 @@ final class AccountStore {
         if isConfigured { providersAvailable = await api.providersAvailable() }
     }
 
-    func signIn(provider: SignInProvider, authenticate: @MainActor (URL) async throws -> URL) async {
+    func signIn(provider: SignInProvider, registering: Bool = false, authenticate: @MainActor (URL) async throws -> URL) async {
         guard !isBusy, isConfigured, providersAvailable, session == nil, pendingVerification == nil else { return }
         isBusy = true
         notice = nil
         defer { isBusy = false }
         do {
+            if registering, try await !registrationAvailability().open {
+                notice = "Registration is closed. Existing members can still sign in."
+                return
+            }
             let attempt = try ProviderSignIn(provider: provider)
             let callback = try await authenticate(attempt.url)
             let handoff = try attempt.handoff(from: callback)

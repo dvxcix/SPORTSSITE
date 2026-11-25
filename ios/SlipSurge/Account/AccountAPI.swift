@@ -8,6 +8,19 @@ struct AccountAPI {
         case additionalVerificationRequired
     }
 
+    struct RegistrationAvailability: Decodable {
+        struct Sport: Decodable, Identifiable {
+            let id: String
+            let logo: URL?
+        }
+        let open: Bool
+        let sports: [Sport]
+    }
+
+    func registrationAvailability() async throws -> RegistrationAvailability {
+        try await SlipSurgeHTTP.get("/api/mobile/information", query: [.init(name: "page", value: "registration")])
+    }
+
     var isConfigured: Bool { publishableKey != nil }
 
     private var publishableKey: String? {

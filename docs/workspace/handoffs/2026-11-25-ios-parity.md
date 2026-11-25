@@ -1968,3 +1968,25 @@ physical-device push are still open.
   physical iPhone are still needed to verify universal links and real APNs.
   Fresh social-provider consent, StoreKit purchasing and privacy disclosures
   also remain open release checks.
+- Task `02276a3b3ad4969284a364478dfcbb01d25dee9d` is pushed. PR #72 merged as
+  `fc8e5019e0c75815330be777bc0d23c212428161`. Production deployment
+  `dpl_BteTUana8w67F6RHimPiUJ9pETPp` was READY. The public well-known route
+  returned the expected JSON 404 with no registered app configured.
+
+## Platform settings and registration · 25 November 2026
+
+- The native Create Account flow now checks the current registration setting
+  before showing email setup or the branded Whop, Discord and X buttons. It
+  checks again immediately before starting a signup. The two steps include
+  username, display name, and the site's sports and league artwork. The existing
+  Supabase registration trigger remains the final enforcement for new users.
+- Admin can open the site's general settings, social login readiness, article
+  provider status and custom code in native screens. Each change saves one
+  setting with its observed value, under the existing database role policy.
+  Stale updates return a conflict and the app audits only the setting key.
+- The signed Simulator build and Hub TypeScript passed. The Hub suite passed
+  138 checks including four targeted settings, registration and AASA checks.
+  A local Postgres fixture ran the exact migration with role checks, missing and
+  nullable rows, stale edits and an exact long code value. Next verify the live
+  reads and both signup steps after the narrow release. No production setting
+  or registration was submitted during QA.

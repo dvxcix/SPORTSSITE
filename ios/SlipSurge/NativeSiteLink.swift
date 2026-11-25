@@ -17,6 +17,7 @@ enum NativeSiteLink: Hashable {
     case mlbTeam(Int)
     case adminMarketplace, adminCreatorBusiness, adminPipelineHealth, adminBrowserAutomation, adminSocialPlatforms, adminEmail, adminDiscord, adminDiscordComposer
     case adminWhop(AdminWhopView.Page)
+    case adminPlatformSettings(AdminPlatformSettingsView.Page)
     case eventCreate, threadCreate(String?), storyCreate
 
     enum CommunitySection: Hashable {
@@ -138,7 +139,11 @@ enum NativeSiteLink: Hashable {
         case ["admin", "browserbase"]: self = .adminBrowserAutomation
         case ["admin", "social-platforms"]: self = .adminSocialPlatforms
         case ["admin", "settings", "email"]: self = .adminEmail
-        case ["admin", "monetization"]: self = .adminWhop(.activity)
+        case ["admin", "settings"], ["admin", "settings", "general"]: self = .adminPlatformSettings(.general)
+        case ["admin", "settings", "social-login"]: self = .adminPlatformSettings(.login)
+        case ["admin", "settings", "ai"]: self = .adminPlatformSettings(.writing)
+        case ["admin", "settings", "custom-code"]: self = .adminPlatformSettings(.code)
+        case ["admin", "monetization"], ["admin", "ads"]: self = .adminWhop(.activity)
         case ["admin", "settings", "payments"]: self = .adminWhop(.connection)
         case ["admin", "whop-renewal-shape"]: self = .adminWhop(.verification)
         case ["admin", "discord"]: self = .adminDiscord

@@ -5,7 +5,6 @@ struct AccountSignInView: View {
     let account: AccountStore
     @Binding var appearance: Appearance
 
-    @Environment(\.webAuthenticationSession) private var browser
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var email = ""
@@ -26,7 +25,7 @@ struct AccountSignInView: View {
             VStack(alignment: .leading, spacing: 21) {
                 welcome
                 if account.providersAvailable {
-                    providerGroup
+                    BrandedSignInProviders(account: account, opening: $opening) { focus = nil }
                         .transition(.opacity)
                 }
                 credentials
@@ -62,7 +61,6 @@ struct AccountSignInView: View {
         }
         .foregroundStyle(Brand.text(for: scheme))
         .animation(reduceMotion ? nil : .easeOut(duration: 0.23), value: account.providersAvailable)
-        .sensoryFeedback(.selection, trigger: opening) { _, next in next != nil }
         .onAppear {
             withAnimation(reduceMotion ? nil : .smooth(duration: 0.32)) { appeared = true }
         }
@@ -85,63 +83,6 @@ struct AccountSignInView: View {
         }
         .opacity(appeared || reduceMotion ? 1 : 0)
         .offset(y: appeared || reduceMotion ? 0 : 8)
-    }
-
-    @ViewBuilder
-    private var providerGroup: some View {
-        if #available(iOS 26, *) {
-            GlassEffectContainer(spacing: 11) { providerButtons }
-        } else {
-            providerButtons
-        }
-    }
-
-    private var providerButtons: some View {
-        VStack(spacing: 10) {
-            ForEach([SignInProvider.whop, .discord, .x]) { provider in
-                Button {
-                    open(provider)
-                } label: {
-                    providerAppearance(provider)
-                }
-                .buttonStyle(SlipSurgePressStyle())
-                .disabled(account.isBusy || opening != nil)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func providerAppearance(_ provider: SignInProvider) -> some View {
-        let content = HStack(spacing: 10) {
-            Image("sign-in-\(provider.rawValue)")
-                .renderingMode(.template).resizable().scaledToFit()
-                .frame(width: 23, height: 23)
-                .foregroundStyle(provider == .discord ? (scheme == .dark ? Color(rgb: 0xA6ADFF) : Color(rgb: 0x353FC4)) : .primary)
-                .accessibilityHidden(true)
-            Text("Continue with \(provider.title)").font(.subheadline.weight(.bold))
-            Spacer(minLength: 5)
-            if opening == provider {
-                ProgressView().tint(provider == .whop ? Color(rgb: 0x150E0C) : Brand.text(for: scheme))
-            } else {
-                Image(systemName: "arrow.up.right").font(.footnote.weight(.semibold)).accessibilityHidden(true)
-            }
-        }
-        .padding(.horizontal, 16).padding(.vertical, 9)
-        .frame(minHeight: 52)
-        .contentShape(.rect(cornerRadius: 15))
-
-        if provider == .whop {
-            content.foregroundStyle(Color(rgb: 0x150E0C))
-                .background(Color(rgb: 0xFA4616), in: .rect(cornerRadius: 15))
-        } else if #available(iOS 26, *) {
-            content.foregroundStyle(Brand.text(for: scheme))
-                .glassEffect(.regular.tint(provider == .discord ? Color(rgb: 0x5865F2).opacity(0.22) : .clear).interactive(),
-                    in: .rect(cornerRadius: 15))
-        } else {
-            content.foregroundStyle(Brand.text(for: scheme))
-                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
-                .overlay { RoundedRectangle(cornerRadius: 15).strokeBorder(.secondary.opacity(0.23)) }
-        }
     }
 
     private var credentials: some View {
@@ -227,13 +168,91 @@ struct AccountSignInView: View {
             .font(.footnote.weight(.semibold)).frame(minHeight: 44)
     }
 
+    private func submit() {
+        guard canSignIn else { return }
+        let address = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let submittedPassword = password
+        focus = nil
+        password = ""
+        Task { await account.signIn(email: address, password: submittedPassword) }
+    }
+}
+
+struct BrandedSignInProviders: View {
+    let account: AccountStore
+    @Binding var opening: SignInProvider?
+    var registering = false
+    var onOpen: () -> Void = {}
+    @Environment(\.webAuthenticationSession) private var browser
+    @Environment(\.colorScheme) private var scheme
+
+    @ViewBuilder
+    var body: some View {
+        Group {
+            if #available(iOS 26, *) {
+                GlassEffectContainer(spacing: 11) { providerButtons }
+            } else {
+                providerButtons
+            }
+        }
+        .sensoryFeedback(.selection, trigger: opening) { _, next in next != nil }
+    }
+
+    private var providerButtons: some View {
+        VStack(spacing: 10) {
+            ForEach([SignInProvider.whop, .discord, .x]) { provider in
+                Button {
+                    open(provider)
+                } label: {
+                    providerAppearance(provider)
+                }
+                .buttonStyle(SlipSurgePressStyle())
+                .disabled(account.isBusy || opening != nil)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func providerAppearance(_ provider: SignInProvider) -> some View {
+        let content = HStack(spacing: 10) {
+            Image("sign-in-\(provider.rawValue)")
+                .renderingMode(.template).resizable().scaledToFit()
+                .frame(width: 23, height: 23)
+                .foregroundStyle(provider == .discord ? (scheme == .dark ? Color(rgb: 0xA6ADFF) : Color(rgb: 0x353FC4)) : .primary)
+                .accessibilityHidden(true)
+            Text("Continue with \(provider.title)").font(.subheadline.weight(.bold))
+            Spacer(minLength: 5)
+            if opening == provider {
+                ProgressView().tint(provider == .whop ? Color(rgb: 0x150E0C) : Brand.text(for: scheme))
+            } else {
+                Image(systemName: "arrow.up.right").font(.footnote.weight(.semibold)).accessibilityHidden(true)
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 9)
+        .frame(minHeight: 52)
+        .contentShape(.rect(cornerRadius: 15))
+
+        if provider == .whop {
+            content.foregroundStyle(Color(rgb: 0x150E0C))
+                .background(Color(rgb: 0xFA4616), in: .rect(cornerRadius: 15))
+        } else if #available(iOS 26, *) {
+            content.foregroundStyle(Brand.text(for: scheme))
+                .glassEffect(.regular.tint(provider == .discord ? Color(rgb: 0x5865F2).opacity(0.22) : .clear).interactive(),
+                    in: .rect(cornerRadius: 15))
+        } else {
+            content.foregroundStyle(Brand.text(for: scheme))
+                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
+                .overlay { RoundedRectangle(cornerRadius: 15).strokeBorder(.secondary.opacity(0.23)) }
+        }
+    }
+
     private func open(_ provider: SignInProvider) {
         guard opening == nil else { return }
-        focus = nil
+        onOpen()
         opening = provider
         Task {
             defer { opening = nil }
-            await account.signIn(provider: provider) { url in
+            await account.signIn(provider: provider, registering: registering) { url in
                 if #available(iOS 17.4, *) {
                     return try await browser.authenticate(using: url, callback: .customScheme(ProviderSignIn.scheme),
                         preferredBrowserSession: .ephemeral, additionalHeaderFields: [:])
@@ -242,14 +261,5 @@ struct AccountSignInView: View {
                     preferredBrowserSession: .ephemeral)
             }
         }
-    }
-
-    private func submit() {
-        guard canSignIn else { return }
-        let address = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        let submittedPassword = password
-        focus = nil
-        password = ""
-        Task { await account.signIn(email: address, password: submittedPassword) }
     }
 }
