@@ -1,23 +1,18 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { syncDiscordIdentity } from '@/lib/discord'
 import { extractIdentityHandle, type VerifiedIdentity } from '@/lib/verifiedIdentity'
+import { accountSettingsActor } from '@/lib/supabase/accountSettingsActor'
 
 export const dynamic = 'force-dynamic'
 
 // Rebuild public identity badges from the authenticated user's real Auth
 // identities. The browser never submits arbitrary "verified" handles.
-export async function POST() {
-  const supabase = await createClient()
-  const [{ data: { user } }, identitiesResult] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase.auth.getUserIdentities(),
-  ])
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (identitiesResult.error) {
-    return NextResponse.json({ error: 'Could not verify connected accounts' }, { status: 502 })
-  }
+export async function POST(request: Request) {
+  const account = await accountSettingsActor(request)
+  if (account.error) return account.error
+  const { user } = account
+  if (!user.identities) return NextResponse.json({ error: 'Could not verify connected accounts' }, { status: 502 })
 
   const admin = createAdminClient()
   const { data: current, error: readError } = await admin
@@ -32,7 +27,7 @@ export async function POST() {
   }
   delete next.discord
   delete next.x
-  for (const identity of identitiesResult.data?.identities ?? []) {
+  for (const identity of user.identities) {
     if (identity.provider !== 'discord' && identity.provider !== 'x') continue
     const extracted = extractIdentityHandle(identity.provider, identity.identity_data ?? {})
     if (extracted) next[identity.provider] = extracted

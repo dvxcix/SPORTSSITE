@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { generatePkce, randomToken, buildAuthorizeUrl } from '@/lib/whop'
 import { safeInternalPath } from '@/lib/safeRedirect'
 import { readNativeOAuthRequest, nativeOAuthFailure } from '@/lib/nativeOAuth'
+import { nativeHandoffKey } from '@/lib/nativeAuthHandoff'
+import { readWhopLinkRequest } from '@/lib/nativeWhopLink'
 
 const STATE_COOKIE = 'whop_oauth_state'
 
@@ -28,6 +30,13 @@ export async function GET(request: Request) {
   const next = safeInternalPath(searchParams.get('next'), mode === 'link' ? '/settings/membership' : '/launch')
   const desktopState = searchParams.get('desktop_state')
   const nativeState = searchParams.get('native_state')
+  const nativeLink = searchParams.get('native_link')
+  if (nativeLink !== null) {
+    const key = nativeHandoffKey()
+    if (mode || desktopState || nativeState || !key || !readWhopLinkRequest(key, nativeLink)) {
+      return new Response('This connection attempt expired. Open SlipSurge to try again.', { status: 400, headers: { 'Cache-Control': 'private, no-store' } })
+    }
+  }
   if (nativeState !== null) {
     const nativeRequest = await readNativeOAuthRequest(nativeState)
     if (mode || desktopState || nativeRequest?.provider !== 'whop') return nativeOAuthFailure(nativeState)
@@ -49,7 +58,8 @@ export async function GET(request: Request) {
   const authorizeUrl = buildAuthorizeUrl({ redirectUri, state, codeChallenge, nonce })
 
   const cookieStore = await cookies()
-  cookieStore.set(STATE_COOKIE, JSON.stringify({ state, codeVerifier, nonce, next, mode, linkUserId, desktopState, ...(nativeState ? { nativeState } : {}) }), {
+  cookieStore.set(STATE_COOKIE, JSON.stringify({ state, codeVerifier, nonce, next, mode, linkUserId, desktopState,
+    ...(nativeState ? { nativeState } : {}), ...(nativeLink ? { nativeLink } : {}) }), {
     httpOnly: true,
     secure: new URL(origin).protocol === 'https:',
     sameSite: 'lax',

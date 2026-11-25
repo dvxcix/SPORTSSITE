@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { safeApiError } from '@/lib/safeApiError'
+import { accountSettingsActor } from '@/lib/supabase/accountSettingsActor'
 
 // Whop isn't a Supabase-native identity, so there's no auth.unlinkIdentity()
 // call for it (see verifiedIdentity.ts) — this is the equivalent hand-rolled
@@ -12,10 +12,10 @@ import { safeApiError } from '@/lib/safeApiError'
 // — a REAL purchased tier (tier/whop_plan_id/tier_status, set by the
 // webhook off internal_user_id metadata, never whop_user_id) is untouched,
 // same as unlinking Discord/X doesn't affect anything either.
-export async function POST() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
+export async function POST(request: Request) {
+  const account = await accountSettingsActor(request)
+  if (account.error) return account.error
+  const { user } = account
 
   const admin = createAdminClient()
   const { data: current } = await admin.from('users').select('tier, admin_granted_tier, verified_identities').eq('id', user.id).maybeSingle()

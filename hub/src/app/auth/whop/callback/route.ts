@@ -1,12 +1,17 @@
 import { NextResponse, after } from 'next/server'
 import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { exchangeCodeForToken, fetchWhopUserInfo, checkHasAccess, buildWhopVerifiedIdentity, type WhopUserInfo } from '@/lib/whop'
+import { exchangeCodeForToken, fetchWhopUserInfo, checkHasAccess, buildWhopVerifiedIdentity } from '@/lib/whop'
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { sendXConversion, clientIpFromRequest } from '@/lib/xConversion'
 import { safeInternalPath } from '@/lib/safeRedirect'
 import { readNativeOAuthRequest, clearNativeOAuthRequest, nativeOAuthComplete, nativeOAuthFailure } from '@/lib/nativeOAuth'
+import { createClient } from '@/lib/supabase/server'
+import { nativeHandoffKey } from '@/lib/nativeAuthHandoff'
+import { nativeConnectionRedirect } from '@/lib/nativeConnectionRedirect'
+import { readWhopLinkRequest, sealWhopLink, type WhopLinkRequest } from '@/lib/nativeWhopLink'
+import { applyWhopConnection } from '@/lib/whopConnection'
 
 const STATE_COOKIE = 'whop_oauth_state'
 
@@ -33,7 +38,9 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const state = searchParams.get('state')
   let nativeState: string | null = null
-  const loginFailed = (reason: string) => nativeState !== null
+  let nativeLink: WhopLinkRequest | null = null
+  const loginFailed = (reason: string) => nativeLink
+    ? nativeConnectionRedirect(nativeLink.state, 'error', 'connection_failed') : nativeState !== null
     ? nativeOAuthFailure(nativeState, reason)
     : NextResponse.redirect(`${origin}/auth/login?error=${reason}`)
 
@@ -43,13 +50,18 @@ export async function GET(request: Request) {
 
   if (!rawStateCookie) return loginFailed('whop_auth_failed')
 
-  let stored: { state: string; codeVerifier: string; nonce: string; next: string; mode?: 'link'; linkUserId?: string; desktopState?: string; nativeState?: string | null }
+  let stored: { state: string; codeVerifier: string; nonce: string; next: string; mode?: 'link'; linkUserId?: string; desktopState?: string; nativeState?: string | null; nativeLink?: string }
   try {
     stored = JSON.parse(rawStateCookie)
   } catch {
     return loginFailed('whop_auth_failed')
   }
   nativeState = stored.nativeState ?? null
+  const linkKey = stored.nativeLink ? nativeHandoffKey() : null
+  if (stored.nativeLink) {
+    nativeLink = linkKey ? readWhopLinkRequest(linkKey, stored.nativeLink) : null
+    if (!nativeLink || nativeState !== null || stored.mode || stored.desktopState) return loginFailed('whop_auth_failed')
+  }
   const nativeRequest = nativeState === null ? null : await readNativeOAuthRequest(nativeState)
   if (nativeState !== null) {
     await clearNativeOAuthRequest()
@@ -80,6 +92,15 @@ export async function GET(request: Request) {
     checkHasAccess(whopUser.sub, tokenResponse.access_token, DISCORD_ADVANCED_PRODUCT_ID),
   ])
 
+  if (nativeLink && linkKey) {
+    const whop = {
+      sub: whopUser.sub,
+      preferred_username: whopUser.preferred_username?.slice(0, 120),
+      name: whopUser.name?.slice(0, 120),
+    }
+    return nativeConnectionRedirect(nativeLink.state, 'proof', sealWhopLink(linkKey, 'proof', { ...nativeLink, whop, discordAccess: discordHasAccess }))
+  }
+
   const admin = createAdminClient()
 
   // Linking Whop onto an already-signed-in account (started at
@@ -89,12 +110,19 @@ export async function GET(request: Request) {
   // failure here, just "nothing to grant." Handled entirely separately so
   // it can't fall through into the login branches below and accidentally
   // create a second account for someone who already has one.
-  if (stored.mode === 'link' && stored.linkUserId) {
+  if (stored.mode === 'link') {
     // stored.next is user-suppliable (came from ?next= on the /auth/whop/login
     // request) — must be a same-site relative path, not "//host/..." (a
     // protocol-relative external redirect).
     const linkNext = safeInternalPath(stored.next, '/settings/membership')
-    return handleWhopLink(admin, stored.linkUserId, whopUser, discordHasAccess, origin, linkNext)
+    const target = new URL(linkNext, origin)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const linkError = user && stored.linkUserId === user.id
+      ? await applyWhopConnection(admin, user.id, whopUser, discordHasAccess) : 'link_failed'
+    if (linkError) target.searchParams.set('whop_link_error', linkError)
+    else target.searchParams.set('whop_linked', '1')
+    return NextResponse.redirect(target)
   }
 
   // Find an existing bridged account by Whop user ID first (stable across
@@ -261,33 +289,4 @@ export async function GET(request: Request) {
     return NextResponse.redirect(desktopUrl.toString())
   }
   return NextResponse.redirect(completeUrl.toString())
-}
-
-// admin param typed loosely (matches createAdminClient()'s own inferred
-// return type) to avoid importing a Supabase generic just for this helper.
-async function handleWhopLink(admin: ReturnType<typeof createAdminClient>, linkUserId: string, whopUser: WhopUserInfo, discordHasAccess: boolean, origin: string, next: string) {
-  // `next` is whatever page started the link (Settings > Membership or
-  // Settings > Profile's Connected Accounts) — round-tripping back there
-  // keeps both entry points working without hardcoding one destination.
-  const redirectTo = (params: string) => NextResponse.redirect(`${origin}${next}${next.includes('?') ? '&' : '?'}${params}`)
-  const linkFailed = (reason: string) => redirectTo(`whop_link_error=${reason}`)
-
-  // This Whop identity might already be linked to someone — a DIFFERENT
-  // SlipSurge account (block it) or this same one (harmless re-link, just
-  // proceed and re-sync).
-  const { data: existingByWhop } = await admin.from('users').select('id').eq('whop_user_id', whopUser.sub).maybeSingle()
-  if (existingByWhop && existingByWhop.id !== linkUserId) return linkFailed('already_linked_elsewhere')
-
-  const { data: current } = await admin.from('users').select('tier, admin_granted_tier, verified_identities').eq('id', linkUserId).maybeSingle()
-
-  const { data: updated, error } = await admin.from('users').update({
-    whop_user_id: whopUser.sub,
-    discord_advanced_claimed: discordHasAccess,
-    verified_identities: { ...(current?.verified_identities ?? {}), whop: buildWhopVerifiedIdentity(whopUser) },
-  }).eq('id', linkUserId).select('tier').single()
-  if (error || !updated) return linkFailed('link_failed')
-
-  await syncTierBadge(admin, linkUserId, effectiveTier((updated.tier as Tier) ?? 'free', discordHasAccess, current?.admin_granted_tier as Tier | null))
-
-  return redirectTo('whop_linked=1')
 }
