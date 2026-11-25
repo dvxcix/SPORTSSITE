@@ -7,6 +7,7 @@ enum SidelineResearchTool: String {
     case ladders
     case board
     case matchup
+    case compare
 }
 
 enum SidelineResearchSample: String, CaseIterable {

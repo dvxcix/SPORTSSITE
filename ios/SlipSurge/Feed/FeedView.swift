@@ -56,6 +56,7 @@ struct FeedView: View {
             MemberProfileView(api: DiscoverAPI(account: api.account, userID: api.userID), target: name)
         }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) { VoltTeaser() }
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 6) {
                     Image("brand").resizable().scaledToFit().frame(width: 25, height: 25)

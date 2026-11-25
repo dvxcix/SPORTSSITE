@@ -210,6 +210,7 @@ struct CourtView: View {
         .navigationTitle(tool?.rawValue ?? "The Court")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) { VoltTeaser(jersey: .nba) }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Research tools", systemImage: "square.grid.2x2") {
                     Button("The Court", systemImage: "basketball") { tool = nil }

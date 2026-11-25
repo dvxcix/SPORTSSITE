@@ -74,6 +74,7 @@ struct DugoutView: View {
         .navigationTitle("The Dugout")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) { VoltTeaser() }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Dugout tools", systemImage: mode == .live ? "dot.radiowaves.left.and.right" : "square.grid.2x2") {
                     Button("Pitcher Report", systemImage: "gauge") { tool = .pitcher }

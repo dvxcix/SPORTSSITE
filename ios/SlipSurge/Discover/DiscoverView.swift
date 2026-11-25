@@ -86,6 +86,7 @@ struct DiscoverView: View {
         .navigationTitle("Discover")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) { VoltTeaser() }
             if api.userID != nil {
                 ToolbarItem(placement: .primaryAction) {
                     NavigationLink {

@@ -34,17 +34,20 @@ struct NativeResumeLocation: Equatable {
         if let anchor = components.percentEncodedFragment, !anchor.isEmpty { path += "#" + anchor }
         guard path.utf8.count <= 900, let native = URL(string: "https://" + SlipSurgeHTTP.site + path),
               ResearchDeepLink(native) != nil || NativeSiteLink(native) != nil else { return nil }
-        return Self(path: path, title: title ?? label(pathname))
+        let savedTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return Self(path: path, title: savedTitle.flatMap { $0.isEmpty || $0.hasPrefix("SlipSurge | ") ? nil : $0 }
+            ?? label(pathname, target: NativeSiteLink(native)))
     }
 
-    private static func label(_ path: String) -> String {
-        switch path {
+    private static func label(_ path: String, target: NativeSiteLink?) -> String {
+        if case .community(_, .settings) = target { return "Community settings" }
+        return switch path {
         case "/the-paint", "/nba": "The Court"
         case "/the-sideline": "The Sideline"
         case "/dugout": "The Dugout"
         case "/sports", "/scores": "Live Scores"
         case "/picks": "My Picks"
-        case "/feed", "/home": "Feed"
+        case "/", "/feed", "/home": "Feed"
         default:
             String((path.split(separator: "/").first ?? "SlipSurge").replacingOccurrences(of: "-", with: " ").capitalized.prefix(160))
         }
@@ -186,7 +189,8 @@ final class NativeResumeStore {
         guard let record = snapshot.saved, record.updatedAt != dismissedVersion,
               let url = URL(string: "https://" + SlipSurgeHTTP.site + record.path),
               let location = NativeResumeLocation.destination(url, title: record.pageTitle),
-              location.path != active?.path, (0...10_000_000).contains(record.scrollY) else {
+              (location.path != active?.path || record.scrollY != active?.scrollY),
+              (0...10_000_000).contains(record.scrollY) else {
             offer = nil
             return
         }

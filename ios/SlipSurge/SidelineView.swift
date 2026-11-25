@@ -164,6 +164,7 @@ struct SidelineView: View {
         .navigationTitle(tool.rawValue)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) { VoltTeaser() }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Research tools", systemImage: "square.grid.2x2") {
                     ForEach(Workspace.allCases, id: \.self) { destination in

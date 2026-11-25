@@ -1808,5 +1808,33 @@ physical-device push are still open.
   excluded from resume.
 - Signed Simulator build, Hub TypeScript, all 134 production source
   checks and four focused Discord and session-route fixtures passed.
-  Testing will continue with the already saved account destination after
-  the mobile adapter is live.
+  Task `7e9148109315bdc1041971ebaeedf71c07aba088` is pushed. PR #67
+  merged as `8e784ea6183e89b8e127d5b54fe0b8f87c91f816`. Preview
+  `dpl_4U39ccvgZS4VQc4Z9Hzam7JYAwQi` and production
+  `dpl_Cy778NjJ5naS2bcMrPrFkiyPwCBY` were READY. The signed Simulator
+  showed the member's existing resume offer and opened its saved community
+  settings. Guest resume returned 401 and public Feed returned 200. Exact
+  Feed-offset verification is tracked separately.
+
+## NFL player comparison, VOLT and GIF configuration · 25 November 2026
+
+- The Sideline compares up to four athletes side by side. Matchup and NFL
+  Tracking show the selected original game and historical sample with team
+  backdrops, portraits and signed metric colors. Sportsbooks uses the exact
+  frozen game, recorded primary prices or alternate lines, opening prices,
+  observed picks and verified final results. Unverified lineup pricing is
+  withheld. The original two-sided first-touchdown contracts grade Yes and
+  No separately.
+- Feed, Discover and the three league workspaces open the original VOLT
+  Sparks teaser in a native popover. The number-seven portrait animates
+  while visible and respects Reduce Motion. The Court uses its basketball
+  jersey variant.
+- The Mac’s local GIPHY iOS SDK key is configured as
+  `SLIPSURGE_GIPHY_IOS_SDK_KEY` in the ignored, mode-0600
+  `ios/LocalAuth.xcconfig` file. The signed Simulator loaded Trending,
+  searched for “basketball dunk,” and inserted a GIF into an unsent Feed
+  draft and an unsent Story draft. Store and distribution builds need their
+  own supplied build setting. No live posts were made during GIF QA.
+- Hub TypeScript, 134 baseline source tests and five targeted checks for
+  NFL samples, exact captures, contract sides and inactive prices passed.
+  Production comparison and signed interaction checks follow deployment.

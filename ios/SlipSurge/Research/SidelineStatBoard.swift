@@ -137,6 +137,7 @@ struct SidelineStatBoard: View {
     let revision: Int
     let initialPlayer: Int?
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var sample: SidelineResearchSample
     @State private var book: String
     @State private var window = SidelineStatWindow.season
@@ -153,6 +154,8 @@ struct SidelineStatBoard: View {
     @State private var configuring = false
     @State private var player: Projection.Row?
     @State private var openedLinkedPlayer = false
+    @State private var comparing: [String] = []
+    @State private var comparisonOpen = false
 
     init(api: SidelineAPI, game: String, date: String, teams: [SidelineMarketTools.Visual], mode: SidelineStatMode,
         revision: Int, initialSample: SidelineResearchSample, initialBook: String?, initialPlayer: Int? = nil) {
@@ -201,6 +204,11 @@ struct SidelineStatBoard: View {
         .onAppear(perform: restoreLayout)
         .sheet(isPresented: $configuring) { editor }
         .sheet(item: $player) { row in playerDetail(row) }
+        .sheet(isPresented: $comparisonOpen) {
+            SidelinePlayerComparison(api: api, date: date, game: game, players: comparisonPlayers,
+                statsLoading: projection == nil, remove: toggleComparison, clear: { comparing.removeAll() }, sample: $window)
+        }
+        .sensoryFeedback(.selection, trigger: comparing)
     }
 
     private var controls: some View {
@@ -237,6 +245,13 @@ struct SidelineStatBoard: View {
             }
             if mode != .team {
                 TextField("Find a player", text: $search).textFieldStyle(.roundedBorder).autocorrectionDisabled()
+                if !comparing.isEmpty {
+                    Button("Compare (\(comparing.count))", systemImage: "rectangle.split.2x1") { comparisonOpen = true }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Brand.accent(for: scheme))
+                        .foregroundStyle(scheme == .dark ? Color(rgb: 0x0C1118) : .white)
+                        .controlSize(.large)
+                }
             }
         }
     }
@@ -309,13 +324,23 @@ struct SidelineStatBoard: View {
     private func playerCard(_ row: Projection.Row, fields: [SidelineStatColumn]) -> some View {
         let colors = visual(row.player.team)
         return ResearchToolCard(color: colors.primary) {
-            Button { player = row } label: {
-                HStack(spacing: 6) {
-                    portrait(row, colors: colors)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                }.contentShape(.rect)
-            }.buttonStyle(SlipSurgePressStyle())
+            HStack(spacing: 2) {
+                Button { player = row } label: {
+                    HStack(spacing: 6) {
+                        portrait(row, colors: colors)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    }.contentShape(.rect)
+                }.buttonStyle(SlipSurgePressStyle())
+                let selected = comparing.contains(row.id)
+                Button(selected ? "Remove \(row.player.name) from comparison" : "Compare \(row.player.name)",
+                    systemImage: selected ? "checkmark.circle.fill" : "plus.circle") { toggleComparison(row.id) }
+                    .labelStyle(.iconOnly).font(.title3)
+                    .foregroundStyle(selected ? Brand.accent(for: scheme) : .secondary)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .buttonStyle(.plain)
+                    .disabled(!selected && comparing.count >= 4)
+            }
         } content: {
             if !fields.isEmpty {
                 values(row, fields: Array(fields.prefix(6)))
@@ -327,6 +352,24 @@ struct SidelineStatBoard: View {
             if mode == .gameDay || mode == .matchup && category == .market {
                 marketSignal(row.signal)
             }
+        }
+    }
+
+    private var comparisonPlayers: [SidelinePlayerComparison.Player] {
+        comparing.compactMap { id in
+            guard let row = response?.1.rows.first(where: { $0.id == id }) else { return nil }
+            var values = row.metrics
+            values["score"] = row.score
+            values["mm"] = row.mm.map(Double.init)
+            return .init(id: row.id, rosterID: row.player.id, name: row.player.name, team: visual(row.player.team),
+                position: row.player.position, status: row.status, portraits: row.player.portraits, values: values)
+        }
+    }
+
+    private func toggleComparison(_ id: String) {
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) {
+            if let index = comparing.firstIndex(of: id) { comparing.remove(at: index) }
+            else if comparing.count < 4 { comparing.append(id) }
         }
     }
 
