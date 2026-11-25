@@ -2396,3 +2396,25 @@ physical-device push are still open.
   sportsbook card in view and keep the member’s animated portrait in You.
   The remaining checks are X Chat, Discord, Real and signed-in SlipSurge
   Feed, reactions, profile and Inbox on the same phone.
+
+## Discord community walkthrough · 25 November 2026
+
+- On the physical iPhone 16 Plus, reviewed the Parlay Party server's channel
+  list, a live text room and the member profile opened from an avatar in that
+  room. The server list keeps the active community identifiable while selecting
+  a channel. The room has a persistent name, reply context, an unread divider
+  and an anchored composer. The member sheet keeps the room visible behind it
+  and surfaces the member’s identity, mutual server and available actions.
+- On the same phone, SlipSurge restored its signed-in session and opened
+  Community on Joined. ParlayParty displayed the same community artwork and
+  opened to its posts, with Channels below the community header. The group’s
+  native channel link opened a searchable list with one visible room and a
+  favorite indicator. Chat currently uses static author avatars in channel
+  messages. The full SwiftUI member profile already contains the member’s
+  animated decoration and public statistics.
+- The next design pass should test a Rooms entry at the top of joined
+  communities, a quick way to switch rooms, and a dismissible member preview
+  from chat with access to the full profile. Use the group's real artwork and
+  the member’s SlipSurge identity and decoration. Use the existing access rules
+  for channels, profiles and direct messages. If adding room unread markers,
+  derive them from real read state. Posts and Picks remain part of the group.
