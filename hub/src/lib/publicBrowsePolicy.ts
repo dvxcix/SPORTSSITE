@@ -23,7 +23,11 @@ export function usesVisitorBrowseFrame(pathname:string) {
   return isPublicBrowsePath(pathname) || publicInfoPages.has(pathname)
 }
 
-const nativePublicReaders = new Set(['/api/mobile/feed', '/api/mobile/discover', '/api/mobile/scores', '/api/mobile/scores/game', '/api/mobile/profiles', '/api/mobile/information', '/api/mobile/stories'])
+const nativePublicReaders = new Set([
+  '/api/mobile/feed', '/api/mobile/discover', '/api/mobile/scores', '/api/mobile/scores/game',
+  '/api/mobile/profiles', '/api/mobile/information', '/api/mobile/stories',
+  '/api/mobile/announcements', '/api/mobile/events',
+])
 const nativePublicPost = /^\/api\/mobile\/posts\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
 
 /** Exact guest reads use only public projections. Handlers verify any bearer independently. */

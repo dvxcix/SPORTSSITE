@@ -1169,9 +1169,13 @@ physical-device push are still open.
   and the native pick composer. Weekly and sport order use the site’s win
   rate ranking with its existing overall order as the stable tie break.
 - Signed Xcode Debug, Hub TypeScript and 10 focused archive, profile,
-  announcements and admin-access checks passed. Announcements API preview,
-  signed mobile walkthrough and the next feature-flagged community tools
-  are pending.
+  announcements and admin-access checks passed. Task checkpoint
+  `c4f12a10629e50d56dfc618cf95f44e6617cfa7d` is pushed. PR #44 merged as
+  `820b9f6411cfd15e22a037216df7487f4910da21`. Preview
+  `dpl_D7hZ23fQU3Ukt9S8KJthPENm7Zpq` and production
+  `dpl_HC9d8VXMFTbfodS6MNvsMLWoFHSo` reported READY. A production check
+  found that the proxy stopped guest banner reads before the handler. The
+  next release adds the two exact read paths for announcements and events.
 
 ## Native Events and live-season Slate Breakdown · 25 November 2026
 
@@ -1191,3 +1195,7 @@ physical-device push are still open.
 - Signed Xcode, Hub TypeScript and 14 focused event, archive, profile, admin
   and announcement checks passed. Live feature-gated reads follow the narrow
   release. Forum, Articles and custom Pages remain in progress.
+- Task checkpoint `5f5430def752739b5cfb3737c8dba1f710f516ce` is pushed. Added
+  exact method-and-path guest routing tests for `/api/mobile/announcements`
+  and `/api/mobile/events`. Handlers still verify supplied sessions and
+  evaluate rollout access. Admin and changing requests retain their gates.
