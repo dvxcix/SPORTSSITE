@@ -142,8 +142,29 @@ test('wallet auth verifies identity and MFA before reading the exact signed-in p
     const module = compile('src/lib/creatorWalletAuth.ts', {
       './supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: option === 'anonymous' ? null : { id: 'owned-user' } } }), mfa: { getAuthenticatorAssuranceLevel: async () => ({ data: { currentLevel: 'aal1', nextLevel: option === 'mfa' ? 'aal2' : 'aal1' } }) } } }) },
       './supabase/admin': { createAdminClient: () => ({ from: () => query }) },
+      './supabase/nativeAccount': { requireNativeAccount: async () => { throw new Error('Cookie sessions should use browser assurance') } },
     })
     const result = await module.creatorWalletAuth()
     if (option === 'ok') { assert.equal(result.accountId, 'biz_owned'); assert.deepEqual(filters, [['id', 'owned-user']]) } else { assert.ok(result.status >= 400); assert.equal(filters.length, 0) }
+  }
+})
+
+test('native wallet rejects invalid bearer assurance before reading a payment account', async () => {
+  for (const status of [401, 403, 200]) {
+    const filters = []
+    const query = { select() { return this }, eq(...args) { filters.push(args); return this }, async single() { return { data: { username: 'member', whop_connected_company_id: 'biz_owned' } } } }
+    const module = compile('src/lib/creatorWalletAuth.ts', {
+      './supabase/server': { createClient: async () => { throw new Error('Bearer requests cannot fall back to cookies') } },
+      './supabase/admin': { createAdminClient: () => ({ from: () => query }) },
+      './supabase/nativeAccount': { requireNativeAccount: async () => status === 200 ? { userId: 'native-owner' } : { error: new Response(null, { status }) } },
+    })
+    const result = await module.creatorWalletAuth(new Request('https://www.slipsurge.com/api/creator/wallet', { headers: { Authorization: 'Bearer native-fixture' } }))
+    if (status === 200) {
+      assert.equal(result.accountId, 'biz_owned')
+      assert.deepEqual(filters, [['id', 'native-owner']])
+    } else {
+      assert.equal(result.status, status)
+      assert.equal(filters.length, 0)
+    }
   }
 })

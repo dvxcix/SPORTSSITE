@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import * as crypto from 'node:crypto'
+import { creatorBrowserRouteImport } from './creator-route-fixture.mjs'
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
 function compile(path, imports = {}, extra = {}) {
  const module = { exports: {} }
@@ -10,6 +11,8 @@ function compile(path, imports = {}, extra = {}) {
  new Function('require','module','exports','fetch','process',source)(name => {
   if (name === 'server-only') return {}
   if (name === 'node:crypto') return crypto
+  const creatorImport = creatorBrowserRouteImport(name, compile, imports)
+  if (creatorImport) return creatorImport
   assert.ok(name in imports, 'Unexpected import: ' + name)
   return imports[name]
  },module,module.exports,extra.fetch || fetch,extra.process || process)
@@ -183,7 +186,7 @@ test('a regular signed-in member can start paid setup without an application or 
   '@/lib/whopUrl':{isTrustedWhopUrl:url=>url.startsWith('https://whop.com/')},
   '@/lib/serverRateLimit':{consumeServerRateLimit:async()=>({available:true,allowed:true})},'@/lib/safeApiError':safeApi,
  })
- const response=await route.POST()
+ const response=await route.POST(new Request('https://www.slipsurge.com/api/creator/whop-onboard',{method:'POST'}))
  assert.equal(response.status,200);assert.equal(creates,1);assert.equal(linked.account_type,'creator')
  assert.equal(linked.whop_connected_company_id,account);assert.equal(linked.tier,undefined)
  const creation=calls.find(call=>call.path==='/accounts')
@@ -201,7 +204,7 @@ test('restarting onboarding recovers the same subaccount using the stable extern
   '@/lib/creatorWhop':{creatorWhop:async(path)=>{if(path==='/accounts/me')return{id:parent};if(path.startsWith('/accounts?'))return{data:[{id:account,parent_account:{id:parent}}]};creates++;throw new Error('Duplicate account create')},getCreatorPaymentState:async()=>({state:'onboarding'}),creatorAccountLink:async()=>({url:'https://whop.com/onboard/fixture'})},
   '@/lib/whopUrl':{isTrustedWhopUrl:()=>true},'@/lib/serverRateLimit':{consumeServerRateLimit:async()=>({available:true,allowed:true})},'@/lib/safeApiError':safeApi,
  })
- assert.equal((await route.POST()).status,200);assert.equal(creates,0);assert.equal(saved.account_type,undefined,'admin role is preserved')
+ assert.equal((await route.POST(new Request('https://www.slipsurge.com/api/creator/whop-onboard',{method:'POST'}))).status,200);assert.equal(creates,0);assert.equal(saved.account_type,undefined,'admin role is preserved')
 })
 test('checkout requires a real session before it reads an offer or talks to Whop', async () => {
  const route=compile('src/app/api/creator/products/[productId]/checkout/route.ts',{
