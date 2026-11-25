@@ -3,6 +3,7 @@ import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { notifyMentions } from '@/lib/mentions'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 import { isOwnedNativeMedia } from '@/lib/nativeMedia'
+import { nativeCommunityPublishing } from '@/lib/nativeCommunityPublishing'
 
 const headers = { 'Cache-Control': 'private, no-store' }
 const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i
@@ -27,9 +28,9 @@ export async function POST(request: Request) {
     return invalid()
   }
   if (!value || typeof value !== 'object' || Array.isArray(value) ||
-      Object.keys(value).some(key => !['id', 'content', 'kind', 'sport', 'visibility', 'spoiler', 'poll', 'image'].includes(key))) return invalid()
+      Object.keys(value).some(key => !['id', 'content', 'kind', 'sport', 'visibility', 'spoiler', 'poll', 'image', 'groupId'].includes(key))) return invalid()
 
-  const { id, content, kind, sport, visibility, spoiler, poll, image } = value as Record<string, unknown>
+  const { id, content, kind, sport, visibility, spoiler, poll, image, groupId } = value as Record<string, unknown>
   const media = image == null ? null : isOwnedNativeMedia(image, userId, 'posts') ? image : null
   if (image != null && !media) return invalid()
   if (typeof id !== 'string' || !uuid.test(id) || typeof content !== 'string' || content.length > 500 ||
@@ -39,6 +40,10 @@ export async function POST(request: Request) {
   if (sport === 'MLB' && !await canViewMlb(supabase, userId)) {
     return NextResponse.json({ error: 'That sport is unavailable' }, { status: 403, headers })
   }
+  if (groupId != null && typeof groupId !== 'string') return invalid()
+  const group = groupId == null ? null : await nativeCommunityPublishing(supabase, userId, groupId)
+  if (group?.error) return NextResponse.json({ error: group.error }, { status: group.status, headers })
+  const audience = group && !group.public ? 'public' : visibility
 
   let pollData: { options: { text: string; votes: number }[]; ends_at: string } | null = null
   if (kind === 'poll') {
@@ -55,8 +60,8 @@ export async function POST(request: Request) {
   } else if ((!content.trim() && !media) || poll != null) return invalid()
 
   const draft = {
-    id, author_id: userId, content: content.trim(), post_type: kind, sport, visibility,
-    is_spoiler: spoiler, group_id: null, page_id: null, pick_data: null, poll_data: pollData, media_urls: media ? [media] : [],
+    id, author_id: userId, content: content.trim(), post_type: kind, sport, visibility: audience,
+    is_spoiler: spoiler, group_id: groupId?.toLowerCase() ?? null, page_id: null, pick_data: null, poll_data: pollData, media_urls: media ? [media] : [],
   }
   const { data, error } = await supabase.from('posts').insert(draft).select('id').single()
   if (error?.code === '23505') {
@@ -70,8 +75,8 @@ export async function POST(request: Request) {
           Number((poll as { duration: number }).duration) * 3600 * 1000) < 60_000
       : !existing?.poll_data
     if (!existing || existing.content !== draft.content || existing.post_type !== kind ||
-        existing.sport !== sport || existing.visibility !== visibility || existing.is_spoiler !== spoiler ||
-        existing.group_id !== null || existing.page_id !== null || (existing.media_urls?.[0] ?? null) !== media || !samePoll) {
+        existing.sport !== sport || existing.visibility !== audience || existing.is_spoiler !== spoiler ||
+        existing.group_id !== draft.group_id || existing.page_id !== null || (existing.media_urls?.[0] ?? null) !== media || !samePoll) {
       return NextResponse.json({ error: 'This draft no longer matches the saved post. Check the feed before trying again.' }, { status: 409, headers })
     }
     return NextResponse.json({ id: existing.id }, { headers })
@@ -79,6 +84,6 @@ export async function POST(request: Request) {
   if (error || !data) return NextResponse.json({ error: 'The post could not be saved' }, { status: 503, headers })
 
   // Mentions are a best-effort effect of the original insert, never of a retry.
-  await notifyMentions(supabase, userId, draft.content, `/posts/${data.id}`, data.id, 'a post').catch(() => undefined)
+  if (!group) await notifyMentions(supabase, userId, draft.content, `/posts/${data.id}`, data.id, 'a post').catch(() => undefined)
   return NextResponse.json({ id: data.id }, { status: 201, headers })
 }

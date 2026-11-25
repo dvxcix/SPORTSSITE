@@ -32,7 +32,8 @@ export async function GET(request: Request, context: Context) {
       member.data ? supabase.rpc('get_my_community_permissions', { p_group_id: id }) : { data: null },
     ])
     const flags = (capabilities.data ?? {}) as Record<string, boolean>
-    return response({ ...feed, posts: feed.posts.map(mobilePost), canView, role: member.data?.role ?? null,
+    return response({ ...feed, posts: feed.posts.map(mobilePost), canView, role: member.data?.role ?? null, allowMlb: showMlb,
+      publicAudience: group.data.is_public && group.data.access_type !== 'paid',
       canManage: Boolean(member.data && (['owner', 'admin', 'moderator'].includes(member.data.role) ||
         ['manage_channels', 'manage_roles', 'manage_members', 'create_invites'].some(flag => flags[flag] === true))),
       canJoin: !member.data && group.data.is_public && group.data.access_type !== 'paid',
