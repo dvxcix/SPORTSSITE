@@ -13,6 +13,7 @@ test('profile appearance retains legacy books and applies only the changes based
       edits.push({ fields, filters })
       return {
         eq(column: string, expected: unknown) { filters.push([column, expected]); return this },
+        is(column: string, expected: null) { filters.push([column, expected]); return this },
         select() { return this },
         maybeSingle() { return { data: stale ? null : { id: 'fixture-account' }, error: null } },
       }
@@ -35,9 +36,9 @@ test('profile appearance retains legacy books and applies only the changes based
   })
   const module = { exports: {} as typeof import('../src/app/api/mobile/account/settings/route') }
   new Function('require', 'module', 'exports', output.outputFiles[0].text)(createRequire(import.meta.url), module, module.exports)
-  const patch = (body: object, authorized = true) => module.exports.PATCH(new Request('https://fixture.invalid', {
+  const patch = (body: object, authorized = true, legacy = true) => module.exports.PATCH(new Request('https://fixture.invalid', {
     method: 'PATCH', headers: authorized ? { authorization: 'Bearer fixture' } : {},
-    body: JSON.stringify({ kind: 'profile', displayName: 'Fixture', bio: '', location: '', website: '', ...body }),
+    body: JSON.stringify({ kind: 'profile', ...(legacy ? { displayName: 'Fixture', bio: '', location: '', website: '' } : {}), ...body }),
   }))
   assert.equal((await patch({}, false)).status, 401)
   assert.equal((await patch({ avatarRingStyle: { before: 'surge', value: 'deco:unknown' } })).status, 400)
@@ -57,4 +58,14 @@ test('profile appearance retains legacy books and applies only the changes based
   assert.deepEqual(edits[1].fields.sportsbooks, ['legacy"book', 'fanduel'])
   stale = true
   assert.equal((await patch(saved)).status, 409)
+  assert.equal((await patch({ bio: { before: 'previous', value: 'stale edit' } }, true, false)).status, 409)
+  stale = false
+  assert.equal((await patch({ location: { before: null, value: 'Boston' }, avatarRingStyle: saved.avatarRingStyle }, true, false)).status, 200)
+  assert.deepEqual(edits.at(-1), {
+    fields: { location: 'Boston', avatar_ring_style: 'deco:fb-spiral' },
+    filters: [['id', 'fixture-account'], ['location', null], ['avatar_ring_style', 'surge']],
+  })
+  const writes = edits.length
+  assert.equal((await patch({}, true, false)).status, 200)
+  assert.equal(edits.length, writes)
 })
