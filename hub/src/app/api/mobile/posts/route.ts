@@ -4,6 +4,7 @@ import { notifyMentions } from '@/lib/mentions'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 import { isNativeSocialGif, isOwnedNativeMedia } from '@/lib/nativeMedia'
 import { nativeCommunityPublishing } from '@/lib/nativeCommunityPublishing'
+import { nativePagePublishing } from '@/lib/nativePagePublishing'
 
 const headers = { 'Cache-Control': 'private, no-store' }
 const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i
@@ -28,9 +29,9 @@ export async function POST(request: Request) {
     return invalid()
   }
   if (!value || typeof value !== 'object' || Array.isArray(value) ||
-      Object.keys(value).some(key => !['id', 'content', 'kind', 'sport', 'visibility', 'spoiler', 'poll', 'image', 'groupId'].includes(key))) return invalid()
+      Object.keys(value).some(key => !['id', 'content', 'kind', 'sport', 'visibility', 'spoiler', 'poll', 'image', 'groupId', 'pageId'].includes(key))) return invalid()
 
-  const { id, content, kind, sport, visibility, spoiler, poll, image, groupId } = value as Record<string, unknown>
+  const { id, content, kind, sport, visibility, spoiler, poll, image, groupId, pageId } = value as Record<string, unknown>
   const media = isOwnedNativeMedia(image, userId, 'posts') || isNativeSocialGif(image) ? image : null
   if (image != null && !media) return invalid()
   if (typeof id !== 'string' || !uuid.test(id) || typeof content !== 'string' || content.length > 500 ||
@@ -40,9 +41,12 @@ export async function POST(request: Request) {
   if (sport === 'MLB' && !await canViewMlb(supabase, userId)) {
     return NextResponse.json({ error: 'That sport is unavailable' }, { status: 403, headers })
   }
-  if (groupId != null && typeof groupId !== 'string') return invalid()
+  if ((groupId != null && typeof groupId !== 'string') || (pageId != null && typeof pageId !== 'string') ||
+      (groupId != null && pageId != null)) return invalid()
   const group = groupId == null ? null : await nativeCommunityPublishing(supabase, userId, groupId)
   if (group?.error) return NextResponse.json({ error: group.error }, { status: group.status, headers })
+  const page = pageId == null ? null : await nativePagePublishing(supabase, userId, pageId)
+  if (page?.error) return NextResponse.json({ error: page.error }, { status: page.status, headers })
   const audience = group && !group.public ? 'public' : visibility
 
   let pollData: { options: { text: string; votes: number }[]; ends_at: string } | null = null
@@ -61,7 +65,7 @@ export async function POST(request: Request) {
 
   const draft = {
     id, author_id: userId, content: content.trim(), post_type: kind, sport, visibility: audience,
-    is_spoiler: spoiler, group_id: groupId?.toLowerCase() ?? null, page_id: null, pick_data: null, poll_data: pollData, media_urls: media ? [media] : [],
+    is_spoiler: spoiler, group_id: groupId?.toLowerCase() ?? null, page_id: page?.id ?? null, pick_data: null, poll_data: pollData, media_urls: media ? [media] : [],
   }
   const { data, error } = await supabase.from('posts').insert(draft).select('id').single()
   if (error?.code === '23505') {
@@ -76,7 +80,7 @@ export async function POST(request: Request) {
       : !existing?.poll_data
     if (!existing || existing.content !== draft.content || existing.post_type !== kind ||
         existing.sport !== sport || existing.visibility !== audience || existing.is_spoiler !== spoiler ||
-        existing.group_id !== draft.group_id || existing.page_id !== null || (existing.media_urls?.[0] ?? null) !== media || !samePoll) {
+        existing.group_id !== draft.group_id || existing.page_id !== draft.page_id || (existing.media_urls?.[0] ?? null) !== media || !samePoll) {
       return NextResponse.json({ error: 'This draft no longer matches the saved post. Check the feed before trying again.' }, { status: 409, headers })
     }
     return NextResponse.json({ id: existing.id }, { headers })

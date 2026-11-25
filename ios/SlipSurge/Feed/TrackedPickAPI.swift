@@ -111,6 +111,7 @@ struct TrackedPickAPI {
         let wager: Double?
         let imageUrl: URL?
         var groupId: String? = nil
+        var pageId: String? = nil
     }
 
     let account: AccountStore

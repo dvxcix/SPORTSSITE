@@ -267,6 +267,12 @@ struct AccountWorkspaceView: View {
                     NavigationLink {
                         AdminForumView(api: .init(viewer: .init(account: account, userID: userID)))
                     } label: { Label("Manage discussions", systemImage: "bubble.left.and.bubble.right") }
+                    NavigationLink {
+                        AdminPublicationsView(viewer: .init(account: account, userID: userID), kind: .articles)
+                    } label: { Label("Manage articles", systemImage: "book") }
+                    NavigationLink {
+                        AdminPublicationsView(viewer: .init(account: account, userID: userID), kind: .pages)
+                    } label: { Label("Manage pages", systemImage: "rectangle.grid.2x2") }
                 }
             } else if adminTab == .members {
                 NavigationLink {

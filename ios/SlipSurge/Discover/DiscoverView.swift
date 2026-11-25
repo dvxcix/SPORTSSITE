@@ -4,6 +4,7 @@ enum DiscoverDestination: Hashable {
     case communities, creators, leaderboard, scores, events(UUID?)
     case discussions, discussionCategory(String), discussion(UUID)
     case articles(Bool), article(String), articleEditor(UUID?, assistant: Bool)
+    case pages(String, create: Bool), page(String, manage: Bool)
 }
 
 struct DiscoverView: View {
@@ -29,6 +30,7 @@ struct DiscoverView: View {
     @State private var eventsAvailable = false
     @State private var forumAvailable = false
     @State private var articlesAvailable = false
+    @State private var pagesAvailable = false
     @State private var destination: DiscoverDestination?
 
     init(api: DiscoverAPI, opensCommunity: UUID? = nil, opensDestination: Binding<DiscoverDestination?> = .constant(nil)) {
@@ -89,6 +91,8 @@ struct DiscoverView: View {
             case .discussion(let id): ForumThreadView(api: .init(viewer: api), id: id)
             case .articles(let mine): ArticlesView(api: .init(viewer: api), mine: mine)
             case .article(let slug): ArticleReader(api: .init(viewer: api), slug: slug)
+            case .pages(let category, let create): CommunityPagesView(api: .init(viewer: api), initialCategory: category, startsCreating: create)
+            case .page(let slug, let manage): CommunityPageDetail(api: .init(viewer: api), slug: slug, startsManaging: manage)
             case .articleEditor(let id, let assistant):
                 if let id { ArticleEditorLoader(api: .init(viewer: api), id: id, saved: articleSaved) }
                 else if articlesAvailable { ArticleEditor(api: .init(viewer: api), draft: .init(), opensAssistant: assistant, saved: articleSaved) }
@@ -108,7 +112,7 @@ struct DiscoverView: View {
             case .leaderboard:
                 destination = nil
                 section = .records
-            case .scores, .events, .discussions, .discussionCategory, .discussion, .articles, .article, .articleEditor:
+            case .scores, .events, .discussions, .discussionCategory, .discussion, .articles, .article, .articleEditor, .pages, .page:
                 destination = opening
             }
             opensDestination = nil
@@ -133,7 +137,8 @@ struct DiscoverView: View {
             async let events = CommunityEventsAPI(viewer: api).available()
             async let forum = ForumAPI(viewer: api).available()
             async let articles = ArticlesAPI(viewer: api).available()
-            (eventsAvailable, forumAvailable, articlesAvailable) = await (events, forum, articles)
+            async let pages = CommunityPagesAPI(viewer: api).available()
+            (eventsAvailable, forumAvailable, articlesAvailable, pagesAvailable) = await (events, forum, articles, pages)
         }
         .task(id: request) { await load(section) }
     }
@@ -157,6 +162,9 @@ struct DiscoverView: View {
                     }
                     if articlesAvailable {
                         NavigationLink { ArticlesView(api: .init(viewer: api)) } label: { Label("Articles", systemImage: "book") }
+                    }
+                    if pagesAvailable {
+                        NavigationLink { CommunityPagesView(api: .init(viewer: api)) } label: { Label("Pages", systemImage: "rectangle.grid.2x2") }
                     }
                 }
                 .buttonStyle(.bordered)

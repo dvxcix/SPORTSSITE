@@ -9,12 +9,20 @@ struct FeedComposerView: View {
         let memberOnly: Bool
     }
 
+    struct Page {
+        let id: UUID
+        let name: String
+        let preferredSport: String?
+        let artwork: URL?
+    }
+
     let account: AccountStore
     let userID: UUID
     let allowMLB: Bool
     var startWithPick = false
     var initialPick: TrackedPickAPI.Leg? = nil
     var community: Community? = nil
+    var page: Page? = nil
     let onPost: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -69,6 +77,7 @@ struct FeedComposerView: View {
         let image: URL?
         let poll: Poll?
         let groupId: String?
+        let pageId: String?
     }
 
     private var pollChoices: [String] {
@@ -89,19 +98,21 @@ struct FeedComposerView: View {
         return amount
     }
 
-    private var personalAllowed: Bool { community == nil && kind == .pick && legs.first?.sport == "NBA" }
+    private var personalAllowed: Bool { community == nil && page == nil && kind == .pick && legs.first?.sport == "NBA" }
     private var destination: String? { community?.id.uuidString.lowercased() }
+    private var pageID: String? { page?.id.uuidString.lowercased() }
     private var finalAudience: Audience { community?.memberOnly == true ? .everyone : audience }
 
     var body: some View {
         NavigationStack {
             Form {
-                if let community {
+                if let name = community?.name ?? page?.name {
                     Section {
                         HStack(spacing: 8) {
-                            ResearchArtwork(urls: [community.artwork].compactMap { $0 }, fallback: "person.2")
+                            ResearchArtwork(urls: [community?.artwork ?? page?.artwork].compactMap { $0 },
+                                fallback: page == nil ? "person.2" : "star.fill")
                                 .frame(width: 25, height: 25)
-                            Text(community.name).font(.subheadline.weight(.semibold))
+                            Text(name).font(.subheadline.weight(.semibold))
                         }
                     }
                 }
@@ -184,7 +195,8 @@ struct FeedComposerView: View {
             .onAppear {
                 guard !initialized else { return }
                 initialized = true
-                if let preferred = community?.preferredSport, ["NFL", "NBA", "NHL", "Soccer", "MMA", "CFB", "CBB"].contains(preferred) || allowMLB && preferred == "MLB" {
+                if let preferred = community?.preferredSport ?? page?.preferredSport,
+                   ["NFL", "NBA", "NHL", "Soccer", "MMA", "CFB", "CBB"].contains(preferred) || allowMLB && preferred == "MLB" {
                     sport = preferred
                 }
                 if startWithPick && !attempted && legs.isEmpty {
@@ -217,7 +229,7 @@ struct FeedComposerView: View {
         defer { posting = false }
         if kind == .pick, let sport = legs.first?.sport {
             let pick = TrackedPickAPI.Draft(draftId: draftID, sport: sport, content: content, legs: legs,
-                visibility: finalAudience.rawValue, isSpoiler: spoiler, wager: parsedWager, imageUrl: image, groupId: destination)
+                visibility: finalAudience.rawValue, isSpoiler: spoiler, wager: parsedWager, imageUrl: image, groupId: destination, pageId: pageID)
             do {
                 _ = try await TrackedPickAPI(account: account, userID: userID).post(pick)
                 onPost()
@@ -232,7 +244,7 @@ struct FeedComposerView: View {
         }
         let draft = Draft(
             id: draftID, content: content, kind: kind, sport: sport, visibility: finalAudience, spoiler: spoiler, image: image,
-            poll: kind == .poll ? .init(options: pollChoices, duration: duration) : nil, groupId: destination
+            poll: kind == .poll ? .init(options: pollChoices, duration: duration) : nil, groupId: destination, pageId: pageID
         )
         do {
             let token = try await account.accessToken(for: userID)

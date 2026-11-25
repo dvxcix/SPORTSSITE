@@ -188,6 +188,17 @@ struct SlipSurgeTabs: View {
             options: .regularExpression) != nil {
             discoverDestination = .article(String(path.dropFirst(5)))
             selected = .discover
+        } else if path == "pages" || path == "pages/create" {
+            let category = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "category" })?.value ?? ""
+            discoverDestination = .pages(category, create: path == "pages/create")
+            selected = .discover
+        } else if path.hasPrefix("pages/") {
+            let pieces = path.split(separator: "/")
+            if pieces.count == 2 || pieces.count == 3 && pieces[2] == "settings",
+               pieces[1].range(of: #"^[a-z0-9-]{1,80}$"#, options: .regularExpression) != nil {
+                discoverDestination = .page(String(pieces[1]), manage: pieces.count == 3)
+                selected = .discover
+            } else { systemOpenURL(url) }
         } else if ["account", "settings", "auth/login"].contains(path) {
             selected = .account
         } else {

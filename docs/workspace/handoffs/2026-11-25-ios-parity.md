@@ -1300,6 +1300,30 @@ physical-device push are still open.
   revision during analytics updates. It provides a service-only exact-state
   like operation in addition to the existing browser toggle contract.
 - Signed Xcode, Hub TypeScript, 16 focused tests, the 134-check production
-  source suite and local PostgreSQL passed. Production SQL and the narrow
-  endpoint release remain to verify. No article, like or generated draft
-  was written to the live system for testing. Custom Pages is next.
+  source suite and local PostgreSQL passed. The task checkpoint is
+  `a51fc672c1bf041ebda720c9a1c4f9a716817f33`. The primary database applied
+  `20261125113335_native_article_revisions` individually. The trigger was
+  active and like mutation was service-role-only. Do not replay it. PR #48
+  merged as `6a862530f99c07954df45fad1b3f293a0590032a` with preview
+  `dpl_44TuBDX172fAYNRKk2hNGpkswijZ` and production
+  `dpl_CRhoNDMM88Mfz8dtaGSi6u2gWsFz` READY. The web Blog and Feed returned
+  200, and unauthenticated native article and AI reads/actions were rejected.
+  The signed Simulator opened the live empty Articles library and the native
+  editor with Publish, Save draft, and Preview. No article, like or generated
+  draft was written to the live system for testing.
+
+## Native Pages and publication moderation · 25 November 2026
+
+- Discover offers custom Pages using the website rollout and authenticated
+  page visibility. Native screens include category artwork, the directory and
+  My pages, the original icons, banners and avatars, follow/unfollow, the
+  page’s social feed and the owner’s native creation and settings flows.
+  Existing canonical text, analysis, poll and tracked-pick writes accept an
+  explicitly verified Page destination. Normal browser and group submissions
+  keep their original path. Page settings reject stale edits.
+- The admin Moderation tab lists Pages and Articles with the existing
+  publication visibility rules. Admin actions verify or remove verification
+  on a Page and delete reviewed Pages or Articles. Each action calls the
+  existing native admin gate. No production changes were made for QA.
+- Signed Xcode, Hub TypeScript, 21 focused tests and 134 production source
+  checks passed. Live read checks follow the narrow Hub release.
