@@ -29,7 +29,8 @@ export async function nativeCommunitySettings(client: SupabaseClient, access: No
   const id = access.group.id
   const [members, channels, roles, assignments] = await Promise.all([
     access.memberManagement || access.roleManagement ? client.from('group_members')
-      .select('id:user_id,role,user:users!group_members_user_id_fkey(id,username,display_name,avatar_url,is_verified)').eq('group_id', id).order('created_at').limit(500) : { data: [], error: null },
+      .select('id:user_id,role,user:users!group_members_user_id_fkey(id,username,display_name,avatar_url,is_verified)')
+      .eq('group_id', id).order('joined_at').order('user_id').limit(500) : { data: [], error: null },
     access.channelManagement || access.roleManagement ? client.from('channels').select('id,slug,name,description,icon,channel_kind,sort_order')
       .eq('group_id', id).order('sort_order').order('created_at').limit(100) : { data: [], error: null },
     access.roleManagement ? client.from('community_roles').select('id,name,color,is_default,position,permissions')

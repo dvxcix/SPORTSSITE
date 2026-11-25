@@ -20,7 +20,7 @@ const fixture = {
       let excluded = false
       let write: Record<string, unknown> | null = null
       return {
-        select() { return this },
+        select(columns: string) { if (table === 'channels') calls.push(['channel projection', columns]); return this },
         eq(column: string, value: string) { calls.push([table, column, value]); return this },
         ilike() { contentFilter = true; return this },
         in(column: string) { if (column === 'post_type') isPick = true; return this },
@@ -107,6 +107,14 @@ test('Explore picks and trending use visible public cards with independent order
   assert.deepEqual(body.pages, [])
   assert.ok(calls.some(call => Array.isArray(call) && call.join(':') === 'posts:post_type:pick'))
   assert.equal(calls.filter(call => Array.isArray(call) && call.join(':') === 'posts:visibility:public').length, 2)
+})
+
+test('community search disambiguates the two production channel and group relationships', async () => {
+  calls.length = 0
+  const response = await Search.GET(req('tab=community&q=Lakers'))
+  assert.equal(response.status, 200)
+  const projection = calls.find(call => Array.isArray(call) && call[0] === 'channel projection') as [string, string] | undefined
+  assert.match(projection?.[1] ?? '', /group:groups!channels_group_id_fkey\(slug,sport\)/)
 })
 
 test('trackable picks match the stored player data and exclude blocked and hidden league content', async () => {
