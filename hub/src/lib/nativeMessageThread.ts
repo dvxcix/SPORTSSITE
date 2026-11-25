@@ -4,7 +4,7 @@ import { isAccountId, isBlockedEitherWay } from '@/lib/blocks'
 import { loadDmHistory, loadGroupHistory } from '@/lib/conversationHistory'
 import type { ChannelHistoryCursor } from '@/lib/channelHistory'
 import { notify } from '@/lib/notify'
-import { isOwnedNativeMedia } from '@/lib/nativeMedia'
+import { isNativeSocialGif, isOwnedNativeMedia } from '@/lib/nativeMedia'
 
 type Context = { kind: 'direct' | 'group'; id: string }
 type Partner = { id: string; username: string; display_name: string | null; avatar_url: string | null; allow_dms: boolean }
@@ -159,7 +159,7 @@ export async function updateNativeThread(client: SupabaseClient, userId: string,
   const text = typeof action.text === 'string' ? action.text.trim() : ''
   if (verb === 'send') {
     if (message) return message.sender_id === userId ? 200 : 409
-    const media = action.image == null ? null : isOwnedNativeMedia(action.image, userId, 'messages') ? action.image : null
+    const media = isOwnedNativeMedia(action.image, userId, 'messages') || isNativeSocialGif(action.image) ? action.image : null
     if ((!text && !media) || text.length > 1_000 || (action.image != null && !media)) return 400
     if (room.partner && !room.partner.allow_dms) return 403
     let reply: string | null = null
