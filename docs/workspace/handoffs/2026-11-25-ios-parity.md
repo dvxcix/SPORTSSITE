@@ -1041,6 +1041,13 @@ physical-device push are still open.
 - Signed Xcode Debug, Hub TypeScript and 32 focused MLB, NBA and NFL Matrix,
   archive, and access checks passed. The signed create/edit/delete and basic
   listing/import walkthroughs need the narrow production release.
+- Task checkpoint `1528501af4a1f784ce9c92a8b42b9543b624dac1` is pushed. PR #39
+  merged as `640a749fab679402cbb8d1ef1a98c83816e5e250`. Preview
+  `dpl_4RA9kKdg9tvQMhqe8DLdRaFajkTc` and production
+  `dpl_5Xr5Pii9cAsU4GfCvjsUMveQmdTU` reported READY. The signed iPhone 18 Pro
+  loaded existing MLB Matrices and opened a Pipeline editor with its saved
+  rule and initial pool. The test account is at the website’s Matrix cap.
+  Existing definitions were left intact during the walkthrough.
 
 ## Native direct and group conversation history · 25 November 2026
 
@@ -1060,3 +1067,20 @@ physical-device push are still open.
   access and scroll checks passed. The tests cover same-timestamp boundaries
   and revoked memberships. Cross-device typing and real forwarding remain
   pending, and no real message or forwarding action was sent during testing.
+
+## Native admin member support and feature rollouts · 25 November 2026
+
+- Admin now opens a native member directory and banned-account list. Name,
+  username, and email search use the same server records, organization roles,
+  tier rules, verification, and Whop membership details. Discord, X, and Whop
+  show their existing marks and verified connection state.
+- Verification, role changes, grants, bans, deletion, existing account-support
+  email actions and individual Whop reconciliation use the existing server
+  handlers. Native callers pass the current bearer, onboarding and MFA checks
+  and the live admin role. The browser still uses its existing cookie path.
+- Feature rollouts open the original audience and cohort controls. A native
+  save checks the version the administrator reviewed, and conflicts keep the
+  current saved configuration. Confirmation is shown before requesting changes.
+- Xcode Debug, Hub TypeScript and 18 focused admin, feature configuration and
+  member access checks passed. Production release and native read walkthroughs
+  follow. No role, membership, email, ban, deletion or rollout was changed in QA.

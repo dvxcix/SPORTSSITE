@@ -58,7 +58,7 @@ struct AccountWorkspaceView: View {
     }
 
     private enum StudioTab: String, CaseIterable { case offers = "Memberships", groups = "Communities", drafts = "Scheduled posts" }
-    private enum AdminTab: String, CaseIterable { case moderation = "Queues", delivery = "System health" }
+    private enum AdminTab: String, CaseIterable { case moderation = "Queues", members = "Members", delivery = "System health", settings = "Settings" }
 
     let account: AccountStore
     let userID: UUID
@@ -262,6 +262,18 @@ struct AccountWorkspaceView: View {
                         LabeledContent(label, value: count(admin.queues[key] ?? nil))
                     }
                 }
+            } else if adminTab == .members {
+                NavigationLink {
+                    AdminMembersView(api: .init(account: account, userID: userID))
+                } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Manage members", systemImage: "person.2") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
+            } else if adminTab == .settings {
+                NavigationLink {
+                    AdminFeatureRollouts(account: account, userID: userID)
+                } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Feature rollouts", systemImage: "switch.2") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
             } else {
                 ForEach(admin.pipelines) { pipeline in
                     ResearchToolCard(color: Brand.accent(for: scheme)) {
