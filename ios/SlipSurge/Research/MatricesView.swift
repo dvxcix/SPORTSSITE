@@ -11,6 +11,7 @@ struct MatricesView: View {
     var gameID: Int? = nil
     var mode: CourtResearchMode = .pregame
     let didChange: () -> Void
+    private let showsDone: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
     @State private var tab = Tab.mine
@@ -26,6 +27,16 @@ struct MatricesView: View {
     @State private var notice: String?
     @State private var error: (any Error)?
     @State private var retry = 0
+
+    init(api: MatricesAPI, gameID: Int? = nil, mode: CourtResearchMode = .pregame,
+        opensCommunity: Bool = false, showsDone: Bool = true, didChange: @escaping () -> Void) {
+        self.api = api
+        self.gameID = gameID
+        self.mode = mode
+        self.didChange = didChange
+        self.showsDone = showsDone
+        _tab = State(initialValue: opensCommunity ? .community : .mine)
+    }
 
     var body: some View {
         ScrollView {
@@ -54,7 +65,9 @@ struct MatricesView: View {
         .navigationBarTitleDisplayMode(.inline)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
-        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done", role: .cancel) { dismiss() } } }
+        .toolbar {
+            if showsDone { ToolbarItem(placement: .cancellationAction) { Button("Done", role: .cancel) { dismiss() } } }
+        }
         .task(id: "\(tab.rawValue)-\(retry)") { await load(tab) }
         .refreshable { await load(tab) }
         .sheet(item: $editing) { draft in

@@ -7,6 +7,7 @@ struct DugoutMatricesView: View {
     }
 
     let api: DugoutMatricesAPI
+    var opensPublication: NativeMarketplaceTarget.Publication?
     @Environment(\.colorScheme) private var scheme
     @State private var matrices: [DugoutMatrix]?
     @State private var editor: Editing?
@@ -16,6 +17,8 @@ struct DugoutMatricesView: View {
     @State private var code = ""
     @State private var busy = false
     @State private var notice: String?
+    @State private var choosingPublication = false
+    @State private var attemptedPublication = false
 
     var body: some View {
         ScrollView {
@@ -68,6 +71,22 @@ struct DugoutMatricesView: View {
             titleVisibility: .visible, presenting: deleting) { matrix in
                 Button("Delete \(matrix.name)", role: .destructive) { Task { await change { try await api.delete(matrix) } } }
             }
+        .confirmationDialog("Choose a Matrix", isPresented: $choosingPublication, titleVisibility: .visible) {
+            ForEach(matrices ?? []) { item in Button(item.name) { publication = item } }
+        }
+    }
+
+    private func openPublication() {
+        guard let opensPublication, let matrices, !attemptedPublication else { return }
+        attemptedPublication = true
+        switch opensPublication {
+        case .chooser:
+            if matrices.isEmpty { notice = "Create a Matrix before publishing." }
+            else { choosingPublication = true }
+        case .matrix(let id):
+            publication = matrices.first { $0.id == id }
+            if publication == nil { notice = "This Matrix is unavailable." }
+        }
     }
 
     private func card(_ matrix: DugoutMatrix) -> some View {
@@ -104,6 +123,7 @@ struct DugoutMatricesView: View {
     private func load() async {
         do { matrices = try await api.list(); notice = nil }
         catch { if !Task.isCancelled { notice = dugoutMatrixError(error) } }
+        openPublication()
     }
 
     private func change(_ work: () async throws -> Void) async {
@@ -160,9 +180,11 @@ private struct DugoutMatrixPublishSheet: View {
     }
 }
 
-private struct DugoutMatrixMarketplace: View {
+struct DugoutMatrixMarketplace: View {
     private struct Search: Hashable { let text: String; let sort: String; let type: String; let mine: Bool }
     let api: DugoutMatricesAPI
+    var author: UUID? = nil
+    var opensListing: UUID? = nil
     let onImport: () async -> Void
     @Environment(\.colorScheme) private var scheme
     @State private var search = ""
@@ -174,6 +196,8 @@ private struct DugoutMatrixMarketplace: View {
     @State private var removal: DugoutMatrixListing?
     @State private var busy = false
     @State private var notice: String?
+    @State private var openedListing = false
+    @State private var listingProblem: String?
 
     private var query: Search { .init(text: search, sort: sort, type: type, mine: mine) }
 
@@ -200,6 +224,7 @@ private struct DugoutMatrixMarketplace: View {
                     ProgressView().frame(maxWidth: .infinity).padding()
                 }
                 if let notice { Text(notice).font(.subheadline).foregroundStyle(.secondary) }
+                if let listingProblem { Text(listingProblem).font(.subheadline).foregroundStyle(.secondary) }
             }
             .padding(16)
         }
@@ -210,6 +235,17 @@ private struct DugoutMatrixMarketplace: View {
         .task(id: query) {
             try? await Task.sleep(for: .milliseconds(search.isEmpty ? 0 : 220))
             if !Task.isCancelled { await load(query) }
+        }
+        .task(id: opensListing) {
+            guard let opensListing, !openedListing else { return }
+            do {
+                let listing = try await api.listing(opensListing)
+                guard !Task.isCancelled else { return }
+                selection = listing
+                openedListing = true
+            } catch {
+                if !Task.isCancelled { listingProblem = dugoutMatrixError(error) }
+            }
         }
         .refreshable { await load(query) }
         .sheet(item: $selection) { listing in
@@ -225,6 +261,10 @@ private struct DugoutMatrixMarketplace: View {
                             .buttonStyle(SlipSurgePrimaryButtonStyle()).disabled(busy)
                         if listing.is_owner {
                             Button("Remove listing", systemImage: "trash", role: .destructive) { removal = listing }.disabled(busy)
+                        }
+                        if let share = URL(string: "https://" + SlipSurgeHTTP.site + "/marketplace/" + listing.id.uuidString.lowercased()) {
+                            ShareLink(item: share) { Label("Share listing", systemImage: "square.and.arrow.up") }
+                                .buttonStyle(.bordered)
                         }
                         if let notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
                     }
@@ -262,7 +302,8 @@ private struct DugoutMatrixMarketplace: View {
 
     private func load(_ requested: Search) async {
         do {
-            let value = try await api.marketplace(search: requested.text, sort: requested.sort, type: requested.type, mine: requested.mine)
+            let value = try await api.marketplace(search: requested.text, sort: requested.sort, type: requested.type,
+                mine: requested.mine, author: author)
             if !Task.isCancelled, query == requested { listings = value; notice = nil }
         } catch { if !Task.isCancelled, query == requested { notice = dugoutMatrixError(error) } }
     }

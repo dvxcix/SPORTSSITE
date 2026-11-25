@@ -148,6 +148,7 @@ struct DugoutMatrixListing: Decodable, Identifiable {
 struct DugoutMatricesAPI {
     private struct ListResponse: Decodable { let matrices: [DugoutMatrix] }
     private struct MarketResponse: Decodable { let listings: [DugoutMatrixListing] }
+    private struct ListingResponse: Decodable { let listing: DugoutMatrixListing }
     private struct Receipt: Decodable {
         struct Created: Decodable { let id: UUID }
         let ok: Bool?
@@ -165,11 +166,21 @@ struct DugoutMatricesAPI {
         try await api.memberRead(ListResponse.self, path: Self.path).matrices
     }
 
-    func marketplace(search: String, sort: String, type: String, mine: Bool) async throws -> [DugoutMatrixListing] {
-        try await api.memberRead(MarketResponse.self, path: Self.path, query: [
+    func marketplace(search: String, sort: String, type: String, mine: Bool, author: UUID? = nil) async throws -> [DugoutMatrixListing] {
+        var query: [URLQueryItem] = [
             .init(name: "op", value: "marketplace"), .init(name: "q", value: search), .init(name: "sort", value: sort),
             .init(name: "type", value: type), .init(name: "mine", value: mine ? "1" : "0"),
-        ]).listings
+        ]
+        if let author, !mine { query.append(.init(name: "author", value: author.uuidString.lowercased())) }
+        return try await api.memberRead(MarketResponse.self, path: Self.path, query: query).listings
+    }
+
+    func listing(_ id: UUID) async throws -> DugoutMatrixListing {
+        let response = try await api.memberRead(ListingResponse.self, path: Self.path, query: [
+            .init(name: "op", value: "listing"), .init(name: "id", value: id.uuidString.lowercased()),
+        ])
+        guard response.listing.id == id else { throw URLError(.cannotParseResponse) }
+        return response.listing
     }
 
     func save(_ draft: DugoutMatrix.Draft, previous: DugoutMatrix?) async throws {

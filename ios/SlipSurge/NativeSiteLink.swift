@@ -9,6 +9,7 @@ enum NativeSiteLink: Hashable {
     case activityReplay, missions, launch
     case search(String), topic(String), explore
     case scoreGame(String, String)
+    case marketplace(NativeMarketplaceTarget)
     case nbaEntity(NbaDirectoryEntityView.Kind, Int, game: Int?, mode: CourtResearchMode)
     case nflEntity(NflDirectoryEntityView.Kind, String)
 
@@ -57,6 +58,7 @@ enum NativeSiteLink: Hashable {
         case ["auth", "register"]: self = .registration
         case ["auth", "forgot-password"]: self = .passwordRecovery
         case ["pricing"]: self = .pricing
+        case ["pro"]: self = .pricing
         case ["discover"], ["groups"], ["community"]: self = .discover(.communities)
         case ["explore"]: self = .explore
         case ["creators"]: self = .discover(.creators)
@@ -93,6 +95,21 @@ enum NativeSiteLink: Hashable {
         case ["creators", "studio"], ["creators", "apply"]: self = .creatorStudio
         case ["creators", "payouts"]: self = .creatorPayouts
         case ["workspace"]: self = .researchWorkspace
+        case ["marketplace"]:
+            let sports = query.filter { $0.name == "sport" }
+            let authors = query.filter { $0.name == "author" }
+            let shares = query.filter { $0.name == "share" }
+            guard sports.count <= 1, authors.count <= 1, shares.count <= 1 else { return nil }
+            let league = sports.first?.value.flatMap(NativeMarketplaceTarget.League.init(rawValue:))
+            let author = authors.first?.value.flatMap(UUID.init(uuidString:))
+            let share = shares.first?.value
+            let publication: NativeMarketplaceTarget.Publication? = share == "1" ? .chooser :
+                share.flatMap(UUID.init(uuidString:)).map(NativeMarketplaceTarget.Publication.matrix)
+            guard sports.isEmpty || league != nil, authors.isEmpty || author != nil,
+                  shares.isEmpty || publication != nil else { return nil }
+            let targetLeague = league ?? (author != nil || publication != nil ? .mlb : nil)
+            self = .marketplace(.init(league: targetLeague, author: author, publication: publication))
+        case ["marketplace", "sell"]: self = .marketplace(.init(league: .mlb, publication: .chooser))
         case ["launch"]: self = .launch
         case ["admin"]: self = .admin
         default:
@@ -112,6 +129,9 @@ enum NativeSiteLink: Hashable {
                 case "channels":
                     guard Self.matches(name, Self.slugPattern) else { return nil }
                     self = .channel(name)
+                case "marketplace":
+                    guard let id = UUID(uuidString: name) else { return nil }
+                    self = .marketplace(.init(league: .mlb, listing: id))
                 case "settings":
                     guard let section = Settings(rawValue: name) else { return nil }
                     self = .settings(section)
@@ -182,7 +202,8 @@ enum NativeSiteLink: Hashable {
     var needsMember: Bool {
         switch self {
         case .notifications, .activityReplay, .missions, .search, .topic, .explore, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
-            .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .communityCreator, .researchWorkspace, .admin, .nbaEntity, .nflEntity,
+            .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .communityCreator, .researchWorkspace, .admin,
+            .marketplace, .nbaEntity, .nflEntity,
             .community(_, .settings), .community(_, .channels): true
         default: false
         }

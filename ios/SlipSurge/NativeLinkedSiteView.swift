@@ -67,6 +67,7 @@ struct NativeLinkedSiteView: View {
         case .creatorPayouts: CreatorWalletView(api: .init(account: account, userID: userID))
         case .communityCreator: CreatorStoreView(api: .init(account: account, userID: userID))
         case .researchWorkspace: ResearchLibraryView(api: .init(account: account, userID: userID))
+        case .marketplace(let target): NativeMarketplaceView(api: viewer, userID: userID, target: target)
         case .admin: AccountWorkspaceView(account: account, userID: userID, workspace: .admin)
         default: EmptyView()
         }

@@ -275,6 +275,14 @@ private struct ResearchHome: View {
                         .buttonStyle(.bordered)
                 } else if let id = account.memberID {
                     NavigationLink {
+                        NativeMarketplaceView(api: .init(account: account, userID: id), userID: id, target: .init())
+                    } label: {
+                        ResearchToolCard(color: Brand.accent(for: scheme)) {
+                            Label("Matrix Marketplace", systemImage: "storefront").font(.title3.weight(.semibold))
+                        } content: { EmptyView() }
+                    }
+                    .buttonStyle(SlipSurgePressStyle())
+                    NavigationLink {
                         ResearchLibraryView(api: ResearchLibraryAPI(account: account, userID: id))
                     } label: {
                         ResearchToolCard(color: Brand.accent(for: scheme)) {

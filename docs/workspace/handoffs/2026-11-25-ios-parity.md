@@ -1506,3 +1506,18 @@ physical-device push are still open.
   Focused tests cover both query contracts.
 - Verify the released exact game link in the signed Simulator and continue
   Matrix Marketplace, the unified research destination, and admin parity.
+
+## Native Matrix Marketplace links · 25 November 2026
+
+- The native marketplace can switch leagues with league artwork. NFL and
+  NBA reuse the community and personal Matrix editors. MLB keeps the
+  existing Ultimate and offseason access checks for browsing and publishing.
+- Existing MLB website links support the full listing list, a creator’s
+  published Matrices, and an exact listing lookup with the saved rule
+  snapshot. Publication links open the chooser or select the specified
+  owned Matrix. The server checks publication state and member blocks.
+- Hub TypeScript, 134 production source checks, 11 focused tests across
+  this and the preceding score/discovery checkpoint, and signed Xcode
+  Simulator build passed. The signed app opened NFL Community Matrices from
+  a direct link. Live MLB read verification follows deployment. No live
+  listing was published, copied or removed for QA.
