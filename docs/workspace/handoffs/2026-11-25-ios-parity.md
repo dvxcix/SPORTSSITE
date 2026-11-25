@@ -2300,7 +2300,11 @@ physical-device push are still open.
 - Task `e11158c656e2552291c30391427b2347092e3d4d` is pushed. PR #84 preview
   `dpl_63gE3AEGCifkTAVJiFXnXYd1qNfU` was READY and returned the real public
   post plus both share PNGs with 200. The PR merged as
-  `fe7244efaee87484f3fee7eb6f01bf8675b5a5ab`.
+  `fe7244efaee87484f3fee7eb6f01bf8675b5a5ab`. Production
+  `dpl_CZoEbeGJ11WuZ2Sa7wv7vDdnv6Q1` reported READY. The live post declared
+  the Fanatics palette. Both live share PNGs returned 200 and their header
+  pixels verified red for Fanatics and blue for FanDuel. The site home and
+  native Feed also returned 200.
 
 ## Native Feed reactions, avatars and profiles · 25 November 2026
 
@@ -2326,5 +2330,12 @@ physical-device push are still open.
   A fire reaction appeared and was removed, preserving the original state.
   An isolated Swift fixture exercised rapid reversal and failure rollback.
   On the guest profile, the avatar region differed between two captures while
-  the banner stayed pixel-for-pixel stable. Hub TypeScript, 287 checks and
-  the shared-palette and artwork comparisons passed. iPad keeps system tabs.
+  the banner stayed pixel-for-pixel stable. The same comparison proved motion
+  in the signed Account tab with a neighboring tab as the stable control.
+  The quick picker's plus button opened the full emoji browser. A profile
+  link from an open post sheet opened the full-height iPhone profile.
+- Task `c91196a31fae89b9789a167e71894ec6cae2a50a` is pushed. Hub TypeScript,
+  287 checks, the shared-palette and artwork comparisons, signed Simulator
+  Debug and unsigned arm64 Release passed. iPad keeps system tabs. Visual
+  references were [X's iOS post actions](https://mobbin.com/screens/aec94d01-7930-4083-b198-ad33e0a2987e)
+  and [Beli's iOS profile hierarchy](https://mobbin.com/screens/aaa8cc34-89a1-419e-948b-80aa6218cf3b).
