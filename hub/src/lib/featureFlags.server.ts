@@ -1,5 +1,6 @@
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { FeatureFlagKey, FeatureRollout } from './featureFlags'
 
 function cohortBucket(value: string) {
@@ -25,12 +26,14 @@ export function resolveFeatureRollout(rollout: Pick<FeatureRollout, 'audience' |
 // a flag, e.g. hide /blog for everyone while it's being reworked. Kept out
 // of featureFlags.ts so client components can import the flag constants/
 // client fetcher from there without pulling this into the browser bundle.
-export async function getFeatureFlagsServer(keys: FeatureFlagKey[], fallback = true): Promise<Record<FeatureFlagKey, boolean>> {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+type VerifiedFeatureViewer = { supabase: SupabaseClient; userId: string | null }
+
+export async function getFeatureFlagsServer(keys: FeatureFlagKey[], fallback = true, viewer?: VerifiedFeatureViewer): Promise<Record<FeatureFlagKey, boolean>> {
+  const supabase = viewer?.supabase ?? await createServerSupabase()
+  const userId = viewer ? viewer.userId : (await supabase.auth.getUser()).data.user?.id ?? null
   let isAdmin = false
-  if (user) {
-    const { data: profile } = await supabase.from('users').select('account_type').eq('id', user.id).maybeSingle()
+  if (userId) {
+    const { data: profile } = await supabase.from('users').select('account_type').eq('id', userId).maybeSingle()
     isAdmin = profile?.account_type === 'admin'
   }
 
@@ -38,7 +41,7 @@ export async function getFeatureFlagsServer(keys: FeatureFlagKey[], fallback = t
     const admin = createAdminClient()
     const [{ data: rollouts }, { data: overrides }] = await Promise.all([
       admin.from('feature_rollouts').select('feature_key, audience, rollout_percent, rollout_salt').in('feature_key', keys),
-      user ? admin.from('feature_rollout_overrides').select('feature_key, enabled').in('feature_key', keys).eq('user_id', user.id) : Promise.resolve({ data: [] }),
+      userId ? admin.from('feature_rollout_overrides').select('feature_key, enabled').in('feature_key', keys).eq('user_id', userId) : Promise.resolve({ data: [] }),
     ])
     if (rollouts?.length) {
       const rolloutByKey = new Map(rollouts.map(row => [row.feature_key, row]))
@@ -50,7 +53,7 @@ export async function getFeatureFlagsServer(keys: FeatureFlagKey[], fallback = t
         const override = overrideByKey.get(key)
         if (typeof override === 'boolean') return [key, isAdmin || override]
         const rollout = rolloutByKey.get(key)
-        if (rollout) return [key, resolveFeatureRollout(rollout as Pick<FeatureRollout, 'audience' | 'rollout_percent' | 'rollout_salt'>, { userId: user?.id ?? null, isAdmin })]
+        if (rollout) return [key, resolveFeatureRollout(rollout as Pick<FeatureRollout, 'audience' | 'rollout_percent' | 'rollout_salt'>, { userId, isAdmin })]
         return [key, legacyByKey.get(key) ?? fallback]
       })) as Record<FeatureFlagKey, boolean>
     }
@@ -61,6 +64,6 @@ export async function getFeatureFlagsServer(keys: FeatureFlagKey[], fallback = t
   return Object.fromEntries(keys.map(key => [key, legacyByKey.get(key) ?? fallback])) as Record<FeatureFlagKey, boolean>
 }
 
-export async function isFeatureEnabledServer(key: FeatureFlagKey, fallback = true): Promise<boolean> {
-  return (await getFeatureFlagsServer([key], fallback))[key]
+export async function isFeatureEnabledServer(key: FeatureFlagKey, fallback = true, viewer?: VerifiedFeatureViewer): Promise<boolean> {
+  return (await getFeatureFlagsServer([key], fallback, viewer))[key]
 }

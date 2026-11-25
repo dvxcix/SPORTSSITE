@@ -34,8 +34,9 @@ const stubs: Record<string, string> = {
   '@/app/the-paint/estimate/route': 'export async function GET() { return Response.json({reader: "estimate"}) }',
   '@/lib/nativeCourtCheatsheets': 'export async function getNativeCourtCheatsheets(request) { return Response.json({ reader: "courtCheatsheets", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
   '@/lib/nflPregameResearchData': 'export function nflPregameOpen() { return Boolean(globalThis.nativeCourtFixture.phases?.shift()) }',
-  '@/lib/nativeNflResearch': 'export function nativeNflCheatsheets() { return {rows: []} } export function nativeNflMismatch(game, window, board) { return {rows: [window, board.capturedAt]} }',
-  '@/lib/nflAccess': 'export async function requireNflAccess() { return globalThis.nativeCourtFixture.readerStatus === 403 ? { error: new Response(null, {status: 403}) } : {} }',
+  '@/lib/nativeNflResearch': 'export function nativeNflCheatsheets() { return {rows: []} } export function nativeNflMismatch(game, lens, window, board) { return {rows: [lens.windows[window], board.capturedAt]} }',
+  '@/lib/nflMatrixData': 'export async function loadNflMatrices(userId) { if (userId !== globalThis.nativeCourtFixture.userId) throw new Error("Wrong Matrix owner"); return {data: []} }',
+  '@/lib/nflAccess': 'export async function requireNflAccess() { const fixture = globalThis.nativeCourtFixture; return fixture.readerStatus === 403 ? { error: new Response(null, {status: 403}) } : { userId: fixture.nflUserId ?? fixture.userId } }',
   '@/app/the-sideline/data': `export async function getSidelineGames() { const fixture = globalThis.nativeCourtFixture; if (!fixture.schedule) throw new Error("Schedule unavailable"); return fixture.schedule }
     export async function getSidelineOddsBundle() { const fixture = globalThis.nativeCourtFixture; return { odds: { players: [], capturedAt: fixture.captures?.shift() } } }
     export async function getCachedSidelineBoardLens() { return { status: "calculated", windows: { season: "season", l5: "l5" } } }
@@ -164,6 +165,8 @@ test('research tools keep native auth, canonical readers, date scope and kickoff
   const mm = 'tool=mm&game=nfl-match&window=l5&date='
   assert.equal((await request('sidelineResearch', mm + '2026-11-25')).status, 404)
   set({ readerStatus: 403 })
+  assert.equal((await request('sidelineResearch', mm + date)).status, 403)
+  set({ nflUserId: 'different-member' })
   assert.equal((await request('sidelineResearch', mm + date)).status, 403)
   set({ phases: [true, false], captures: ['in-flight', 'frozen'] })
   const response = await request('sidelineResearch', mm + date)
