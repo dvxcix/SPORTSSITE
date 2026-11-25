@@ -2640,3 +2640,9 @@ physical-device push are still open.
   16 Plus. All 286 native and production checks and git diff --check passed.
   The website and backend were unchanged. No production reaction or test
   post was sent.
+- The final signed build is installed on the iPhone 16 Plus. The phone
+  displayed the timeline during the earlier device check, but a subsequent
+  CoreDevice relaunch exited with signal 9. Retesting the earlier signed
+  build reproduced the exit. The latest build is installed again, and the
+  simulator is open on the Giannis free throw. Repeat a normal on-device
+  launch before claiming the final physical run.
