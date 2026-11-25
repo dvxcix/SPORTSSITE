@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MessageRecipientsView: View {
     let api: MessagesAPI
+    var forward: ((MessageDestination) async throws -> Void)?
     let onOpen: (MessageDestination) -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
@@ -13,16 +14,20 @@ struct MessageRecipientsView: View {
     @State private var working = false
     @State private var searchFailed = false
     @State private var createFailed = false
+    @State private var forwardTarget: MessagePerson?
+    @State private var forwardFailed = false
 
     var body: some View {
         NavigationStack {
             List {
-                Picker("Conversation type", selection: $group) {
-                    Text("Direct message").tag(false)
-                    Text("Group").tag(true)
+                if forward == nil {
+                    Picker("Conversation type", selection: $group) {
+                        Text("Direct message").tag(false)
+                        Text("Group").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(Brand.surface(for: scheme))
                 }
-                .pickerStyle(.segmented)
-                .listRowBackground(Brand.surface(for: scheme))
                 if group {
                     Section {
                         TextField("Group name", text: $name)
@@ -51,6 +56,8 @@ struct MessageRecipientsView: View {
                             if group {
                                 if included { selected.removeAll { $0.id == person.id } }
                                 else if selected.count < 19 { selected.append(person) }
+                            } else if forward != nil {
+                                forwardTarget = person
                             } else {
                                 onOpen(.init(kind: .direct, id: person.id))
                             }
@@ -64,6 +71,7 @@ struct MessageRecipientsView: View {
                             }
                         }
                         .accessibilityAddTraits(included ? .isSelected : [])
+                        .disabled(working)
                     }
                     if searchFailed { Text("Search is temporarily unavailable").font(.subheadline).foregroundStyle(.secondary) }
                 }
@@ -71,7 +79,7 @@ struct MessageRecipientsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Brand.background(for: scheme))
-            .navigationTitle("New message")
+            .navigationTitle(forward == nil ? "New message" : "Forward message")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(working) }
@@ -83,6 +91,11 @@ struct MessageRecipientsView: View {
                 }
             }
             .alert("Group couldn’t be created", isPresented: $createFailed) { Button("OK", role: .cancel) {} }
+            .alert("Message forwarding couldn’t be confirmed", isPresented: $forwardFailed) { Button("OK", role: .cancel) {} }
+            .confirmationDialog("Forward this message?", isPresented: Binding(get: { forwardTarget != nil }, set: { if !$0 { forwardTarget = nil } }),
+                titleVisibility: .visible, presenting: forwardTarget) { person in
+                    Button("Forward to \(person.name)") { Task { await sendForward(person) } }
+                }
             .task(id: query) { await search(query) }
         }
     }
@@ -106,6 +119,15 @@ struct MessageRecipientsView: View {
         defer { working = false }
         do { onOpen(try await api.createGroup(name, users: selected.map(\.id))) }
         catch { createFailed = true }
+    }
+
+    private func sendForward(_ person: MessagePerson) async {
+        guard !working, let forward else { return }
+        working = true
+        defer { working = false }
+        let destination = MessageDestination(kind: .direct, id: person.id)
+        do { try await forward(destination); onOpen(destination) }
+        catch { forwardFailed = true }
     }
 }
 

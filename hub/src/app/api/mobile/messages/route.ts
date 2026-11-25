@@ -24,19 +24,19 @@ export async function GET(request: Request) {
         return directory.status ? respond({ error: 'Channels unavailable' }, directory.status) : respond(directory)
       }
       case 'thread': {
+        const cursor = query.get('before')
+        const before = cursor !== null && cursor.length <= 80 ? readChannelHistoryCursor(cursor) : null
+        if (cursor !== null && !before) return respond({ error: 'Invalid message cursor' }, 400)
         if (query.get('kind') === 'channel') {
           const id = query.get('id')
           if (!id || !isAccountId(id)) return respond({ error: 'Invalid channel' }, 400)
-          const cursor = query.get('before')
-          const before = cursor !== null && cursor.length <= 80 ? readChannelHistoryCursor(cursor) : null
-          if (cursor !== null && !before) return respond({ error: 'Invalid message cursor' }, 400)
           const result = await openNativeChannel(supabase, userId, id)
           return result.room ? respond(await loadNativeChannel(supabase, userId, result.room, before ?? undefined)) : respond({ error: 'Channel unavailable' }, result.status)
         }
         const context = messageContext(query)
         if (!context) return respond({ error: 'Invalid conversation' }, 400)
         const room = await openMessageRoom(supabase, userId, context)
-        return room ? respond(await loadNativeThread(supabase, userId, room)) : respond({ error: 'Conversation unavailable' }, 404)
+        return room ? respond(await loadNativeThread(supabase, userId, room, before ?? undefined)) : respond({ error: 'Conversation unavailable' }, 404)
       }
       default: return respond({ error: 'Unknown inbox view' }, 400)
     }

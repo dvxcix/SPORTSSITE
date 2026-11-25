@@ -11,6 +11,8 @@ struct MessageThreadView: View {
     @State private var thread: MessageThread?
     @State private var error: (any Error)?
     @State private var draft = ""
+    @State private var draftVersion = 0
+    @State private var unsent: [UnsentDraft] = []
     @State private var lastSendAttempt: SendAttempt?
     @State private var picture: URL?
     @State private var uploading = false
@@ -34,6 +36,12 @@ struct MessageThreadView: View {
     @State private var loadingHistory = false
     @State private var historyFailed = false
     @State private var historyEpoch = 0
+    @State private var typingPresence = MessageTypingPresence()
+    @State private var forwarding: MessageThread.Note?
+    @State private var forwardAttempts: [UUID: UUID] = [:]
+    @State private var forwardedThread: MessageDestination?
+
+    private struct UnsentDraft: Identifiable { let id = UUID(); var text: String }
 
     private struct HistoryPage {
         let cursor: String
@@ -86,6 +94,28 @@ struct MessageThreadView: View {
                 if phase == .active { await refresh() }
             }
         }
+        .task(id: phase == .active && thread != nil && destination.kind != .group) {
+            if phase == .active, thread != nil, destination.kind != .group {
+                await typingPresence.run(account: api.account, userID: api.userID, destination: destination)
+            } else { typingPresence.stop() }
+        }
+        .onChange(of: focused) { _, isFocused in if !isFocused { typingPresence.didType(hasText: false) } }
+        .onDisappear { typingPresence.stop() }
+        .navigationDestination(item: $forwardedThread) { room in
+            MessageThreadView(api: api, destination: room)
+        }
+        .sheet(item: $forwarding, onDismiss: { forwardAttempts = [:] }) { message in
+            MessageRecipientsView(api: api, forward: { recipient in
+                let replay = forwardAttempts[recipient.id] ?? UUID()
+                forwardAttempts[recipient.id] = replay
+                try await api.change(.init(action: "forward", message: message.id.uuidString.lowercased(),
+                    user: recipient.id.uuidString.lowercased(), forwardId: replay.uuidString.lowercased()), in: destination)
+            }) { recipient in
+                forwarding = nil
+                if recipient == destination { Task { await refresh() } }
+                else { forwardedThread = recipient }
+            }
+        }
         .alert("Message change couldn’t be confirmed", isPresented: $actionFailed) { Button("OK", role: .cancel) {} }
         .confirmationDialog("Delete this message?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting) { note in
             Button("Delete", role: .destructive) { Task { await mutate(.init(action: "delete", message: note.id.uuidString.lowercased())) } }
@@ -102,9 +132,11 @@ struct MessageThreadView: View {
             NavigationStack {
                 List {
                     if let thread {
-                        let pins = thread.messages.filter { thread.pins.contains($0.id) }
+                        let pinnedIDs = Set(thread.pins + history.flatMap { $0.result.pins })
+                        let pins = (thread.messages + history.flatMap { $0.result.messages }).filter { pinnedIDs.contains($0.id) }
+                        let uniquePins = Dictionary(pins.map { ($0.id, $0) }, uniquingKeysWith: { recent, _ in recent })
                         if pins.isEmpty { ContentUnavailableView("No pinned messages", systemImage: "pin") }
-                        ForEach(pins) { note in
+                        ForEach(uniquePins.values.sorted { $0.createdAt > $1.createdAt }) { note in
                             Text(verbatim: note.content.isEmpty ? "Attachment" : note.content)
                                 .swipeActions(allowsFullSwipe: false) {
                                     Button("Unpin", systemImage: "pin.slash", role: .destructive) {
@@ -160,6 +192,12 @@ struct MessageThreadView: View {
                         }
                         bubble(message, in: thread, reactions: byMessage[message.id] ?? []).id(message.id)
                     }
+                    if term.isEmpty, destination.kind == .direct, let latest = thread.messages.last,
+                       latest.senderId == api.userID, latest.isDeleted != true,
+                       let read = thread.partnerLastReadAt.flatMap(SidelineBoard.timestamp), let sent = SidelineBoard.timestamp(latest.createdAt), read >= sent {
+                        Label("Seen", systemImage: "checkmark")
+                            .font(.caption2).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .trailing)
+                    }
                     Color.clear.frame(height: 2).id("latest-message")
                         .onAppear { atBottom = true; read(thread.messages.last?.id) }
                         .onDisappear { atBottom = false }
@@ -192,7 +230,7 @@ struct MessageThreadView: View {
 
     private func bubble(_ message: MessageThread.Note, in thread: MessageThread, reactions: [MessageThread.Reaction]) -> some View {
         let mine = message.senderId == api.userID
-        let pinned = thread.pins.contains(message.id)
+        let pinned = thread.pins.contains(message.id) || history.contains { $0.result.pins.contains(message.id) }
         let counts = Dictionary(grouping: reactions, by: \.emoji)
         let messageID = message.id.uuidString.lowercased()
         return HStack(alignment: .bottom, spacing: 7) {
@@ -211,6 +249,9 @@ struct MessageThreadView: View {
                     if message.isDeleted == true {
                         Text("Message deleted").font(.subheadline).italic().foregroundStyle(.secondary)
                     } else {
+                        if message.forwardedFromId != nil {
+                            Label("Forwarded", systemImage: "arrowshape.turn.up.right").font(.caption2).foregroundStyle(.secondary)
+                        }
                         if let reply = message.replyTo { replyPreview(reply.content, author: reply.sender?.displayName ?? reply.sender?.username) }
                         if !message.content.isEmpty { Text(verbatim: message.content).font(.body) }
                         ForEach((message.mediaUrls ?? []).filter(FeedPostCard.allowedMedia), id: \.self) { url in
@@ -231,6 +272,7 @@ struct MessageThreadView: View {
                             Button(pinned ? "Unpin" : "Pin", systemImage: pinned ? "pin.slash" : "pin") {
                                 Task { await mutate(.init(action: "pin", message: messageID, enabled: !pinned)) }
                             }
+                            Button("Forward", systemImage: "arrowshape.turn.up.right") { forwarding = message }
                         }
                         Menu("React", systemImage: "face.smiling") {
                             ForEach(["❤️", "🔥", "⚡", "👏", "😂", "👀"], id: \.self) { symbol in
@@ -281,6 +323,17 @@ struct MessageThreadView: View {
 
     private func composer(_ thread: MessageThread) -> some View {
         VStack(alignment: .leading, spacing: 5) {
+            if typingPresence.count > 0 {
+                HStack(spacing: 5) {
+                    Image(systemName: "ellipsis.bubble.fill")
+                        .symbolEffect(.variableColor, options: .repeating, isActive: !reduceMotion)
+                        .accessibilityHidden(true)
+                    if let partner = thread.partner { Text("\(partner.name) is typing") }
+                    else { Text(typingPresence.count == 1 ? "Someone is typing" : "\(typingPresence.count) members are typing") }
+                }
+                .font(.caption).foregroundStyle(.secondary)
+                .accessibilityElement(children: .combine)
+            }
             if let context = editing ?? responding {
                 HStack {
                     replyPreview(context.content, author: editing == nil ? "Replying" : "Editing")
@@ -298,6 +351,13 @@ struct MessageThreadView: View {
                     Spacer()
                 }
             }
+            if !unsent.isEmpty, editing == nil {
+                Menu("Unsent drafts (\(unsent.count))", systemImage: "doc.badge.clock") {
+                    ForEach(unsent) { item in Button(String(item.text.prefix(70))) { insertDraft(item) } }
+                }
+                .font(.footnote)
+                .disabled(draft.utf16.count >= 999)
+            }
             if thread.canSend || editing != nil {
                 HStack(alignment: .bottom, spacing: 9) {
                     if editing == nil {
@@ -312,7 +372,11 @@ struct MessageThreadView: View {
                         .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 17))
                         .focused($focused)
                         .onChange(of: draft) { _, value in
+                            draftVersion += 1
                             if value.utf16.count > 1_000 { draft = String(value.prefix(1_000)) }
+                            if editing == nil, thread.canSend, focused {
+                                typingPresence.didType(hasText: !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            }
                         }
                     sendControl
                 }
@@ -388,8 +452,10 @@ struct MessageThreadView: View {
     private func send() async {
         guard !composing, !uploading else { return }
         composing = true
+        typingPresence.didType(hasText: false)
         defer { composing = false }
         let submitted = draft
+        let submittedVersion = draftVersion
         let reply = responding?.id
         let image = editing == nil ? picture : nil
         if editing == nil, lastSendAttempt?.text != submitted || lastSendAttempt?.reply != reply || lastSendAttempt?.image != image {
@@ -400,13 +466,34 @@ struct MessageThreadView: View {
             text: submitted, reply: reply?.uuidString.lowercased(), image: image)
         if await perform(change) {
             if change.action == "edit" { await refreshOlderMessage(note, deleted: false) }
-            if draft == submitted { draft = "" }
+            if draftVersion == submittedVersion { draft = "" }
             if picture == image { picture = nil }
             editing = nil
             responding = nil
             lastSendAttempt = nil
+        } else if editing == nil, draftVersion != submittedVersion, !submitted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            unsent.append(.init(text: submitted))
         }
         await refresh()
+    }
+
+    private func insertDraft(_ item: UnsentDraft) {
+        let separator = draft.isEmpty ? "" : "\n"
+        let available = 1_000 - draft.utf16.count - separator.utf16.count
+        guard available > 0, let index = unsent.firstIndex(where: { $0.id == item.id }) else { return }
+        var insertion = String.UnicodeScalarView()
+        var count = 0
+        for scalar in item.text.unicodeScalars {
+            let width = scalar.utf16.count
+            if count + width > available { break }
+            insertion.append(scalar)
+            count += width
+        }
+        guard !insertion.isEmpty else { return }
+        draft += separator + String(insertion)
+        let remaining = item.text.unicodeScalars.dropFirst(insertion.count)
+        if remaining.isEmpty { unsent.remove(at: index) }
+        else { unsent[index].text = String(remaining) }
     }
 
     private func archivedReactions(excluding recentIDs: Set<UUID>) -> [MessageThread.Reaction] {
@@ -419,7 +506,7 @@ struct MessageThreadView: View {
     }
 
     private func loadHistory(before cursor: String) async -> Bool {
-        guard !loadingHistory, destination.kind == .channel else { return false }
+        guard !loadingHistory else { return false }
         loadingHistory = true
         historyFailed = false
         let epoch = historyEpoch
@@ -445,7 +532,7 @@ struct MessageThreadView: View {
     }
 
     private func preserveVisibleHistory(next: MessageThread) {
-        guard destination.kind == .channel, loadingHistory || !history.isEmpty,
+        guard loadingHistory || !history.isEmpty,
               let previous = thread, let first = next.messages.first else { return }
         if let overlap = previous.messages.firstIndex(where: { $0.id == first.id }), overlap > 0 {
             let aged = previous.messages.prefix(upTo: overlap)
@@ -458,11 +545,10 @@ struct MessageThreadView: View {
     }
 
     private func refreshOlderMessage(_ id: UUID, deleted: Bool) async {
-        guard destination.kind == .channel else { return }
         let page = history.first { $0.result.messages.contains { $0.id == id } }
         let aged = agedMessages.contains { $0.id == id }
         guard page != nil || aged else { return }
-        if deleted && aged {
+        if deleted && aged && destination.kind == .channel {
             agedMessages.removeAll { $0.id == id }
             agedReactions.removeAll { $0.messageId == id }
         }

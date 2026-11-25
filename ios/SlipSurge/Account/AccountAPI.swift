@@ -16,6 +16,16 @@ struct AccountAPI {
         return key
     }
 
+    func realtimeURL() -> URL? {
+        guard let publishableKey else { return nil }
+        var endpoint = URLComponents()
+        endpoint.scheme = "wss"
+        endpoint.host = projectHost
+        endpoint.path = "/realtime/v1/websocket"
+        endpoint.queryItems = [.init(name: "apikey", value: publishableKey), .init(name: "vsn", value: "1.0.0")]
+        return endpoint.url
+    }
+
     func providersAvailable() async -> Bool {
         struct Availability: Decodable { let available: Bool }
         let response: Availability? = try? await SlipSurgeHTTP.get("/auth/native/status")

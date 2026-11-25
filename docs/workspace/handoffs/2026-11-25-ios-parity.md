@@ -1023,6 +1023,10 @@ physical-device push are still open.
   `dpl_7XFiBRUxrVsviQD8CD552xg2UhXy` and production
   `dpl_A9Zn18NHynxS7G3P9ghiffdfkKRk` reported READY. Both new native requests
   returned 401 without a signed-in account.
+- On the signed iPhone 18 Pro Simulator, the September 25 Cubs–Red Sox
+  Odds Movement Terminal displayed 179 captures, the frozen first-pitch
+  status, branded sports books, and the price chart. Synergy showed the
+  existing offseason pause. The production guest Feed returned 200.
 
 ## Native MLB Matrix editor and marketplace · 25 November 2026
 
@@ -1037,3 +1041,22 @@ physical-device push are still open.
 - Signed Xcode Debug, Hub TypeScript and 32 focused MLB, NBA and NFL Matrix,
   archive, and access checks passed. The signed create/edit/delete and basic
   listing/import walkthroughs need the narrow production release.
+
+## Native direct and group conversation history · 25 November 2026
+
+- Direct and group messages can load older pages with the existing stable
+  timestamp and message ID cursor used by Live Rooms. The app retains the
+  current scroll position, reply previews and reactions and rechecks each
+  room’s current access on every page. Direct messages show the partner’s
+  existing read receipt when visible to the signed-in member.
+- Direct message and channel typing use the website’s authenticated Supabase
+  Realtime presence topics. Presence runs only in an active, authorized room,
+  sends no draft text and stops on leaving. The app preserves a failed draft
+  if the member has already started entering the next message.
+- Direct message forwarding uses the existing message table, source and
+  destination privacy, and original copied payload. A stable forward ID
+  prevents a duplicate if the app retries that same forwarding action.
+- Signed Xcode Debug, Hub TypeScript and 15 focused history, forwarding,
+  access and scroll checks passed. The tests cover same-timestamp boundaries
+  and revoked memberships. Cross-device typing and real forwarding remain
+  pending, and no real message or forwarding action was sent during testing.

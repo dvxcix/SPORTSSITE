@@ -62,6 +62,7 @@ struct MessageThread: Decodable {
         let editedAt: String?
         let isDeleted: Bool?
         let senderId: UUID
+        let forwardedFromId: UUID?
         let mediaUrls: [URL]?
         let replyTo: Reply?
         let sender: Author?
@@ -90,6 +91,7 @@ struct MessageThread: Decodable {
     let canModerate: Bool?
     let channelId: UUID?
     let nextCursor: String?
+    let partnerLastReadAt: String?
     let muted: Bool
     let owner: Bool
 }
@@ -117,6 +119,7 @@ struct MessagesAPI {
         var status: String?
         var user: String?
         var users: [String]?
+        var forwardId: String?
     }
 
     private struct Confirmation: Decodable { let ok: Bool; let id: UUID? }
@@ -141,7 +144,6 @@ struct MessagesAPI {
     func thread(_ destination: MessageDestination, before: String? = nil) async throws -> MessageThread {
         var query = [URLQueryItem(name: "view", value: "thread")] + destination.query
         if let before {
-            guard destination.kind == .channel else { throw URLError(.badURL) }
             query.append(.init(name: "before", value: before))
         }
         let thread = try await read(MessageThread.self, query: query)
