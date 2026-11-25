@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { blockUser, getBlockedEitherWayIds, isAccountId, isBlockedEitherWay } from '@/lib/blocks'
+import { hasCreatorAccess } from '@/lib/creator'
 import { fetchProfilePostsPage, type ProfileTab } from '@/lib/feedQuery'
 import { InvalidFeedCursorError } from '@/lib/feedPagination'
 import { getFavoriteCatalog } from '@/lib/favoriteCatalog'
@@ -34,20 +35,30 @@ export async function GET(request: Request) {
     if (account?.error) return account.error
     const client = account?.supabase ?? nativeAnonymousClient(), viewer = account?.userId
     const { data: person, error: personError } = await client.from('users')
-      .select('id,username,display_name,bio,avatar_url,banner_url,avatar_ring_style,avatar_ring_color,sportsbooks,is_verified,is_private,allow_dms,follower_count,following_count,location,website,created_at,hide_win_rate,social_links')
+      .select('id,username,display_name,bio,avatar_url,banner_url,avatar_ring_style,avatar_ring_color,sportsbooks,is_verified,is_private,allow_dms,follower_count,following_count,location,website,created_at,hide_win_rate,social_links,account_type')
       .eq(isAccountId(target) ? 'id' : 'username', target).maybeSingle()
     if (personError) throw Error('Profile unavailable')
     if (!person || viewer && viewer !== person.id && await isBlockedEitherWay(client, viewer, person.id)) return respond({ error: 'Profile unavailable' }, 404)
     const own = person.id === viewer
-    const [relationship, favorites, allowMlb, badges, platforms] = await Promise.all([
+    const [relationship, favorites, allowMlb, badges, platforms, postsCount, repostsCount, creatorApproval] = await Promise.all([
       viewer && !own ? client.from('follows').select('follower_id').eq('follower_id', viewer).eq('following_id', person.id).maybeSingle() : { data: null, error: null },
       createAdminClient().from('users').select(PROFILE_PROJECTION_COLUMNS).eq('id', person.id).maybeSingle(),
       canViewMlb(client, viewer),
       client.from('user_badges').select('badge:badges(id,name,description,icon_url,card_image_url)').eq('user_id', person.id).limit(24),
       client.from('social_platforms').select(socialPlatformColumns).order('sort_order').order('name').order('id'),
+      cursor ? null : client.from('posts').select('id', { count: 'exact', head: true }).eq('author_id', person.id),
+      cursor ? null : client.from('reposts').select('*', { count: 'exact', head: true }).eq('user_id', person.id),
+      cursor || hasCreatorAccess(person.account_type) ? null : client.from('creator_applications').select('id')
+        .eq('user_id', person.id).eq('status', 'approved').maybeSingle(),
     ])
     if (relationship.error || favorites.error || badges.error) throw Error('Profile unavailable')
     const following = Boolean(relationship.data), canView = own || !person.is_private || following
+    const [offers, ownedCommunities] = !cursor && hasCreatorAccess(person.account_type, Boolean(creatorApproval?.data)) ? await Promise.all([
+      client.from('creator_products').select('id,title,description,price,currency').eq('creator_id', person.id).eq('status', 'active')
+        .order('created_at', { ascending: false }).limit(6),
+      client.from('groups').select('id,name,slug,description,avatar_url,banner_url,emoji,member_count,is_public,access_type,sport')
+        .eq('owner_id', person.id).eq('is_public', true).order('created_at', { ascending: false }).limit(6),
+    ]) : [null, null]
     const settings = favorites.data ? visibleFavorites(favorites.data, allowMlb) : null
     const sports: string[] = settings?.favorite_sports ?? []
     const catalog = settings?.favorite_teams?.length ? await getFavoriteCatalog(true).catch(() => []) : []
@@ -60,22 +71,31 @@ export async function GET(request: Request) {
       avatarUrl: person.avatar_url, bannerUrl: person.banner_url, avatarRingStyle: person.avatar_ring_style, avatarRingColor: person.avatar_ring_color,
       sportsbooks: person.sportsbooks, verified: person.is_verified, isPrivate: person.is_private,
       allowMessages: person.allow_dms, followerCount: person.follower_count, followingCount: person.following_count,
+      postCount: postsCount?.count ?? null, repostCount: repostsCount?.count ?? null,
       location: person.location, website: person.website, createdAt: person.created_at, following, own, canView,
       teams, sports, players: settings?.favorite_players ?? [], verifiedSocials: publicVerifiedIdentities(settings?.verified_identities),
       socialLinks: platforms.error ? null : nativePublicSocialLinks(platforms.data ?? [], person.social_links, settings?.verified_identities),
       badges: (badges.data ?? []).flatMap(item => item.badge ?? []), record: records?.records.get(person.id.toLowerCase()) ?? null,
+      creator: offers || ownedCommunities ? {
+        offers: (offers?.data ?? []).map(offer => ({ ...offer, price: offer.price == null ? null : Number(offer.price) })),
+        communities: (ownedCommunities?.data ?? []).filter(group => allowMlb || group.sport?.toUpperCase() !== 'MLB'),
+      } : null,
     }
     if (!canView) return respond({ profile, posts: [], replies: [], communities: [], hasMore: false, nextCursor: null })
     if (tab === 'replies') {
-      const result = await client.from('comments').select('id,content,created_at,post_id,post:posts!inner(id,author_id,sport,visibility,is_premium,group_id)')
+      const result = await client.from('comments').select('id,content,created_at,post_id,post:posts!inner(id,author_id,sport,visibility,is_premium,group_id,is_spoiler,content,author:users!posts_author_id_fkey(username,display_name))')
         .eq('author_id', person.id).order('created_at', { ascending: false }).limit(20)
       if (result.error) throw Error('Replies unavailable')
       const blocked = new Set(viewer ? await getBlockedEitherWayIds(client, viewer) : [])
       const replies = (result.data ?? []).flatMap(row => {
         const post = Array.isArray(row.post) ? row.post[0] : row.post
+        const author = Array.isArray(post?.author) ? post.author[0] : post?.author
         return post && !blocked.has(post.author_id) && (allowMlb || post.sport?.toUpperCase() !== 'MLB')
           && (viewer || post.visibility === 'public' && !post.is_premium && post.group_id === null)
-          ? [{ id: row.id, text: row.content, createdAt: row.created_at, postId: row.post_id }] : []
+          ? [{ id: row.id, text: row.content, createdAt: row.created_at, postId: row.post_id,
+            parentAuthor: author?.display_name || (author?.username ? `@${author.username}` : null),
+            parentExcerpt: post.is_spoiler ? null : post.content?.slice(0, 320) ?? null,
+          }] : []
       })
       return respond({ profile, posts: [], replies, communities: [], hasMore: false, nextCursor: null })
     }
@@ -85,7 +105,7 @@ export async function GET(request: Request) {
       if (result.error) throw Error('Communities unavailable')
       const communities = (result.data ?? []).flatMap(row => {
         const group = Array.isArray(row.group) ? row.group[0] : row.group
-        return group && (group.is_public || own) && (allowMlb || group.sport?.toUpperCase() !== 'MLB') ? [group] : []
+        return group && (group.is_public || own) && (allowMlb || group.sport?.toUpperCase() !== 'MLB') ? [{ ...group, member_role: row.role }] : []
       })
       return respond({ profile, posts: [], replies: [], communities, hasMore: false, nextCursor: null })
     }
