@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import ts from 'typescript'
 import {nbaSeasonTrackingView} from '../src/lib/nbaSeasonTrackingView.ts'
+import {nbaTrackingField} from '../src/lib/nbaTracking.ts'
 import type {PaintBoard} from '../src/lib/nbaPaint.ts'
 const board=(season=2026)=>({game:{id:101,season,date:`${season}-10-25`},players:[{id:1,logs:[{id:1,player:{id:1},team:{id:1},game:{id:10,date:`${season}-10-01`,season,status:'Final'}}]}]}) as unknown as PaintBoard
 const sample=()=>({gameId:101,rows:[{id:1,playerId:1,gameId:10,teamId:1,values:{pace:98}}],seasons:[2026],complete:true,fields:['pace'],sourceStates:[{key:'advanced:2026',complete:true}],fetchedAt:'2026-10-25T12:00:00Z'})
@@ -46,10 +47,10 @@ test('actual route uses one saved board and tracking read and does not write or 
  const source=await readFile(new URL('../src/app/the-paint/tracking/route.ts',import.meta.url),'utf8')
  const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  let reads=0,boardReads=0;const b=board(),data=sample()
- const imports:Record<string,unknown>={'next/server':{NextResponse:{json:(value:unknown,init?:{status?:number})=>({status:init?.status??200,value})}},'@/lib/paintAccess':{requirePaintAccess:async()=>({})},'@/lib/nbaOddsMode':{nbaOddsMode:(x:string)=>x==='live'?'live':'pregame'},'@/lib/nbaPaintData':{getPaintGame:async()=>b.game,getPaintBoard:async()=>{boardReads++;return b}},'@/lib/nbaResearchResources':{getNbaResearchTracking:async()=>{reads++;return data}},'@/lib/nbaSeasonTrackingView':{nbaSeasonTrackingView},'@/lib/nbaResearchBundle':{resolveNbaResearchBundle:async(b:PaintBoard,_mode:string,load:(board:PaintBoard)=>Promise<unknown>)=>({board:b,value:await load(b)})}}
- const m={exports:{} as {GET:(request:unknown)=>Promise<{status:number;value:ReturnType<typeof sample>}>}}
+ const imports:Record<string,unknown>={'next/server':{NextResponse:{json:(value:unknown,init?:{status?:number})=>({status:init?.status??200,value})}},'@/lib/paintAccess':{requirePaintAccess:async()=>({})},'@/lib/nbaOddsMode':{nbaOddsMode:(x:string)=>x==='live'?'live':'pregame'},'@/lib/nbaPaintData':{getPaintGame:async()=>b.game,getPaintBoard:async()=>{boardReads++;return b}},'@/lib/nbaResearchResources':{getNbaResearchTracking:async()=>{reads++;return data}},'@/lib/nbaSeasonTrackingView':{nbaSeasonTrackingView},'@/lib/nbaTracking':{nbaTrackingField},'@/lib/nbaResearchBundle':{resolveNbaResearchBundle:async(b:PaintBoard,_mode:string,load:(board:PaintBoard)=>Promise<unknown>)=>({board:b,value:await load(b)})}}
+ const m={exports:{} as {GET:(request:unknown)=>Promise<{status:number;value:ReturnType<typeof sample>&{fieldDefinitions:ReturnType<typeof nbaTrackingField>[]}}>}}
  new Function('require','exports','module',output)((name:string)=>{assert.ok(name in imports,name);return imports[name]},m.exports,m)
- for(const mode of ['pregame','live']){const result=await m.exports.GET({nextUrl:new URL(`https://example.test/?game=101&mode=${mode}`)});assert.equal(result.status,200);assert.deepEqual(result.value.rows,data.rows)}
+ for(const mode of ['pregame','live']){const result=await m.exports.GET({nextUrl:new URL(`https://example.test/?game=101&mode=${mode}`)});assert.equal(result.status,200);assert.deepEqual(result.value.rows,data.rows);assert.deepEqual(result.value.fieldDefinitions,[nbaTrackingField('pace')])}
  assert.equal(reads,2);assert.equal(boardReads,2);assert.deepEqual(data,sample())
 })
 test('a pregame request crossing tip pairs the final saved tracking winner and final board',async()=>{
@@ -62,7 +63,7 @@ test('a pregame request crossing tip pairs the final saved tracking winner and f
  const bundleImports:Record<string,unknown>={'server-only':{},'./nbaPaintData':{getPaintBoard:async()=>{boardReads++;return final}},'./nbaOddsClockData':{getNbaOddsGame:async()=>{clocks++;return {...initial.game,status:'Final'}}},'./nbaOddsMode':{nbaPregameOpen:()=>false}}
  new Function('require','exports','module',output)((name:string)=>{assert.ok(name in bundleImports,name);return bundleImports[name]},bmod.exports,bmod)
  const routeSource=await readFile(new URL('../src/app/the-paint/tracking/route.ts',import.meta.url),'utf8'),compiled=ts.transpileModule(routeSource,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
- const imports:Record<string,unknown>={'next/server':{NextResponse:{json:(value:unknown,init?:{status?:number})=>({status:init?.status??200,value})}},'@/lib/paintAccess':{requirePaintAccess:async()=>({})},'@/lib/nbaOddsMode':{nbaOddsMode:()=> 'pregame'},'@/lib/nbaPaintData':{getPaintGame:async()=>initial.game,getPaintBoard:async()=>initial},'@/lib/nbaResearchResources':{getNbaResearchTracking:async()=>++reads===1?first:last},'@/lib/nbaSeasonTrackingView':{nbaSeasonTrackingView},'@/lib/nbaResearchBundle':bmod.exports}
+ const imports:Record<string,unknown>={'next/server':{NextResponse:{json:(value:unknown,init?:{status?:number})=>({status:init?.status??200,value})}},'@/lib/paintAccess':{requirePaintAccess:async()=>({})},'@/lib/nbaOddsMode':{nbaOddsMode:()=> 'pregame'},'@/lib/nbaPaintData':{getPaintGame:async()=>initial.game,getPaintBoard:async()=>initial},'@/lib/nbaResearchResources':{getNbaResearchTracking:async()=>++reads===1?first:last},'@/lib/nbaSeasonTrackingView':{nbaSeasonTrackingView},'@/lib/nbaTracking':{nbaTrackingField},'@/lib/nbaResearchBundle':bmod.exports}
  const m={exports:{} as {GET:(request:unknown)=>Promise<{status:number;value:ReturnType<typeof sample>}>}}
  new Function('require','exports','module',compiled)((name:string)=>{assert.ok(name in imports,name);return imports[name]},m.exports,m)
  const result=await m.exports.GET({nextUrl:new URL('https://example.test/?game=101')})
