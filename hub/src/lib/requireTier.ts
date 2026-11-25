@@ -55,6 +55,11 @@ export async function requireTier(minTier: Tier): Promise<{ error?: NextResponse
   if (authError) return { error: authError }
   if (!userId) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
 
+  return requireVerifiedUserTier(userId, minTier)
+}
+
+/** Use only with a user ID obtained from verified authentication for this request. */
+export async function requireVerifiedUserTier(userId: string, minTier: Tier): Promise<{ error?: NextResponse; userId?: string }> {
   const { data, error } = await createAdminClient().from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed, admin_granted_tier').eq('id', userId).single()
   if (error || !data) return { error: unavailable() }
   const userTier = effectiveTier((data?.tier as Tier | undefined) ?? 'free', data?.discord_advanced_claimed, data?.admin_granted_tier as Tier | null)
