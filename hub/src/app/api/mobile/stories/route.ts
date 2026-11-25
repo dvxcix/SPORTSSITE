@@ -3,7 +3,7 @@ import { getBlockedEitherWayIds, isAccountId } from '@/lib/blocks'
 import { FEATURE_FLAGS } from '@/lib/featureFlags'
 import { isFeatureEnabledServer } from '@/lib/featureFlags.server'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
-import { isOwnedNativeMedia } from '@/lib/nativeMedia'
+import { isNativeSocialGif, isOwnedNativeMedia } from '@/lib/nativeMedia'
 import { nativeAnonymousClient } from '@/lib/nativeSocial'
 import { requireTier } from '@/lib/requireTier'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
@@ -41,7 +41,8 @@ export async function GET(request: Request) {
         video: row.story_type !== 'text' && Boolean(row.media_url) && (row.media_type === 'video' || isStoryVideo(row.media_url)),
         createdAt: row.created_at, expiresAt: row.expires_at, mine: row.author_id === userId }]
     })
-    return respond({ enabled: true, canCreate: Boolean(creation?.userId && creation.userId === userId), stories })
+    return respond({ enabled: true, canCreate: Boolean(creation?.userId && creation.userId === userId), stories,
+      sports: allowMlb ? ['NBA', 'NFL', 'MLB'] : ['NBA', 'NFL'] })
   } catch { return respond({ error: 'Stories are temporarily unavailable' }, 503) }
 }
 
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
     const id = typeof input?.id === 'string' && isAccountId(input.id) ? input.id : null
     const text = typeof input?.content === 'string' ? input.content.trim() : ''
     const sport = typeof input?.sport === 'string' ? input.sport : ''
-    const photo = input?.photo == null ? null : isOwnedNativeMedia(input.photo, userId, 'stories') ? input.photo : null
+    const photo = isOwnedNativeMedia(input?.photo, userId, 'stories') || isNativeSocialGif(input?.photo) ? input.photo : null
     if (!id || (!text && !photo) || text.length > 1000 || (input?.photo != null && !photo) || !['', 'NBA', 'NFL', 'MLB'].includes(sport)) {
       return respond({ error: 'Check your story and try again' }, 400)
     }

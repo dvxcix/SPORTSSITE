@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { after, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { adminDecisionActor } from '@/lib/supabase/adminDecisionActor'
 import { TRACKED_PIPELINES } from '@/lib/pipelineRegistry'
 import { isMlbCronPaused, mlbPausedResponse } from '@/lib/mlbOffseason'
 import { PLATFORM_URL } from '@/lib/platform'
@@ -54,7 +55,8 @@ async function refreshNflGame(gameId: string, secret: string) {
 }
 
 export async function POST(request: Request) {
-  const authError = await requireAdmin()
+  const native = request.headers.has('authorization') ? await adminDecisionActor(request) : null
+  const authError = native ? native.error : await requireAdmin()
   if (authError) return authError
   const body = await request.json().catch(() => null) as { jobName?: string; action?: string; gameId?: unknown } | null
   const jobName = body?.jobName ?? ''
@@ -62,7 +64,7 @@ export async function POST(request: Request) {
   if (isMlbCronPaused(jobName)) return mlbPausedResponse(503)
   const action = body?.action ?? 'run'
   if (action === 'nfl-game' && jobName === 'poll-pikkit-nfl-picks') {
-    if (request.headers.get('origin') !== new URL(request.url).origin) {
+    if (!native && request.headers.get('origin') !== new URL(request.url).origin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     const gameId = body?.gameId
