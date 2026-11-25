@@ -96,6 +96,9 @@ struct MemberAccountView: View {
 
         Section("Account") {
             NavigationLink {
+                AccountConnectionsView(api: .init(account: account, userID: userID))
+            } label: { Label("Connected accounts", systemImage: "link") }
+            NavigationLink {
                 AccountSecurityView(account: account, userID: userID)
             } label: { Label("Account security", systemImage: "lock.shield") }
             NavigationLink {

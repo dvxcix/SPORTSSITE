@@ -540,6 +540,8 @@ physical-device push are still open.
   200. Tests did not change passwords, revoke sessions, download account
   exports, or request account deletion. Task checkpoint
   `5c3441a3d689b59f9d3a0058d43ffd747f971220` is on GitHub and was sent to Cloud.
+  The existing signed-in iPhone 18 Pro account reached the native Account
+  Security screen, including authenticator status and session controls.
 
 ## Profile photos, favorites, and compact Workspace · 25 November 2026
 
@@ -556,3 +558,20 @@ physical-device push are still open.
   checkpoint adds coverage for older MLB cards. Signed SwiftUI, TypeScript and
   focused source checks were run on the Mac. Native profile and favorites
   writes remain to verify with a designated test account.
+  Task checkpoint `4469d92f11799c1c5ad0cb88796f8fd1336c0eac` is on GitHub and
+  PR #20 isolates its API changes for deployment.
+
+## Native connected accounts · 25 November 2026
+
+- Account settings now offers branded Whop, Discord and X connection cards.
+  Discord and X use the current member's Supabase identity linking, exchange
+  proof on the device and refresh badges from the verified server identity.
+  Whop uses its existing authorization and entitlement checks. The return
+  requires a short-lived encrypted proof, the initiating device's verifier,
+  and the same authenticated member. The existing Whop web callback also
+  rechecks the initiating member before saving the connection.
+- Signed SwiftUI, Hub TypeScript, and 202 focused checks passed. New tests
+  cover proof expiry, purpose separation and same-account redemption. The API
+  and app still need their deployment and provider start checks. Linking or
+  disconnecting real provider identities and any provider login requiring
+  member credentials remain unverified.

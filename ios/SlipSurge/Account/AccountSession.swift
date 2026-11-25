@@ -2,6 +2,11 @@ import Foundation
 
 struct AccountSession: Codable {
     struct User: Codable {
+        struct Identity: Codable {
+            let identity_id: UUID
+            let provider: String
+        }
+
         struct Factor: Codable {
             let id: UUID
             let factorType: String
@@ -18,6 +23,7 @@ struct AccountSession: Codable {
         let id: UUID
         let email: String?
         let factors: [Factor]?
+        let identities: [Identity]?
 
         var hasVerifiedFactor: Bool { factors?.contains { $0.status == "verified" } ?? false }
         var verifiedTOTP: UUID? { factors?.first { $0.status == "verified" && $0.factorType == "totp" }?.id }

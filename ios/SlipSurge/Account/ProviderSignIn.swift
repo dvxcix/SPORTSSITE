@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 import Security
 
-enum SignInProvider: String, CaseIterable, Identifiable {
+enum SignInProvider: String, CaseIterable, Identifiable, Decodable {
     case discord, x, whop
 
     var id: String { rawValue }

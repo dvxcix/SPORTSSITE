@@ -5,10 +5,23 @@ import { sendXConversion, clientIpFromRequest } from '@/lib/xConversion'
 import { syncDiscordIdentity, syncDiscordRoleForUser } from '@/lib/discord'
 import { safeInternalPath } from '@/lib/safeRedirect'
 import { readNativeOAuthRequest, clearNativeOAuthRequest, nativeOAuthComplete, nativeOAuthFailure } from '@/lib/nativeOAuth'
+import { isNativeAuthValue } from '@/lib/nativeAuthHandoff'
+import { nativeConnectionRedirect } from '@/lib/nativeConnectionRedirect'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const connectionState = searchParams.get('native_connection_state')
+  if (connectionState !== null) {
+    if (!isNativeAuthValue(connectionState) || searchParams.getAll('native_connection_state').length !== 1 ||
+        searchParams.has('native_state') || searchParams.has('desktop_state') || searchParams.has('discord_community')) {
+      return nativeConnectionRedirect(connectionState, 'error', 'connection_failed')
+    }
+    return code && searchParams.getAll('code').length === 1 && /^[A-Za-z0-9_-]{32,256}$/.test(code) &&
+      !searchParams.has('error') && !searchParams.has('error_code')
+      ? nativeConnectionRedirect(connectionState, 'code', code)
+      : nativeConnectionRedirect(connectionState, 'error', 'connection_failed')
+  }
   const nativeState = searchParams.get('native_state')
   const nativeRequest = nativeState === null ? null : await readNativeOAuthRequest(nativeState)
   if (nativeState !== null) {
