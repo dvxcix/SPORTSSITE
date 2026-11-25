@@ -15,13 +15,34 @@ struct ActivityNotification: Decodable, Identifiable {
     let read: Bool
     let createdAt: String
     let actor: Actor?
+    let actorId: UUID?
+    let targetId: UUID?
+    let targetType: String?
 
-    var destination: URL? {
-        guard let link, link.hasPrefix("/"), !link.hasPrefix("//"), !link.contains("\\"),
-              !link.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }),
-              let url = URL(string: "https://\(SlipSurgeHTTP.site)\(link)"),
-              url.scheme == "https", url.host == SlipSurgeHTTP.site else { return nil }
-        return url
+    enum Destination: Hashable {
+        case post(UUID), conversation(MessageDestination), discovery, community(UUID)
+    }
+
+    var destination: Destination? {
+        let path = link.flatMap { URLComponents(string: $0) }.flatMap { value -> [Substring]? in
+            guard value.scheme == nil, value.host == nil, value.percentEncodedPath.hasPrefix("/"),
+                  !value.percentEncodedPath.contains("\\") else { return nil }
+            return value.percentEncodedPath.split(separator: "/")
+        } ?? []
+        if targetType == "post", let targetId { return .post(targetId) }
+        if path.count == 2, path[0] == "posts", let id = UUID(uuidString: String(path[1])) { return .post(id) }
+        if type == "message" {
+            if targetType == "group_conversation", let targetId { return .conversation(.init(kind: .group, id: targetId)) }
+            if path.count == 3, path[0] == "messages", path[1] == "group", let id = UUID(uuidString: String(path[2])) {
+                return .conversation(.init(kind: .group, id: id))
+            }
+            if let user = actorId ?? targetId { return .conversation(.init(kind: .direct, id: user)) }
+        }
+        if type == "group_invite" {
+            if targetType == "group", let targetId { return .community(targetId) }
+            return .discovery
+        }
+        return nil
     }
 
     var icon: String {

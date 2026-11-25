@@ -81,9 +81,14 @@ struct FeedView: View {
                     Text("SlipSurge").font(.headline.weight(.heavy)).accessibilityAddTraits(.isHeader)
                 }
             }
-            if api.userID != nil, load == .ready {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Compose", systemImage: "square.and.pencil") { composing = true }
+            if let userID = api.userID {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    NavigationLink {
+                        MessagesView(api: MessagesAPI(account: api.account, userID: userID))
+                    } label: { Label("Messages", systemImage: "bubble.left.and.bubble.right") }
+                    if load == .ready {
+                        Button("Compose", systemImage: "square.and.pencil") { composing = true }
+                    }
                 }
             }
         }
@@ -110,6 +115,8 @@ struct FeedView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .listSectionSpacing(12)
+        .contentMargins(.top, 8, for: .scrollContent)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))

@@ -45,6 +45,9 @@ export async function GET(request: Request) {
       queues: { reports: count(reports), applications: count(applications), deletions: count(deletions), webhooks: count(webhooks), delivery: count(delivery) } })
   }
 
+  if (profile.account_type !== 'creator' && profile.account_type !== 'admin') {
+    return respond({ error: 'Creator access required' }, 403)
+  }
   const [offers, groups, memberships, scheduled, storefront] = await Promise.all([
     supabase.from('creator_products').select('id,title,description,price,currency,status,billing_period_days')
       .eq('creator_id', userId).order('created_at', { ascending: false }).limit(100),

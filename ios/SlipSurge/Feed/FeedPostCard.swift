@@ -91,13 +91,7 @@ struct FeedPostCard: View {
     private var postBody: some View {
         if !post.content.isEmpty { Text(verbatim: post.content) }
         if let pick = post.pick {
-            if pick.legs.isEmpty {
-                pickRow(label: pick.label, line: pick.line, price: pick.odds, result: pick.result)
-            } else {
-                ForEach(Array(pick.legs.enumerated()), id: \.offset) { _, leg in
-                    pickRow(label: leg.label, line: leg.line, price: leg.odds, result: leg.result)
-                }
-            }
+            FeedPickCard(pick: pick, sport: post.sport)
         }
         if let poll = post.poll {
             pollView(poll)
@@ -217,27 +211,15 @@ struct FeedPostCard: View {
         showingEmoji = false
     }
 
-    private func pickRow(label: String?, line: String?, price: String?, result: String?) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label ?? "Pick").font(.subheadline.bold())
-            if let line { Text(verbatim: line).font(.subheadline) }
-            if let price { Text(verbatim: price).monospacedDigit() }
-            if let result { Text(result.capitalized).font(.caption) }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(9)
-        .background(.quaternary, in: .rect(cornerRadius: 8))
-    }
-
     private func count(_ label: String, icon: String, value: Int) -> some View {
         Label(value.formatted(), systemImage: icon)
             .accessibilityLabel("\(value) \(label.lowercased())")
     }
 
     static func allowedMedia(_ url: URL) -> Bool {
-        guard url.scheme == "https", url.user == nil, url.password == nil, let host = url.host else { return false }
+        guard url.scheme == "https", url.user == nil, url.password == nil, url.port == nil, let host = url.host else { return false }
         return host == SlipSurgeHTTP.site || host == "hkldweedwnxartkfhror.supabase.co" ||
-            host == "media.tenor.com" || host == "a.espncdn.com" ||
+            host == "media.tenor.com" || host == "a.espncdn.com" || host == "cdn.nba.com" ||
             host == "cdn.discordapp.com" || host == "pbs.twimg.com" || host.hasSuffix(".public.blob.vercel-storage.com")
     }
 }

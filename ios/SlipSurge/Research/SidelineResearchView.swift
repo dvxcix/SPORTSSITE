@@ -77,7 +77,12 @@ struct SidelineResearchView: View {
             .task(id: filters) { await load(filters) }
             .sheet(item: $selectedRow) { row in
                 NavigationStack {
-                    SidelinePlayerTrendView(row: row, visual: visual(row.player.team), market: market, book: book)
+                    if mismatch {
+                        SidelineMMPlayerView(api: api, row: row, visual: visual(row.player.team), date: date, game: game,
+                            market: market == "completions" ? "passing_completions" : market, sample: sample, initialBook: book)
+                    } else {
+                        SidelinePlayerTrendView(row: row, visual: visual(row.player.team), market: market, book: book)
+                    }
                 }
                 .presentationDragIndicator(.visible)
             }
@@ -165,18 +170,24 @@ struct SidelineResearchView: View {
             LazyVStack(spacing: 9) {
                 ForEach(visible) { row in
                     ResearchToolCard(color: visual(row.player.team).primary) {
-                        portrait(row.player)
+                        if mismatch || row.gameLog?.isEmpty == false {
+                            Button { selectedRow = row } label: {
+                                HStack {
+                                    portrait(row.player)
+                                    Spacer(minLength: 8)
+                                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                                }
+                            }
+                            .buttonStyle(SlipSurgePressStyle())
+                            .accessibilityHint("Opens player trends")
+                        } else {
+                            portrait(row.player)
+                        }
                     } content: {
                         if mismatch {
                             mismatchValues(row)
                         } else {
                             cheatsheetsValues(row)
-                            if row.gameLog?.isEmpty == false {
-                                Button("Player trends", systemImage: "chart.bar.xaxis") { selectedRow = row }
-                                    .font(.subheadline.weight(.semibold))
-                                    .buttonStyle(SlipSurgePressStyle())
-                                    .frame(minHeight: 44)
-                            }
                         }
                     }
                 }

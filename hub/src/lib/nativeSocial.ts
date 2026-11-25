@@ -1,6 +1,8 @@
 import 'server-only'
 import { createClient } from '@supabase/supabase-js'
 import type { FeedPost } from './feedQuery'
+import { nbaPortraitFallback } from './nbaPlayerPortraits'
+import { sportTeamColors, sportTeamLogoUrl } from './sportTeamArtwork'
 
 export function nativeAnonymousClient() {
   // Guest reads never inherit the browser's session or a service credential.
@@ -11,6 +13,26 @@ export function nativeAnonymousClient() {
 
 export function isGuestVisible(post: FeedPost & { group_id?: string | null }) {
   return post.visibility === 'public' && !post.is_premium && post.group_id === null
+}
+
+type Pick = NonNullable<FeedPost['pick_data']>
+type PickLeg = NonNullable<Pick['legs']>[number]
+
+function displayPick(value: Pick | PickLeg, fallbackSport?: string) {
+  const sport = value.sport ?? fallbackSport
+  const palette = sportTeamColors(sport, value.team)
+  return {
+    label: value.player_name ?? value.team,
+    line: value.prop_label ?? value.line ?? null,
+    odds: value.odds == null ? null : String(value.odds),
+    result: value.result ?? null,
+    sport: sport ?? null,
+    team: value.team ?? null,
+    teamLogo: sportTeamLogoUrl(sport, value.team),
+    colors: palette ?? [],
+    portraits: [...new Set([value.headshot_url, sport?.toLowerCase() === 'nba' ? nbaPortraitFallback(value.player_id) : null]
+      .filter((url): url is string => typeof url === 'string' && url.length > 0))],
+  }
 }
 
 export function mobilePost(post: FeedPost) {
@@ -42,16 +64,11 @@ export function mobilePost(post: FeedPost) {
     comments: post.comment_count,
     reposts: post.repost_count,
     pick: post.pick_data ? {
-      label: post.pick_data.player_name ?? post.pick_data.team,
-      line: post.pick_data.line ?? null,
-      odds: post.pick_data.odds == null ? null : String(post.pick_data.odds),
-      result: post.pick_data.result ?? null,
-      legs: (post.pick_data.legs ?? []).map(leg => ({
-        label: leg.player_name,
-        line: leg.line,
-        odds: leg.odds == null ? null : String(leg.odds),
-        result: leg.result,
-      })),
+      ...displayPick(post.pick_data, post.sport),
+      book: post.pick_data.book ?? post.book ?? null,
+      combinedOdds: (post.pick_data.combined_odds ?? post.combined_odds) == null ? null
+        : String(post.pick_data.combined_odds ?? post.combined_odds),
+      legs: (post.pick_data.legs ?? []).map(leg => displayPick(leg, post.sport)),
     } : null,
     poll: post.poll_data ? {
       options: post.poll_data.options.map(option => option.text),

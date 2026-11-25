@@ -1,6 +1,23 @@
 import SwiftUI
 
 enum Sportsbook {
+    static func normalized(_ vendor: String) -> String {
+        let name = vendor.lowercased().filter { $0.isASCII && $0.isLetter }
+        switch name {
+        case "fd": return "fanduel"
+        case "dk": return "draftkings"
+        case "mgm": return "betmgm"
+        case "cz", "williamhill", "williamhillus": return "caesars"
+        case "fan": return "fanatics"
+        case "br": return "betrivers"
+        case "ballys", "bally": return "ballybet"
+        case "parx": return "betparx"
+        case "kal": return "kalshi"
+        case "poly", "pm": return "polymarket"
+        default: return name
+        }
+    }
+
     static func name(_ key: String) -> String {
         switch key {
         case "fanduel": "FanDuel"

@@ -393,3 +393,34 @@ physical-device push are still open.
   push delivery. Direct and group messages, deeper play-by-play, the full
   publishing and creator/admin workflows, App Store purchases, and remaining
   research and account controls still need implementation and verification.
+
+## Native messages, branded picks, and NFL player access · 25 November 2026
+
+- The previous signed build checkpoint is `ff272c5f320efbc9a8032f7ecdc57a511c5232ec`.
+  Its handoff was sent to the existing Codex Cloud chat.
+- PR #13 deployed Court Intelligence, Starting Lineups, The Public and results,
+  Cross-market and saved estimates from `cb414e44f311ac9ba56777f345599a41c3d8958c`.
+  Preview `dpl_AabyX9QCcniGGZbCeHmm4dpBJhpV` and production
+  `dpl_BxQypJjD17N2LiG9kHzik1P5BJgx` reported READY. All six production requests
+  rejected an invalid token with 401. Desktop login, Feed and both research
+  previews still returned 200. Signed-in visual checks remain open.
+- PR #14 merged account and membership APIs in `e8c36c450471987896d205a7d0329298e0f4432a`.
+  Preview `dpl_3axy6qek7Xd85UPuAEXsDJMMpG5M` reported READY. Production
+  `dpl_J1HxEX4xRziHbMG1WJubmp2uot6H` was still building when this was recorded.
+  Whop billing uses the existing server attribution and webhooks. Live email
+  registration and reset depend on confirming the Supabase redirect allowlist.
+- The task branch now includes native direct and group messages, member search,
+  group creation, requests, text replies and edits, reactions, direct pins,
+  group membership controls, and existing image display. It reuses the site's
+  inbox and RLS policies. The thread refreshes while visible. Live typing,
+  forwarding, native attachments and live member-to-member QA still need work.
+  Notifications deep-link to in-app posts, messages and community invitations.
+  The native Bookmarks screen uses the same Basic membership gate as the web.
+- Feed pick cards now render saved league, player and team assets, team palettes,
+  sportsbook marks, quoted prices and result colors. NFL MM opens the exact
+  player's saved-game chart with the selected sample and sportsbook and keeps
+  missing history visible. Xcode Debug and Hub TypeScript passed. The focused
+  suite passed 198 checks, including private chat access, reply scope, and
+  duplicate-send prevention. Device Hub temporarily lost native window access,
+  so post-deployment interactive QA needs a fresh pass. No live messages,
+  transactions, or owner account changes were made as part of QA.

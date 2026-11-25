@@ -43,6 +43,16 @@ struct AccountView: View {
                         } label: {
                             Label("Notifications", systemImage: "bell")
                         }
+                        NavigationLink {
+                            MessagesView(api: MessagesAPI(account: account, userID: userID))
+                        } label: {
+                            Label("Messages", systemImage: "bubble.left.and.bubble.right")
+                        }
+                        NavigationLink {
+                            FeedBookmarksView(api: FeedAPI(account: account, userID: userID))
+                        } label: {
+                            Label("Bookmarks", systemImage: "bookmark")
+                        }
                     }
                     if !account.onboardingComplete {
                         NavigationLink {

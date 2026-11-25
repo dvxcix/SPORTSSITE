@@ -13,18 +13,32 @@ struct FeedPost: Decodable, Identifiable {
     }
 
     struct Pick: Decodable {
-        struct Leg: Decodable {
-            let label: String
+        struct Line: Decodable {
+            let label: String?
             let line: String?
             let odds: String?
             let result: String?
+            let sport: String?
+            let team: String?
+            let teamLogo: URL?
+            let colors: [String]?
+            let portraits: [URL]?
         }
 
-        let label: String?
-        let line: String?
-        let odds: String?
-        let result: String?
-        let legs: [Leg]
+        let single: Line
+        let book: String?
+        let combinedOdds: String?
+        let legs: [Line]
+
+        private enum CodingKeys: CodingKey { case book, combinedOdds, legs }
+
+        init(from decoder: any Decoder) throws {
+            single = try Line(from: decoder)
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            book = try values.decodeIfPresent(String.self, forKey: .book)
+            combinedOdds = try values.decodeIfPresent(String.self, forKey: .combinedOdds)
+            legs = try values.decode([Line].self, forKey: .legs)
+        }
     }
 
     struct Poll: Decodable {

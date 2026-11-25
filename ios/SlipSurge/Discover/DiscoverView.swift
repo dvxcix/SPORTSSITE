@@ -4,6 +4,7 @@ struct DiscoverView: View {
     private enum Section: String, CaseIterable { case communities = "Communities", creators = "Creators", records = "Records" }
 
     let api: DiscoverAPI
+    var opensCommunity: UUID? = nil
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var section = Section.communities
@@ -16,6 +17,8 @@ struct DiscoverView: View {
     @State private var thisWeek = false
     @State private var error: (any Error)?
     @State private var revision = 0
+    @State private var routedCommunity: UUID?
+    @State private var routed = false
 
     private var request: String { "\(section.rawValue):\(revision)" }
 
@@ -50,6 +53,18 @@ struct DiscoverView: View {
         }
         .navigationTitle("Discover")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $routedCommunity) { id in
+            if let data = communities, let group = (data.invitations + data.groups).first(where: { $0.id == id }) {
+                CommunityDetailView(api: api, group: group, initialMember: data.joinedIds.contains(id))
+            }
+        }
+        .onChange(of: communities != nil, initial: true) { _, ready in
+            if ready, !routed, let opensCommunity, let data = communities,
+               (data.invitations + data.groups).contains(where: { $0.id == opensCommunity }) {
+                routed = true
+                routedCommunity = opensCommunity
+            }
+        }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .onChange(of: section) { _, _ in

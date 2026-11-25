@@ -3,8 +3,8 @@ import SwiftUI
 struct ActivityView: View {
     let api: ActivityAPI
     @Environment(\.colorScheme) private var scheme
-    @Environment(\.openURL) private var openURL
     @State private var selection = Filter.all
+    @State private var destination: ActivityNotification.Destination?
     @State private var rows: [ActivityNotification] = []
     @State private var state = State.loading
     @State private var busy = false
@@ -46,12 +46,19 @@ struct ActivityView: View {
                     Label("Notifications unavailable", systemImage: "bell.slash")
                 } actions: {
                     Button("Retry") { revision += 1 }
-                    SiteLink("Open notifications on the web", path: "/notifications")
                 }
                 .listRowBackground(Brand.surface(for: scheme))
             }
         }
         .navigationTitle("Notifications")
+        .navigationDestination(item: $destination) { chosen in
+            switch chosen {
+            case .post(let id): FeedThreadView(api: FeedAPI(account: api.account, userID: api.userID), id: id)
+            case .conversation(let room): MessageThreadView(api: MessagesAPI(account: api.account, userID: api.userID), destination: room)
+            case .discovery: DiscoverView(api: DiscoverAPI(account: api.account, userID: api.userID))
+            case .community(let id): DiscoverView(api: DiscoverAPI(account: api.account, userID: api.userID), opensCommunity: id)
+            }
+        }
         .scrollContentBackground(.hidden)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
@@ -102,7 +109,7 @@ struct ActivityView: View {
         ForEach(filtered) { row in
             Button {
                 if !row.read { Task { await mutate { try await api.markRead([row.id]) } } }
-                if let url = row.destination { openURL(url) }
+                if let target = row.destination { destination = target }
             } label: {
                 notification(row)
             }
