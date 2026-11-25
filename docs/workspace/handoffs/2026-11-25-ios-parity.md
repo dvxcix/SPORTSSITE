@@ -2259,6 +2259,8 @@ physical-device push are still open.
   passed 286/286. Hub TypeScript passed. The restored Matrix fixture stubs
   the already shipped private listing reader and verifies blocked-author
   behavior. The runtime Matrix route did not change.
+- Task `46d489f50dfc3c317b1c6b34c731ab862ea27d40` is pushed. Production home
+  and public Feed returned 200 after the native API releases.
 - Xcode 27.2 build `27B52` recognizes the SlipSurge scheme. The project was
   opened on this Mac. The window control surface returned `cgWindowNotFound`
   during the last verification. `devicectl` listed two simulators and zero
@@ -2267,3 +2269,18 @@ physical-device push are still open.
   StoreKit remain unverified. Market DNA player analogs, the legacy Contact
   Recap data and the desktop MLB importer paths still require resolution of
   the separate legacy data dependency before complete native parity.
+
+## Xcode release metadata and rotation · 25 November 2026
+
+- Added the app's supported iPhone and iPad orientations to its Info.plist.
+  iPhone supports upright portrait and both landscape orientations. iPad
+  also supports upside-down portrait. The arm64 iOS Release build passed
+  without the prior orientation warning. This build used signing disabled
+  because the Mac has no physical-device signing identity.
+- Signed Simulator Debug rebuilt and passed `codesign --verify --deep
+  --strict`. The iPad mini displayed the public Feed in landscape and the
+  NBA and NFL Research entries after rotating to portrait. This is a launch
+  and rotation smoke check across those screens.
+- Left the signed iPhone 18 Pro on The Court's November 24 Odds Board with
+  the latest app installed. The Xcode scheme and project remain ready to
+  open on the Mac.
