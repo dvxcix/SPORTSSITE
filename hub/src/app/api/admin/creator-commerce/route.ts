@@ -5,22 +5,27 @@ import { configureCreatorDelivery, testCreatorDelivery } from '@/lib/creatorWebh
 import { safeApiError } from '@/lib/safeApiError'
 import { writeAdminAudit } from '@/lib/adminAudit'
 import { creatorPlatformHealth } from '@/lib/creatorPlatformHealth'
+import { adminDecisionActor } from '@/lib/supabase/adminDecisionActor'
 
-async function operator() {
+async function operator(request: Request) {
+ if (request.headers.has('authorization')) {
+  const actor = await adminDecisionActor(request)
+  return actor.error ? null : actor.user
+ }
  const supabase = await createClient()
  const { data: { user } } = await supabase.auth.getUser()
  if (!user) return null
  const { data } = await supabase.from('users').select('account_type').eq('id', user.id).single()
  return data?.account_type === 'admin' ? user : null
 }
-export async function GET() {
- if (!await operator()) return NextResponse.json({ error: 'Admin access required.' }, { status: 403 })
+export async function GET(request: Request) {
+ if (!await operator(request)) return NextResponse.json({ error: 'Admin access required.' }, { status: 403 })
  try {
    return NextResponse.json(await creatorPlatformHealth(), { headers: { 'Cache-Control': 'private, no-store' } })
  } catch (cause) { return safeApiError('creator-platform-check', cause, 'The Whop platform connection could not be verified. Check its account and API permissions.', 502) }
 }
 export async function POST(request: Request) {
- const user = await operator()
+ const user = await operator(request)
  if (!user) return NextResponse.json({ error: 'Admin access required.' }, { status: 403 })
  try {
    const admin = createAdminClient()
