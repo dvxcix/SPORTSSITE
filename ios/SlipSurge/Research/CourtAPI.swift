@@ -39,21 +39,76 @@ struct CourtBoard: Decodable {
         let observedAt: String?
     }
 
-    struct Player: Decodable, Identifiable {
-        struct Averages: Decodable {
-            let pts: Double?
-            let reb: Double?
-            let ast: Double?
-        }
+    struct GameOdds: Decodable {
+        let vendor: String
+        let spreadAwayValue: String?
+        let spreadHomeValue: String?
+        let spreadAwayOdds: Int?
+        let spreadHomeOdds: Int?
+        let moneylineAwayOdds: Int?
+        let moneylineHomeOdds: Int?
+        let totalValue: String?
+        let totalOverOdds: Int?
+        let totalUnderOdds: Int?
+        let updatedAt: String?
 
+        var book: GameMarketBook {
+            GameMarketBook(
+                vendor: vendor, moneylineAway: moneylineAwayOdds, moneylineHome: moneylineHomeOdds,
+                spreadAway: spreadAwayValue.flatMap(Double.init), spreadHome: spreadHomeValue.flatMap(Double.init),
+                spreadAwayOdds: spreadAwayOdds, spreadHomeOdds: spreadHomeOdds,
+                total: totalValue.flatMap(Double.init), totalOverOdds: totalOverOdds, totalUnderOdds: totalUnderOdds,
+                updatedAt: updatedAt, isOpeningOnly: nil
+            )
+        }
+    }
+
+    struct Player: Decodable, Identifiable {
         let id: Int
         let firstName: String
         let lastName: String
         let position: String?
         let team: Team
         let headshot: URL?
-        let average: Averages?
+        let average: [String: Double?]?
+        let logs: [PlayerLog]?
+        let periodLogs: [PlayerLog]?
         let props: [Prop]
+    }
+
+    struct PlayerLog: Decodable {
+        struct Identity: Decodable { let id: Int }
+        struct LoggedGame: Decodable {
+            let id: Int
+            let date: String
+            let season: Int?
+            let status: String
+            let statusState: String?
+        }
+
+        let id: Int
+        let period: Int?
+        let player: Identity
+        let game: LoggedGame
+        let min: String?
+        let pts: Double?
+        let reb: Double?
+        let ast: Double?
+        let fg3m: Double?
+        let stl: Double?
+        let blk: Double?
+        let turnover: Double?
+        let fga: Double?
+        let fgm: Double?
+        let fg3a: Double?
+        let fta: Double?
+        let ftm: Double?
+
+        var played: Bool {
+            guard let min, min.range(of: #"^\d+(?:\.\d+|:[0-5]\d)?$"#, options: .regularExpression) != nil else { return false }
+            return min.contains { ("1"..."9").contains(String($0)) }
+                || [pts, reb, ast, fg3m, stl, blk, turnover, fga, fgm, fg3a, fta, ftm].contains { ($0 ?? 0) > 0 }
+        }
     }
 
     struct Prop: Decodable, Identifiable {
@@ -76,9 +131,11 @@ struct CourtBoard: Decodable {
 
     let game: Game
     let players: [Player]
+    let gameOdds: [GameOdds]?
     let issues: [String]
     let oddsMode: CourtResearchMode
     let historical: Bool
+    let sampleSeason: Int?
     let researchSnapshot: Snapshot?
 
     var isFrozen: Bool { researchSnapshot?.frozen == true }
@@ -98,7 +155,7 @@ struct CourtAPI {
         let games: [CourtBoard.Game]
     }
 
-    func featuredBoard(mode: CourtResearchMode) async throws -> CourtBoard {
+    func previewBoard(mode: CourtResearchMode) async throws -> CourtBoard {
         let request = try SlipSurgeHTTP.request(
             host: SlipSurgeHTTP.site,
             path: "/preview/nba/data",

@@ -64,6 +64,9 @@ struct SidelineBoard: Decodable {
         let position: String
         let price: Int
         let observedAt: Date
+        let previousPrice: Int?
+        let openingPrice: Int?
+        let openingConflict: Bool
 
         init(from decoder: Decoder) throws {
             var row = try decoder.unkeyedContainer()
@@ -79,6 +82,11 @@ struct SidelineBoard: Decodable {
                 throw DecodingError.dataCorruptedError(in: row, debugDescription: "Invalid odds observation timestamp")
             }
             observedAt = date
+            let prior = row.isAtEnd ? nil : try row.decodeIfPresent(Int.self)
+            let priorDate = row.isAtEnd ? nil : try row.decodeIfPresent(String.self)
+            previousPrice = priorDate.flatMap(SidelineBoard.timestamp).map { $0 < date } == true ? prior : nil
+            openingPrice = row.isAtEnd ? nil : try row.decodeIfPresent(Int.self)
+            openingConflict = row.isAtEnd ? false : try row.decode(Bool.self)
         }
     }
 
@@ -124,6 +132,25 @@ struct OddsSelection: Equatable {
     var book = "fanduel"
 }
 
+struct SidelineSchedule: Decodable {
+    struct Team: Decodable {
+        let abbreviation: String
+        let name: String
+        let logo: URL?
+        let color: String
+    }
+
+    struct Game: Decodable, Identifiable {
+        let id: String
+        let kickoff: String?
+        let away: Team
+        let home: Team
+    }
+
+    let date: String
+    let games: [Game]
+}
+
 struct SidelineAPI {
     enum Scope {
         case featured
@@ -135,6 +162,49 @@ struct SidelineAPI {
     var isFeatured: Bool {
         if case .featured = scope { return true }
         return false
+    }
+
+    func schedule(date: String?) async throws -> SidelineSchedule {
+        guard case .member(let account, let userID) = scope else { throw URLError(.userAuthenticationRequired) }
+        let query = date.map { [URLQueryItem(name: "date", value: $0)] } ?? []
+        let data = try await SlipSurgeHTTP.memberData("/api/mobile/sideline/schedule", query: query, account: account, userID: userID)
+        let schedule = try JSONDecoder().decode(SidelineSchedule.self, from: data)
+        guard let parsed = SlateDate.fromKey(schedule.date), SlateDate.key(parsed) == schedule.date,
+              (date == nil || date == schedule.date), schedule.games.count <= 24,
+              Set(schedule.games.map(\.id)).count == schedule.games.count else { throw URLError(.cannotParseResponse) }
+        return schedule
+    }
+
+    struct MarketObservation {
+        let offers: [GameMarketBook]
+        let cutoff: Date?
+    }
+
+    func gameMarkets(gameID: String, date: String) async throws -> MarketObservation {
+        struct Payload: Decodable {
+            struct Odds: Decodable {
+                let gameLines: [GameMarketBook]
+                let availabilityCutoffAt: String?
+            }
+            let odds: Odds
+        }
+        let query: [URLQueryItem] = [
+            .init(name: "game", value: gameID), .init(name: "date", value: date),
+            .init(name: "summary", value: "1")
+        ]
+        let payload: Payload
+        switch scope {
+        case .featured:
+            payload = try await SlipSurgeHTTP.get("/preview/nfl/data", query: [
+                .init(name: "resource", value: "/the-sideline/market")
+            ] + query)
+        case .member(let account, let userID):
+            let data = try await SlipSurgeHTTP.memberData(
+                "/api/mobile/sideline/market", query: query, account: account, userID: userID
+            )
+            payload = try JSONDecoder().decode(Payload.self, from: data)
+        }
+        return MarketObservation(offers: payload.odds.gameLines, cutoff: payload.odds.availabilityCutoffAt.flatMap(SidelineBoard.timestamp))
     }
 
     func board(for selection: OddsSelection, date: String) async throws -> SidelineBoard {

@@ -44,39 +44,62 @@ private struct ResearchHome: View {
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        List {
-            if let userID = account.memberID {
-                Section("Member research") {
-                    NavigationLink {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                NavigationLink {
+                    if let userID = account.memberID {
                         SidelineView(api: SidelineAPI(scope: .member(account, userID)))
-                    } label: {
-                        Label("The Sideline", systemImage: "football")
+                    } else {
+                        SidelineView(api: SidelineAPI())
                     }
-                    NavigationLink {
+                } label: {
+                    destination("The Sideline", league: "NFL", logo: "nfl")
+                }
+                NavigationLink {
+                    if let userID = account.memberID {
                         CourtView(scope: .member(account, userID))
-                    } label: {
-                        Label("The Court", systemImage: "basketball")
+                    } else {
+                        CourtView(scope: .preview)
                     }
-                }
-                .listRowBackground(Brand.surface(for: scheme))
-            }
-            Section("Featured matchups") {
-                NavigationLink {
-                    SidelineView(api: SidelineAPI())
                 } label: {
-                    Label("The Sideline", systemImage: "football")
+                    destination("The Court", league: "NBA", logo: "nba")
                 }
-                NavigationLink {
-                    CourtView(scope: .featured)
-                } label: {
-                    Label("The Court", systemImage: "basketball")
+                if account.memberID == nil {
+                    Text("Preview one matchup. Ultimate includes the full workspaces.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 2)
                 }
             }
-            .listRowBackground(Brand.surface(for: scheme))
+            .padding()
         }
         .navigationTitle("Research")
-        .scrollContentBackground(.hidden)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
+    }
+
+    private func destination(_ title: String, league: String, logo: String) -> some View {
+        HStack(spacing: 15) {
+            ResearchArtwork(
+                urls: URL(string: "https://a.espncdn.com/i/teamlogos/leagues/500/\(logo).png").map { [$0] } ?? [],
+                fallback: logo == "nfl" ? "football" : "basketball"
+            )
+            .frame(width: 39, height: 39)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(league).font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                Text(title).font(.title3.weight(.semibold))
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
+        .padding(15)
+        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14).strokeBorder(.secondary.opacity(0.2))
+        }
+        .accessibilityElement(children: .combine)
     }
 }

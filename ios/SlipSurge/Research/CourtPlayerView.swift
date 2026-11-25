@@ -26,6 +26,8 @@ struct CourtPlayerView: View {
     let frozen: Bool
     let tip: Date?
     let observedAt: Date
+    var initialBook: String?
+    var initialMarket: String?
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
@@ -57,9 +59,9 @@ struct CourtPlayerView: View {
             } else {
                 if let average = player.average {
                     Section("Recorded averages") {
-                        stat("Points", average.pts)
-                        stat("Rebounds", average.reb)
-                        stat("Assists", average.ast)
+                        stat("Points", average["pts"] ?? nil)
+                        stat("Rebounds", average["reb"] ?? nil)
+                        stat("Assists", average["ast"] ?? nil)
                     }
                     .listRowBackground(Brand.surface(for: scheme))
                 }
@@ -81,7 +83,7 @@ struct CourtPlayerView: View {
                 .listRowBackground(Brand.surface(for: scheme))
             }
         }
-        .navigationTitle("Player research")
+        .navigationTitle("\(player.firstName) \(player.lastName)")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
         .background(Brand.background(for: scheme))
@@ -89,7 +91,9 @@ struct CourtPlayerView: View {
         .tint(Brand.accent(for: scheme))
         .onAppear {
             if sportsbook.isEmpty {
-                sportsbook = books.contains("fanduel") ? "fanduel" : (books.first ?? "")
+                let fallback = books.contains("fanduel") ? "fanduel" : (books.first ?? "")
+                sportsbook = initialBook.flatMap { books.contains($0) ? $0 : nil } ?? fallback
+                if let initialMarket { market = initialMarket }
                 selectMarket()
             }
         }

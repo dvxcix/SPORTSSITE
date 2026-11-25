@@ -1,200 +1,386 @@
 import SwiftUI
 
 struct SidelineView: View {
+    private enum Section: String, CaseIterable {
+        case gameDay = "Game Day", props = "Props", oddsBoard = "Odds Board"
+    }
+
     private enum LoadState {
-        case loading
-        case loaded(SidelineBoard)
-        case failed
-        case denied
+        case loading, loaded(SidelineBoard), failed, denied
+    }
+
+    private enum ScheduleState {
+        case loading, loaded(SidelineSchedule), failed, denied
+    }
+
+    private struct DayRequest: Equatable {
+        let date: String
+        let revision: Int
+    }
+
+    private struct RequestKey: Equatable {
+        let date: String
+        let selection: OddsSelection
+        let revision: Int
+        let fetchQuotes: Bool
     }
 
     let api: SidelineAPI
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
-    @State private var slateDate = Date.now
+    @State private var date = Date.now
+    @State private var section = Section.gameDay
     @State private var selection = OddsSelection()
+    @State private var selectedGameID: String?
     @State private var revision = 0
     @State private var state = LoadState.loading
-    @State private var markets: [String] = []
-    @State private var books: [String] = []
+    @State private var lastBoard: SidelineBoard?
+    @State private var schedule = ScheduleState.loading
+    @State private var useDefaultDate = true
+
+    private var dayRequest: DayRequest { .init(date: SlateDate.key(date), revision: revision) }
+
+    private var requestKey: RequestKey {
+        RequestKey(date: dayRequest.date, selection: selection, revision: revision, fetchQuotes: api.isFeatured || section != .gameDay)
+    }
+
+    private var dateSelection: Binding<Date> {
+        Binding(get: { date }, set: { useDefaultDate = false; date = $0 })
+    }
 
     var body: some View {
-        List {
-            if !api.isFeatured {
-                DatePicker("Slate date", selection: $slateDate, displayedComponents: .date)
-                    .environment(\.timeZone, SlateDate.zone)
-                    .listRowBackground(Brand.surface(for: scheme))
-            }
-            switch state {
-            case .loading:
-                ProgressView("Loading NFL research")
-                    .listRowBackground(Brand.surface(for: scheme))
-            case .failed:
-                ContentUnavailableView {
-                    Label("Research unavailable", systemImage: "wifi.exclamationmark")
-                } description: {
-                    Text("NFL research could not load.")
-                } actions: {
-                    Button("Retry") { revision += 1 }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                if api.isFeatured {
+                    if let slate = lastBoard, !slate.games.isEmpty {
+                        previewMatchup(slate)
+                        boardPicker
+                    }
+                    oddsContent()
+                } else {
+                    ResearchSlateControls(date: dateSelection)
+                    memberSlate()
                 }
-                .listRowBackground(Brand.surface(for: scheme))
-            case .denied:
-                ContentUnavailableView {
-                    Label("Sideline access required", systemImage: "lock")
-                } description: {
-                    Text("The full slate requires Ultimate membership or NFL early access.")
-                } actions: {
-                    NavigationLink("View featured matchup") { SidelineView(api: SidelineAPI()) }
-                }
-                .listRowBackground(Brand.surface(for: scheme))
-            case let .loaded(board):
-                boardSections(board)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 20)
         }
-        .scrollContentBackground(.hidden)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))
         .navigationTitle("The Sideline")
-        .task(id: revision) { await loadAndRevalidate() }
-        .onChange(of: slateDate) { _, _ in revision += 1 }
+        .navigationBarTitleDisplayMode(.inline)
+        .task(id: dayRequest) { await loadSchedule() }
+        .task(id: requestKey) { await load() }
         .refreshable { revision += 1 }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active, case .loaded = state { revision += 1 }
+            if phase == .active { revision += 1 }
         }
+    }
+
+    private var boardPicker: some View {
+        Picker("Board", selection: $section) {
+            ForEach(Section.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+        }
+        .pickerStyle(.segmented)
     }
 
     @ViewBuilder
-    private func boardSections(_ board: SidelineBoard) -> some View {
-        Section("\(api.isFeatured ? "NFL featured matchup" : "NFL slate") · \(board.date)") {
-            if board.games.isEmpty {
-                Text("No NFL matchups available.")
-            }
-            ForEach(board.games) { game in
-                HStack {
-                    team(game.away, in: game, board: board)
-                    Text("at").foregroundStyle(.secondary)
-                    team(game.home, in: game, board: board)
+    private func memberSlate() -> some View {
+        switch schedule {
+        case .loading:
+            loading("Loading slate")
+        case .failed:
+            unavailable("Slate couldn’t load")
+        case .denied:
+            accessRequired
+        case .loaded(let slate):
+            if slate.date != dayRequest.date {
+                loading("Loading slate")
+            } else if let game = slate.games.first(where: { $0.id == selectedGameID }) ?? slate.games.first {
+                matchupPicker(slate, selected: game.id)
+                boardPicker
+                if section == .gameDay {
+                    SidelineGameDay(api: api, gameID: game.id, away: game.away.abbreviation, home: game.home.abbreviation, date: slate.date)
+                        .id(game.id)
+                } else {
+                    oddsContent()
                 }
-                if board.availabilityUnavailable.contains(game.id) || game.status == "unavailable" {
-                    Text("Odds unavailable for this matchup.")
-                } else if game.status == "incomplete" {
-                    Text("This observation has incomplete coverage.")
-                }
+            } else {
+                ContentUnavailableView("No games on this date", systemImage: "calendar")
             }
         }
-        .listRowBackground(Brand.surface(for: scheme))
+    }
 
-        if !markets.isEmpty {
-            Section("Pregame odds") {
-                Picker("Market", selection: $selection.market) {
-                    ForEach(markets, id: \.self) { Text(label($0)).tag($0) }
-                }
-                SportsbookPicker(books: books, selection: $selection.book)
-                    .disabled(board.books.isEmpty)
-            }
-            .onChange(of: selection) { _, _ in revision += 1 }
-            .listRowBackground(Brand.surface(for: scheme))
-        }
-
-        if board.quotes.isEmpty {
-            Text("No verified prices for this selection.")
-                .listRowBackground(Brand.surface(for: scheme))
-        } else {
-            let byGame = Dictionary(grouping: board.quotes, by: { $0.id.player.game })
-            let portraits = Dictionary(grouping: board.identities, by: \.player)
-            let teamLooks = Dictionary(grouping: board.teams, by: \.game)
-            ForEach(board.games) { game in
-                if let quotes = byGame[game.id] {
-                    Section {
-                        ForEach(quotes) { quote in
-                            QuoteRow(
-                                quote: quote,
-                                artwork: portraits[quote.id.player]?.first?.urls ?? [],
-                                team: teamLooks[game.id]?.first { $0.abbreviation == quote.id.player.team }
-                            )
-                        }
-                    } header: {
-                        Text("\(game.away) at \(game.home) · \(Sportsbook.name(board.book))")
-                    } footer: {
-                        Text("Prices reflect the recorded pregame observations.")
+    private func matchupPicker(_ slate: SidelineSchedule, selected: String) -> some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 9) {
+                ForEach(slate.games) { game in
+                    Button {
+                        selectedGameID = game.id
+                    } label: {
+                        ResearchMatchup(
+                            away: matchupTeam(game.away), home: matchupTeam(game.home),
+                            subtitle: game.kickoff.flatMap(SidelineBoard.timestamp)?.formatted(date: .omitted, time: .shortened),
+                            selected: selected == game.id
+                        )
                     }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(game.away.name) at \(game.home.name)")
+                }
+            }
+            .padding(.vertical, 2)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private func matchupTeam(_ team: SidelineSchedule.Team) -> ResearchMatchup.Team {
+        .init(name: team.abbreviation, logo: team.logo, color: Color(hex: team.color) ?? Brand.surface(for: scheme))
+    }
+
+    @ViewBuilder
+    private func previewMatchup(_ board: SidelineBoard) -> some View {
+        if let game = board.games.first {
+            ResearchMatchup(
+                away: matchupTeam(game.away, game, board), home: matchupTeam(game.home, game, board),
+                subtitle: SlateDate.fromKey(board.date).map { SlateDate.label($0) }, fullWidth: true
+            )
+        }
+    }
+
+    private func matchupTeam(_ name: String, _ game: SidelineBoard.Game, _ board: SidelineBoard) -> ResearchMatchup.Team {
+        let team = board.teams.first { $0.game == game.id && $0.abbreviation == name }
+        return .init(name: name, logo: team?.logo, color: Color(hex: team?.primary) ?? Brand.surface(for: scheme))
+    }
+
+    @ViewBuilder
+    private func oddsContent() -> some View {
+        if section != .gameDay, let lastBoard, api.isFeatured || lastBoard.date == dayRequest.date {
+            quoteFilters(lastBoard)
+        }
+        switch state {
+        case .loading:
+            loading("Loading board")
+        case .failed:
+            unavailable("Board couldn’t load")
+        case .denied:
+            accessRequired
+        case .loaded(let board):
+            if !api.isFeatured, board.date != dayRequest.date {
+                loading("Loading board")
+            } else if api.isFeatured, section == .gameDay, let game = board.games.first {
+                SidelineGameDay(api: api, gameID: game.id, away: game.away, home: game.home, date: board.date)
+                    .id(game.id)
+            } else if board.games.isEmpty {
+                ContentUnavailableView(api.isFeatured ? "Preview unavailable" : "No games on this date", systemImage: "calendar")
+            } else if board.market == selection.market, board.book == selection.book {
+                if section == .props {
+                    if let game = board.games.first(where: { $0.id == selectedGameID }) ?? (api.isFeatured ? board.games.first : nil) {
+                        quoteBoard(board, game: game)
+                    } else {
+                        Text("Odds unavailable for this matchup.").font(.subheadline).foregroundStyle(.secondary)
+                    }
+                } else {
+                    ForEach(board.games) { quoteBoard(board, game: $0) }
+                }
+            } else {
+                loading("Loading board")
+            }
+        }
+    }
+
+    private func loading(_ title: String) -> some View {
+        ProgressView(title).frame(maxWidth: .infinity).padding()
+    }
+
+    private var accessRequired: some View {
+        ContentUnavailableView {
+            Label("Ultimate research", systemImage: "lock")
+        } description: {
+            Text("The full slate requires Ultimate or NFL early access.")
+        } actions: {
+            NavigationLink("Open Preview") { SidelineView(api: SidelineAPI()) }
+        }
+    }
+
+    private func unavailable(_ title: String) -> some View {
+        ContentUnavailableView {
+            Label(title, systemImage: "wifi.exclamationmark")
+        } actions: {
+            Button("Retry") { revision += 1 }
+            if !api.isFeatured {
+                NavigationLink("Open Preview") { SidelineView(api: SidelineAPI()) }
+            }
+        }
+    }
+
+    private func quoteFilters(_ board: SidelineBoard) -> some View {
+        VStack(spacing: 5) {
+            Picker("Market", selection: $selection.market) {
+                ForEach(Array(Set(board.markets + [selection.market])).sorted(), id: \.self) {
+                    Text(marketName($0)).tag($0)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            Divider()
+            SportsbookPicker(books: Array(Set(board.books + [selection.book])).sorted(), selection: $selection.book)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        }
+        .padding(.horizontal, 12)
+        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private func quoteBoard(_ board: SidelineBoard, game: SidelineBoard.Game) -> some View {
+        let quotes = board.quotes.filter { $0.id.player.game == game.id }
+        let groups = Dictionary(grouping: quotes, by: { $0.id.player })
+        let players = groups.keys.sorted { $0.name == $1.name ? $0.id < $1.id : $0.name < $1.name }
+
+        VStack(alignment: .leading, spacing: 8) {
+            if section == .oddsBoard { ResearchSectionTitle(title: "\(game.away) at \(game.home)") }
+            if board.availabilityUnavailable.contains(game.id) || game.status == "unavailable" {
+                Text("Odds unavailable for this matchup.").font(.subheadline).foregroundStyle(.secondary)
+            } else if game.status == "incomplete" {
+                Text("This observation has incomplete coverage.").font(.caption).foregroundStyle(.secondary)
+            }
+            if players.isEmpty {
+                Text("No verified prices for this selection.").font(.subheadline).foregroundStyle(.secondary)
+            } else {
+                HStack {
+                    Text("Player")
+                    Spacer()
+                    Text("Line & price")
+                }
+                .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                LazyVStack(spacing: 0) {
+                    ForEach(players, id: \.self) { player in
+                        if let prices = groups[player], let first = prices.first {
+                            let portrait = board.identities.first { $0.player == player }
+                            let team = board.teams.first { $0.game == game.id && $0.abbreviation == player.team }
+                            SidelinePlayerPrices(player: player, position: first.position, prices: prices, portrait: portrait, team: team)
+                            if player != players.last { Divider() }
+                        }
+                    }
                 }
             }
         }
+        .padding(12)
+        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
     }
 
-    private func team(_ abbreviation: String, in game: SidelineBoard.Game, board: SidelineBoard) -> some View {
-        HStack(spacing: 6) {
-            if let logo = board.teams.first(where: { $0.game == game.id && $0.abbreviation == abbreviation })?.logo {
-                ResearchArtwork(urls: [logo], fallback: "shield")
-                    .frame(width: 28, height: 28)
-            }
-            Text(abbreviation).bold()
+    private func loadSchedule() async {
+        guard !api.isFeatured else { return }
+        let requested = dayRequest
+        if case .loaded(let slate) = schedule, slate.date != requested.date { schedule = .loading }
+        do {
+            let slate = try await api.schedule(date: useDefaultDate ? nil : requested.date)
+            try Task.checkCancellation()
+            guard requested == dayRequest else { return }
+            useDefaultDate = false
+            if !slate.games.contains(where: { $0.id == selectedGameID }) { selectedGameID = slate.games.first?.id }
+            schedule = .loaded(slate)
+            if slate.date != requested.date, let nextDate = SlateDate.fromKey(slate.date) { date = nextDate }
+        } catch let error as SlipSurgeHTTP.Status where error.code == 403 {
+            if !Task.isCancelled, requested == dayRequest { schedule = .denied }
+        } catch {
+            if !Task.isCancelled, requested == dayRequest { schedule = .failed }
         }
     }
 
-    private func loadAndRevalidate() async {
+    private func load() async {
+        let requested = requestKey
+        guard requested.fetchQuotes else { return }
         state = .loading
-        let requested = selection
         do {
-            let board = try await api.board(for: requested, date: SlateDate.key(slateDate))
+            let board = try await api.board(for: requested.selection, date: requested.date)
             try Task.checkCancellation()
+            guard requested == requestKey else { return }
             let deadline = try board.refreshDeadline()
-            markets = Array(Set(board.markets + [requested.market])).sorted()
-            books = Array(Set(board.books + [requested.book])).sorted()
+            lastBoard = board
             state = .loaded(board)
             if let deadline {
                 try await Task.sleep(for: .seconds(max(0, deadline.timeIntervalSinceNow)))
                 revision += 1
             }
         } catch let error as SlipSurgeHTTP.Status where error.code == 403 && !api.isFeatured {
-            if !Task.isCancelled { state = .denied }
+            if !Task.isCancelled, requested == requestKey { state = .denied }
         } catch {
-            if !Task.isCancelled { state = .failed }
+            if !Task.isCancelled, requested == requestKey { state = .failed }
         }
     }
 
-    private func label(_ key: String) -> String {
-        switch key {
-        case "fanduel": "FanDuel"
-        case "draftkings": "DraftKings"
-        case "betmgm": "BetMGM"
-        case "betrivers": "BetRivers"
+    private func marketName(_ value: String) -> String {
+        switch value {
         case "anytime_td": "Anytime TD"
         case "first_td": "First TD"
-        default: key.replacingOccurrences(of: "_", with: " ").capitalized
+        default: value.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
 }
 
-private struct QuoteRow: View {
-    let quote: SidelineBoard.Quote
-    let artwork: [URL]
+private struct SidelinePlayerPrices: View {
+    let player: SidelineBoard.PlayerIdentity
+    let position: String
+    let prices: [SidelineBoard.Quote]
+    let portrait: SidelineBoard.Portrait?
     let team: SidelineBoard.Team?
+    @State private var expanded = false
+
+    private var sorted: [SidelineBoard.Quote] { prices.sorted { $0.id.line < $1.id.line } }
+    private var reference: SidelineBoard.Quote? {
+        sorted.min { abs(abs(Double($0.price)) - 100) < abs(abs(Double($1.price)) - 100) }
+    }
 
     var body: some View {
-        HStack(alignment: .top) {
-            PlayerArtwork(
-                portraits: artwork, logo: team?.logo,
-                primary: Color(hex: team?.primary) ?? Color(rgb: 0x263542),
-                secondary: Color(hex: team?.secondary) ?? Color(rgb: 0x141C25)
-            )
-            VStack(alignment: .leading, spacing: 3) {
-                Text(quote.id.player.name).font(.headline)
-                Text("\(quote.id.player.team) · \(quote.position)")
-                Text(quote.observedAt.formatted(date: .abbreviated, time: .shortened))
+        VStack(alignment: .leading, spacing: 8) {
+            DisclosureGroup(isExpanded: $expanded) {
+                ForEach(sorted) { quote in
+                    VStack(alignment: .leading, spacing: 3) {
+                        LabeledContent("\(quote.id.line.formatted())+", value: price(quote.price))
+                            .monospacedDigit()
+                        HStack(spacing: 10) {
+                            if let previous = quote.previousPrice {
+                                Text("Prior \(price(previous))")
+                            }
+                            if let opening = quote.openingPrice,
+                               !quote.openingConflict {
+                                Text("Open \(price(opening))")
+                            }
+                        }
+                        .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                if let stamp = sorted.map(\.observedAt).max() {
+                    Text("Latest observation \(stamp.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+            } label: {
+                HStack(spacing: 9) {
+                    PlayerArtwork(
+                        portraits: portrait?.urls ?? [], logo: team?.logo,
+                        primary: Color(hex: team?.primary) ?? Color(rgb: 0x263542),
+                        secondary: Color(hex: team?.secondary) ?? Color(rgb: 0x141C25)
+                    )
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(player.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                        Text("\(player.team) · \(position)").font(.caption2).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 3)
+                    if let reference {
+                        VStack(alignment: .trailing, spacing: 3) {
+                            Text("\(reference.id.line.formatted())+ · \(price(reference.price))")
+                                .font(.footnote.weight(.medium)).monospacedDigit()
+                            if sorted.count > 1 {
+                                Text("\(sorted.count.formatted()) lines").font(.caption2).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
             }
-            .font(.caption)
-            Spacer(minLength: 12)
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(quote.id.line, format: .number).font(.headline)
-                Text(quote.price > 0 ? "+\(quote.price)" : String(quote.price))
-                    .monospacedDigit()
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Line \(quote.id.line.formatted()), odds \(quote.price)")
         }
+        .padding(.vertical, 7)
     }
+
+    private func price(_ value: Int) -> String { value > 0 ? "+\(value)" : String(value) }
 }

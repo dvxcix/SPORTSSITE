@@ -22,20 +22,6 @@ struct HomeView: View {
             }
             .listRowBackground(Brand.surface(for: scheme))
 
-            Section("Featured research") {
-                NavigationLink {
-                    SidelineView(api: SidelineAPI())
-                } label: {
-                    Label("The Sideline", systemImage: "football")
-                }
-                NavigationLink {
-                    CourtView(scope: .featured)
-                } label: {
-                    Label("The Court", systemImage: "basketball")
-                }
-            }
-            .listRowBackground(Brand.surface(for: scheme))
-
             Section("On the web") {
                 SiteLink("Communities", path: "/groups")
                 SiteLink("Creators", path: "/creators")

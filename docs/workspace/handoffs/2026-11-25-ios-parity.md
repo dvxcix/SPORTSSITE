@@ -220,3 +220,52 @@ iPhone 18 Pro in Device Hub, left on The Court's Pregame screen. The temporary
 Mac-local feed server was stopped after verification. The Mac reports zero
 valid Apple signing identities. TestFlight and physical-device push need
 device signing, and payment testing needs the Apple product configuration.
+
+## Native research boards and slate selection · 25 November 2026
+
+Checkpoint on `codex/ios-parity-20261125`, based on `e2dc4d9b`.
+
+- Research leads to The Sideline and The Court. Home no longer duplicates the
+  research promotion. Public previews retain the one matchup selected by the
+  server. The full workspaces use the existing account and entitlement checks,
+  including NFL early access. A preview remains reachable if the member read fails.
+- The signed-in screens have a native calendar, day arrows and team-logo matchup
+  buttons. Dates use the Eastern slate day. Court keeps the board on the same
+  screen while changing matchups. The new authenticated Sideline schedule reader
+  follows the site's initial NFL date and returns an exact empty slate for an
+  off day. It reads through the existing account and NFL access checks.
+- The Court's Player Board has player search, market, sportsbook and Over/Under
+  selectors, a reference line with the observed sportsbook price, its baseline,
+  and L5/L10/L20 results. The calculation follows the site's reference selection
+  and excludes pushes from decisions. Pregame uses the saved snapshot once tipped.
+  Explicit Live mode continues to use the corresponding live reader.
+- The Sideline Game Day shows moneyline, spread and total by sportsbook. Props
+  group verified prices in one expandable player row, with historical opening
+  and prior prices when present. The Odds Board also shows the other games on the
+  selected slate. Game markets and dates remain usable when player quotes fail.
+
+### Verification and next work
+
+- Xcode 27.2 built the SlipSurge scheme and installed it on the iPhone 18 Pro
+  simulator. The real Court preview changed modal market selection from Points
+  to Rebounds and recalculated the displayed line and hit rates. Player detail
+  kept the selected sportsbook and market. The real Sideline preview switched
+  from FanDuel TB/CHI moneylines +220/−270 to DraftKings +240/−298 and showed
+  grouped Receiving Yards from the public board.
+- Device Hub confirmed the date arrows and graphical calendar. A separately
+  installed test build supplied two controlled Court matchups and an empty
+  date. Selecting the second matchup replaced the board, Next day cleared it,
+  and Previous day restored the first real fixture's player rows. That test
+  build was removed. The standard build still uses SlipSurge's actual readers.
+- Hub TypeScript, 143 native access, public scope and production-source tests,
+  and Git whitespace checks passed. The native Sideline tests cover anonymous
+  denial, native onboarding and entitlement checks, exact off days, the default
+  slate, invalid dates, no cache and schedule failure.
+- Both standard-build member slate requests reached the retry state in the
+  local simulator. End-to-end Ultimate, NFL early access and real multi-game
+  slate verification require a working authorized backend environment. The
+  branch adds the NFL mobile readers. Production was not deployed.
+- Continue Court MM, the remaining proprietary boards, historical timelines and
+  saved picks from the web implementations. The remaining role-specific flows,
+  community and creator/admin workflows, production OAuth and payments,
+  and physical-device notifications remain tracked in `docs/ios/README.md`.

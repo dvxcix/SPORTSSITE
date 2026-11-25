@@ -2,17 +2,37 @@ import SwiftUI
 
 struct CourtView: View {
     enum Scope {
-        case featured
+        case preview
         case member(AccountStore, UUID)
-        case game(CourtBoard.Game, AccountStore, UUID)
     }
 
-    private enum State {
+    private enum BoardSection: String, CaseIterable {
+        case players = "Player Board", markets = "Game Markets"
+    }
+
+    private enum Slate {
         case loading
-        case slate([CourtBoard.Game])
-        case board(CourtBoard, Date)
+        case games(String, [CourtBoard.Game])
         case denied
-        case unavailable
+        case failed
+    }
+
+    private enum LoadState {
+        case loading
+        case loaded(CourtBoard, Date)
+        case denied
+        case failed
+    }
+
+    private struct SlateRequest: Equatable {
+        let date: String
+        let revision: Int
+    }
+
+    private struct BoardRequest: Equatable {
+        let slate: SlateRequest
+        let gameID: Int?
+        let mode: CourtResearchMode
     }
 
     let scope: Scope
@@ -21,63 +41,55 @@ struct CourtView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var date = Date.now
     @State private var revision = 0
+    @State private var selectedGameID: Int?
     @State private var mode = CourtResearchMode.pregame
+    @State private var section = BoardSection.players
+    @State private var market = CourtPlayerMarket.points
+    @State private var sportsbook: String?
+    @State private var side = CourtPlayerMarket.Side.over
+    @State private var playerSearch = ""
+    @State private var slate = Slate.loading
+    @State private var state = LoadState.loading
 
-    private struct RequestKey: Equatable {
-        let revision: Int
-        let mode: CourtResearchMode
-        let date: String
+    private var isPreview: Bool {
+        if case .preview = scope { return true }
+        return false
     }
 
-    private var requestKey: RequestKey { RequestKey(revision: revision, mode: mode, date: SlateDate.key(date)) }
-    @State private var state = State.loading
+    private var slateRequest: SlateRequest { .init(date: SlateDate.key(date), revision: revision) }
+
+    private var games: [CourtBoard.Game] {
+        guard case .games(let key, let games) = slate, key == slateRequest.date else { return [] }
+        return games
+    }
+
+    private var selectedGame: CourtBoard.Game? {
+        games.first { $0.id == selectedGameID } ?? games.first
+    }
+
+    private var boardRequest: BoardRequest { .init(slate: slateRequest, gameID: selectedGame?.id, mode: mode) }
 
     var body: some View {
-        List {
-            if case .member = scope {
-                DatePicker("Slate date", selection: $date, displayedComponents: .date)
-                    .environment(\.timeZone, SlateDate.zone)
-                    .listRowBackground(Brand.surface(for: scheme))
-            } else {
-                Picker("Research mode", selection: $mode) {
-                    Text("Pregame").tag(CourtResearchMode.pregame)
-                    Text("Live").tag(CourtResearchMode.live)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                if isPreview {
+                    boardContent()
+                } else {
+                    ResearchSlateControls(date: $date)
+                    memberContent()
                 }
-                .pickerStyle(.segmented)
-                .listRowBackground(Brand.surface(for: scheme))
             }
-            switch state {
-            case .loading:
-                ProgressView("Loading NBA research")
-                    .listRowBackground(Brand.surface(for: scheme))
-            case .slate(let games):
-                slateRows(games)
-            case .board(let board, let observedAt):
-                if board.oddsMode == mode { boardSections(board, observedAt: observedAt) }
-            case .denied:
-                ContentUnavailableView {
-                    Label("Court access required", systemImage: "lock")
-                } description: {
-                    Text("The full NBA slate requires Ultimate membership.")
-                } actions: {
-                    NavigationLink("View featured matchup") { CourtView(scope: .featured) }
-                }
-                .listRowBackground(Brand.surface(for: scheme))
-            case .unavailable:
-                ContentUnavailableView {
-                    Label("Research unavailable", systemImage: "wifi.exclamationmark")
-                } actions: {
-                    Button("Retry") { revision += 1 }
-                }
-                .listRowBackground(Brand.surface(for: scheme))
-            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 20)
         }
         .navigationTitle("The Court")
-        .scrollContentBackground(.hidden)
+        .navigationBarTitleDisplayMode(.inline)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))
-        .task(id: requestKey) { await load() }
+        .task(id: slateRequest) { await loadSlate() }
+        .task(id: boardRequest) { await loadBoard() }
         .refreshable { revision += 1 }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { revision += 1 }
@@ -85,116 +97,268 @@ struct CourtView: View {
     }
 
     @ViewBuilder
-    private func slateRows(_ games: [CourtBoard.Game]) -> some View {
-        if case .member(let account, let userID) = scope {
-            Section("NBA slate") {
-                if games.isEmpty { Text("No NBA games for this date.") }
-                ForEach(games) { game in
-                    NavigationLink {
-                        CourtView(scope: .game(game, account, userID))
-                    } label: {
-                        matchup(game)
+    private func memberContent() -> some View {
+        switch slate {
+        case .loading:
+            loading("Loading slate")
+        case .denied:
+            accessRequired
+        case .failed:
+            unavailable("Slate couldn’t load")
+        case .games(let key, let list):
+            if key != slateRequest.date {
+                loading("Loading slate")
+            } else if list.isEmpty {
+                ContentUnavailableView("No games on this date", systemImage: "calendar")
+            } else {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 9) {
+                        ForEach(list) { game in
+                            Button {
+                                if game.id != selectedGame?.id {
+                                    selectedGameID = game.id
+                                    mode = .pregame
+                                }
+                            } label: {
+                                matchup(game, subtitle: gameTime(game), selected: game.id == selectedGame?.id)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("\(game.visitorTeam.fullName) at \(game.homeTeam.fullName)")
+                        }
                     }
+                    .padding(.vertical, 2)
                 }
+                .scrollIndicators(.hidden)
+                boardContent()
             }
-            .listRowBackground(Brand.surface(for: scheme))
+        }
+    }
+
+    private var selectors: some View {
+        VStack(spacing: 9) {
+            Picker("Research mode", selection: $mode) {
+                Text("Pregame").tag(CourtResearchMode.pregame)
+                Text("Live").tag(CourtResearchMode.live)
+            }
+            .pickerStyle(.segmented)
+            Picker("Board", selection: $section) {
+                ForEach(BoardSection.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
         }
     }
 
     @ViewBuilder
-    private func boardSections(_ board: CourtBoard, observedAt: Date) -> some View {
-        Section("NBA matchup · \(board.game.date)") {
-            matchup(board.game, showScore: board.oddsMode == .live)
-            if board.oddsMode == .live {
-                Label(board.game.isFinal ? "Final score" : "Live research", systemImage: "waveform")
-                if board.game.isInProgress {
-                    LabeledContent("Checked", value: observedAt.formatted(date: .omitted, time: .standard))
-                }
-            } else if board.isFrozen {
-                Label("Saved pregame snapshot", systemImage: "clock")
-            }
-            if !board.issues.isEmpty {
-                Text("Some research is unavailable for this matchup.")
-                    .foregroundStyle(.secondary)
+    private func boardContent() -> some View {
+        if isPreview, case .loaded(let board, _) = state {
+            matchup(board.game, subtitle: SlateDate.fromKey(board.game.date).map { SlateDate.label($0) }, selected: false)
+        }
+        selectors
+        switch state {
+        case .loading:
+            loading("Loading board")
+        case .denied:
+            accessRequired
+        case .failed:
+            unavailable("Board couldn’t load")
+        case .loaded(let board, let observedAt):
+            if board.oddsMode == mode, isPreview || board.game.id == selectedGame?.id && board.game.date == slateRequest.date {
+                research(board, observedAt: observedAt)
+            } else {
+                loading("Loading board")
             }
         }
-        .listRowBackground(Brand.surface(for: scheme))
+    }
+
+    @ViewBuilder
+    private func research(_ board: CourtBoard, observedAt: Date) -> some View {
+        if board.oddsMode == .live, board.game.isInProgress || board.game.isFinal {
+            HStack {
+                Label(board.game.isFinal ? "Final" : "Live", systemImage: "waveform")
+                Spacer()
+                Text("\(board.game.visitorTeam.abbreviation) \(score(board.game.visitorTeamScore))  ·  \(board.game.homeTeam.abbreviation) \(score(board.game.homeTeamScore))")
+                    .monospacedDigit()
+            }
+            .font(.subheadline.weight(.medium))
+        } else if board.isFrozen {
+            Label("Saved pregame snapshot", systemImage: "clock").font(.caption).foregroundStyle(.secondary)
+        }
 
         if board.hasUsableResearch {
-            ForEach([board.game.visitorTeam, board.game.homeTeam], id: \.id) { team in
-                Section(team.fullName) {
-                    let players = board.players.filter { $0.team.id == team.id }
-                    if players.isEmpty { Text("No pregame player data available.") }
-                    ForEach(players) { player in
-                        NavigationLink {
-                            CourtPlayerView(
-                                player: player, game: board.game, mode: board.oddsMode,
-                                frozen: board.isFrozen, tip: board.tip, observedAt: observedAt
-                            )
-                        } label: {
-                            CourtPlayerIdentity(player: player)
-                        }
-                    }
+            if !board.issues.isEmpty {
+                Text("Some research is unavailable for this matchup.").font(.caption).foregroundStyle(.secondary)
+            }
+            switch section {
+            case .players:
+                playerFilters(board)
+                ForEach([board.game.visitorTeam, board.game.homeTeam], id: \.id) { team in
+                    CourtPlayerBoard(
+                        team: team, board: board, observedAt: observedAt,
+                        market: market, sportsbook: sportsbook, side: side, search: playerSearch
+                    )
                 }
-                .listRowBackground(Brand.surface(for: scheme))
+            case .markets:
+                GameMarkets(
+                    away: board.game.visitorTeam.abbreviation, home: board.game.homeTeam.abbreviation,
+                    offers: board.gameOdds?.map(\.book) ?? []
+                )
             }
         } else {
-            Text(board.oddsMode == .live ? "Live research isn’t available for this matchup." : "A verified pregame snapshot is unavailable.")
-                .listRowBackground(Brand.surface(for: scheme))
+            ContentUnavailableView(
+                board.oddsMode == .live ? "Live research unavailable" : "Pregame snapshot unavailable",
+                systemImage: board.oddsMode == .live ? "waveform" : "clock"
+            )
         }
     }
 
-    private func matchup(_ game: CourtBoard.Game, showScore: Bool = false) -> some View {
-        let visible = showScore && (game.isInProgress || game.isFinal)
+    private func playerFilters(_ board: CourtBoard) -> some View {
+        let vendors = Set(board.players.flatMap(\.props).map(\.vendor)).sorted()
         return VStack(alignment: .leading, spacing: 8) {
-            team(game.visitorTeam, role: "Away", score: visible ? game.visitorTeamScore : nil)
-            team(game.homeTeam, role: "Home", score: visible ? game.homeTeamScore : nil)
+            HStack(spacing: 8) {
+                menu(market.label, icon: "slider.horizontal.3", accessibility: "Market, \(market.label)") {
+                    Picker("Market", selection: $market) {
+                        ForEach(CourtPlayerMarket.allCases, id: \.self) { Text($0.label).tag($0) }
+                    }
+                }
+                Spacer(minLength: 0)
+                menu(sportsbook.map(Sportsbook.name) ?? "All books", icon: nil, accessibility: "Sportsbook, \(sportsbook.map(Sportsbook.name) ?? "all books")") {
+                    Picker("Sportsbook", selection: $sportsbook) {
+                        Text("All books").tag(nil as String?)
+                        ForEach(vendors, id: \.self) { Text(Sportsbook.name($0)).tag(Optional($0)) }
+                    }
+                }
+                menu(side.rawValue, icon: nil, accessibility: "Side, \(side.rawValue)") {
+                    Picker("Side", selection: $side) {
+                        ForEach(CourtPlayerMarket.Side.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                }
+            }
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                TextField("Find a player", text: $playerSearch)
+                    .autocorrectionDisabled()
+                    .submitLabel(.search)
+                if !playerSearch.isEmpty {
+                    Button { playerSearch = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                    .accessibilityLabel("Clear player search")
+                }
+            }
+            .padding(.horizontal, 10)
+            .frame(minHeight: 44)
+            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 10))
+        }
+        .onChange(of: vendors, initial: true) { _, current in
+            if let sportsbook, !current.contains(sportsbook) { self.sportsbook = nil }
         }
     }
 
-    private func team(_ team: CourtBoard.Team, role: String, score: Int?) -> some View {
-        HStack {
-            ResearchArtwork(urls: team.logo.map { [$0] } ?? [], fallback: "shield")
-                .frame(width: 28, height: 28)
-            Text(team.fullName)
-                .fontWeight(.semibold)
-            Spacer()
-            if let score {
-                Text(score.formatted()).monospacedDigit()
-                    .accessibilityLabel("\(score) points, \(role)")
-            } else {
-                Text(role).font(.caption).foregroundStyle(.secondary)
+    private func menu<Options: View>(
+        _ title: String, icon: String?, accessibility: String, @ViewBuilder options: () -> Options
+    ) -> some View {
+        Menu(content: options) {
+            HStack(spacing: 5) {
+                if let icon { Image(systemName: icon) }
+                Text(title)
+                Image(systemName: "chevron.down").font(.caption2.weight(.semibold))
+            }
+            .font(.subheadline.weight(.semibold))
+            .frame(minHeight: 44)
+        }
+        .accessibilityLabel(accessibility)
+    }
+
+    private func matchup(_ game: CourtBoard.Game, subtitle: String?, selected: Bool) -> some View {
+        ResearchMatchup(away: matchupTeam(game.visitorTeam), home: matchupTeam(game.homeTeam), subtitle: subtitle, selected: selected, fullWidth: isPreview)
+    }
+
+    private func matchupTeam(_ team: CourtBoard.Team) -> ResearchMatchup.Team {
+        .init(name: team.abbreviation, logo: team.logo, color: CourtTeamColors.colors(for: team.abbreviation).primary)
+    }
+
+    private func gameTime(_ game: CourtBoard.Game) -> String? {
+        game.datetime.flatMap(SidelineBoard.timestamp)?.formatted(date: .omitted, time: .shortened)
+    }
+
+    private func score(_ value: Int?) -> String { value.map(String.init) ?? "—" }
+
+    private func loading(_ title: String) -> some View {
+        ProgressView(title).frame(maxWidth: .infinity).padding()
+    }
+
+    private var accessRequired: some View {
+        ContentUnavailableView {
+            Label("Ultimate research", systemImage: "lock")
+        } description: {
+            Text("Ultimate includes the full Court slate.")
+        } actions: {
+            NavigationLink("Open Preview") { CourtView(scope: .preview) }
+        }
+    }
+
+    private func unavailable(_ title: String) -> some View {
+        ContentUnavailableView {
+            Label(title, systemImage: "wifi.exclamationmark")
+        } actions: {
+            Button("Retry") { revision += 1 }
+            if !isPreview {
+                NavigationLink("Open Preview") { CourtView(scope: .preview) }
             }
         }
     }
 
-    private func load() async {
-        state = .loading
-        let requested = requestKey
+    private func loadSlate() async {
+        guard case .member(let account, let userID) = scope else { return }
+        let request = slateRequest
+        if games.isEmpty { slate = .loading }
         do {
-            switch scope {
-            case .member(let account, let userID):
-                let games = try await api.slate(date: requested.date, account: account, userID: userID)
-                try Task.checkCancellation()
-                state = .slate(games)
-            case .featured:
-                try await show(api.featuredBoard(mode: requested.mode))
-            case .game(let game, let account, let userID):
-                try await show(api.memberBoard(game: game, mode: requested.mode, account: account, userID: userID))
+            let list = try await api.slate(date: request.date, account: account, userID: userID)
+            try Task.checkCancellation()
+            guard request == slateRequest else { return }
+            if !list.contains(where: { $0.id == selectedGameID }) {
+                selectedGameID = list.first?.id
+                mode = .pregame
             }
+            slate = .games(request.date, list)
         } catch let error as SlipSurgeHTTP.Status where error.code == 403 {
-            if !Task.isCancelled { state = .denied }
+            if !Task.isCancelled, request == slateRequest { slate = .denied }
         } catch {
-            if !Task.isCancelled { state = .unavailable }
+            if !Task.isCancelled, request == slateRequest { slate = .failed }
         }
     }
 
-    private func show(_ board: CourtBoard) async throws {
-        try Task.checkCancellation()
-        state = .board(board, .now)
-        if board.oddsMode == .pregame, !board.isFrozen, let tip = board.tip, tip > .now {
-            try await Task.sleep(for: .seconds(max(0, tip.timeIntervalSinceNow)))
-            revision += 1
+    private func loadBoard() async {
+        let request = boardRequest
+        let game = selectedGame
+        if !isPreview, game == nil { return }
+        if !isPreview { state = .loading }
+        do {
+            let board: CourtBoard
+            switch scope {
+            case .preview:
+                board = try await api.previewBoard(mode: request.mode)
+            case .member(let account, let userID):
+                guard let game else { return }
+                board = try await api.memberBoard(game: game, mode: request.mode, account: account, userID: userID)
+            }
+            try Task.checkCancellation()
+            guard request == boardRequest else { return }
+            let observedAt = Date.now
+            state = .loaded(board, observedAt)
+            if board.oddsMode == .pregame, !board.isFrozen, let tip = board.tip, tip > observedAt {
+                try await Task.sleep(for: .seconds(max(0, tip.timeIntervalSinceNow)))
+                revision += 1
+            } else if board.oddsMode == .live, board.game.isInProgress {
+                try await Task.sleep(for: .seconds(30))
+                revision += 1
+            }
+        } catch let error as SlipSurgeHTTP.Status where error.code == 403 && !isPreview {
+            if !Task.isCancelled, request == boardRequest { state = .denied }
+        } catch {
+            if !Task.isCancelled, request == boardRequest { state = .failed }
         }
     }
 }
