@@ -78,20 +78,32 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
     resolveAuthedClient: async () => ({ supabase: client(), userId: state.caller }),
     createAdminClient: () => { state.adminCalls++; return client() },
     writeAdminAudit: async (_client: unknown, event: unknown) => { state.audit.push(event); return null },
+    adminDecisionActor: async (request: Request) => {
+      const bearer = request.headers.get('authorization')
+      if (!state.caller || bearer !== 'Bearer fixture') return { error: Response.json({}, { status: 401 }) }
+      if (state.accounts.get(state.caller) !== 'admin' ||
+          (state.assurance.nextLevel === 'aal2' && state.assurance.currentLevel !== 'aal2')) {
+        return { error: Response.json({}, { status: 403 }) }
+      }
+      state.adminCalls++
+      return { user: { id: state.caller }, admin: client() }
+    },
   }
   const globals = globalThis as typeof globalThis & { __nflAccessTest?: typeof fixture }
   globals.__nflAccessTest = fixture
   const output = await build({
-    stdin: { contents: "export { requireNflAccess } from './src/lib/nflAccess'; export { GET, POST } from './src/app/api/admin/nfl-access/route'", resolveDir: process.cwd() },
+    stdin: { contents: `export { requireNflAccess } from './src/lib/nflAccess';
+      export { GET, POST } from './src/app/api/admin/nfl-access/route';
+      export { GET as mobileGet, POST as mobilePost } from './src/app/api/mobile/admin/nfl-access/route'`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: 'node', format: 'esm', tsconfig: 'tsconfig.json',
     plugins: [{
       name: 'isolated-auth-fixtures',
       setup(builder) {
-        builder.onResolve({ filter: /^(server-only|next\/server|@\/lib\/(requireTier|supabase\/admin|adminAudit))$/ }, args => ({ path: args.path, namespace: 'fixture' }))
+        builder.onResolve({ filter: /^(server-only|next\/server|@\/lib\/(requireTier|supabase\/admin|supabase\/adminDecisionActor|adminAudit))$/ }, args => ({ path: args.path, namespace: 'fixture' }))
         builder.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({
           contents: args.path === 'server-only' ? '' : args.path === 'next/server'
             ? 'export const NextResponse = Response'
-            : 'export const { resolveAuthedClient, createAdminClient, writeAdminAudit } = globalThis.__nflAccessTest',
+            : 'export const { resolveAuthedClient, createAdminClient, writeAdminAudit, adminDecisionActor } = globalThis.__nflAccessTest',
         }))
       },
     }],
@@ -100,9 +112,13 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
   const request = (body: unknown, origin = 'https://slipsurge.com') => new Request('https://slipsurge.com/api/admin/nfl-access', {
     method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify(body),
   })
+  const mobileRequest = (body: unknown, auth = 'Bearer fixture') => new Request('https://slipsurge.com/api/mobile/admin/nfl-access', {
+    method: 'POST', headers: auth ? { authorization: auth, 'content-type': 'application/json' } : {}, body: JSON.stringify(body),
+  })
   try {
     assert.equal((await api.requireNflAccess()).error.status, 401)
     assert.equal((await api.GET(new Request('https://slipsurge.com/api/admin/nfl-access'))).status, 401)
+    assert.equal((await api.mobileGet(new Request('https://slipsurge.com/api/mobile/admin/nfl-access'))).status, 401)
     state.caller = member
     state.profileError = true
     assert.equal((await api.requireNflAccess()).error.status, 503, 'Private entitlement failures fail closed')
@@ -111,6 +127,7 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
     state.tier = 'ultimate'
     assert.deepEqual(await api.requireNflAccess(), { userId: member, isAdmin: false })
     assert.equal((await api.POST(request({ userId: member, granted: true }))).status, 403, 'Ultimate must never grant admin access')
+    assert.equal((await api.mobilePost(mobileRequest({ userId: member, granted: true }))).status, 403)
     state.tier = 'advanced'
     assert.equal((await api.requireNflAccess()).error.status, 403, 'Downgrade takes effect on the next request')
     state.adminTier = 'ultimate'
@@ -127,6 +144,7 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
     assert.equal((await api.requireNflAccess()).userId, adminId)
     state.assurance.nextLevel = 'aal2'
     assert.equal((await api.POST(request({ userId: member, granted: true }))).status, 403)
+    assert.equal((await api.mobilePost(mobileRequest({ userId: member, granted: true }))).status, 403)
     state.assurance.currentLevel = 'aal2'
     assert.equal((await api.POST(request({ userId: member, granted: 'true' }))).status, 400)
     assert.equal((await api.POST(request({ userId: member, granted: true }, 'https://evil.example'))).status, 403)
@@ -143,5 +161,14 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
     state.caller = member
     assert.equal((await api.requireNflAccess()).error.status, 403, 'Revocation must not be cached')
     assert.equal(state.audit.length, 2)
+    state.caller = adminId
+    assert.equal((await api.mobilePost(mobileRequest({ userId: member, granted: true }, ''))).status, 401)
+    assert.equal((await api.mobilePost(mobileRequest({ userId: adminId, granted: true }))).status, 400)
+    assert.equal((await api.mobilePost(mobileRequest({ userId: member, granted: true }))).status, 200)
+    assert.equal(state.grants.has(member), true)
+    assert.equal((await api.mobilePost(mobileRequest({ userId: member, granted: false }))).status, 200)
+    assert.equal(state.grants.has(member), false)
+    assert.equal(state.accounts.get(member), 'user')
+    assert.equal(state.audit.length, 4)
   } finally { delete globals.__nflAccessTest }
 })
