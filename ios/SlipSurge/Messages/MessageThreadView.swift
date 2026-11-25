@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct MessageThreadDraft {
@@ -22,6 +23,10 @@ struct MessageThreadDraft {
 
 struct MessageThreadView: View {
     private enum Input: Hashable { case message, search }
+    private enum ComposerPicker: Identifiable {
+        case gif, emoji
+        var id: Self { self }
+    }
     let api: MessagesAPI
     let destination: MessageDestination
     var roomDraft: Binding<MessageThreadDraft>? = nil
@@ -33,6 +38,9 @@ struct MessageThreadView: View {
     @State private var thread: MessageThread?
     @State private var error: (any Error)?
     @State private var localDraft = MessageThreadDraft()
+    @State private var showingPhotos = false
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var composerPicker: ComposerPicker?
     @State private var memberPreview: MessagePerson?
     @State private var deleting: MessageThread.Note?
     @State private var leave = false
@@ -84,7 +92,30 @@ struct MessageThreadView: View {
         .foregroundStyle(Brand.text(for: scheme))
         .navigationTitle(thread?.title ?? "Messages")
         .navigationBarTitleDisplayMode(.inline)
-        .keyboardDone { focused = nil }
+        .presentationContentInteraction(.scrolls)
+        .interactiveDismissDisabled(focused != nil || !draftData.text.isEmpty || draftData.picture != nil || draftData.uploading)
+        .photosPicker(isPresented: $showingPhotos, selection: $selectedPhoto, matching: .images, preferredItemEncoding: .current)
+        .modifier(NativePhotoSelection(photo: $selectedPhoto, url: draftBinding.picture, uploading: draftBinding.uploading) { photo in
+            try await NativeMediaUpload.upload(photo, kind: .messages, account: api.account, userID: api.userID)
+        })
+        .sheet(item: $composerPicker) { picker in
+            switch picker {
+            case .gif:
+                NativeGIFPickerSheet(account: api.account, userID: api.userID, uploadKind: .messages) { url in
+                    draftData.picture = url
+                    composerPicker = nil
+                }
+            case .emoji:
+                NavigationStack {
+                    NativeEmojiPicker { value in
+                        let next = draftData.text.isEmpty ? value : draftData.text + " " + value
+                        if next.utf16.count <= 1_000 { draftData.text = next }
+                    }
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
+        }
         .sheet(item: $memberPreview) { member in
             ChatMemberPreview(viewer: .init(account: api.account, userID: api.userID), member: member)
         }
@@ -420,7 +451,10 @@ struct MessageThreadView: View {
                     .buttonStyle(.borderless).labelStyle(.iconOnly)
                 }
             }
-            if let roomPicture = draftData.picture, draftData.editing == nil {
+            if draftData.uploading, draftData.editing == nil {
+                ProgressView("Uploading photo")
+                    .font(.footnote).padding(.horizontal, 8).padding(.vertical, 4)
+            } else if let roomPicture = draftData.picture, draftData.editing == nil {
                 let gif = NativeGIFSource.canPlay(roomPicture)
                 HStack(spacing: 10) {
                     Group {
@@ -453,72 +487,92 @@ struct MessageThreadView: View {
             }
             if thread.canSend || draftData.editing != nil {
                 messageInput(thread)
-                composerTools
             } else {
                 Label(destination.kind == .channel ? "Read-only channel" : "This member has direct messages turned off", systemImage: "lock")
                     .font(.footnote).foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
-        .background(.bar)
+        .background { Brand.background(for: scheme).ignoresSafeArea(.container, edges: .bottom) }
         .overlay(alignment: .top) { Rectangle().fill(Color(uiColor: .separator)).frame(height: 0.5).accessibilityHidden(true) }
     }
 
     private func messageInput(_ thread: MessageThread) -> some View {
-        HStack(alignment: .bottom, spacing: 9) {
-            TextField("Message", text: draftBinding.text, axis: .vertical)
-                .font(.body)
-                .lineLimit(1...5)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
-                .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
-                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 21))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 21).strokeBorder(
-                        focused == .message ? Brand.accent(for: scheme).opacity(0.62) : .secondary.opacity(0.22))
-                }
-                .focused($focused, equals: .message)
-                .accessibilityIdentifier("chat-message-input")
-                .onChange(of: draftData.text) { _, value in
-                    draftData.revision += 1
-                    if value.utf16.count > 1_000 { draftData.text = String(value.prefix(1_000)) }
-                    if draftData.editing == nil, thread.canSend, focused == .message {
-                        typingPresence.didType(hasText: !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        HStack(alignment: .bottom, spacing: 8) {
+            composerMenu
+            HStack(alignment: .bottom, spacing: 0) {
+                TextField("Message", text: draftBinding.text, axis: .vertical)
+                    .font(.body)
+                    .lineLimit(1...5)
+                    .padding(.leading, 13)
+                    .padding(.trailing, focused == .message ? 0 : 13)
+                    .padding(.vertical, 11)
+                    .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
+                    .focused($focused, equals: .message)
+                    .accessibilityIdentifier("chat-message-input")
+                    .onChange(of: draftData.text) { _, value in
+                        draftData.revision += 1
+                        if value.utf16.count > 1_000 { draftData.text = String(value.prefix(1_000)) }
+                        if draftData.editing == nil, thread.canSend, focused == .message {
+                            typingPresence.didType(hasText: !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
                     }
+                if focused == .message {
+                    Button {
+                        focused = nil
+                    } label: {
+                        Image(systemName: "keyboard.chevron.compact.down")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 44, height: 46)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(SlipSurgePressStyle())
+                    .accessibilityLabel("Hide keyboard")
+                    .accessibilityIdentifier("chat-hide-keyboard")
                 }
+            }
+            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 23))
+            .overlay {
+                RoundedRectangle(cornerRadius: 23)
+                    .strokeBorder(focused == .message ? Brand.accent(for: scheme).opacity(0.42) : .secondary.opacity(0.18))
+                    .allowsHitTesting(false)
+            }
             sendControl
         }
     }
 
-    private var composerTools: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 12) {
-                if draftData.editing == nil {
-                    NativePhotoPicker(title: "Photo", upload: { photo in
-                        try await NativeMediaUpload.upload(photo, kind: .messages, account: api.account, userID: api.userID)
-                    }, url: draftBinding.picture, uploading: draftBinding.uploading, minimumHitHeight: 44)
-                        .accessibilityLabel(draftData.uploading ? "Uploading photo" : "Attach a photo")
-                        .disabled(draftData.composing)
-                    NativeGIFPickerButton(account: api.account, userID: api.userID, uploadKind: .messages, compact: true) {
-                        draftData.picture = $0
-                    }
-                    .disabled(draftData.composing || draftData.uploading)
+    private var composerMenu: some View {
+        Menu {
+            if draftData.editing == nil {
+                Button("Photo", systemImage: "photo.on.rectangle") {
+                    focused = nil
+                    showingPhotos = true
                 }
-                NativeEmojiButton(title: "Emoji") { value in
-                    let next = draftData.text.isEmpty ? value : draftData.text + " " + value
-                    if next.utf16.count <= 1_000 { draftData.text = next }
+                .disabled(draftData.uploading)
+                Button("GIF", systemImage: "play.rectangle") {
+                    focused = nil
+                    composerPicker = .gif
                 }
-                .disabled(draftData.composing)
+                .disabled(draftData.uploading)
             }
-            .padding(.horizontal, 4)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Brand.accent(for: scheme))
-            .buttonStyle(SlipSurgePressStyle())
+            Button("Emoji", systemImage: "face.smiling") {
+                focused = nil
+                composerPicker = .emoji
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Brand.text(for: scheme))
+                .frame(width: 44, height: 46)
+                .background(Brand.surface(for: scheme), in: .circle)
+                .contentShape(.rect)
         }
-        .scrollIndicators(.hidden)
-        .scrollDismissesKeyboard(.never)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Message attachments and emoji")
+        .menuOrder(.fixed)
+        .buttonStyle(SlipSurgePressStyle())
+        .accessibilityLabel("Add to message")
+        .accessibilityIdentifier("chat-compose-menu")
+        .disabled(draftData.composing)
     }
 
     private var sendControl: some View {

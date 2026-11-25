@@ -8,43 +8,50 @@ struct NativePhotoPicker: View {
     let upload: (NativeMediaUpload.Photo) async throws -> URL
     @Binding var url: URL?
     @Binding var uploading: Bool
-    var minimumHitHeight: CGFloat? = nil
     @State private var photo: PhotosPickerItem?
-    @State private var failed = false
 
     var body: some View {
-        let pending = uploading, labelTitle = title
+        let pending = uploading
         PhotosPicker(selection: $photo, matching: .images, preferredItemEncoding: .current) {
-            Group {
-                if pending {
-                    ProgressView("Uploading photo")
-                } else {
-                    Label(labelTitle, systemImage: "photo.on.rectangle")
-                }
+            if pending {
+                ProgressView("Uploading photo")
+            } else {
+                Label(title, systemImage: "photo.on.rectangle")
             }
-            .frame(minHeight: minimumHitHeight)
-            .contentShape(.rect)
         }
         .disabled(uploading)
-        .task(id: photo) {
-            guard let photo else { return }
-            uploading = true
-            defer { uploading = false }
-            do {
-                guard let data = try await photo.loadTransferable(type: Data.self) else { throw URLError(.cannotDecodeContentData) }
-                let prepared = try await Task.detached(priority: .userInitiated) { try NativeMediaUpload.prepare(data) }.value
-                try Task.checkCancellation()
-                let result = try await upload(prepared)
-                try Task.checkCancellation()
-                url = result
-                self.photo = nil
-            } catch {
-                if !Task.isCancelled { failed = true; self.photo = nil }
+        .modifier(NativePhotoSelection(photo: $photo, url: $url, uploading: $uploading, upload: upload))
+    }
+}
+
+struct NativePhotoSelection: ViewModifier {
+    @Binding var photo: PhotosPickerItem?
+    @Binding var url: URL?
+    @Binding var uploading: Bool
+    let upload: (NativeMediaUpload.Photo) async throws -> URL
+    @State private var failed = false
+
+    func body(content: Content) -> some View {
+        content
+            .task(id: photo) {
+                guard let photo else { return }
+                uploading = true
+                defer { uploading = false }
+                do {
+                    guard let data = try await photo.loadTransferable(type: Data.self) else { throw URLError(.cannotDecodeContentData) }
+                    let prepared = try await Task.detached(priority: .userInitiated) { try NativeMediaUpload.prepare(data) }.value
+                    try Task.checkCancellation()
+                    let result = try await upload(prepared)
+                    try Task.checkCancellation()
+                    url = result
+                    self.photo = nil
+                } catch {
+                    if !Task.isCancelled { failed = true; self.photo = nil }
+                }
             }
-        }
-        .alert("Photo couldn’t upload", isPresented: $failed) {
-            Button("OK", role: .cancel) {}
-        } message: { Text("Choose a supported image and try again.") }
+            .alert("Photo couldn’t upload", isPresented: $failed) {
+                Button("OK", role: .cancel) {}
+            } message: { Text("Choose a supported image and try again.") }
     }
 }
 

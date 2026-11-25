@@ -2485,3 +2485,24 @@ physical-device push are still open.
   The signed build installed and launched on the phone, which was left in
   Picks Room. Physical keyboard gestures were not exercised. The native
   and production smoke suites passed 286 checks.
+
+## Compact chat composer · 25 November 2026
+
+- Put the chat input, add menu and send button on a single row. The plus menu
+  opens the native photo library, GIPHY gallery or SlipSurge emoji picker.
+  The composer reuses the existing photo upload, GIF preview and room APIs.
+  GIF opens at the large detent.
+- Moved keyboard dismissal into the input as a keyboard-down button.
+  Downward scrolling keeps its native keyboard behavior, including in short
+  rooms. Chat sheets give scrolling priority and guard against swiping away
+  a conversation while editing or with an unsent draft. Chat search retains
+  its own Cancel action.
+- Xcode Debug built cleanly for the iPhone 18 Pro simulator. In Picks Room,
+  the keyboard button and a downward swipe preserved an unsent draft. The
+  swipe also stayed in the room when it was opened as a sheet. Opening and
+  cancelling Photos kept the draft, a GIPHY result attached to the composer,
+  and a custom emoji inserted. No messages were sent and photo upload was
+  not exercised. The native and production suites passed 286 checks.
+- Left the iPhone 18 Pro simulator in Picks Room for design review. The
+  paired iPhone 16 Plus was updating during this pass. Physical screen
+  sharing and verification of this build remain pending.

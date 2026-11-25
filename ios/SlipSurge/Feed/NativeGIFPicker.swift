@@ -7,11 +7,9 @@ struct NativeGIFPickerButton: View {
     var compact = false
     let choose: (URL) -> Void
     @State private var open = false
-    @State private var detent = PresentationDetent.large
 
     var body: some View {
         Button {
-            detent = .large
             open = true
         } label: {
             Group {
@@ -27,15 +25,27 @@ struct NativeGIFPickerButton: View {
         }
         .accessibilityLabel("Choose a GIF")
         .sheet(isPresented: $open) {
-            NavigationStack {
-                NativeGIFPicker(account: account, userID: userID, uploadKind: uploadKind) { url in
-                    choose(url)
-                    open = false
-                }
+            NativeGIFPickerSheet(account: account, userID: userID, uploadKind: uploadKind) { url in
+                choose(url)
+                open = false
             }
-            .presentationDetents([.medium, .large], selection: $detent)
-            .presentationDragIndicator(.visible)
         }
+    }
+}
+
+struct NativeGIFPickerSheet: View {
+    let account: AccountStore
+    let userID: UUID
+    let uploadKind: NativeMediaUpload.Kind
+    let choose: (URL) -> Void
+    @State private var detent = PresentationDetent.large
+
+    var body: some View {
+        NavigationStack {
+            NativeGIFPicker(account: account, userID: userID, uploadKind: uploadKind, choose: choose)
+        }
+        .presentationDetents([.medium, .large], selection: $detent)
+        .presentationDragIndicator(.visible)
     }
 }
 
