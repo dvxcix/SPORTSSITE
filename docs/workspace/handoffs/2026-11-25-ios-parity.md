@@ -56,3 +56,44 @@ slice does not remove any remaining feature from the full parity scope.
 No app logic, API behavior, schema, production credentials, website deployment,
 collector, Discord grant or member notification was changed or run. Publication
 of the earlier Cloud environment does not supply a Mac/iOS build environment.
+
+## Mac implementation checkpoint · 25 November 2026
+
+- Continued `codex/ios-parity-20261125` from Cloud checkpoint `c2f4a07b` after
+  fetching. Verified the branch descends from current main `99d15a53` and
+  retains the required recovered NFL ancestry. The latest Vercel production
+  deployment for that main commit was READY. The Mac's main checkout was clean
+  before switching. Windows-local work and its recovery branch were untouched.
+- Chose SwiftUI for the first native slice, with an iOS 17 minimum and a
+  development-only bundle identifier. The Xcode project and shared scheme live
+  in `ios/`. The original Expo prototype remains available in `hub/mobile/`.
+- Implemented the signed-out Sideline odds preview. It uses the deployed
+  read-only `/preview/nfl/data` dispatcher with
+  `resource=/api/the-sideline/odds-board`. The backend chooses the single game
+  and enforces the preview scope. The app renders the returned exact game,
+  market, sportsbook, lines, prices, observation timestamps and real artwork.
+  It uses the existing Light/Dark colors, native pickers, a local appearance
+  preference and unavailable/retry states. Upcoming quotes are revalidated at
+  the server proof's freshness limit or scheduled start, whichever comes first.
+- Built with Xcode 27.2 (27B52), without distribution signing, and installed and
+  launched on an iPhone 18 Pro running iOS 27.2. Observed real TB at CHI
+  (8 November 2026) with logos, Colston Loveland's headshot and FanDuel
+  receiving-yard prices in Light and Dark. The public endpoint returned 140
+  FanDuel and 229 DraftKings receiving-yard quotes for the same matchup.
+  The alternate sportsbook was checked at the endpoint. Picker interaction,
+  timed future-game revalidation, denied/unavailable branches and accessibility
+  still need Simulator interaction coverage.
+- No API, schema, shared web code or production configuration changed. The
+  default research reader remains the existing server implementation. The
+  public preview uses no member session. No account, permission or notification
+  flows are certified by this checkpoint.
+
+Next milestone: implement and verify native session handling and one
+member-only research route using the existing bearer contract. Trace secure
+persistence, refresh, revocation, account-switch isolation and server-side tier
+checks before expanding to saved research and social features. Keep the full
+parity ledger in scope. APNs provisioning, owned device registration, native
+routing and real delivery still need implementation and physical-device
+verification. The installed SwiftUI UI Patterns and iOS Debugger Agent skills
+guided this slice. The owner-listed web design skills were absent from the
+Mac's personal skill directory and were not applied to this native screen.

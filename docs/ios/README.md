@@ -152,3 +152,21 @@ Codex session, then fetch and resume the task branch recorded in the handoff.
 Verify Xcode/Simulator before creating or claiming a runnable native app.
 No production secret, migration, deployment, collector or notification send is
 needed for this source audit or an isolated UI foundation.
+
+## Mac build checkpoint
+
+The first native target is [SlipSurge.xcodeproj](../../ios/SlipSurge.xcodeproj),
+with a shared `SlipSurge` scheme and a minimum deployment target of iOS 17.
+Select an installed iOS Simulator in Xcode and run the scheme. From the
+repository root, an unsigned Simulator build can also be run with:
+
+```sh
+xcodebuild -project ios/SlipSurge.xcodeproj -scheme SlipSurge \
+  -configuration Debug -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath /tmp/slipsurge-ios-derived CODE_SIGNING_ALLOWED=NO build
+```
+
+The signed-out Sideline preview is implemented. It uses the existing public
+one-game dispatcher, so it needs an internet connection and no credentials or
+local backend. See the [Mac checkpoint](../workspace/handoffs/2026-11-25-ios-parity.md#mac-implementation-checkpoint--25-november-2026)
+for verified behavior, limits and the next member-session slice.
