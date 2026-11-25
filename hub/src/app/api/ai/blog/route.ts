@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireTier } from '@/lib/requireTier'
+import { FEATURE_FLAGS } from '@/lib/featureFlags'
+import { isFeatureEnabledServer } from '@/lib/featureFlags.server'
+import { requireTier, requireVerifiedUserTier } from '@/lib/requireTier'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
+import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 
 const AI_TIMEOUT_MS = 30_000
 const VALID_SPORTS = new Set(['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'CFB', 'CBB'])
 const VALID_TONES = new Set(['analytical', 'educational', 'conversational', 'concise'])
 
 export async function POST(req: NextRequest) {
-  const gate = await requireTier('basic')
+  const gate = await articleWriterAccount(req)
   if (gate.error) return gate.error
 
   const body = await req.json().catch(() => null)
@@ -67,4 +70,14 @@ export async function POST(req: NextRequest) {
     excerpt: `An analysis of: ${prompt}`,
     content: text,
   })
+}
+
+async function articleWriterAccount(request: NextRequest) {
+  if (request.headers.get('x-slipsurge-client') !== 'ios') return requireTier('basic')
+  const account = await requireNativeAccount(request)
+  if (account.error) return { error: account.error }
+  if (!await isFeatureEnabledServer(FEATURE_FLAGS.blog, false, account)) {
+    return { error: NextResponse.json({ error: 'Articles are currently unavailable' }, { status: 403 }) }
+  }
+  return requireVerifiedUserTier(account.userId, 'basic')
 }
