@@ -47,6 +47,7 @@ struct CourtView: View {
     private let api = CourtAPI()
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var date = Date.now
     @State private var revision = 0
     @State private var selectedGameID: Int?
@@ -99,8 +100,9 @@ struct CourtView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Research tools", systemImage: "square.grid.2x2") {
                     Button("The Court", systemImage: "basketball") { tool = nil }
-                    Button("Matchup Lab", systemImage: "chart.xyaxis.line") { tool = .matchup }
-                    Button("Availability", systemImage: "heart.text.square") { tool = .availability }
+                    ForEach(CourtMatchupTool.allCases, id: \.self) { destination in
+                        Button(destination.rawValue, systemImage: destination.glyph) { tool = destination }
+                    }
                 }
             }
         }
@@ -135,19 +137,23 @@ struct CourtView: View {
                         ForEach(list) { game in
                             Button {
                                 if game.id != selectedGame?.id {
-                                    selectedGameID = game.id
-                                    mode = .pregame
+                                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.21)) {
+                                        selectedGameID = game.id
+                                        mode = .pregame
+                                    }
                                 }
                             } label: {
                                 matchup(game, subtitle: gameTime(game), selected: game.id == selectedGame?.id)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(SlipSurgePressStyle())
+                            .accessibilityAddTraits(game.id == selectedGame?.id ? .isSelected : [])
                             .accessibilityLabel("\(game.visitorTeam.fullName) at \(game.homeTeam.fullName)")
                         }
                     }
                     .padding(.vertical, 2)
                 }
                 .scrollIndicators(.hidden)
+                .sensoryFeedback(.selection, trigger: selectedGameID)
                 boardContent()
             }
         }
@@ -155,6 +161,8 @@ struct CourtView: View {
 
     private var selectors: some View {
         VStack(spacing: 9) {
+            ResearchToolRail(title: "Research tools", choices: [nil] + CourtMatchupTool.allCases.map(Optional.some),
+                selection: $tool, label: { $0?.rawValue ?? "The Court" }, glyph: { $0?.glyph ?? "house" })
             Picker("Research mode", selection: $mode) {
                 Text("Pregame").tag(CourtResearchMode.pregame)
                 Text("Live").tag(CourtResearchMode.live)
@@ -175,7 +183,9 @@ struct CourtView: View {
             matchup(board.game, subtitle: SlateDate.fromKey(board.game.date).map { SlateDate.label($0) }, selected: false)
         }
         selectors
-        if tool == nil, section == .odds {
+        if tool == .slateEdge {
+            CourtSlateEdgeView(scope: scope, date: slateRequest.date, mode: mode, games: games, reload: revision)
+        } else if tool == nil, section == .odds {
             CourtOddsBoardView(scope: scope, date: slateRequest.date, gameID: selectedGame?.id, mode: mode, reload: revision)
         } else {
             playerOrMarketContent()
@@ -214,7 +224,13 @@ struct CourtView: View {
             Label("Saved pregame snapshot", systemImage: "clock").font(.caption).foregroundStyle(.secondary)
         }
 
-        if board.hasUsableResearch {
+        if tool == .firstBasket {
+            CourtFirstBasketView(scope: scope, board: board, reload: revision)
+                .id("\(board.game.id):\(mode.rawValue)")
+        } else if tool == .cheatsheets {
+            CourtCheatsheetsView(scope: scope, board: board, reload: revision)
+                .id("\(board.game.id):\(mode.rawValue)")
+        } else if board.hasUsableResearch {
             if !board.issues.isEmpty {
                 Text("Some research is unavailable for this matchup.").font(.caption).foregroundStyle(.secondary)
             }
@@ -222,6 +238,7 @@ struct CourtView: View {
                 switch tool {
                 case .matchup: CourtMatchupLab(board: board, observedAt: observedAt)
                 case .availability: CourtAvailability(board: board, observedAt: observedAt)
+                case .firstBasket, .cheatsheets, .slateEdge: EmptyView()
                 }
             } else {
                 switch section {

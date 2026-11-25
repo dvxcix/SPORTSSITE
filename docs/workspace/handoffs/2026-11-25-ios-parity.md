@@ -319,3 +319,40 @@ currently supports all players, injury listings and draft class. The NFL Public
 screen displays captured counts and shares; its full outcomes and ladders still
 need porting. Real-account OAuth callbacks, role-by-role tests, payments and
 physical-device push are still open.
+
+## Native research and sign-in design checkpoint · 25 November 2026
+
+- Task branch `codex/ios-parity-20261125` carries the signed SwiftUI build. The
+  existing member app and `SlipSurge Sign-in Test` use separate Keychain
+  identities. The test copy opens the real production Discord, X, and Whop
+  flow from Account. Branded marks come from SlipSurge source. Whop uses
+  orange, with native Liquid Glass for Discord and X. The owner's full
+  provider callback checks are still pending.
+- Reviewed the live login and both public workspaces at 390 CSS pixels.
+  Compared targeted player-chart and logo-filter references in Mobbin.
+  Native work follows SlipSurge's team palette, artwork, and product labels.
+  The Court now has First Basket, Cheatsheets, Slate Edge, and player trends
+  with exact line selection, hit/miss/push colors, L3/L5/L10/L20 and a per-game
+  plot and log. The Sideline now has MM, Slate Edge, and Cheatsheets with
+  Market Edge, Exact Lines, Explosive Plays, Run Gaps, Defense vs. Position,
+  and recorded player trends. Research selectors add press feedback and
+  respect Reduce Motion. Book and team sheets display their source marks.
+- Xcode built the signed Debug app on iOS 27.2. On the separate iPhone 17e,
+  Device Hub loaded the real Detroit at Orlando pregame board. Opened
+  Collins, applied his 11.5+ line at Bally Bet, and inspected the colored
+  form bars and dated hit/miss log. Opened First Basket, selected FanDuel
+  using its logo, and switched to saved history with 20/20 games covered.
+  Those were production public responses. The signed-in role and complete
+  provider credentials were not exercised at this checkpoint.
+- Narrow backend PR #10 has reviewed source `11ba9b40559467b3a4807bde2e0ccf7319b1b7d9`.
+  Protected Vercel preview `dpl_3dd1HY58jdpSynGhpGyiE9Vxh3er` reported READY.
+  TypeScript and 147 auth, NBA, public scope, and web checks passed. The NFL
+  odds/context run passed 104 checks and one integration fixture failed before
+  tests because esbuild could not resolve `server-only` and
+  `@opentelemetry/api`. The identical error reproduced against the unchanged
+  main commit. No migrations or historical replays were run.
+- Next work includes authenticated verification of all new boards, native
+  Feed and post interactions, replacing the old Home shortcut list with
+  native destinations, remaining Court and Sideline tools, account lifecycle,
+  community and creator operations, administration, payments, and physical
+  push verification.

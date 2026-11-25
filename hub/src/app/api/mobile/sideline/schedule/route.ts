@@ -23,8 +23,8 @@ export async function GET(request: Request) {
     const games = date && schedule.date !== date ? [] : schedule.games.map(game => ({
       id: game.id,
       kickoff: nflKickoffAt(game)?.toISOString() ?? null,
-      away: { abbreviation: game.away.abbr, name: game.away.name, logo: game.away.logo, color: game.away.color },
-      home: { abbreviation: game.home.abbr, name: game.home.name, logo: game.home.logo, color: game.home.color },
+      away: { abbreviation: game.away.abbr, name: game.away.name, logo: game.away.logo, color: game.away.color, secondary: game.away.color2 },
+      home: { abbreviation: game.home.abbr, name: game.home.name, logo: game.home.logo, color: game.home.color, secondary: game.home.color2 },
     }))
     return NextResponse.json({ date: date ?? schedule.date, games }, { headers })
   } catch {

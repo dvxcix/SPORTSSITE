@@ -1,25 +1,27 @@
-import AuthenticationServices
 import SwiftUI
 
 struct AccountView: View {
     let account: AccountStore
     @Binding var appearance: Appearance
-    @Environment(\.webAuthenticationSession) private var browser
     @Environment(\.colorScheme) private var scheme
-    @State private var email = ""
-    @State private var password = ""
     @State private var code = ""
-    @FocusState private var focus: Field?
-
-    private enum Field {
-        case email, password
-    }
-
-    private var canSignIn: Bool {
-        !account.isBusy && account.isConfigured && !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !password.isEmpty
-    }
 
     var body: some View {
+        Group {
+            if account.needsVerification || account.user != nil {
+                signedInForm
+            } else {
+                AccountSignInView(account: account, appearance: $appearance)
+            }
+        }
+        .navigationTitle("Account")
+        .task { await account.checkProviders() }
+        .background(Brand.background(for: scheme))
+        .foregroundStyle(Brand.text(for: scheme))
+        .tint(Brand.accent(for: scheme))
+    }
+
+    private var signedInForm: some View {
         Form {
             if account.needsVerification {
                 verificationFields
@@ -51,36 +53,6 @@ struct AccountView: View {
                     .disabled(account.isBusy)
                 }
                 .listRowBackground(Brand.surface(for: scheme))
-            } else {
-                if account.providersAvailable {
-                    Section("Continue with") {
-                        ForEach(SignInProvider.allCases) { provider in
-                            Button(provider.title) {
-                                Task {
-                                    await account.signIn(provider: provider) { url in
-                                        if #available(iOS 17.4, *) {
-                                            return try await browser.authenticate(
-                                                using: url, callback: .customScheme(ProviderSignIn.scheme),
-                                                preferredBrowserSession: .ephemeral, additionalHeaderFields: [:]
-                                            )
-                                        }
-                                        return try await browser.authenticate(
-                                            using: url, callbackURLScheme: ProviderSignIn.scheme, preferredBrowserSession: .ephemeral
-                                        )
-                                    }
-                                }
-                            }
-                            .disabled(account.isBusy)
-                        }
-                    }
-                    .listRowBackground(Brand.surface(for: scheme))
-                }
-                signInFields
-                Section("Account help on the web") {
-                    SiteLink("Forgot password?", path: "/auth/forgot-password")
-                    SiteLink("Create account", path: "/auth/register")
-                }
-                .listRowBackground(Brand.surface(for: scheme))
             }
             if let notice = account.notice {
                 Text(notice)
@@ -100,12 +72,7 @@ struct AccountView: View {
             }
             .listRowBackground(Brand.surface(for: scheme))
         }
-        .navigationTitle("Account")
-        .task { await account.checkProviders() }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
-        .tint(Brand.accent(for: scheme))
     }
 
     private var verificationFields: some View {
@@ -130,49 +97,5 @@ struct AccountView: View {
             .disabled(account.isBusy)
         }
         .listRowBackground(Brand.surface(for: scheme))
-    }
-
-    private var signInFields: some View {
-        Section {
-            TextField("Email", text: $email)
-                .keyboardType(.emailAddress)
-                .textContentType(.username)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .focused($focus, equals: .email)
-                .submitLabel(.next)
-                .onSubmit { focus = .password }
-                .disabled(account.isBusy || !account.isConfigured)
-            SecureField("Password", text: $password)
-                .textContentType(.password)
-                .focused($focus, equals: .password)
-                .submitLabel(.go)
-                .onSubmit(submit)
-                .disabled(account.isBusy || !account.isConfigured)
-            Button(action: submit) {
-                if account.isBusy {
-                    ProgressView("Signing in")
-                } else {
-                    Text("Sign in").fontWeight(.semibold)
-                }
-            }
-            .disabled(!canSignIn)
-        } header: {
-            Text("Sign in to SlipSurge")
-        } footer: {
-            if !account.isConfigured {
-                Text("Sign-in isn’t configured for this build.")
-            }
-        }
-        .listRowBackground(Brand.surface(for: scheme))
-    }
-
-    private func submit() {
-        guard canSignIn else { return }
-        let address = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        let submittedPassword = password
-        focus = nil
-        password = ""
-        Task { await account.signIn(email: address, password: submittedPassword) }
     }
 }

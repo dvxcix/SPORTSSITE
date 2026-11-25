@@ -44,13 +44,13 @@ struct CourtPlayerBoard: View {
                         NavigationLink {
                             CourtPlayerView(
                                 player: player, game: board.game, mode: board.oddsMode,
-                                frozen: board.isFrozen, tip: board.tip, observedAt: observedAt,
-                                initialBook: quote?.vendor ?? sportsbook, initialMarket: market.rawValue
+                                frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason,
+                                initialBook: quote?.vendor ?? sportsbook, initialMarket: market.rawValue, initialSide: side
                             )
                         } label: {
                             playerRow(player, quote: quote)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(SlipSurgePressStyle())
                         if player.id != players.last?.id { Divider() }
                     }
                 }
@@ -152,7 +152,7 @@ struct CourtPlayerBoard: View {
                 columnTitle("L\(count)")
                 Text(percent?.formatted(.percent.precision(.fractionLength(0))) ?? "—")
                     .font(.subheadline.weight(.semibold)).monospacedDigit()
-                    .foregroundStyle(percent.map { $0 >= 0.5 ? Brand.accent(for: scheme) : Brand.text(for: scheme) } ?? .secondary)
+                    .foregroundStyle(Brand.signal(percent.map { $0 - 0.5 }, for: scheme))
                 if let result, result.decisions > 0 || result.pushes > 0 {
                     Text(result.pushes > 0 ? "\(result.wins)/\(result.decisions) · \(result.pushes)P" : "\(result.wins)/\(result.decisions)")
                         .font(.caption2).foregroundStyle(.secondary).monospacedDigit()

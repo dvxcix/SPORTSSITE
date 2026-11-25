@@ -181,6 +181,7 @@ struct SidelineSchedule: Decodable {
         let name: String
         let logo: URL?
         let color: String
+        let secondary: String?
     }
 
     struct Game: Decodable, Identifiable {

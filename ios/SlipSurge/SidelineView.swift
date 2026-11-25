@@ -5,6 +5,22 @@ struct SidelineView: View {
         case gameDay = "Game Day", props = "Props", oddsBoard = "Odds Board"
     }
 
+    private enum Workspace: String, CaseIterable {
+        case matchup = "The Sideline", mismatch = "MM", cheatsheets = "Cheatsheets", slateEdge = "Slate Edge"
+        case publicActivity = "The Public", sportsbooks = "Sportsbooks"
+
+        var glyph: String {
+            switch self {
+            case .matchup: "football"
+            case .mismatch: "chart.bar.xaxis"
+            case .cheatsheets: "tablecells"
+            case .slateEdge: "chart.line.uptrend.xyaxis"
+            case .publicActivity: "person.2"
+            case .sportsbooks: "chart.bar"
+            }
+        }
+    }
+
     private enum LoadState {
         case loading, loaded(SidelineBoard), failed, denied
     }
@@ -28,9 +44,10 @@ struct SidelineView: View {
     let api: SidelineAPI
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var date = Date.now
     @State private var section = Section.gameDay
-    @State private var tool: SidelineMarketTools.Tool?
+    @State private var tool = Workspace.matchup
     @State private var selection = OddsSelection()
     @State private var selectedGameID: String?
     @State private var revision = 0
@@ -42,7 +59,7 @@ struct SidelineView: View {
     private var dayRequest: DayRequest { .init(date: SlateDate.key(date), revision: revision) }
 
     private var requestKey: RequestKey {
-        RequestKey(date: dayRequest.date, selection: selection, revision: revision, fetchQuotes: api.isFeatured || tool == nil && section != .gameDay)
+        RequestKey(date: dayRequest.date, selection: selection, revision: revision, fetchQuotes: api.isFeatured || tool == .matchup && section != .gameDay)
     }
 
     private var dateSelection: Binding<Date> {
@@ -55,18 +72,18 @@ struct SidelineView: View {
                 if api.isFeatured {
                     if let slate = lastBoard, let game = slate.games.first {
                         previewMatchup(slate)
-                        if let tool {
+                        toolPicker
+                        if tool != .matchup {
                             let teams = [game.away, game.home].map { nickname in
                                 let team = matchupTeam(nickname, game, slate)
                                 return SidelineMarketTools.Visual(code: nickname, logo: team.logo, primary: team.color, secondary: team.secondary)
                             }
-                            SidelineMarketTools(api: api, tool: tool, date: slate.date, gameID: game.id, teams: teams)
-                                .id("\(game.id):\(tool.rawValue)")
+                            toolContent(date: slate.date, gameID: game.id, selectedTeams: teams, slateTeams: teams)
                         } else {
                             boardPicker
                         }
                     }
-                    if tool == nil || lastBoard?.games.isEmpty != false { oddsContent() }
+                    if tool == .matchup || lastBoard?.games.isEmpty != false { oddsContent() }
                 } else {
                     ResearchSlateControls(date: dateSelection)
                     memberSlate()
@@ -79,14 +96,14 @@ struct SidelineView: View {
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))
-        .navigationTitle(tool?.rawValue ?? "The Sideline")
+        .navigationTitle(tool.rawValue)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Research tools", systemImage: "square.grid.2x2") {
-                    Button("The Sideline", systemImage: "football") { tool = nil }
-                    Button("The Public", systemImage: "person.2") { tool = .publicActivity }
-                    Button("Sportsbooks", systemImage: "chart.bar.xaxis") { tool = .sportsbooks }
+                    ForEach(Workspace.allCases, id: \.self) { destination in
+                        Button(destination.rawValue, systemImage: destination.glyph) { tool = destination }
+                    }
                 }
             }
         }
@@ -118,14 +135,11 @@ struct SidelineView: View {
             if slate.date != dayRequest.date {
                 loading("Loading slate")
             } else if let game = slate.games.first(where: { $0.id == selectedGameID }) ?? slate.games.first {
-                matchupPicker(slate, selected: game.id)
-                if let tool {
-                    let teams = [game.away, game.home].map { team in
-                        let visual = matchupTeam(team)
-                        return SidelineMarketTools.Visual(code: team.abbreviation, logo: visual.logo, primary: visual.color, secondary: visual.secondary)
-                    }
-                    SidelineMarketTools(api: api, tool: tool, date: slate.date, gameID: game.id, teams: teams)
-                        .id("\(game.id):\(tool.rawValue)")
+                if tool != .slateEdge { matchupPicker(slate, selected: game.id) }
+                toolPicker
+                if tool != .matchup {
+                    let slateTeams = slate.games.flatMap { [$0.away, $0.home] }.map(marketVisual)
+                    toolContent(date: slate.date, gameID: game.id, selectedTeams: [game.away, game.home].map(marketVisual), slateTeams: slateTeams)
                 } else {
                     boardPicker
                     if section == .gameDay {
@@ -141,12 +155,42 @@ struct SidelineView: View {
         }
     }
 
+    private var toolPicker: some View {
+        ResearchToolRail(title: "Research tools", choices: Workspace.allCases, selection: $tool,
+            label: \.rawValue, glyph: \.glyph)
+    }
+
+    private func marketVisual(_ team: SidelineSchedule.Team) -> SidelineMarketTools.Visual {
+        let visual = matchupTeam(team)
+        return .init(code: team.abbreviation, logo: visual.logo, primary: visual.color,
+            secondary: visual.secondary ?? Color(hex: team.secondary))
+    }
+
+    @ViewBuilder
+    private func toolContent(date: String, gameID: String, selectedTeams: [SidelineMarketTools.Visual],
+        slateTeams: [SidelineMarketTools.Visual]) -> some View {
+        switch tool {
+        case .matchup:
+            EmptyView()
+        case .publicActivity, .sportsbooks:
+            SidelineMarketTools(api: api, tool: tool == .publicActivity ? .publicActivity : .sportsbooks,
+                date: date, gameID: gameID, teams: selectedTeams)
+                .id("\(gameID):\(tool.rawValue)")
+        case .mismatch, .cheatsheets:
+            SidelineResearchView(api: api, tool: tool == .mismatch ? .mismatch : .cheatsheets,
+                date: date, game: gameID, teams: selectedTeams, revision: revision)
+                .id("\(gameID):\(tool.rawValue)")
+        case .slateEdge:
+            SidelineSlateEdgeView(api: api, date: date, teams: slateTeams, revision: revision)
+        }
+    }
+
     private func matchupPicker(_ slate: SidelineSchedule, selected: String) -> some View {
         ScrollView(.horizontal) {
             HStack(spacing: 9) {
                 ForEach(slate.games) { game in
                     Button {
-                        selectedGameID = game.id
+                        withAnimation(reduceMotion ? nil : .snappy(duration: 0.21)) { selectedGameID = game.id }
                     } label: {
                         ResearchMatchup(
                             away: matchupTeam(game.away), home: matchupTeam(game.home),
@@ -154,13 +198,15 @@ struct SidelineView: View {
                             selected: selected == game.id
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(SlipSurgePressStyle())
+                    .accessibilityAddTraits(selected == game.id ? .isSelected : [])
                     .accessibilityLabel("\(game.away.name) at \(game.home.name)")
                 }
             }
             .padding(.vertical, 2)
         }
         .scrollIndicators(.hidden)
+        .sensoryFeedback(.selection, trigger: selectedGameID)
     }
 
     private func matchupTeam(_ team: SidelineSchedule.Team) -> ResearchMatchup.Team {

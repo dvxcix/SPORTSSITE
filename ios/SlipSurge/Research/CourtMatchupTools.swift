@@ -1,8 +1,21 @@
 import SwiftUI
 
-enum CourtMatchupTool: String {
+enum CourtMatchupTool: String, CaseIterable {
     case matchup = "Matchup Lab"
     case availability = "Availability"
+    case firstBasket = "First Basket"
+    case cheatsheets = "Cheatsheets"
+    case slateEdge = "Slate Edge"
+
+    var glyph: String {
+        switch self {
+        case .matchup: "chart.xyaxis.line"
+        case .availability: "heart.text.square"
+        case .firstBasket: "basketball"
+        case .cheatsheets: "tablecells"
+        case .slateEdge: "chart.bar.xaxis"
+        }
+    }
 }
 
 struct CourtMatchupLab: View {
@@ -89,7 +102,7 @@ struct CourtMatchupLab: View {
             ForEach(list.prefix(8)) { player in
                 NavigationLink {
                     CourtPlayerView(player: player, game: board.game, mode: board.oddsMode,
-                        frozen: board.isFrozen, tip: board.tip, observedAt: observedAt)
+                        frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason)
                 } label: {
                     HStack {
                         CourtPlayerIdentity(player: player)
@@ -148,7 +161,7 @@ struct CourtAvailability: View {
                     ForEach(players) { player in
                         NavigationLink {
                             CourtPlayerView(player: player, game: board.game, mode: board.oddsMode,
-                                frozen: board.isFrozen, tip: board.tip, observedAt: observedAt)
+                                frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason)
                         } label: {
                             card(player, color: color)
                         }

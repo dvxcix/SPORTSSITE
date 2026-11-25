@@ -127,12 +127,16 @@ enum CourtPlayerMarket: String, CaseIterable {
     }
 
     func history(_ player: CourtBoard.Player, board: CourtBoard) -> [CourtBoard.PlayerLog] {
-        guard let season = board.sampleSeason else { return [] }
+        history(player, game: board.game, sampleSeason: board.sampleSeason)
+    }
+
+    func history(_ player: CourtBoard.Player, game: CourtBoard.Game, sampleSeason: Int?) -> [CourtBoard.PlayerLog] {
+        guard let season = sampleSeason else { return [] }
         let logs = (isFirstQuarter ? player.periodLogs : player.logs) ?? []
         return Dictionary(logs.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last }).values
             .filter { log in
-                log.player.id == player.id && log.game.id != board.game.id &&
-                log.game.season == season && String(log.game.date.prefix(10)) < board.game.date &&
+                log.player.id == player.id && log.game.id != game.id &&
+                log.game.season == season && String(log.game.date.prefix(10)) < game.date &&
                 (log.game.statusState == "final" || log.game.status == "Final") &&
                 (log.period ?? 0) == (isFirstQuarter ? 1 : 0) && log.played
             }
@@ -142,7 +146,7 @@ enum CourtPlayerMarket: String, CaseIterable {
     }
 
     func rate(_ logs: ArraySlice<CourtBoard.PlayerLog>, against reference: Reference, side: Side) -> HitRate {
-        let values = logs.compactMap(value)
+        let values = logs.compactMap(statistic)
         let pushes = reference.milestone ? 0 : values.count { $0 == reference.line }
         let wins = values.count { value in
             if reference.milestone { return value >= reference.line }
@@ -151,7 +155,7 @@ enum CourtPlayerMarket: String, CaseIterable {
         return HitRate(wins: wins, decisions: values.count - pushes, pushes: pushes)
     }
 
-    private func value(_ log: CourtBoard.PlayerLog) -> Double? {
+    func statistic(_ log: CourtBoard.PlayerLog) -> Double? {
         let stats = ["pts": log.pts, "reb": log.reb, "ast": log.ast, "fg3m": log.fg3m,
                      "stl": log.stl, "blk": log.blk, "turnover": log.turnover]
         let values = fields.map { stats[$0] ?? nil }
