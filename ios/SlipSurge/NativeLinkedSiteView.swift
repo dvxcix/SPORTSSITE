@@ -104,6 +104,7 @@ struct NativeLinkedSiteView: View {
         case .adminEmail: AdminEmailOperationsView(api: viewer)
         case .adminPlatformSettings(let page): AdminPlatformSettingsView(api: viewer, page: page)
         case .adminSection(let section): adminSection(section, userID: userID)
+        case .adminMlbArchive(let selection): AdminMlbArchiveView(api: viewer, selection: selection)
         case .adminWhop(let page): AdminWhopView(api: viewer, page: page)
         case .adminDiscord: AdminDiscordView(api: .init(viewer: viewer))
         case .adminDiscordComposer: AdminDiscordComposer(api: .init(viewer: viewer))

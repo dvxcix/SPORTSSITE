@@ -19,6 +19,7 @@ enum NativeSiteLink: Hashable {
     case adminWhop(AdminWhopView.Page)
     case adminPlatformSettings(AdminPlatformSettingsView.Page)
     case adminSection(AdminSection)
+    case adminMlbArchive(AdminMlbArchiveView.Selection)
     case eventCreate, threadCreate(String?), storyCreate
 
     enum CommunitySection: Hashable {
@@ -175,6 +176,11 @@ enum NativeSiteLink: Hashable {
         case ["admin", "site-banner"]: self = .adminSection(.banner)
         case ["admin", "changelog"]: self = .adminSection(.changelog)
         case ["admin", "product-audit"]: self = .adminSection(.experienceAudit)
+        case ["admin", "mlb-archive"]:
+            self = .adminMlbArchive(.init(
+                date: Self.queryValue(query, named: "date", pattern: #"^\d{4}-\d{2}-\d{2}$"#),
+                game: Self.queryValue(query, named: "game", pattern: #"^[0-9]{1,14}$"#),
+                frame: Self.queryValue(query, named: "frame", pattern: #"^[0-9]{1,16}$"#)))
         default:
             if segments.count == 2 {
                 let name = segments[1]
@@ -282,7 +288,7 @@ enum NativeSiteLink: Hashable {
         case .notifications, .activityReplay, .missions, .search, .topic, .explore, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
             .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .creatorStoreSetup, .communityCreator, .researchWorkspace, .admin,
             .marketplace, .nbaEntity, .nflEntity, .mlbTeam, .creatorAccess, .adminMarketplace, .adminCreatorBusiness, .adminPipelineHealth,
-            .adminBrowserAutomation, .adminSocialPlatforms, .adminEmail, .adminDiscord, .adminDiscordComposer, .adminWhop, .adminPlatformSettings, .adminSection,
+            .adminBrowserAutomation, .adminSocialPlatforms, .adminEmail, .adminDiscord, .adminDiscordComposer, .adminWhop, .adminPlatformSettings, .adminSection, .adminMlbArchive,
             .eventCreate, .threadCreate, .storyCreate,
             .community(_, .settings), .community(_, .channels): true
         default: false

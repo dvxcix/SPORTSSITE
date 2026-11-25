@@ -2063,7 +2063,7 @@ physical-device push are still open.
   Injected alerts used a fixture ID and did not contact APNs. The Simulator
   did not establish a server device registration. Opening a production alert
   and physical Apple delivery remain unverified.
-- Task `53b3ec9418273468e6e3df165d20b20c812e6a83b` is pushed. PR #76 merged
+- Task `53b3ec9418273468e6e3df165d18b4c1e03d3af8` is pushed. PR #76 merged
   as `fa89217a04b29cd35e17a852ef4e5d690c0ae9e5`. Preview
   `dpl_4gQepVBeia1FzkntVECk69sJ91Qw` and production
   `dpl_EBM3vWZE2w9vetsg8u6CaxsNM3a8` were READY. The signed Simulator
@@ -2093,3 +2093,24 @@ physical-device push are still open.
   and 149 targeted and baseline checks passed. The catalog, animation and
   cross-surface artwork still need signed and compact checks after the Hub
   release. No live profile appearance was saved in this checkpoint.
+- Task `d43bbd5b9da9913fc456dc6d54871081e6b866c8` is pushed. PR #77 merged
+  as `e5add08181b377cb6cc50c52b13daf2ace5f4025` after preview
+  `dpl_6aRhZLqrrtEw5ySHyjcWLSiRWrqE` was READY. Signed app checks follow the
+  production rollout.
+
+## MLB admin archive · 25 November 2026
+
+- The native archive uses the same saved MLB game, frame, quote and research
+  reader as the administrative website. It includes the first genuine frame
+  and up to 30 most recent pregame observations, captured times, matchup and
+  book artwork, player and market search, and the original research inputs.
+  Missing start times and missing historical observations stay unavailable.
+- Both entry points preserve administrator and enrolled-MFA checks. The
+  archive reads the primary SlipSurge database only. It adds no collection,
+  recovery, replay or database write. Normal MLB hibernation remains governed
+  by the site's existing access policy.
+- The primary database had 116 pregame frames for October 27 game `849803`
+  before the saved cutoff. The targeted fixture exercises the retained first
+  frame, 31-frame cap, cutoff and access failure cases on both entry points.
+  Hub TypeScript, 140 checks and signed Simulator Debug passed. The archived
+  live screen follows the reviewed Hub release.
