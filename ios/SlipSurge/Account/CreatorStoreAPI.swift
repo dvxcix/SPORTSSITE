@@ -100,7 +100,8 @@ struct CreatorStoreAPI {
     private var client: DiscoverAPI { .init(account: account, userID: userID) }
 
     func load() async throws -> CreatorStorePage {
-        try await client.memberRead(CreatorStorePage.self, path: "/api/mobile/creator-store")
+        try await client.memberRead(CreatorStorePage.self, path: "/api/mobile/creator-store",
+            keyDecodingStrategy: .convertFromSnakeCase)
     }
 
     func save(_ draft: CreatorStoreDraft, publish: Bool) async throws -> CreatorStorePage.Store {

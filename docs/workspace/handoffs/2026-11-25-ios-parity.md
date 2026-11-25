@@ -1635,5 +1635,36 @@ physical-device push are still open.
   provider verification for restoration.
 - Signed Xcode Simulator, Hub TypeScript, eight targeted creator storefront,
   analytics, community setup and admin access tests, plus all 134 baseline
-  source checks passed. Live workflows need release verification. No live
-  groups, promotions, access holds or creator payments were changed for QA.
+  source checks passed. Task `00cfa748bcf7957ab5de6825bb9eb441300228d7`
+  is pushed. PR #61 merged as `69d01078abf77ad56de28563c13f95afb8f14dd5`.
+  Preview `dpl_DPQfQGFesyj9kCV8cNUPh2MU5stS` and production
+  `dpl_2G4teDbogu1eh4oZLYa5GRif29CX` were READY. On the signed Simulator,
+  Creator Analytics returned the live thirty-day data and Admin Creator
+  Operations returned the creator directory. Both private routes returned
+  401 to guests, while the public Feed returned 200. The live owner
+  payload revealed that Store Setup and New Community needed to decode
+  the existing snake_case offer, storefront and group fields. The native
+  reader now applies that strategy for this endpoint. No live groups,
+  promotions, access holds or creator payments were changed for QA.
+
+## Story GIFs, exact creation links and Pipeline Health · 25 November 2026
+
+- Member links open the native Story, event, and category-specific
+  discussion composers. Account setup opens in Account and `/nba` routes
+  to The Court. Story availability and posting still use the applicable
+  account, sport and plan permissions.
+- The Story composer uses the existing GIPHY picker and the viewer plays
+  GIFs from the trusted media providers or the member upload path. Reduce
+  Motion uses an image. The signed iPhone 18 Pro Simulator loaded live
+  GIPHY Trending inside Stories and selected a GIF into the unsent preview.
+  The GIPHY SDK build configuration belongs to the Mac’s ignored
+  `ios/LocalAuth.xcconfig`. The key stays out of Git and chat handoffs.
+- Admin Pipeline Health lists current schedules, last runs, freshness,
+  queue and Statcast counts, and the Browserbase usage budget. Existing
+  manual actions retain explicit confirmation, audited authorization and
+  browser origin checks. Native writes require the admin MFA session.
+  No collector, queue retry, refresh or other live operation was run for QA.
+- Hub TypeScript, all 134 production source checks, and 13 focused
+  story-media, pipeline, discussion, event and link checks passed. Signed
+  Simulator builds succeeded. Physical signing and notification delivery
+  still require a provisioned Apple team and test device.

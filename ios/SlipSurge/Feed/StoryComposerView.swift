@@ -8,6 +8,7 @@ struct StoryComposerView: View {
     let api: StoriesAPI
     let userID: UUID
     let sports: [String]
+    var embedded = false
     let shared: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
@@ -25,43 +26,50 @@ struct StoryComposerView: View {
     private var canShare: Bool { !saving && !uploading && text.count <= 1000 && (kind == .text ? !text.isEmpty : photo != nil) }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 15) {
-                    Picker("Story format", selection: $kind) {
-                        ForEach(Kind.allCases, id: \.self) { kind in
-                            Label(kind.rawValue, systemImage: kind == .text ? "textformat" : "photo").tag(kind)
-                        }
-                    }.pickerStyle(.segmented)
-                    preview.frame(maxWidth: .infinity)
-                    ResearchArtworkPicker(title: "Story sport", options: [.init(id: "", title: "All sports", icon: "sportscourt")]
-                        + sports.map { .init(id: $0, title: LeagueArtwork.label($0), url: LeagueArtwork.logo($0), icon: "sportscourt") }, selection: $sport)
-                    TextField(kind == .text ? "Story text" : "Caption", text: $content, axis: .vertical)
-                        .lineLimit(2...5).textFieldStyle(.roundedBorder)
-                    if kind == .text {
-                        colorPicker
-                    } else {
-                        NativePhotoPicker(title: photo == nil ? "Choose photo" : "Change photo", upload: { photo in
-                            try await NativeMediaUpload.upload(photo, kind: .stories, account: api.account, userID: userID)
-                        }, url: $photo, uploading: $uploading)
-                        .buttonStyle(.bordered)
+        if embedded { editor }
+        else { NavigationStack { editor } }
+    }
+
+    private var editor: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 15) {
+                Picker("Story format", selection: $kind) {
+                    ForEach(Kind.allCases, id: \.self) { kind in
+                        Label(kind.rawValue, systemImage: kind == .text ? "textformat" : "photo").tag(kind)
                     }
-                    if let failure { Label(failure, systemImage: "exclamationmark.circle").font(.footnote).foregroundStyle(.red) }
+                }.pickerStyle(.segmented)
+                preview.frame(maxWidth: .infinity)
+                ResearchArtworkPicker(title: "Story sport", options: [.init(id: "", title: "All sports", icon: "sportscourt")]
+                    + sports.map { .init(id: $0, title: LeagueArtwork.label($0), url: LeagueArtwork.logo($0), icon: "sportscourt") }, selection: $sport)
+                TextField(kind == .text ? "Story text" : "Caption", text: $content, axis: .vertical)
+                    .lineLimit(2...5).textFieldStyle(.roundedBorder)
+                if kind == .text {
+                    colorPicker
+                } else {
+                    NativePhotoPicker(title: photo == nil ? "Choose photo" : "Change photo", upload: { photo in
+                        try await NativeMediaUpload.upload(photo, kind: .stories, account: api.account, userID: userID)
+                    }, url: $photo, uploading: $uploading)
+                    .buttonStyle(.bordered)
+                    NativeGIFPickerButton(account: api.account, userID: userID, uploadKind: .stories) { photo = $0 }
+                        .buttonStyle(.bordered)
                 }
-                .padding(16)
-                .disabled(saving)
+                if let failure { Label(failure, systemImage: "exclamationmark.circle").font(.footnote).foregroundStyle(.red) }
             }
-            .scrollDismissesKeyboard(.interactively)
-            .background(Brand.background(for: scheme))
-            .foregroundStyle(Brand.text(for: scheme))
-            .navigationTitle("Add to story")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
+            .padding(16)
+            .disabled(saving)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .background(Brand.background(for: scheme))
+        .foregroundStyle(Brand.text(for: scheme))
+        .navigationTitle("Add to story")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if !embedded {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel", role: .cancel) { dismiss() }.disabled(saving) }
-                ToolbarItem(placement: .confirmationAction) {
-                    if saving { ProgressView() }
-                    else { Button("Share") { Task { await publish() } }.disabled(!canShare) }
-                }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                if saving { ProgressView() }
+                else { Button("Share") { Task { await publish() } }.disabled(!canShare) }
             }
         }
         .interactiveDismissDisabled(saving)
@@ -71,7 +79,9 @@ struct StoryComposerView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 20).fill(kind == .photo ? Color.black : Color(hex: color) ?? .black)
             if kind == .photo, let photo {
-                ResearchArtwork(urls: [photo], fallback: "photo").clipped()
+                if NativeGIFSource.canPlay(photo) {
+                    NativeGIFPlayback(url: photo, maxHeight: 270, maxWidth: 160, label: "Story GIF preview")
+                } else { ResearchArtwork(urls: [photo], fallback: "photo").clipped() }
             } else if kind == .text {
                 Text(text.isEmpty ? "Your story" : text)
                     .font(.title3.weight(.bold)).foregroundStyle(.white)
@@ -114,7 +124,7 @@ struct StoryComposerView: View {
             try await api.add(.init(id: submission.uuidString.lowercased(), content: text, sport: sport,
                 photo: kind == .photo ? photo : nil, background: color))
             shared()
-            dismiss()
+            if !embedded { dismiss() }
         } catch let error as SlipSurgeHTTP.Status {
             struct Details: Decodable { let error: String }
             failure = (try? JSONDecoder().decode(Details.self, from: error.data))?.error ?? "Your story couldn’t be shared."

@@ -2,12 +2,15 @@ import SwiftUI
 
 struct ForumIndexView: View {
     let api: ForumAPI
+    var opensComposer = false
+    var composerCategory: String?
     @Environment(\.colorScheme) private var scheme
     @State private var categories: [ForumAPI.Category]?
     @State private var issue: (any Error)?
     @State private var creating = false
     @State private var routed: UUID?
     @State private var revision = 0
+    @State private var didOpenComposer = false
 
     var body: some View {
         ScrollView {
@@ -47,7 +50,7 @@ struct ForumIndexView: View {
         .sheet(isPresented: $creating) {
             if let categories {
                 NavigationStack {
-                    ForumComposer(api: api, categories: categories, defaultCategory: nil) { receipt in
+                    ForumComposer(api: api, categories: categories, defaultCategory: categories.first { $0.slug == composerCategory }?.id) { receipt in
                         creating = false
                         routed = receipt.id
                         revision += 1
@@ -65,6 +68,10 @@ struct ForumIndexView: View {
             try Task.checkCancellation()
             categories = result
             issue = nil
+            if opensComposer, !didOpenComposer, !result.isEmpty, api.viewer.userID != nil {
+                didOpenComposer = true
+                creating = true
+            }
         } catch { if !Task.isCancelled { issue = error } }
     }
 }

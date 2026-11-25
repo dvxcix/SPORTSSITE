@@ -2,12 +2,14 @@ import SwiftUI
 
 struct CommunityEventsView: View {
     let api: CommunityEventsAPI
+    var opensComposer = false
     @Environment(\.colorScheme) private var scheme
     @State private var calendar: CommunityEventsAPI.Calendar?
     @State private var failure: (any Error)?
     @State private var creating = false
     @State private var eventRoute: UUID?
     @State private var revision = 0
+    @State private var didOpenComposer = false
 
     var body: some View {
         ScrollView {
@@ -75,6 +77,10 @@ struct CommunityEventsView: View {
             try Task.checkCancellation()
             calendar = value
             failure = nil
+            if opensComposer, !didOpenComposer, api.viewer.userID != nil {
+                didOpenComposer = true
+                creating = true
+            }
         } catch { if !Task.isCancelled { failure = error } }
     }
 }

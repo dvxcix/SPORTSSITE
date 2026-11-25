@@ -5,6 +5,7 @@ struct NativeLinkedSiteView: View {
     let target: NativeSiteLink
     @Binding var appearance: Appearance
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.openURL) private var openURL
 
     private var viewer: DiscoverAPI { .init(account: account, userID: account.memberID) }
 
@@ -64,6 +65,19 @@ struct NativeLinkedSiteView: View {
         case .groupMessage(let id): MessageThreadView(api: messages, destination: .init(kind: .group, id: id))
         case .channels: ChannelDirectoryView(api: messages)
         case .channel(let slug): linkedChannel(slug, group: nil, api: messages)
+        case .eventCreate: CommunityEventsView(api: .init(viewer: viewer), opensComposer: true)
+        case .threadCreate(let category): ForumIndexView(api: .init(viewer: viewer), opensComposer: true, composerCategory: category)
+        case .storyCreate:
+            let stories = StoriesAPI(account: account, userID: userID)
+            NativeLinkLookup(title: "Add to story", load: { try await stories.load() }) { page in
+                if page.canCreate {
+                    StoryComposerView(api: stories, userID: userID, sports: page.sports ?? ["NBA", "NFL"], embedded: true) {
+                        if let feed = URL(string: "slipsurge-app://site/feed?refresh=stories") { openURL(feed) }
+                    }
+                } else {
+                    ContentUnavailableView(page.enabled ? "Basic access required" : "Stories unavailable", systemImage: "lock")
+                }
+            }
         case .community(let slug, let section): linkedCommunity(slug, section: section)
         case .settings(let section): settings(section, userID: userID)
         case .creatorStudio(let section):
@@ -84,6 +98,7 @@ struct NativeLinkedSiteView: View {
         case .admin: AccountWorkspaceView(account: account, userID: userID, workspace: .admin)
         case .adminMarketplace: AdminMatrixMarketplaceView(api: viewer)
         case .adminCreatorBusiness: AdminCreatorBusinessView(api: .init(viewer: viewer))
+        case .adminPipelineHealth: AdminPipelineHealthView(api: viewer)
         default: EmptyView()
         }
     }

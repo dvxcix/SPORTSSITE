@@ -160,6 +160,13 @@ struct StoryViewer: View {
             if story.video {
                 if let player { VideoPlayer(player: player).frame(width: size.width, height: size.height) }
                 else { ProgressView().tint(.white) }
+            } else if NativeGIFSource.canPlay(url) {
+                let id = mediaID
+                NativeGIFPlayback(url: url, maxHeight: size.height, maxWidth: size.width, label: "Story GIF") { loaded in
+                    if loaded { loadedPhoto = id }
+                    else { failedPhoto = id }
+                }
+                .id(id)
             } else {
                 let id = mediaID
                 AsyncImage(url: url) { phase in

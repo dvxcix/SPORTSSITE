@@ -374,6 +374,9 @@ struct AccountWorkspaceView: View {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Notification history", systemImage: "bell") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
             } else {
+                NavigationLink { AdminPipelineHealthView(api: .init(account: account, userID: userID)) } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Pipeline health", systemImage: "waveform.path") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
                 ForEach(admin.pipelines) { pipeline in
                     ResearchToolCard(color: Brand.accent(for: scheme)) {
                         Text(pipeline.label).font(.headline)

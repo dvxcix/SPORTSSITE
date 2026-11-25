@@ -15,7 +15,8 @@ enum NativeSiteLink: Hashable {
     case nbaEntity(NbaDirectoryEntityView.Kind, Int, game: Int?, mode: CourtResearchMode)
     case nflEntity(NflDirectoryEntityView.Kind, String)
     case mlbTeam(Int)
-    case adminMarketplace, adminCreatorBusiness
+    case adminMarketplace, adminCreatorBusiness, adminPipelineHealth
+    case eventCreate, threadCreate(String?), storyCreate
 
     enum CommunitySection: Hashable {
         case posts, picks, settings, channels(String?)
@@ -57,8 +58,9 @@ enum NativeSiteLink: Hashable {
             let filter = Self.queryValue(query, named: "filter", pattern: #"^(latest|top|picks|following)$"#)
                 .flatMap(FeedFilter.init(rawValue:)) ?? .latest
             let sport = Self.queryValue(query, named: "sport", pattern: #"^(?i:mlb|nba|nfl)$"#)?.uppercased() ?? ""
-            self = .feed(.init(filter: filter, sport: sport))
-        case ["account"], ["settings"], ["auth", "login"]: self = .account
+            let refresh = app && Self.queryValue(query, named: "refresh", pattern: "^stories$") == "stories"
+            self = .feed(.init(filter: filter, sport: sport, refreshStories: refresh))
+        case ["account"], ["settings"], ["auth", "login"], ["onboarding"]: self = .account
         case ["auth", "register"]: self = .registration
         case ["auth", "forgot-password"]: self = .passwordRecovery
         case ["pricing"]: self = .pricing
@@ -74,7 +76,10 @@ enum NativeSiteLink: Hashable {
             let filter = league?.count == 2 && league?.first == "scores" ? String(league?[1] ?? "") : ""
             self = .discover(.scores(date: date, league: Self.scoreLeagues.contains(filter) ? filter : ""))
         case ["events"]: self = .discover(.events(nil))
+        case ["events", "create"]: self = .eventCreate
         case ["forum"]: self = .discover(.discussions)
+        case ["forum", "new"]: self = .threadCreate(Self.queryValue(query, named: "category", pattern: Self.slugPattern))
+        case ["stories", "create"]: self = .storyCreate
         case ["blog"]: self = .discover(.articles(false))
         case ["blog", "my"]: self = .discover(.articles(true))
         case ["blog", "create"]: self = .discover(.articleEditor(nil, assistant: false))
@@ -127,7 +132,8 @@ enum NativeSiteLink: Hashable {
         case ["launch"]: self = .launch
         case ["admin"]: self = .admin
         case ["admin", "marketplace"]: self = .adminMarketplace
-        case ["admin", "creators"]: self = .adminCreatorBusiness
+        case ["admin", "creators"], ["admin", "jobs"]: self = .adminCreatorBusiness
+        case ["admin", "pipeline-health"]: self = .adminPipelineHealth
         default:
             if segments.count == 2 {
                 let name = segments[1]
@@ -234,7 +240,8 @@ enum NativeSiteLink: Hashable {
         switch self {
         case .notifications, .activityReplay, .missions, .search, .topic, .explore, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
             .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .creatorStoreSetup, .communityCreator, .researchWorkspace, .admin,
-            .marketplace, .nbaEntity, .nflEntity, .mlbTeam, .creatorAccess, .adminMarketplace, .adminCreatorBusiness,
+            .marketplace, .nbaEntity, .nflEntity, .mlbTeam, .creatorAccess, .adminMarketplace, .adminCreatorBusiness, .adminPipelineHealth,
+            .eventCreate, .threadCreate, .storyCreate,
             .community(_, .settings), .community(_, .channels): true
         default: false
         }

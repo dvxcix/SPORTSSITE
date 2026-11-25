@@ -35,6 +35,7 @@ struct StoriesAPI {
         let enabled: Bool
         let canCreate: Bool
         let stories: [FeedStory]
+        let sports: [String]?
     }
 
     struct Draft: Encodable {

@@ -50,6 +50,8 @@ struct ResearchDeepLink: Hashable {
         let tool: Tool
         if profilePathID != nil {
             tool = .mlbPlayer
+        } else if (isWebsite || isSiteScheme), encodedPath == "/nba" {
+            tool = .court
         } else {
             guard let matched = Tool(rawValue: String(encodedPath.dropFirst())), encodedPath == "/" + matched.rawValue,
                   matched != .mlbPlayer || isNative else { return nil }

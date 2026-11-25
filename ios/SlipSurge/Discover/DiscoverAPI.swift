@@ -152,16 +152,19 @@ enum LeagueArtwork {
 }
 
 extension DiscoverAPI {
-    func memberRead<Response: Decodable>(_ type: Response.Type, path: String, query: [URLQueryItem] = []) async throws -> Response {
+    func memberRead<Response: Decodable>(_ type: Response.Type, path: String, query: [URLQueryItem] = [],
+        keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy = .useDefaultKeys) async throws -> Response {
         guard let userID else { throw URLError(.userAuthenticationRequired) }
         let response = try await SlipSurgeHTTP.memberData(path, query: query, account: account, userID: userID)
-        return try JSONDecoder().decode(type, from: response)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = keyDecodingStrategy
+        return try decoder.decode(type, from: response)
     }
 
     func write<Body: Encodable, Response: Decodable>(_ type: Response.Type, path: String, query: [URLQueryItem] = [], body: Body,
-        keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy = .useDefaultKeys) async throws -> Response {
+        keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy = .useDefaultKeys, timeout: TimeInterval = 30) async throws -> Response {
         guard let userID else { throw URLError(.userAuthenticationRequired) }
-        var request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: path, query: query)
+        var request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: path, query: query, timeout: timeout)
         let access = try await account.accessToken(for: userID)
         request.httpMethod = "POST"
         request.httpBody = try JSONEncoder().encode(body)

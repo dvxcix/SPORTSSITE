@@ -3,6 +3,7 @@ import SwiftUI
 struct NativeFeedSelection: Hashable {
     let filter: FeedFilter
     let sport: String
+    var refreshStories = false
 }
 
 struct FeedView: View {
@@ -140,6 +141,7 @@ struct FeedView: View {
             guard let entry = opensSelection else { return }
             filter = entry.filter == .following && api.userID == nil ? .latest : entry.filter
             sport = entry.sport
+            if entry.refreshStories { revision += 1 }
             opensSelection = nil
         }
         .task(id: selection) { await firstPage() }

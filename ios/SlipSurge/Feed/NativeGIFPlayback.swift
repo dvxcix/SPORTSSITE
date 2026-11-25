@@ -36,6 +36,7 @@ struct NativeGIFPlayback: View {
     var maxHeight: CGFloat = 220
     var maxWidth: CGFloat = 400
     var label = "GIF"
+    var onLoaded: ((Bool) -> Void)? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scene
     @State private var clip: Animation?
@@ -62,8 +63,9 @@ struct NativeGIFPlayback: View {
                 let loaded = try await Self.load(url)
                 try Task.checkCancellation()
                 clip = loaded
+                onLoaded?(true)
             } catch {
-                if !Task.isCancelled { failed = true }
+                if !Task.isCancelled { failed = true; onLoaded?(false) }
             }
         }
         .onDisappear { clip = nil }
