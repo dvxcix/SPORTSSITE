@@ -117,6 +117,14 @@ verification records in the handoff.
 
 ## Native behavior and verification
 
+- The GIF picker can attach a validated Tenor or GIPHY image link or upload
+  an animated GIF from Photos. Search uses GIPHY directly from the device
+  with its official attribution. In `ios/LocalAuth.xcconfig`, set separately
+  issued iOS client keys as `SLIPSURGE_GIPHY_FEED_KEY`,
+  `SLIPSURGE_GIPHY_MESSAGES_KEY`, and `SLIPSURGE_GIPHY_FORUM_KEY` for the
+  surfaces you enable. Follow GIPHY’s platform and production-key rules.
+  Keep local configuration out of Git. An unconfigured surface offers
+  link and Photos attachments. The old Tenor API retired in June 2026.
 - Secure session persistence/refresh, logout cleanup, foreground revalidation
   and cross-account cache isolation. Load authorized data before restoring a
   protected destination after login.

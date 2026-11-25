@@ -104,7 +104,7 @@ struct FeedPostCard: View {
 
     @ViewBuilder
     private var postBody: some View {
-        if !post.content.isEmpty { Text(verbatim: post.content) }
+        if !post.content.isEmpty { NativeSocialBody(content: post.content) }
         if let pick = post.pick {
             FeedPickCard(pick: pick, sport: post.sport)
         }
@@ -232,6 +232,7 @@ struct FeedPostCard: View {
     }
 
     nonisolated static func allowedMedia(_ url: URL) -> Bool {
+        if NativeGIFSource.isProvider(url) { return true }
         guard url.scheme == "https", url.user == nil, url.password == nil, url.port == nil, let host = url.host else { return false }
         return host == SlipSurgeHTTP.site || host == "hkldweedwnxartkfhror.supabase.co" ||
             host == "media.tenor.com" || host == "a.espncdn.com" || host == "cdn.nba.com" || host == "static.www.nfl.com" || host == "img.mlbstatic.com" ||
@@ -244,7 +245,9 @@ private struct FeedMedia: View {
     @State private var player: AVPlayer?
 
     var body: some View {
-        if ["mp4", "mov", "m4v"].contains(url.pathExtension.lowercased()) {
+        if NativeGIFSource.canPlay(url) {
+            NativeGIFPlayback(url: url, maxHeight: 340).clipShape(.rect(cornerRadius: 9))
+        } else if ["mp4", "mov", "m4v"].contains(url.pathExtension.lowercased()) {
             if let player {
                 VideoPlayer(player: player).aspectRatio(16 / 9, contentMode: .fit)
                     .onDisappear { player.pause() }

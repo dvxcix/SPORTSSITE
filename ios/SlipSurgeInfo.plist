@@ -28,6 +28,12 @@
     </array>
     <key>SlipSurgeSupabasePublishableKey</key>
     <string>$(SLIPSURGE_SUPABASE_PUBLISHABLE_KEY)</string>
+    <key>SlipSurgeGiphyFeedKey</key>
+    <string>$(SLIPSURGE_GIPHY_FEED_KEY)</string>
+    <key>SlipSurgeGiphyMessagesKey</key>
+    <string>$(SLIPSURGE_GIPHY_MESSAGES_KEY)</string>
+    <key>SlipSurgeGiphyForumKey</key>
+    <string>$(SLIPSURGE_GIPHY_FORUM_KEY)</string>
     <key>SLIPSURGE_APNS_ENVIRONMENT</key>
     <string>$(SLIPSURGE_APNS_ENVIRONMENT)</string>
 </dict>

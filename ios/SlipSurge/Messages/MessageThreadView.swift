@@ -253,11 +253,15 @@ struct MessageThreadView: View {
                             Label("Forwarded", systemImage: "arrowshape.turn.up.right").font(.caption2).foregroundStyle(.secondary)
                         }
                         if let reply = message.replyTo { replyPreview(reply.content, author: reply.sender?.displayName ?? reply.sender?.username) }
-                        if !message.content.isEmpty { Text(verbatim: message.content).font(.body) }
+                        if !message.content.isEmpty { NativeSocialBody(content: message.content, maxGIFWidth: 230).font(.body) }
                         ForEach((message.mediaUrls ?? []).filter(FeedPostCard.allowedMedia), id: \.self) { url in
-                            AsyncImage(url: url) { artwork in artwork.resizable().scaledToFit() } placeholder: { ProgressView() }
-                                .frame(maxWidth: 240, maxHeight: 200)
-                                .clipShape(.rect(cornerRadius: 10))
+                            if NativeGIFSource.canPlay(url) {
+                                NativeGIFPlayback(url: url, maxHeight: 200, maxWidth: 240).clipShape(.rect(cornerRadius: 10))
+                            } else {
+                                AsyncImage(url: url) { artwork in artwork.resizable().scaledToFit() } placeholder: { ProgressView() }
+                                    .frame(maxWidth: 240, maxHeight: 200)
+                                    .clipShape(.rect(cornerRadius: 10))
+                            }
                         }
                     }
                 }
@@ -346,8 +350,12 @@ struct MessageThreadView: View {
             }
             if let picture, editing == nil {
                 HStack {
-                    ResearchArtwork(urls: [picture], fallback: "photo").frame(width: 82, height: 56).clipShape(.rect(cornerRadius: 7))
-                    Button("Remove photo", systemImage: "xmark.circle.fill") { self.picture = nil }.labelStyle(.iconOnly)
+                    if NativeGIFSource.canPlay(picture) {
+                        NativeGIFPlayback(url: picture, maxHeight: 63, maxWidth: 104).clipShape(.rect(cornerRadius: 7))
+                    } else {
+                        ResearchArtwork(urls: [picture], fallback: "photo").frame(width: 82, height: 56).clipShape(.rect(cornerRadius: 7))
+                    }
+                    Button("Remove attachment", systemImage: "xmark.circle.fill") { self.picture = nil }.labelStyle(.iconOnly)
                     Spacer()
                 }
             }
@@ -366,6 +374,9 @@ struct MessageThreadView: View {
                         }, url: $picture, uploading: $uploading)
                         .labelStyle(.iconOnly).disabled(composing)
                         .padding(.vertical, 7)
+                        NativeGIFPickerButton(account: api.account, userID: api.userID, uploadKind: .messages,
+                            compact: true, placement: .messages) { picture = $0 }
+                            .disabled(composing || uploading)
                     }
                     TextField("Message", text: $draft, axis: .vertical)
                         .lineLimit(1...5).padding(.horizontal, 12).padding(.vertical, 9)

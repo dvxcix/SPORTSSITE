@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
-import { isOwnedNativeMedia } from '@/lib/nativeMedia'
+import { isNativeSocialGif, isOwnedNativeMedia } from '@/lib/nativeMedia'
 import { isAccountId } from '@/lib/blocks'
 import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
 import { combineOdds, calcPayout } from '@slipsurge/core/parlayCalc'
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
   }
 
   const draftId = native && typeof body?.draftId === 'string' && isAccountId(body.draftId) ? body.draftId : null
-  if (native && (!draftId || body.sport !== sport || content.length > 500 || (imageUrl && !isOwnedNativeMedia(imageUrl, user.id, 'posts')) ||
+  if (native && (!draftId || body.sport !== sport || content.length > 500 || (imageUrl && !isOwnedNativeMedia(imageUrl, user.id, 'posts') && !isNativeSocialGif(imageUrl)) ||
     legs.some(leg => typeof leg.player_id !== 'string' || typeof leg.player_name !== 'string' || typeof leg.line !== 'string' ||
       typeof leg.prop_label !== 'string' || typeof leg.game_pk !== 'string' || typeof leg.game_date !== 'string' ||
       !Number.isInteger(leg.odds) || !['over', 'under', 'milestone'].includes(leg.market_side ?? '') || leg.book !== legs[0].book))) {

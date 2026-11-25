@@ -1199,3 +1199,31 @@ physical-device push are still open.
   exact method-and-path guest routing tests for `/api/mobile/announcements`
   and `/api/mobile/events`. Handlers still verify supplied sessions and
   evaluate rollout access. Admin and changing requests retain their gates.
+- PR #45 merged as `e2980c6b0aa88a557d0ff9717bd483bb95229b24`. Preview
+  `dpl_Bh3dJRqepv8r8D8WGGB75RKfjCov` and production
+  `dpl_6q3AS62ULy1ueppNQvmrb8c8nKrP` were READY. Live guest Event availability
+  returned `enabled: false`, the guest list was blocked, and the invalid
+  bearer and guest admin reads returned 401. Guest announcements and Feed
+  returned 200, with no public banner or entries at the time of the check.
+
+## Native GIF attachments · 25 November 2026
+
+- The Feed composer, pick posts, comments, discussions and chats can
+  attach or display animated GIFs with existing media ownership rules.
+  Native playback validates file type, host, redirect and download size,
+  and pauses animation for Reduce Motion or when the app leaves the foreground.
+  The server bridge accepts HTTPS GIF images only on the approved CDN hosts
+  in native social writes. Other owned upload types and browser writes
+  keep their existing behavior.
+- Google retired the Tenor API on 30 June 2026. The Mac simulator reproduced
+  the broken catalog using the same endpoint as desktop. iOS now supports
+  a direct GIPHY client catalog with official attribution and separate keys by
+  surface. No SlipSurge GIPHY connection or owned iOS key was available to
+  verify. Search stays visibly unavailable on unconfigured surfaces, where
+  Photos and a validated direct image link are presented immediately.
+  The legacy desktop picker was left on its existing endpoint.
+- A signed Xcode Simulator build opened the Feed composer and GIF picker,
+  accepted a live GIPHY image link, and rendered changing animation frames in
+  the unsent draft. No post, message, or GIF share event was sent. Focused
+  native GIF URL and upload ownership tests passed. Production write support
+  follows the narrow Hub release.

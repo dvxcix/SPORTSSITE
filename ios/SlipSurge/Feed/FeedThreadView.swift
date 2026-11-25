@@ -93,6 +93,14 @@ struct FeedThreadView: View {
                 }
             }
             HStack(alignment: .bottom, spacing: 8) {
+                if let userID = api.userID {
+                    NativeGIFPickerButton(account: api.account, userID: userID, uploadKind: .posts, compact: true) { url in
+                        let candidate = comment.isEmpty ? url.absoluteString : comment + " " + url.absoluteString
+                        if candidate.utf16.count <= 1_000 { comment = candidate }
+                        else { notice = "Shorten the comment before adding a GIF." }
+                    }
+                    .disabled(pending)
+                }
                 TextField("Write a comment", text: $comment, axis: .vertical)
                     .focused($composerFocused)
                     .lineLimit(1...4).padding(10)
@@ -150,7 +158,7 @@ struct FeedThreadView: View {
                     Text(date, style: .relative).font(.caption2).foregroundStyle(.secondary)
                 }
             }
-            Text(verbatim: item.text).font(.subheadline)
+            NativeSocialBody(content: item.text).font(.subheadline)
             if api.userID != nil {
                 HStack(spacing: 15) {
                     Button {

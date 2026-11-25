@@ -152,9 +152,13 @@ struct FeedComposerView: View {
                     NativePhotoPicker(title: "Add photo", upload: { photo in
                         try await NativeMediaUpload.upload(photo, kind: .posts, account: account, userID: userID)
                     }, url: $image, uploading: $uploading)
+                    NativeGIFPickerButton(account: account, userID: userID, uploadKind: .posts) { image = $0 }
+                        .disabled(uploading || posting)
                     if let image {
-                        ResearchArtwork(urls: [image], fallback: "photo").frame(maxHeight: 170)
-                        Button("Remove photo", systemImage: "trash", role: .destructive) { self.image = nil }
+                        if NativeGIFSource.canPlay(image) {
+                            NativeGIFPlayback(url: image, maxHeight: 170)
+                        } else { ResearchArtwork(urls: [image], fallback: "photo").frame(maxHeight: 170) }
+                        Button("Remove attachment", systemImage: "trash", role: .destructive) { self.image = nil }
                     }
                 }
                 Section {

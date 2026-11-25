@@ -1,5 +1,8 @@
 // iOS uses a Supabase publishable client key. Keep any Developer configuration local.
 SLIPSURGE_SUPABASE_PUBLISHABLE_KEY =
+SLIPSURGE_GIPHY_FEED_KEY =
+SLIPSURGE_GIPHY_MESSAGES_KEY =
+SLIPSURGE_GIPHY_FORUM_KEY =
 SLIPSURGE_APNS_ENVIRONMENT =
 SLIPSURGE_DEVICE_ENTITLEMENTS =
 #include? "LocalAuth.xcconfig"
