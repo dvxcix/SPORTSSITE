@@ -269,3 +269,14 @@ Checkpoint on `codex/ios-parity-20261125`, based on `e2dc4d9b`.
   saved picks from the web implementations. The remaining role-specific flows,
   community and creator/admin workflows, production OAuth and payments,
   and physical-device notifications remain tracked in `docs/ios/README.md`.
+
+### Research preview receipt
+
+Vercel's Git integration built `1ea85c5ff311b813c557346573580f7bfaba64e5`
+as the protected Preview `dpl_HVnJajnBG13NCQ3Eam9L4sWYqZK5` and reported READY.
+Production returned 404 for the mobile account and Court/Sideline slate routes
+with an invalid test bearer. That confirms the standard build's production host
+is unsuitable for verifying member reads from this branch. This Mac session had
+no existing CLI or short-lived Vercel credential for testing the protected
+preview over HTTP. The standard build remains open on the real Court public
+preview in Device Hub. The Cloud continuity chat received the code checkpoint.
