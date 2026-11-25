@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
+import { createHash } from 'node:crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
+import { isOwnedNativeMedia } from '@/lib/nativeMedia'
+import { isAccountId } from '@/lib/blocks'
 import { getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
 import { combineOdds, calcPayout } from '@slipsurge/core/parlayCalc'
 import { PROP_META } from '@/lib/watchlist'
@@ -45,8 +49,10 @@ function currentOfferOdds(offer: NflMarketOffer, side: Leg['market_side']) {
 // parlay post gets created — plain text/poll posts still go straight from
 // the client since there's no time-sensitive integrity concern there.
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const native = req.headers.has('authorization') ? await requireNativeAccount(req) : null
+  if (native?.error) return native.error
+  const supabase = native?.supabase ?? await createClient()
+  const user = native ? { id: native.userId } : (await supabase.auth.getUser()).data.user
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
 
   const body = await req.json().catch(() => null)
@@ -72,13 +78,33 @@ export async function POST(req: Request) {
   if (!legs.length) return NextResponse.json({ error: 'No pick legs provided' }, { status: 400 })
   if (legs.length > 30) return NextResponse.json({ error: 'Choose up to 30 legs.' }, { status: 400 })
   for (const l of legs) {
-    if (!l.game_pk || !l.prop_key || l.odds == null || (sport === 'MLB' ? !l.mlb_id : !l.player_id)) {
+    if (!l || !l.game_pk || !l.prop_key || l.odds == null || (sport === 'MLB' ? !l.mlb_id : !l.player_id)) {
       return NextResponse.json({ error: 'Malformed pick leg' }, { status: 400 })
     }
     if (l.sport && l.sport !== sport) return NextResponse.json({ error: 'A parlay cannot mix sports.' }, { status: 400 })
     const contract = { pick_type: sport === 'MLB' ? (PROP_META[l.prop_key]?.pickType ?? l.prop_key) : l.prop_key, numeric_line: l.numeric_line, market_side: l.market_side ?? 'milestone' }
     if ((sport === 'MLB' && !supportsMlbPick(contract)) || (sport === 'NFL' && !supportsNflPick({ ...contract, numeric_line: contract.numeric_line ?? null }))) {
       return NextResponse.json({ error: 'This market needs a supported exact line before it can be tracked.' }, { status: 400 })
+    }
+  }
+
+  const draftId = native && typeof body?.draftId === 'string' && isAccountId(body.draftId) ? body.draftId : null
+  if (native && (!draftId || body.sport !== sport || content.length > 500 || (imageUrl && !isOwnedNativeMedia(imageUrl, user.id, 'posts')) ||
+    legs.some(leg => typeof leg.player_id !== 'string' || typeof leg.player_name !== 'string' || typeof leg.line !== 'string' ||
+      typeof leg.prop_label !== 'string' || typeof leg.game_pk !== 'string' || typeof leg.game_date !== 'string' ||
+      !Number.isInteger(leg.odds) || !['over', 'under', 'milestone'].includes(leg.market_side ?? '') || leg.book !== legs[0].book))) {
+    return NextResponse.json({ error: 'Invalid pick draft' }, { status: 400 })
+  }
+  const fingerprint = draftId ? createHash('sha256').update(JSON.stringify([sport, content.trim(), wager, imageUrl, visibility,
+    isSpoiler, groupId, pageId, legs.map(leg => [leg.player_id, leg.mlb_id ?? null, leg.player_name, leg.team ?? null, leg.headshot_url ?? null,
+      leg.game_pk, leg.game_date, leg.prop_key, leg.prop_label, leg.line, leg.numeric_line ?? null, leg.market_side, leg.book, leg.odds])])).digest('hex') : null
+  const nativeAdmin = draftId ? createAdminClient() : null
+  if (nativeAdmin && draftId && fingerprint) {
+    const previous = await nativeAdmin.from('native_tracked_pick_requests').select('fingerprint,post_id,result').eq('user_id', user.id).eq('draft_id', draftId).maybeSingle()
+    if (previous.error) return NextResponse.json({ error: 'Pick submission could not be verified' }, { status: 503 })
+    if (previous.data) {
+      return previous.data.post_id && previous.data.fingerprint === fingerprint ? NextResponse.json(previous.data.result)
+        : NextResponse.json({ error: 'This draft has already been used' }, { status: 409 })
     }
   }
 
@@ -217,15 +243,19 @@ export async function POST(req: Request) {
   if (pickCutoff <= Date.now()) {
     return NextResponse.json({ error: 'A game has already started — pick not posted.' }, { status: 409 })
   }
-  const admin = createAdminClient()
-  const { data: post, error: postErr } = await admin.rpc('create_tracked_pick_post', { p_post: postPayload, p_picks: pickRows })
+  const admin = nativeAdmin ?? createAdminClient()
+  const { data: saved, error: postErr } = draftId && fingerprint
+    ? await admin.rpc('create_native_tracked_pick_post', { p_user_id: user.id, p_draft_id: draftId, p_fingerprint: fingerprint, p_post: postPayload, p_picks: pickRows })
+    : await admin.rpc('create_tracked_pick_post', { p_post: postPayload, p_picks: pickRows })
+  if (draftId && saved?.conflict) return NextResponse.json({ error: 'This draft has already been used' }, { status: 409 })
+  const post = draftId ? saved?.post : saved
   if (postErr || !post?.id || !post.picksTracked) {
     console.error('[posts/pick] transaction failed', { code: postErr?.code, message: postErr?.message })
     if (postErr?.message?.includes('Please wait before posting again')) return NextResponse.json({ error: 'Please wait a few minutes before posting again.' }, { status: 429 })
     return NextResponse.json({ error: 'Your pick was not posted. Please try again.' }, { status: 503 })
   }
   // A notification error must not turn a committed post into a retry/duplicate.
-  if (visibility !== 'private') {
+  if (visibility !== 'private' && (!draftId || saved?.created === true)) {
     try {
       await notifyMentions(admin, user.id, content, `/posts/${post.id}`, post.id, 'a post')
       await notifyFollowers(admin, {
