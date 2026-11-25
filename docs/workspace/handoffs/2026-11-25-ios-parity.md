@@ -1279,3 +1279,27 @@ physical-device push are still open.
   result attached it to the unsent Feed draft with its Remove attachment
   control. No post was sent. Link and Photos attachments remain available.
   Local configuration is required wherever iOS is built with live search.
+- The configured SDK checkpoint is `16f835bb164181015b72b5f7c15f16512c048164`.
+  The Cloud handoff was sent. On the signed Simulator, Discover also showed
+  the full Leaderboard control and loaded the ranking surface. Discussions
+  opened the live category directory and the General Discussion category.
+  General Discussion was empty. No production content or moderation was
+  changed in those checks.
+
+## Native Articles · 25 November 2026
+
+- Discover has native Articles and My articles, with the website’s rollout
+  and Basic membership requirement. The reader shows cover art, league marks,
+  author profile and verification, headings, article views, likes, sharing
+  and related articles. The owner can create, preview, save a draft or
+  publish, and edit an existing article. Draft with AI uses the existing
+  backend, prompt bounds, hourly quota and provider configuration. The
+  generated text stays editable before publication.
+- Native drafts use stable create IDs and check the last confirmed revision
+  on edit. The reviewed SQL tracks article changes without advancing the
+  revision during analytics updates. It provides a service-only exact-state
+  like operation in addition to the existing browser toggle contract.
+- Signed Xcode, Hub TypeScript, 16 focused tests, the 134-check production
+  source suite and local PostgreSQL passed. Production SQL and the narrow
+  endpoint release remain to verify. No article, like or generated draft
+  was written to the live system for testing. Custom Pages is next.

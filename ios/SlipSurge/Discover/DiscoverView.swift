@@ -3,6 +3,7 @@ import SwiftUI
 enum DiscoverDestination: Hashable {
     case communities, creators, leaderboard, scores, events(UUID?)
     case discussions, discussionCategory(String), discussion(UUID)
+    case articles(Bool), article(String), articleEditor(UUID?, assistant: Bool)
 }
 
 struct DiscoverView: View {
@@ -27,6 +28,7 @@ struct DiscoverView: View {
     @State private var routed = false
     @State private var eventsAvailable = false
     @State private var forumAvailable = false
+    @State private var articlesAvailable = false
     @State private var destination: DiscoverDestination?
 
     init(api: DiscoverAPI, opensCommunity: UUID? = nil, opensDestination: Binding<DiscoverDestination?> = .constant(nil)) {
@@ -46,24 +48,7 @@ struct DiscoverView: View {
                     scoresEntry
                 }
                 .buttonStyle(SlipSurgePressStyle())
-                if let userID = api.userID {
-                    NavigationLink {
-                        ChannelDirectoryView(api: .init(account: api.account, userID: userID))
-                    } label: { Label("Live Rooms", systemImage: "dot.radiowaves.left.and.right") }
-                    .buttonStyle(.bordered)
-                }
-                if eventsAvailable {
-                    NavigationLink {
-                        CommunityEventsView(api: .init(viewer: api))
-                    } label: { Label("Events", systemImage: "calendar") }
-                    .buttonStyle(.bordered)
-                }
-                if forumAvailable {
-                    NavigationLink {
-                        ForumIndexView(api: .init(viewer: api))
-                    } label: { Label("Discussions", systemImage: "bubble.left.and.bubble.right") }
-                    .buttonStyle(.bordered)
-                }
+                communityDestinations
                 ResearchToolRail(title: "Discover", choices: Section.allCases, selection: $section, label: \.rawValue, glyph: {
                     switch $0 {
                     case .communities: "person.2"
@@ -102,6 +87,12 @@ struct DiscoverView: View {
             case .discussions: ForumIndexView(api: .init(viewer: api))
             case .discussionCategory(let category): ForumCategoryView(api: .init(viewer: api), slug: category)
             case .discussion(let id): ForumThreadView(api: .init(viewer: api), id: id)
+            case .articles(let mine): ArticlesView(api: .init(viewer: api), mine: mine)
+            case .article(let slug): ArticleReader(api: .init(viewer: api), slug: slug)
+            case .articleEditor(let id, let assistant):
+                if let id { ArticleEditorLoader(api: .init(viewer: api), id: id, saved: articleSaved) }
+                else if articlesAvailable { ArticleEditor(api: .init(viewer: api), draft: .init(), opensAssistant: assistant, saved: articleSaved) }
+                else { ArticlesView(api: .init(viewer: api)) }
             default: EmptyView()
             }
         }
@@ -117,7 +108,7 @@ struct DiscoverView: View {
             case .leaderboard:
                 destination = nil
                 section = .records
-            case .scores, .events, .discussions, .discussionCategory, .discussion:
+            case .scores, .events, .discussions, .discussionCategory, .discussion, .articles, .article, .articleEditor:
                 destination = opening
             }
             opensDestination = nil
@@ -141,9 +132,37 @@ struct DiscoverView: View {
         .task(id: api.userID) {
             async let events = CommunityEventsAPI(viewer: api).available()
             async let forum = ForumAPI(viewer: api).available()
-            (eventsAvailable, forumAvailable) = await (events, forum)
+            async let articles = ArticlesAPI(viewer: api).available()
+            (eventsAvailable, forumAvailable, articlesAvailable) = await (events, forum, articles)
         }
         .task(id: request) { await load(section) }
+    }
+
+    private func articleSaved(_ receipt: ArticlesAPI.Receipt) {
+        opensDestination = receipt.status == "published" ? .article(receipt.slug) : .articles(true)
+    }
+
+    @ViewBuilder private var communityDestinations: some View {
+        if let userID = api.userID {
+            ScrollView(.horizontal) {
+                HStack(spacing: 7) {
+                    NavigationLink {
+                        ChannelDirectoryView(api: .init(account: api.account, userID: userID))
+                    } label: { Label("Live Rooms", systemImage: "dot.radiowaves.left.and.right") }
+                    if eventsAvailable {
+                        NavigationLink { CommunityEventsView(api: .init(viewer: api)) } label: { Label("Events", systemImage: "calendar") }
+                    }
+                    if forumAvailable {
+                        NavigationLink { ForumIndexView(api: .init(viewer: api)) } label: { Label("Discussions", systemImage: "bubble.left.and.bubble.right") }
+                    }
+                    if articlesAvailable {
+                        NavigationLink { ArticlesView(api: .init(viewer: api)) } label: { Label("Articles", systemImage: "book") }
+                    }
+                }
+                .buttonStyle(.bordered)
+            }
+            .scrollIndicators(.hidden)
+        }
     }
 
     private var scoresEntry: some View {
