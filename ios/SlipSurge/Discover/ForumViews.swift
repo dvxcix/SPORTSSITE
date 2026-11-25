@@ -277,8 +277,7 @@ struct ForumComposer: View {
                         }
                     }
                     if let userID = api.viewer.userID {
-                        NativeGIFPickerButton(account: api.viewer.account, userID: userID, uploadKind: .posts,
-                            compact: true, placement: .forum) {
+                        NativeGIFPickerButton(account: api.viewer.account, userID: userID, uploadKind: .posts, compact: true) {
                             append($0.absoluteString)
                         }
                     }

@@ -1251,7 +1251,31 @@ physical-device push are still open.
   smoke suite is 134/134 after updating a stale assertion to check the verified
   shared admin authorization helper. Hub TypeScript and 13 focused tests
   passed. The signed Xcode Simulator build passed.
-- The exact Forum SQL still needs the reviewed production application at
-  release. Signed-in reading and moderation screens remain to verify against
-  that release. No live posts, reactions or moderation have been made for QA.
+- Task checkpoint `4133a669ae5d3e431a55786b80e991866c06e55c` is pushed.
+  The reviewed SQL was individually applied in the primary project as
+  `20261125111504_native_forum_operations`. Production verified that only
+  `service_role` can execute either function. Do not replay the migration.
+  PR #47 merged as `d79e9f9194f025eff8a23a07abff6708f5b9fec8`. Preview
+  `dpl_4pgcm6iiNQeuZiYt5VeT2oEreZQY` and production
+  `dpl_6UGbXmAABTbUhDymebNchJ4FFanw` were READY. Guest availability and Feed
+  returned 200, and unauthorized or invalid-bearer content and moderation
+  reads returned 401. Signed-in reading and moderation screens remain to
+  verify against that release. No live posts, reactions or moderation have
+  been made for QA.
   Articles, custom Pages and remaining admin and account checks remain open.
+
+## Configured GIPHY iOS SDK · 25 November 2026
+
+- The owner supplied a SlipSurge iOS SDK key. It is available to Xcode through
+  `SLIPSURGE_GIPHY_IOS_SDK_KEY` in the Mac’s ignored local configuration.
+  No key value is included in Git or the Cloud handoff. The official SDK
+  `2.4.0` replaces the earlier unconfigured REST catalog in the same shared
+  SwiftUI picker for Feed, comments, Discussions and messages.
+- Xcode 27.2 resolved the SDK and its pinned WebP dependency. The app embeds
+  the signed GIPHY framework and loads it from its Frameworks folder.
+  The signed iPhone 18 Pro Simulator loaded live trending GIFs in the
+  shared picker with native search and the approved provider attribution.
+  A search for `basketball dunk` returned relevant GIFs, and tapping a
+  result attached it to the unsent Feed draft with its Remove attachment
+  control. No post was sent. Link and Photos attachments remain available.
+  Local configuration is required wherever iOS is built with live search.

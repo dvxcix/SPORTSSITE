@@ -118,13 +118,13 @@ verification records in the handoff.
 ## Native behavior and verification
 
 - The GIF picker can attach a validated Tenor or GIPHY image link or upload
-  an animated GIF from Photos. Search uses GIPHY directly from the device
-  with its official attribution. In `ios/LocalAuth.xcconfig`, set separately
-  issued iOS client keys as `SLIPSURGE_GIPHY_FEED_KEY`,
-  `SLIPSURGE_GIPHY_MESSAGES_KEY`, and `SLIPSURGE_GIPHY_FORUM_KEY` for the
-  surfaces you enable. Follow GIPHY’s platform and production-key rules.
-  Keep local configuration out of Git. An unconfigured surface offers
-  link and Photos attachments. The old Tenor API retired in June 2026.
+  an animated GIF from Photos. Search uses the official GIPHY iOS SDK with
+  a native search field and GIPHY attribution. Set the app’s iOS SDK key as
+  `SLIPSURGE_GIPHY_IOS_SDK_KEY` in `ios/LocalAuth.xcconfig` or the equivalent
+  build setting. Keep local configuration out of Git. A build without the
+  SDK key offers link and Photos attachments. The old Tenor API retired in
+  June 2026. The SDK requires Xcode 26.4 or later. Review GIPHY’s SDK privacy
+  disclosures and production key status before App Store submission.
 - Secure session persistence/refresh, logout cleanup, foreground revalidation
   and cross-account cache isolation. Load authorized data before restoring a
   protected destination after login.

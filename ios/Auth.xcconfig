@@ -1,12 +1,11 @@
 // iOS uses a Supabase publishable client key. Keep any Developer configuration local.
 SLIPSURGE_SUPABASE_PUBLISHABLE_KEY =
-SLIPSURGE_GIPHY_FEED_KEY =
-SLIPSURGE_GIPHY_MESSAGES_KEY =
-SLIPSURGE_GIPHY_FORUM_KEY =
+SLIPSURGE_GIPHY_IOS_SDK_KEY =
 SLIPSURGE_APNS_ENVIRONMENT =
 SLIPSURGE_DEVICE_ENTITLEMENTS =
 #include? "LocalAuth.xcconfig"
 
 INFOPLIST_FILE = SlipSurgeInfo.plist
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks
 CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*] = SlipSurgeSimulator.entitlements
 CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*] = $(SLIPSURGE_DEVICE_ENTITLEMENTS)

@@ -374,8 +374,7 @@ struct MessageThreadView: View {
                         }, url: $picture, uploading: $uploading)
                         .labelStyle(.iconOnly).disabled(composing)
                         .padding(.vertical, 7)
-                        NativeGIFPickerButton(account: api.account, userID: api.userID, uploadKind: .messages,
-                            compact: true, placement: .messages) { picture = $0 }
+                        NativeGIFPickerButton(account: api.account, userID: api.userID, uploadKind: .messages, compact: true) { picture = $0 }
                             .disabled(composing || uploading)
                     }
                     TextField("Message", text: $draft, axis: .vertical)

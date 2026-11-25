@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A00000000000000000000013 /* GiphyUISDK in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000012 /* GiphyUISDK */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		A00000000000000000000006 /* SlipSurge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = SlipSurge.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A0000000000000000000000F /* Auth.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Auth.xcconfig; sourceTree = "<group>"; };
@@ -18,6 +22,17 @@
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A00000000000000000000010 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000013 /* GiphyUISDK in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		A00000000000000000000002 = {
@@ -45,6 +60,7 @@
 			buildConfigurationList = A00000000000000000000009 /* Build configuration list for PBXNativeTarget "SlipSurge" */;
 			buildPhases = (
 				A00000000000000000000007 /* Sources */,
+				A00000000000000000000010 /* Frameworks */,
 				A0000000000000000000000E /* Resources */,
 			);
 			buildRules = (
@@ -55,6 +71,9 @@
 				A00000000000000000000003 /* SlipSurge */,
 			);
 			name = SlipSurge;
+			packageProductDependencies = (
+				A00000000000000000000012 /* GiphyUISDK */,
+			);
 			productName = SlipSurge;
 			productReference = A00000000000000000000006 /* SlipSurge.app */;
 			productType = "com.apple.product-type.application";
@@ -74,6 +93,9 @@
 				Base,
 			);
 			mainGroup = A00000000000000000000002;
+			packageReferences = (
+				A00000000000000000000011 /* XCRemoteSwiftPackageReference "giphy-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A00000000000000000000004 /* Products */;
 			projectDirPath = "";
@@ -110,6 +132,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 6.0;
 			};
@@ -173,6 +196,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A00000000000000000000011 /* XCRemoteSwiftPackageReference "giphy-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Giphy/giphy-ios-sdk.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.4.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A00000000000000000000012 /* GiphyUISDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A00000000000000000000011 /* XCRemoteSwiftPackageReference "giphy-ios-sdk" */;
+			productName = GiphyUISDK;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A00000000000000000000001 /* Project object */;
 }
