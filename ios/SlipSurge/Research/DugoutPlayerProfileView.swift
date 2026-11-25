@@ -117,6 +117,7 @@ struct DugoutPlayerProfileView: View {
                 if let logo = data.team?.logo {
                     ResearchArtwork(urls: [logo], fallback: "shield")
                         .frame(width: 30, height: 30)
+                        .foregroundStyle(data.accent)
                         .padding(5).background(.white.opacity(0.92), in: .rect(cornerRadius: 9))
                 }
                 Text(data.name).font(.title2.weight(.heavy)).accessibilityAddTraits(.isHeader)
@@ -164,7 +165,7 @@ struct DugoutPlayerProfileView: View {
             ResearchSectionTitle(title: role.title)
         } content: {
             Picker("Statistics period", selection: $career) {
-                Text("\(data.season) Season").tag(false)
+                Text("\(String(data.season)) Season").tag(false)
                 Text("Career").tag(true)
             }
             .pickerStyle(.segmented)
@@ -224,7 +225,7 @@ struct DugoutPlayerProfileView: View {
             ResearchSectionTitle(title: role == .batter ? "Quality of Contact" : "Quality of Contact Allowed")
         } content: {
             if !metrics.isEmpty { ResearchToolValues(items: metrics) }
-            Text("Compared with qualified players in the \(data.season) season.")
+            Text("Compared with qualified players in the \(String(data.season)) season.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }

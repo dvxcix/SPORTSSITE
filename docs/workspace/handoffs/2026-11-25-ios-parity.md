@@ -1094,7 +1094,9 @@ physical-device push are still open.
   `dpl_G8ECWNXfFEiru5EdDF58KbHjt54P` and production
   `dpl_6DohJQCyA7yZDVKFdtBtvrnSAH4r` reported READY. Invalid member and rollout
   reads returned 401 and the signed-out Feed returned 200. The Cloud handoff
-  chat received the task and deployment checkpoint.
+  chat received the task and deployment checkpoint. The signed Simulator
+  opened the native member directory and a member’s connection and
+  membership details. This was a read-only walkthrough.
 
 ## Native MLB player pages · 25 November 2026
 
@@ -1116,11 +1118,15 @@ physical-device push are still open.
   `dpl_GP5P2a8SQ4PPJdLMBxo3Jf17xG2Q` and production
   `dpl_45YGJBXeZPbRdjo8pGaSXqxh8hmK` reported READY. Invalid profile and spray
   requests returned 401 and guest Feed returned 200.
+- The signed Simulator opened the exact Nick Madrigal profile from a deep
+  link. Rays artwork loaded, the season panel showed .278 AVG and .365 OBP,
+  and the native Spray view loaded recorded batted-ball data. Formatted the
+  year without numeric grouping after visually reviewing the profile.
 
 ## Native MLB Slate Breakdown · 25 November 2026
 
 - Added a dated, game-selectable Slate Breakdown. The screen shows both
-  booked starters and the saved opposing lineup. Use team-styled portraits
+  starters and the saved opposing lineup. Use team-styled portraits
   to switch sides, a Season/L10/L5/L3 starter sample, pinnable pitch usage,
   sortable plate results, actual strike zones and player profile links.
 - Existing Slate Breakdown tier rules remain in force. Free users see the
@@ -1133,6 +1139,31 @@ physical-device push are still open.
   exact sample types using the existing clock, locking, and grants. Test
   PostgreSQL accepted the migration, preserved prior complete observations,
   rejected writes after the earliest first-pitch cutoff, and retained
-  service-only access. Production inspection confirmed the original guards
-  and privileges. Migration and narrow release are next. Older games may
-  have saved rosters with no corresponding pitch or staff observation.
+  service-only access. Applied individually on the primary Supabase project
+  as `20261125101930_add_mlb_slate_breakdown_archive_resources`; the new
+  constraint is validated and both archive functions remain service-only.
+  Older games may have saved rosters with no pitch or staff observation.
+- Task checkpoint `24c8d60650f4b5f82668d5a22771af285cef0750` is pushed. PR #43
+  merged as `cd45772c63bd12b3f2e556398c0413438e4b28b2`. Preview
+  `dpl_cQ6FXiD6tWFBJrZkWjroM9gKUX63` and production
+  `dpl_5QWMhb7CesNLfSzqo4Y8GRzfT7Gu` reported READY. No observations or jobs
+  were replayed. The production Simulator and guest checks are in progress.
+
+## Native announcements and Leaderboard · 25 November 2026
+
+- Added the site-wide banner and What’s New popup using the website’s
+  existing announcements, colors, release artwork, audience and per-account
+  dismissals. Banner dismissal lasts for the app session and edits appear
+  again. Release dismissals use the signed account and sync to the website.
+- Native Admin previews, edits and publishes the existing banner or changelog
+  records. The editor supports the registered color presets and original
+  screenshot upload route. Edits check the saved version and release status
+  before writing. No production announcements were edited or dismissed in QA.
+- Discover’s Leaderboard now includes podium cards, standard season and
+  weekly ranking, branded league filters, win streaks, profile navigation,
+  and the native pick composer. Weekly and sport order use the site’s win
+  rate ranking with its existing overall order as the stable tie break.
+- Signed Xcode Debug, Hub TypeScript and 10 focused archive, profile,
+  announcements and admin-access checks passed. Announcements API preview,
+  signed mobile walkthrough and the next feature-flagged community tools
+  are pending.

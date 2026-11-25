@@ -81,6 +81,9 @@ struct DiscoverAPI {
             let displayName: String?
             let avatarUrl: URL?
             let isVerified: Bool?
+            let avatarRingStyle: String?
+            let avatarRingColor: String?
+            let accountType: String?
             let followerCount: Int
             let wins: Int
             let losses: Int
@@ -138,7 +141,8 @@ extension DiscoverAPI {
         return try JSONDecoder().decode(type, from: response)
     }
 
-    func write<Body: Encodable, Response: Decodable>(_ type: Response.Type, path: String, query: [URLQueryItem] = [], body: Body) async throws -> Response {
+    func write<Body: Encodable, Response: Decodable>(_ type: Response.Type, path: String, query: [URLQueryItem] = [], body: Body,
+        keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy = .useDefaultKeys) async throws -> Response {
         guard let userID else { throw URLError(.userAuthenticationRequired) }
         var request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: path, query: query)
         let access = try await account.accessToken(for: userID)
@@ -148,6 +152,8 @@ extension DiscoverAPI {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let response = try await SlipSurgeHTTP.send(request)
         guard await account.memberID == userID else { throw URLError(.userAuthenticationRequired) }
-        return try JSONDecoder().decode(type, from: response)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = keyDecodingStrategy
+        return try decoder.decode(type, from: response)
     }
 }

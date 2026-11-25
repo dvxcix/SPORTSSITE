@@ -30,7 +30,7 @@ struct InformationLink: View {
     }
 }
 
-private struct InformationNavigation: View {
+struct InformationNavigation: View {
     private enum Destination: Hashable { case page(InformationPage), pricing, membership, account, connections, nbaPreview, nflPreview }
 
     let page: InformationPage

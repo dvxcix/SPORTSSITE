@@ -6,8 +6,16 @@ struct SlipSurgeTabs: View {
     @Binding var researchLink: ResearchDeepLink?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var phase
+    @Environment(\.openURL) private var systemOpenURL
     private enum Destination { case feed, research, discover, account }
     @State private var selected = Destination.feed
+    @State private var announcements: SiteAnnouncements?
+    @State private var dismissedBannerVersion: String?
+    @State private var release: SiteAnnouncements.Release?
+    @State private var dismissedReleases: Set<UUID> = []
+    @State private var savingRelease = false
+    @State private var releaseProblem: String?
+    @State private var informationPage: InformationPage?
 
     var body: some View {
         TabView(selection: $selected) {
@@ -40,7 +48,43 @@ struct SlipSurgeTabs: View {
             .tag(Destination.account)
         }
         .tint(Brand.accent(for: scheme))
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let banner = announcements?.banner, banner.isActive, !banner.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               dismissedBannerVersion != banner.updatedAt {
+                SiteAnnouncementBanner(banner: banner) { dismissedBannerVersion = banner.updatedAt }
+                    .environment(\.openURL, OpenURLAction(handler: announcementLink))
+            }
+        }
+        .sheet(item: $release, onDismiss: presentNextRelease) { current in
+            NavigationStack {
+                ReleaseAnnouncementView(release: current, queueCount: remainingReleases.count, action: {
+                    Task { await dismissRelease(current) }
+                }, problem: releaseProblem, loading: savingRelease)
+                .navigationTitle("What’s New")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Dismiss release", systemImage: "xmark") { Task { await dismissRelease(current) } }
+                            .labelStyle(.iconOnly).disabled(savingRelease)
+                    }
+                }
+            }
+            .interactiveDismissDisabled()
+            .environment(\.openURL, OpenURLAction(handler: announcementLink))
+        }
+        .sheet(item: $informationPage) { page in InformationNavigation(page: page, account: account) }
         .task { await account.restore() }
+        .task(id: account.memberID) {
+            let userID = account.memberID
+            dismissedReleases = []
+            release = nil
+            announcements = nil
+            await refreshAnnouncements(for: userID)
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                if phase == .active { await refreshAnnouncements(for: userID) }
+            }
+        }
         .onChange(of: account.needsNewPassword) { _, ready in if ready { selected = .account } }
         .onChange(of: account.user?.id) { _, signedIn in
             if signedIn != nil, !account.onboardingComplete { selected = .account }
@@ -49,8 +93,71 @@ struct SlipSurgeTabs: View {
             if researchLink != nil { selected = .research }
         }
         .onChange(of: phase) { _, phase in
-            if phase == .active { Task { await account.restore() } }
+            if phase == .active {
+                Task {
+                    await account.restore()
+                    await refreshAnnouncements(for: account.memberID)
+                }
+            }
         }
+    }
+
+    private var remainingReleases: [SiteAnnouncements.Release] {
+        (announcements?.entries ?? []).filter { !dismissedReleases.contains($0.id) }
+    }
+
+    private func refreshAnnouncements(for userID: UUID?) async {
+        guard let result = try? await SiteAnnouncementsAPI(account: account, userID: userID).read(),
+              !Task.isCancelled, account.memberID == userID else { return }
+        announcements = result
+        presentNextRelease()
+    }
+
+    private func presentNextRelease() {
+        guard release == nil, account.memberID != nil, informationPage == nil else { return }
+        releaseProblem = nil
+        release = remainingReleases.first
+    }
+
+    private func dismissRelease(_ current: SiteAnnouncements.Release) async {
+        guard !savingRelease, let userID = account.memberID else { return }
+        savingRelease = true
+        releaseProblem = nil
+        defer { savingRelease = false }
+        do {
+            try await SiteAnnouncementsAPI(account: account, userID: userID).dismiss(current.id)
+            guard account.memberID == userID else { return }
+            dismissedReleases.insert(current.id)
+            release = nil
+        } catch let status as SlipSurgeHTTP.Status where status.code == 404 {
+            dismissedReleases.insert(current.id)
+            release = nil
+        } catch {
+            releaseProblem = "This dismissal couldn’t sync. Try again."
+        }
+    }
+
+    private func announcementLink(_ url: URL) -> OpenURLAction.Result {
+        if let link = ResearchDeepLink(url) {
+            researchLink = link
+            return .handled
+        }
+        guard url.scheme == "https", [SlipSurgeHTTP.site, "slipsurge.com"].contains(url.host ?? "") else {
+            return .systemAction
+        }
+        let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        if let page = InformationPage(rawValue: path), release == nil {
+            informationPage = page
+        } else if ["", "feed", "home"].contains(path) {
+            selected = .feed
+        } else if ["discover", "groups", "creators", "leaderboard", "scores"].contains(path) {
+            selected = .discover
+        } else if ["account", "settings", "auth/login"].contains(path) {
+            selected = .account
+        } else {
+            systemOpenURL(url)
+        }
+        return .handled
     }
 }
 

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DiscoverView: View {
-    private enum Section: String, CaseIterable { case communities = "Communities", creators = "Creators", records = "Records" }
+    private enum Section: String, CaseIterable { case communities = "Communities", creators = "Creators", records = "Leaderboard" }
 
     let api: DiscoverAPI
     var opensCommunity: UUID? = nil
@@ -51,7 +51,9 @@ struct DiscoverView: View {
                 case .creators:
                     if let creators { creatorsView(creators) } else { loading }
                 case .records:
-                    if let records { recordsView(records) } else { loading }
+                    if let records {
+                        DiscoverLeaderboard(api: api, data: records, sport: sport, thisWeek: thisWeek, search: search) { revision += 1 }
+                    } else { loading }
                 }
             }
             .padding(.horizontal, 16)
@@ -194,57 +196,6 @@ struct DiscoverView: View {
                         count: creator.followerCount.map { "\($0.formatted()) followers" })
                 }
                 .buttonStyle(SlipSurgePressStyle())
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func recordsView(_ data: DiscoverAPI.Records) -> some View {
-        let entries = data.users.enumerated().compactMap { index, person -> (Int, DiscoverAPI.Records.Person, DiscoverAPI.Records.Record)? in
-            let record = thisWeek ? person.thisWeek : sport.isEmpty ? person.allTime
-                : person.bySport.first { $0.key.caseInsensitiveCompare(sport) == .orderedSame }?.value
-            guard let record, record.count > 0, matchesText([person.username, person.displayName]) else { return nil }
-            return (index + 1, person, record)
-        }
-        let sorted = sport.isEmpty && !thisWeek ? entries : entries.sorted { a, b in
-            if a.2.wins != b.2.wins { return a.2.wins > b.2.wins }
-            return (a.2.rate ?? 0) > (b.2.rate ?? 0)
-        }
-        if sorted.isEmpty {
-            ContentUnavailableView("No records found", systemImage: "trophy")
-        }
-        LazyVStack(spacing: 8) {
-            ForEach(sorted, id: \.1.id) { place, person, record in
-                ResearchToolCard(color: Brand.accent(for: scheme)) {
-                    HStack {
-                        if sport.isEmpty && !thisWeek {
-                            Text("#\(place)").font(.caption.weight(.heavy)).foregroundStyle(Brand.accent(for: scheme))
-                        }
-                        ResearchArtwork(urls: person.avatarUrl.map { [$0] } ?? [], fallback: "person.crop.circle")
-                            .frame(width: 35, height: 35).clipShape(.circle)
-                        Text(person.displayName ?? person.username).font(.headline)
-                        if person.isVerified == true {
-                            Image(systemName: "checkmark.seal.fill").foregroundStyle(Brand.accent(for: scheme))
-                                .accessibilityLabel("Verified")
-                        }
-                    }
-                } content: {
-                    ResearchToolValues(items: [
-                        .init(label: "Record", text: record.line),
-                        .init(label: "Win rate", text: record.rate?.formatted(.percent.precision(.fractionLength(1))) ?? "—",
-                            tone: Brand.signal(record.rate.map { $0 - 0.5 }, for: scheme)),
-                    ])
-                    if sport.isEmpty && !thisWeek, !person.recentResults.isEmpty {
-                        HStack(spacing: 5) {
-                            ForEach(Array(person.recentResults.enumerated()), id: \.offset) { _, mark in
-                                Text(mark).font(.caption2.weight(.bold))
-                                    .foregroundStyle(Brand.signal(mark == "W" ? 1 : mark == "L" ? -1 : nil, for: scheme))
-                                    .frame(width: 20, height: 21).background(.thinMaterial, in: .rect(cornerRadius: 4))
-                            }
-                        }
-                        .accessibilityLabel("Last games, " + person.recentResults.joined(separator: ", "))
-                    }
-                }
             }
         }
     }

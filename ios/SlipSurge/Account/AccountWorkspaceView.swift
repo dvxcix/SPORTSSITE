@@ -274,6 +274,11 @@ struct AccountWorkspaceView: View {
                 } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Feature rollouts", systemImage: "switch.2") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink {
+                    AdminAnnouncementsView(account: account, userID: userID)
+                } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Announcements", systemImage: "megaphone") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
             } else {
                 ForEach(admin.pipelines) { pipeline in
                     ResearchToolCard(color: Brand.accent(for: scheme)) {

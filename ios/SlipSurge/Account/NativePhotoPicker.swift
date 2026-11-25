@@ -45,7 +45,7 @@ struct NativePhotoPicker: View {
 
 enum NativeMediaUpload {
     struct Photo: Sendable { let data: Data; let mime: String; let extensionName: String }
-    enum Kind: String { case avatars, banners, posts, messages, stories }
+    enum Kind: String { case avatars, banners, posts, messages, stories, changelog }
 
     static func prepare(_ data: Data) throws -> Photo {
         let limit = 4_100_000
