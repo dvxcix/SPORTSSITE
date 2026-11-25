@@ -264,6 +264,9 @@ struct AccountWorkspaceView: View {
                     NavigationLink {
                         AdminCommunityEventsView(api: .init(viewer: .init(account: account, userID: userID)))
                     } label: { Label("Manage events", systemImage: "calendar.badge.clock") }
+                    NavigationLink {
+                        AdminForumView(api: .init(viewer: .init(account: account, userID: userID)))
+                    } label: { Label("Manage discussions", systemImage: "bubble.left.and.bubble.right") }
                 }
             } else if adminTab == .members {
                 NavigationLink {

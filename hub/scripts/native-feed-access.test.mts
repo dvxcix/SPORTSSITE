@@ -67,15 +67,16 @@ test('only the exact native guest reads reach their public handlers', () => {
   assert.equal(isNativePublicRead('/api/mobile/profiles/admin', 'GET'), false)
   assert.equal(isNativePublicRead('/api/mobile/announcements', 'GET'), true)
   assert.equal(isNativePublicRead('/api/mobile/events', 'GET'), true)
+  assert.equal(isNativePublicRead('/api/mobile/forum', 'GET'), true)
   const post = '/api/mobile/posts/00000000-0000-4000-8000-000000000301'
   assert.equal(isNativePublicRead(post, 'GET'), true)
   for (const path of ['/api/mobile/feed', '/api/mobile/discover', '/api/mobile/scores',
-    '/api/mobile/announcements', '/api/mobile/events', post]) {
+    '/api/mobile/announcements', '/api/mobile/events', '/api/mobile/forum', post]) {
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) assert.equal(isNativePublicRead(path, method), false)
   }
   for (const path of ['/api/mobile/posts', post + '/edit', '/api/mobile/posts/undefined', '/api/mobile/account',
     '/api/mobile/communities/00000000-0000-4000-8000-000000000301', '/api/mobile/notifications', '/api/mobile/court/tools',
-    '/api/mobile/admin/announcements', '/api/mobile/admin/events', '/api/mobile/events/private']) {
+    '/api/mobile/admin/announcements', '/api/mobile/admin/events', '/api/mobile/admin/forum', '/api/mobile/events/private']) {
     assert.equal(isNativePublicRead(path, 'GET'), false)
   }
 })

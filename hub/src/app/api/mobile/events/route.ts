@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { isAccountId } from '@/lib/blocks'
 import { FEATURE_FLAGS } from '@/lib/featureFlags'
 import { isFeatureEnabledServer } from '@/lib/featureFlags.server'
-import { nativeAnonymousClient } from '@/lib/nativeSocial'
+import { requireVerifiedUserTier } from '@/lib/requireTier'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 
 const headers = { 'Cache-Control': 'private, no-store' }
@@ -27,18 +27,24 @@ export async function GET(request: Request) {
   if (!['access', 'list', 'detail'].includes(view) || (view === 'detail' && (!id || !isAccountId(id)))) {
     return reply({ error: 'Choose a valid event' }, 400)
   }
-  const account = request.headers.has('authorization') ? await requireNativeAccount(request) : null
-  if (account?.error) return account.error
-  const supabase = account?.supabase ?? nativeAnonymousClient()
-  const userId = account?.userId ?? null
-  const enabled = await isFeatureEnabledServer(FEATURE_FLAGS.events, false, { supabase, userId })
-  if (view === 'access') return reply({ enabled })
-  if (!enabled) return reply({ error: 'Events are currently unavailable' }, 403)
+  if (!request.headers.has('authorization') && view === 'access') return reply({ enabled: false })
+  const account = await requireNativeAccount(request)
+  if (account.error) return account.error
+  const { supabase, userId } = account
+  if (!await isFeatureEnabledServer(FEATURE_FLAGS.events, false, account)) {
+    return view === 'access' ? reply({ enabled: false }) : reply({ error: 'Events are currently unavailable' }, 403)
+  }
+  const membership = await requireVerifiedUserTier(userId, 'basic')
+  if (membership.error) {
+    if (membership.error.status !== 403) return membership.error
+    return view === 'access' ? reply({ enabled: false }) : reply({ code: 'MEMBERSHIP_REQUIRED', error: 'Upgrade required' }, 403)
+  }
+  if (view === 'access') return reply({ enabled: true })
 
   if (view === 'detail') {
     const [result, response] = await Promise.all([
       supabase.from('events').select(fields).eq('id', id).maybeSingle(),
-      userId ? supabase.from('event_rsvps').select('status').eq('event_id', id).eq('user_id', userId).maybeSingle() : null,
+      supabase.from('event_rsvps').select('status').eq('event_id', id).eq('user_id', userId).maybeSingle(),
     ])
     if (result.error || response?.error) return reply({ error: 'Event could not be loaded' }, 503)
     if (!result.data) return reply({ error: 'Event not found' }, 404)
@@ -58,6 +64,8 @@ export async function POST(request: Request) {
   const account = await requireNativeAccount(request)
   if (account.error) return account.error
   if (!await isFeatureEnabledServer(FEATURE_FLAGS.events, false, account)) return reply({ error: 'Events are currently unavailable' }, 403)
+  const membership = await requireVerifiedUserTier(account.userId, 'basic')
+  if (membership.error) return membership.error
   const input: Record<string, unknown> | null = await request.json().catch(() => null)
   if (typeof input?.id !== 'string' || !isAccountId(input.id)) return reply({ error: 'Choose a valid event' }, 400)
   const { supabase, userId } = account

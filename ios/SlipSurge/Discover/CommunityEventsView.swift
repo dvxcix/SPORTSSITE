@@ -22,6 +22,8 @@ struct CommunityEventsView: View {
                         ResearchSectionTitle(title: "Recent")
                         events(calendar.past)
                     }
+                } else if let requirement = CommunityMembershipNotice.Requirement(failure) {
+                    CommunityMembershipNotice(requirement: requirement, subject: "Events", account: api.viewer.account)
                 } else if (failure as? SlipSurgeHTTP.Status)?.code == 403 {
                     ContentUnavailableView("Events are currently unavailable", systemImage: "calendar")
                 } else {
@@ -149,6 +151,8 @@ struct CommunityEventDetail: View {
             VStack(alignment: .leading, spacing: 13) {
                 if let result {
                     content(result)
+                } else if let requirement = CommunityMembershipNotice.Requirement(failure) {
+                    CommunityMembershipNotice(requirement: requirement, subject: "Event", account: api.viewer.account)
                 } else if (failure as? SlipSurgeHTTP.Status)?.code == 403 {
                     ContentUnavailableView("Events are currently unavailable", systemImage: "calendar")
                 } else if (failure as? SlipSurgeHTTP.Status)?.code == 404 {

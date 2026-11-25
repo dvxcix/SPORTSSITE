@@ -194,6 +194,7 @@ struct NativeGIFPlayback: View {
 struct NativeSocialBody: View {
     let content: String
     var maxGIFWidth: CGFloat = 350
+    var linkify: @MainActor (String) -> AttributedString = SiteAnnouncements.linkedText
 
     var body: some View {
         let pieces = splitMedia()
@@ -201,7 +202,7 @@ struct NativeSocialBody: View {
             ForEach(Array(pieces.enumerated()), id: \.offset) { _, piece in
                 switch piece {
                 case .text(let text):
-                    Text(SiteAnnouncements.linkedText(text))
+                    Text(linkify(text))
                 case .gif(let url):
                     NativeGIFPlayback(url: url, maxHeight: 190, maxWidth: maxGIFWidth)
                         .clipShape(.rect(cornerRadius: 9))

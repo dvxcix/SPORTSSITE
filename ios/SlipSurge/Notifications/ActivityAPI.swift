@@ -20,7 +20,7 @@ struct ActivityNotification: Decodable, Identifiable {
     let targetType: String?
 
     enum Destination: Hashable {
-        case post(UUID), conversation(MessageDestination), discovery, community(UUID), profile(UUID), research(ResearchDeepLink)
+        case post(UUID), conversation(MessageDestination), discovery, community(UUID), profile(UUID), research(ResearchDeepLink), discussion(UUID)
     }
 
     var destination: Destination? {
@@ -29,6 +29,8 @@ struct ActivityNotification: Decodable, Identifiable {
                   !value.percentEncodedPath.contains("\\") else { return nil }
             return value.percentEncodedPath.split(separator: "/")
         } ?? []
+        if path.count == 3, path[0] == "forum", path[1] == "thread", let id = UUID(uuidString: String(path[2])) { return .discussion(id) }
+        if targetType == "forum_thread", let targetId { return .discussion(targetId) }
         if targetType == "post", let targetId { return .post(targetId) }
         if path.count == 2, path[0] == "posts", let id = UUID(uuidString: String(path[1])) { return .post(id) }
         if type == "message" {

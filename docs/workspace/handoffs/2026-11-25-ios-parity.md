@@ -1226,4 +1226,32 @@ physical-device push are still open.
   accepted a live GIPHY image link, and rendered changing animation frames in
   the unsent draft. No post, message, or GIF share event was sent. Focused
   native GIF URL and upload ownership tests passed. Production write support
-  follows the narrow Hub release.
+  was released through PR #46. SwiftUI is on task checkpoint
+  `7019474f5b2c6c72850f0f0c065a3453024cc733`. Main is
+  `3f49a192e1aa6763801a00415cf7b64b2a956352` for this release, with preview
+  `dpl_8hkJPXXyjGjKDmQwuGSJ3ZxDH1Ew` and production
+  `dpl_AEKVUVPEUs5bSBG7zsy9wQHSmN2d` READY.
+
+## Native Discussions and community membership · 25 November 2026
+
+- Native Discussions includes categories, pinned and locked threads, native
+  topic and reply editors, nested replies, edit/delete for the reply author,
+  votes and quick reactions, GIF attachments, actual member mentions, profile
+  navigation, share links and notification routing. Admins can review, pin,
+  lock or delete threads through the existing role and MFA verification.
+  Reply paging uses the original timestamp and ID, including equal timestamps.
+- Both Discussions and Events honor the website’s feature rollout and Basic
+  membership floor, including its existing entitlement overrides. Guest
+  availability yields a disabled status and content stays protected. A link
+  can lead to native sign-in or membership details when appropriate.
+- The new migration exposes two service-role-only operations for confirmed
+  native replies and atomic vote switching. It does not rewrite existing
+  data or policies. Local Postgres checks passed for permissions, retry, exact
+  parent, locked threads, vote switching and rate-limit rollback. The Hub
+  smoke suite is 134/134 after updating a stale assertion to check the verified
+  shared admin authorization helper. Hub TypeScript and 13 focused tests
+  passed. The signed Xcode Simulator build passed.
+- The exact Forum SQL still needs the reviewed production application at
+  release. Signed-in reading and moderation screens remain to verify against
+  that release. No live posts, reactions or moderation have been made for QA.
+  Articles, custom Pages and remaining admin and account checks remain open.

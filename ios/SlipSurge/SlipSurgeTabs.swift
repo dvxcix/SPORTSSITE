@@ -165,6 +165,16 @@ struct SlipSurgeTabs: View {
         } else if path.hasPrefix("events/"), let id = UUID(uuidString: String(path.dropFirst(7))) {
             discoverDestination = .events(id)
             selected = .discover
+        } else if path == "forum" {
+            discoverDestination = .discussions
+            selected = .discover
+        } else if path.hasPrefix("forum/thread/"), let id = UUID(uuidString: String(path.dropFirst(13))) {
+            discoverDestination = .discussion(id)
+            selected = .discover
+        } else if path.hasPrefix("forum/"), String(path.dropFirst(6)).range(of: #"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$"#,
+            options: .regularExpression) != nil {
+            discoverDestination = .discussionCategory(String(path.dropFirst(6)))
+            selected = .discover
         } else if ["account", "settings", "auth/login"].contains(path) {
             selected = .account
         } else {

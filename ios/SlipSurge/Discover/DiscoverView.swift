@@ -2,6 +2,7 @@ import SwiftUI
 
 enum DiscoverDestination: Hashable {
     case communities, creators, leaderboard, scores, events(UUID?)
+    case discussions, discussionCategory(String), discussion(UUID)
 }
 
 struct DiscoverView: View {
@@ -25,6 +26,7 @@ struct DiscoverView: View {
     @State private var routedCommunity: UUID?
     @State private var routed = false
     @State private var eventsAvailable = false
+    @State private var forumAvailable = false
     @State private var destination: DiscoverDestination?
 
     init(api: DiscoverAPI, opensCommunity: UUID? = nil, opensDestination: Binding<DiscoverDestination?> = .constant(nil)) {
@@ -54,6 +56,12 @@ struct DiscoverView: View {
                     NavigationLink {
                         CommunityEventsView(api: .init(viewer: api))
                     } label: { Label("Events", systemImage: "calendar") }
+                    .buttonStyle(.bordered)
+                }
+                if forumAvailable {
+                    NavigationLink {
+                        ForumIndexView(api: .init(viewer: api))
+                    } label: { Label("Discussions", systemImage: "bubble.left.and.bubble.right") }
                     .buttonStyle(.bordered)
                 }
                 ResearchToolRail(title: "Discover", choices: Section.allCases, selection: $section, label: \.rawValue, glyph: {
@@ -91,6 +99,9 @@ struct DiscoverView: View {
             case .events(let id):
                 if let id { CommunityEventDetail(api: .init(viewer: api), id: id, refreshList: {}) }
                 else { CommunityEventsView(api: .init(viewer: api)) }
+            case .discussions: ForumIndexView(api: .init(viewer: api))
+            case .discussionCategory(let category): ForumCategoryView(api: .init(viewer: api), slug: category)
+            case .discussion(let id): ForumThreadView(api: .init(viewer: api), id: id)
             default: EmptyView()
             }
         }
@@ -106,7 +117,7 @@ struct DiscoverView: View {
             case .leaderboard:
                 destination = nil
                 section = .records
-            case .scores, .events:
+            case .scores, .events, .discussions, .discussionCategory, .discussion:
                 destination = opening
             }
             opensDestination = nil
@@ -127,7 +138,11 @@ struct DiscoverView: View {
             thisWeek = false
         }
         .refreshable { await load(section) }
-        .task(id: api.userID) { eventsAvailable = await CommunityEventsAPI(viewer: api).available() }
+        .task(id: api.userID) {
+            async let events = CommunityEventsAPI(viewer: api).available()
+            async let forum = ForumAPI(viewer: api).available()
+            (eventsAvailable, forumAvailable) = await (events, forum)
+        }
         .task(id: request) { await load(section) }
     }
 
