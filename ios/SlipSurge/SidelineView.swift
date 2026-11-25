@@ -116,7 +116,7 @@ struct SidelineView: View {
         .refreshable { revision += 1 }
         .sheet(isPresented: $matrices) {
             if case .member(let account, let userID) = api.scope {
-                NavigationStack { NflMatricesView(api: .init(account: account, userID: userID)) { revision += 1 } }
+                NavigationStack { MatricesView(api: .init(league: .nfl, account: account, userID: userID)) { revision += 1 } }
             }
         }
         .onChange(of: scenePhase) { _, phase in

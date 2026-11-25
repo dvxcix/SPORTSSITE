@@ -1,25 +1,27 @@
 import SwiftUI
 
-struct NflMatricesView: View {
+struct MatricesView: View {
     private enum Tab: String, CaseIterable { case mine = "My Matrices", community = "Community" }
     private struct Edit: Identifiable {
         let id = UUID()
-        let matrix: NflMatrix?
+        let matrix: ResearchMatrix?
     }
 
-    let api: NflMatricesAPI
+    let api: MatricesAPI
+    var gameID: Int? = nil
+    var mode: CourtResearchMode = .pregame
     let didChange: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
     @State private var tab = Tab.mine
-    @State private var catalog: NflMatrixCatalog?
-    @State private var matrices: [NflMatrix]?
-    @State private var listings: [NflMatrixListing]?
+    @State private var catalog: ResearchMatrixCatalog?
+    @State private var matrices: [ResearchMatrix]?
+    @State private var listings: [ResearchMatrixListing]?
     @State private var code = ""
     @State private var editing: Edit?
-    @State private var publishing: NflMatrix?
-    @State private var deleting: NflMatrix?
-    @State private var adding: NflMatrixListing?
+    @State private var publishing: ResearchMatrix?
+    @State private var deleting: ResearchMatrix?
+    @State private var adding: ResearchMatrixListing?
     @State private var busy = false
     @State private var notice: String?
     @State private var error: (any Error)?
@@ -28,27 +30,27 @@ struct NflMatricesView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
-                ResearchToolRail(title: "NFL Matrices", choices: Tab.allCases, selection: $tab, label: \.rawValue) {
+                ResearchToolRail(title: "\(api.league.title) Matrices", choices: Tab.allCases, selection: $tab, label: \.rawValue) {
                     $0 == .mine ? "square.grid.3x3" : "person.2"
                 }
                 if tab == .mine, let matrices {
-                    Button("New NFL Matrix", systemImage: "plus") { editing = Edit(matrix: nil) }
+                    Button("New \(api.league.title) Matrix", systemImage: "plus") { editing = Edit(matrix: nil) }
                         .buttonStyle(.borderedProminent).disabled(catalog == nil || busy || matrices.count >= 20)
                     ForEach(matrices, content: matrixCard)
-                    if matrices.isEmpty { ContentUnavailableView("No NFL Matrices", systemImage: "square.grid.3x3") }
+                    if matrices.isEmpty { ContentUnavailableView("No saved Matrices", systemImage: "square.grid.3x3") }
                     importField
                 } else if tab == .community, let listings {
                     ForEach(listings, content: listingCard)
                     if listings.isEmpty { ContentUnavailableView("No published Matrices", systemImage: "person.2") }
                 } else if let status = error as? SlipSurgeHTTP.Status, status.code == 403 {
-                    ContentUnavailableView(tab == .community ? "Ultimate required" : "NFL research access required", systemImage: "lock")
+                    ContentUnavailableView(tab == .community || api.league == .nba ? "Ultimate required" : "NFL research access required", systemImage: "lock")
                 } else {
-                    ResearchToolMessage(title: "NFL Matrices couldn’t load", error: error) { retry += 1 }
+                    ResearchToolMessage(title: "Matrices couldn’t load", error: error) { retry += 1 }
                 }
                 if let notice { Text(notice).font(.subheadline).foregroundStyle(.secondary) }
             }.padding(16)
         }
-        .navigationTitle("NFL Matrices")
+        .navigationTitle("\(api.league.title) Matrices")
         .navigationBarTitleDisplayMode(.inline)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
@@ -57,23 +59,23 @@ struct NflMatricesView: View {
         .refreshable { await load(tab) }
         .sheet(item: $editing) { draft in
             if let catalog {
-                NflMatrixEditor(api: api, catalog: catalog, original: draft.matrix) { await changed() }
+                ResearchMatrixEditor(api: api, catalog: catalog, original: draft.matrix, gameID: gameID, mode: mode) { await changed() }
             }
         }
         .sheet(item: $publishing) { matrix in
-            PublishNflMatrixView(api: api, matrix: matrix) { await changed() }
+            PublishResearchMatrixView(api: api, matrix: matrix) { await changed() }
         }
-        .confirmationDialog("Delete NFL Matrix?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+        .confirmationDialog("Delete \(api.league.title) Matrix?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
             titleVisibility: .visible, presenting: deleting) { matrix in
             Button("Delete \(matrix.name)", role: .destructive) { Task { await mutate { try await api.delete(matrix) } } }
         }
-        .confirmationDialog("Add this NFL Matrix?", isPresented: Binding(get: { adding != nil }, set: { if !$0 { adding = nil } }),
+        .confirmationDialog("Add this \(api.league.title) Matrix?", isPresented: Binding(get: { adding != nil }, set: { if !$0 { adding = nil } }),
             titleVisibility: .visible, presenting: adding) { listing in
             Button("Add \(listing.title)") { Task { await mutate { try await api.importListing(listing.id) } } }
         }
     }
 
-    private func matrixCard(_ matrix: NflMatrix) -> some View {
+    private func matrixCard(_ matrix: ResearchMatrix) -> some View {
         ResearchToolCard(color: Color(hex: matrix.color) ?? Brand.accent(for: scheme)) {
             HStack(spacing: 8) {
                 Image(systemName: "square.grid.3x3.fill").foregroundStyle(Color(hex: matrix.color) ?? Brand.accent(for: scheme))
@@ -98,7 +100,7 @@ struct NflMatricesView: View {
         }
     }
 
-    private func listingCard(_ listing: NflMatrixListing) -> some View {
+    private func listingCard(_ listing: ResearchMatrixListing) -> some View {
         ResearchToolCard(color: Color(hex: listing.color) ?? Brand.accent(for: scheme)) {
             Text(verbatim: listing.title).font(.headline)
         } content: {
@@ -113,14 +115,14 @@ struct NflMatricesView: View {
             Label("Import by element code", systemImage: "tray.and.arrow.down").font(.headline)
         } content: {
             HStack {
-                TextField("NFL-XXXXXXXX", text: $code).textInputAutocapitalization(.characters).autocorrectionDisabled()
+                TextField("\(api.league.title)-XXXXXXXX", text: $code).textInputAutocapitalization(.characters).autocorrectionDisabled()
                     .textFieldStyle(.roundedBorder)
                 Button("Import") {
                     Task {
                         let submitted = code
                         await mutate { try await api.importCode(submitted); self.code = "" }
                     }
-                }.buttonStyle(.borderedProminent).disabled(busy || !code.uppercased().hasPrefix("NFL-"))
+                }.buttonStyle(.borderedProminent).disabled(busy || !code.uppercased().hasPrefix("\(api.league.title)-"))
             }
         }
     }
@@ -159,9 +161,9 @@ struct NflMatricesView: View {
     }
 }
 
-private struct PublishNflMatrixView: View {
-    let api: NflMatricesAPI
-    let matrix: NflMatrix
+private struct PublishResearchMatrixView: View {
+    let api: MatricesAPI
+    let matrix: ResearchMatrix
     let didSave: () async -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
@@ -176,7 +178,7 @@ private struct PublishNflMatrixView: View {
                 TextField("Description", text: $summary, axis: .vertical).lineLimit(4...8)
                 if issue { Text("The Matrix couldn’t be published.").foregroundStyle(.red) }
             }
-            .navigationTitle("Publish NFL Matrix")
+            .navigationTitle("Publish \(api.league.title) Matrix")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel", role: .cancel) { dismiss() } }

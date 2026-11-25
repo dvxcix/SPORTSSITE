@@ -629,7 +629,8 @@ physical-device push are still open.
   `dpl_GKyqY2tXP6BiGxYrGbjfedVs6NHt` and production
   `dpl_7swDB4k7xP8dFjz65ZYNHXTdSJ3E` reported READY. All seven production
   responses matched the local content counts. Unknown keys returned 404.
-  Pricing, login, Feed, and both previews returned 200.
+  Pricing, login, Feed, and both previews returned 200. The signed-in iPhone
+  18 Pro rendered the live Free and Ultimate comparisons in SwiftUI.
 
 ## Native Live Rooms and community settings · 25 November 2026
 
@@ -647,7 +648,11 @@ physical-device push are still open.
   production walkthroughs, chat typing, channel mentions and older message
   pagination remain to verify or implement. No member or community changes
   were submitted in QA. Task checkpoint `c174278662dc533b0dd83c79c6a8e5e41d6c6fa1`
-  is pushed. PR #24 is the isolated backend release.
+  is pushed. PR #24 deployed `692a6f6646e82a847f83c18817172ae96f09ca51`.
+  Preview `dpl_BhGuX7uAPQkfKN6ib2qGjEmh9oof` and production
+  `dpl_4dWWBMEeczJtkY1T17hmcMToxonA` reported READY. Five invalid or anonymous
+  channel and settings requests returned 401. Groups, Feed and NFL preview
+  returned 200.
 
 ## NFL Matrices and live Simulator research · 25 November 2026
 
@@ -660,11 +665,29 @@ physical-device push are still open.
   same rule evaluation to eligible players, frozen sample windows, posted
   offers, public picks and TD baselines. Personal Matrix queries remain bound
   to the verified member. Native evaluation is withheld if player availability
-  is stale. NBA Matrices and NFL ladder board highlights remain in progress.
+  is stale. NFL ladder board highlights remain open.
 - Signed iPhone 18 Pro opened an actual NFL Cheatsheets board, with market
   edge, projections and public-pick counts. Slate Edge opened and showed
   a FanDuel +170 price and public-pick data. No real Matrix writes were made.
 - Signed Xcode Debug and Hub TypeScript passed. The broader NFL subset passed
   76 of 93 checks, including the new Matrix match test. All 17 pregame suite
   failures reproduced with the same test names on the parent checkpoint,
-  where 75 of 92 passed.
+  where 75 of 92 passed. The task checkpoint was
+  `533bd3f5321c7779fc869a9bcb8a3a29bb10a83d`. PR #25 preview
+  `dpl_8oW7QWBdqeKWgf37Xd2YUYu9zEeX` reported READY and merged as
+  `c71145c7c6cd155c582eefbfaf1903165cd16321`.
+
+## Native NBA Matrices · 25 November 2026
+
+- The Court now opens native personal and community NBA Matrices with the
+  shared rule editor. NBA conditions support the saved lineup of fields,
+  season-verified tracking inputs, home and away samples, First Basket
+  contracts, branded sportsbook selection, and Filter, Rank, Group and
+  Unless pipeline steps. Imports and publishing use the existing NBA routes.
+- The Court player board labels and filters matching players. Evaluation
+  runs on the server for the selected game and explicit Pregame or Live
+  mode, including the existing season and missing-input checks. It preserves
+  the saved Matrix definitions and supports version-aware edits and deletion.
+- Signed Xcode Debug, Hub TypeScript, and all 31 focused NBA/NFL Matrix
+  checks passed. Backend deployment, signed-in Simulator evaluation on an
+  existing or disposable Matrix, and slate-wide displays follow.

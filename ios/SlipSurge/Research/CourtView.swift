@@ -61,6 +61,8 @@ struct CourtView: View {
     @State private var slate = Slate.loading
     @State private var state = LoadState.loading
     @State private var rankResult: (RankRequest, [Int: CourtAPI.Rank])?
+    @State private var matrices = false
+    @State private var matrixRevision = 0
 
     private var isPreview: Bool {
         if case .preview = scope { return true }
@@ -103,6 +105,7 @@ struct CourtView: View {
                     ForEach(CourtMatchupTool.allCases, id: \.self) { destination in
                         Button(destination.rawValue, systemImage: destination.glyph) { tool = destination }
                     }
+                    if !isPreview { Button("NBA Matrices", systemImage: "square.grid.3x3") { matrices = true } }
                 }
             }
         }
@@ -112,6 +115,13 @@ struct CourtView: View {
         .task(id: slateRequest) { await loadSlate() }
         .task(id: boardRequest) { await loadBoard() }
         .refreshable { revision += 1 }
+        .sheet(isPresented: $matrices) {
+            if case .member(let account, let userID) = scope {
+                NavigationStack {
+                    MatricesView(api: .init(league: .nba, account: account, userID: userID), gameID: selectedGame?.id, mode: mode) { matrixRevision += 1 }
+                }
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { revision += 1 }
         }
@@ -281,14 +291,27 @@ struct CourtView: View {
         let ranks = rankResult.flatMap { $0.0 == request ? $0.1 : nil }
         return VStack(alignment: .leading, spacing: 12) {
             playerFilters(board)
-            ForEach([board.game.visitorTeam, board.game.homeTeam], id: \.id) { team in
-                CourtPlayerBoard(team: team, board: board, observedAt: observedAt, market: market,
-                    sportsbook: sportsbook, side: side, search: playerSearch, ranks: ranks ?? [:])
+            if case .member(let account, let userID) = scope {
+                CourtMatrixBoard(api: .init(league: .nba, account: account, userID: userID), board: board,
+                    revision: matrixRevision + revision, manage: { matrices = true }) { matches, filter in
+                    playerTeams(board, at: observedAt, ranks: ranks ?? [:], matches: matches, filter: filter)
+                }
+            } else {
+                playerTeams(board, at: observedAt, ranks: ranks ?? [:], matches: [:], filter: nil)
             }
         }
         .task(id: request) {
             let rows = try? await api.ranks(board: board, market: request.market, book: request.sportsbook, scope: scope)
             if !Task.isCancelled { rankResult = (request, rows ?? [:]) }
+        }
+    }
+
+    private func playerTeams(_ board: CourtBoard, at observedAt: Date, ranks: [Int: CourtAPI.Rank],
+        matches: [Int: [CourtMatrixResults.Match]], filter: String?,
+    ) -> some View {
+        ForEach([board.game.visitorTeam, board.game.homeTeam], id: \.id) { team in
+            CourtPlayerBoard(team: team, board: board, observedAt: observedAt, market: market,
+                sportsbook: sportsbook, side: side, search: playerSearch, ranks: ranks, matrixMatches: matches, matrixFilter: filter)
         }
     }
 

@@ -9,6 +9,8 @@ struct CourtPlayerBoard: View {
     let side: CourtPlayerMarket.Side
     let search: String
     let ranks: [Int: CourtAPI.Rank]
+    let matrixMatches: [Int: [CourtMatrixResults.Match]]
+    let matrixFilter: String?
 
     @Environment(\.colorScheme) private var scheme
 
@@ -16,6 +18,7 @@ struct CourtPlayerBoard: View {
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
         return board.players.filter {
             $0.team.id == team.id && (query.isEmpty || "\($0.firstName) \($0.lastName)".localizedStandardContains(query))
+                && (matrixFilter == nil || matrixMatches[$0.id]?.contains { $0.id == matrixFilter } == true)
         }
     }
 
@@ -35,7 +38,7 @@ struct CourtPlayerBoard: View {
             }
 
             if players.isEmpty {
-                Text(search.isEmpty ? "No recorded player research." : "No matching players.")
+                Text(search.isEmpty && matrixFilter == nil ? "No recorded player research." : "No matching players.")
                     .font(.subheadline).foregroundStyle(.secondary)
             } else {
                 LazyVStack(spacing: 0) {
@@ -86,6 +89,19 @@ struct CourtPlayerBoard: View {
                     }
                     HStack(alignment: .top) { hitRates(player, quote: quote) }
                 }
+            }
+            if let matches = matrixMatches[player.id], !matches.isEmpty {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 5) {
+                        ForEach(matches) { match in
+                            Label(match.name, systemImage: "square.grid.3x3")
+                                .font(.caption2.weight(.semibold))
+                                .padding(.horizontal, 7).padding(.vertical, 4)
+                                .background((Color(hex: match.color) ?? .secondary).opacity(0.18), in: Capsule())
+                        }
+                    }
+                }
+                .scrollIndicators(.hidden)
             }
         }
         .padding(.vertical, 9)

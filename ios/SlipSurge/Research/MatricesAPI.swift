@@ -1,6 +1,25 @@
 import Foundation
 
-struct NflMatrix: Decodable, Identifiable {
+enum MatrixLeague: String {
+    case nba, nfl
+
+    var title: String { rawValue.uppercased() }
+    var defaultMarket: String { self == .nba ? "points" : "anytime_td" }
+
+    func rule(pipeline: Bool) -> ResearchMatrix.Rule {
+        var result: ResearchMatrix.Rule = pipeline ? .step : .init()
+        if self == .nba {
+            result.propType = defaultMarket
+            result.vendor = "fanduel"
+            result.marketLine = 15
+            result.marketKind = "milestone"
+            result.marketSide = "over"
+        }
+        return result
+    }
+}
+
+struct ResearchMatrix: Decodable, Identifiable {
     struct Definition: Codable {
         var factors: [Rule]?
         var steps: [Rule]?
@@ -19,6 +38,7 @@ struct NflMatrix: Decodable, Identifiable {
         var marketLine: Double?
         var marketSide: String?
         var marketKind: String?
+        var location: String?
         var kind: String?
         var join: String?
         var direction: String?
@@ -43,7 +63,7 @@ struct NflMatrix: Decodable, Identifiable {
     var conditionCount: Int { matrixType == "pipeline" ? definition.steps?.count ?? 0 : definition.factors?.count ?? 0 }
 }
 
-struct NflMatrixCatalog: Decodable {
+struct ResearchMatrixCatalog: Decodable {
     struct Field: Decodable, Identifiable {
         let category: String
         let field: String
@@ -53,15 +73,17 @@ struct NflMatrixCatalog: Decodable {
     struct Market: Decodable, Identifiable {
         let value: String
         let title: String
+        let halfPoint: Bool?
         var id: String { value }
     }
 
     let fields: [Field]
     let books: [String]
     let markets: [Market]
+    let scoreMarkets: [String]?
 }
 
-struct NflMatrixListing: Decodable, Identifiable {
+struct ResearchMatrixListing: Decodable, Identifiable {
     let id: UUID
     let title: String
     let description: String
@@ -70,7 +92,7 @@ struct NflMatrixListing: Decodable, Identifiable {
     let copyCount: Int
 }
 
-struct NflMatricesAPI {
+struct MatricesAPI {
     struct Edits: Encodable {
         var name: String?
         var color: String?
@@ -79,23 +101,37 @@ struct NflMatricesAPI {
         var match_mode: String?
         var match_any_count: Int?
         var pipeline_scope: String?
-        var definition: NflMatrix.Definition?
+        var definition: ResearchMatrix.Definition?
         var expected_updated_at: String?
     }
 
-    private static let path = "/api/mobile/nfl-matrices"
+    let league: MatrixLeague
     let account: AccountStore
     let userID: UUID
+    private var path: String { "/api/mobile/\(league.rawValue)-matrices" }
 
-    func mine() async throws -> [NflMatrix] {
-        struct Result: Decodable { let matrices: [NflMatrix] }
+    func mine() async throws -> [ResearchMatrix] {
+        struct Result: Decodable { let matrices: [ResearchMatrix] }
         return try await read(Result.self, view: "mine").matrices
     }
 
-    func catalog() async throws -> NflMatrixCatalog { try await read(NflMatrixCatalog.self, view: "catalog") }
+    func catalog() async throws -> ResearchMatrixCatalog { try await read(ResearchMatrixCatalog.self, view: "catalog") }
 
-    func community() async throws -> [NflMatrixListing] {
-        struct Result: Decodable { let listings: [NflMatrixListing] }
+    func nbaTrackingFields(gameID: Int, mode: CourtResearchMode) async throws -> [ResearchMatrixCatalog.Field] {
+        struct Response: Decodable { let fields: [ResearchMatrixCatalog.Field] }
+        return try await read(Response.self, view: "tracking", query: [.init(name: "game", value: String(gameID)),
+            .init(name: "mode", value: mode.rawValue)]).fields
+    }
+
+    func nbaMatches(gameID: Int, mode: CourtResearchMode) async throws -> CourtMatrixResults {
+        let result = try await read(CourtMatrixResults.self, view: "evaluate", query: [.init(name: "game", value: String(gameID)),
+            .init(name: "mode", value: mode.rawValue)])
+        guard result.gameId == gameID, result.mode == mode else { throw URLError(.cannotParseResponse) }
+        return result
+    }
+
+    func community() async throws -> [ResearchMatrixListing] {
+        struct Result: Decodable { let listings: [ResearchMatrixListing] }
         return try await read(Result.self, view: "community").listings
     }
 
@@ -104,7 +140,7 @@ struct NflMatricesAPI {
         else { try await write("POST", action: "create", body: JSONEncoder().encode(edits)) }
     }
 
-    func delete(_ matrix: NflMatrix) async throws { try await write("DELETE", id: matrix.id, version: matrix.updatedAt) }
+    func delete(_ matrix: ResearchMatrix) async throws { try await write("DELETE", id: matrix.id, version: matrix.updatedAt) }
 
     func importCode(_ code: String) async throws {
         try await write("POST", action: "import-code", body: JSONEncoder().encode(["element_code": code]))
@@ -118,8 +154,8 @@ struct NflMatricesAPI {
         ]))
     }
 
-    private func read<T: Decodable>(_ type: T.Type, view: String) async throws -> T {
-        let data = try await SlipSurgeHTTP.memberData(Self.path, query: [.init(name: "view", value: view)], account: account, userID: userID)
+    private func read<T: Decodable>(_ type: T.Type, view: String, query: [URLQueryItem] = []) async throws -> T {
+        let data = try await SlipSurgeHTTP.memberData(path, query: [.init(name: "view", value: view)] + query, account: account, userID: userID)
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return try decoder.decode(type, from: data)
@@ -130,7 +166,7 @@ struct NflMatricesAPI {
         if let action { query.append(.init(name: "action", value: action)) }
         if let id { query.append(.init(name: "id", value: id.uuidString.lowercased())) }
         if let version { query.append(.init(name: "version", value: version)) }
-        var request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: Self.path, query: query)
+        var request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: path, query: query)
         request.httpMethod = method
         request.setValue("Bearer \(try await account.accessToken(for: userID))", forHTTPHeaderField: "Authorization")
         if let body {
@@ -140,4 +176,19 @@ struct NflMatricesAPI {
         _ = try await SlipSurgeHTTP.send(request)
         guard await account.memberID == userID else { throw URLError(.userAuthenticationRequired) }
     }
+}
+
+struct CourtMatrixResults: Decodable {
+    struct Match: Decodable, Identifiable {
+        let id: String
+        let name: String
+        let color: String
+        let playerIds: [Int]
+        let unavailable: String?
+    }
+
+    let gameId: Int
+    let mode: CourtResearchMode
+    let matches: [Match]
+    let unavailable: [String]
 }
