@@ -12,6 +12,7 @@ import { GET as firstBasket } from '@/app/the-paint/first-basket/route'
 import { GET as firstBasketOdds } from '@/app/the-paint/first-basket/odds/route'
 import { GET as slateEdge } from '@/app/the-paint/slate/route'
 import { getNativeCourtCheatsheets } from '@/lib/nativeCourtCheatsheets'
+import { getNativeCourtMovement } from '@/lib/nativeCourtMovement'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 
 export const maxDuration = 120
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest) {
     case 'first-basket-odds': return firstBasketOdds(request)
     case 'slate-edge': return slateEdge(request)
     case 'cheatsheets': return getNativeCourtCheatsheets(request)
+    case 'movement': return getNativeCourtMovement(request)
     case 'intelligence': return intelligence(request)
     case 'lineups': return lineups(request)
     case 'shots': return shots(request)
