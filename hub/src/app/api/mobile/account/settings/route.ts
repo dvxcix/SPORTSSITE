@@ -1,11 +1,23 @@
 import { NextResponse } from 'next/server'
+import { isAvatarStyle } from '@/lib/avatarStyles'
+import { PROFILE_SPORTSBOOKS } from '@/lib/profileSportsbooks'
 import { socialPlatformColumns, socialPlatformKey } from '@/lib/nativeSocialPlatforms'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const headers = { 'Cache-Control': 'private, no-store' }
 const respond = (body: unknown, status = 200) => NextResponse.json(body, { status, headers })
-const profileFields = 'username,display_name,bio,location,website,avatar_url,banner_url,is_private,allow_dms,hide_win_rate,notification_settings,notification_delivery_settings,social_links'
+const profileFields = 'username,display_name,bio,location,website,avatar_url,banner_url,avatar_ring_style,avatar_ring_color,sportsbooks,is_private,allow_dms,hide_win_rate,notification_settings,notification_delivery_settings,social_links'
+const sportsbookChoices = PROFILE_SPORTSBOOKS.map(book => book.key)
+const colorHex = /^#[0-9a-f]{6}$/i
+
+function isBookList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.length <= 32 && value.every(item => typeof item === 'string' && item.length <= 80 && !item.includes('\u0000'))
+}
+
+function textArrayLiteral(values: string[]) {
+  return `{${values.map(value => `"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`).join(',')}}`
+}
 
 export async function GET(request: Request) {
   const account = await requireNativeAccount(request)
@@ -23,6 +35,7 @@ export async function GET(request: Request) {
     profile: {
       username: data.username, displayName: data.display_name, bio: data.bio, location: data.location, website: data.website,
       avatarUrl: data.avatar_url, bannerUrl: data.banner_url,
+      avatarRingStyle: data.avatar_ring_style, avatarRingColor: data.avatar_ring_color, sportsbooks: data.sportsbooks, sportsbookChoices,
       socialPlatforms: platforms.error ? null : platforms.data ?? [], socialLinks,
     },
     privacy: { isPrivate: data.is_private, allowMessages: data.allow_dms, hideWinRate: data.hide_win_rate },
@@ -42,8 +55,9 @@ export async function PATCH(request: Request) {
   } catch {
     return respond({ error: 'Invalid settings' }, 400)
   }
-  const fields: Record<string, string | boolean | Record<string, unknown> | null> = {}
+  const fields: Record<string, string | boolean | string[] | Record<string, unknown> | null> = {}
   let observedLinks: Record<string, unknown> | undefined
+  const observedAppearance: Record<string, string> = {}
   if (body.kind === 'privacy') {
     for (const [key, column] of [['isPrivate', 'is_private'], ['allowMessages', 'allow_dms'], ['hideWinRate', 'hide_win_rate']]) {
       if (typeof body[key] !== 'boolean') return respond({ error: 'Invalid privacy setting' }, 400)
@@ -83,6 +97,28 @@ export async function PATCH(request: Request) {
         return respond({ error: 'Enter a valid website address' }, 400)
       }
     }
+    for (const [key, column, validates] of [
+      ['avatarRingStyle', 'avatar_ring_style', isAvatarStyle],
+      ['avatarRingColor', 'avatar_ring_color', (value: unknown) => typeof value === 'string' && colorHex.test(value)],
+    ] as const) {
+      const update = body[key] as { before?: unknown; value?: unknown } | undefined
+      if (update === undefined) continue
+      if (typeof update?.before !== 'string' || update.before.length > 100 || typeof update.value !== 'string' || !validates(update.value)) {
+        return respond({ error: 'Choose a valid avatar style and color' }, 400)
+      }
+      fields[column] = update.value
+      observedAppearance[column] = update.before
+    }
+    if (body.sportsbooks !== undefined) {
+      const update = body.sportsbooks as { before?: unknown; value?: unknown } | null
+      const before = update?.before, value = update?.value
+      if (!isBookList(before) || !isBookList(value) || new Set(value).size !== value.length ||
+          value.some(item => !sportsbookChoices.includes(item) && !before.includes(item))) {
+        return respond({ error: 'Choose supported sportsbooks' }, 400)
+      }
+      fields.sportsbooks = value
+      observedAppearance.sportsbooks = textArrayLiteral(before)
+    }
     if (body.socialLinks !== undefined) {
       const changes = body.socialLinks
       if (!changes || typeof changes !== 'object' || Array.isArray(changes)) return respond({ error: 'Check your social links' }, 400)
@@ -117,9 +153,11 @@ export async function PATCH(request: Request) {
   }
   let update = account.supabase.from('users').update(fields).eq('id', account.userId)
   if (observedLinks) update = update.eq('social_links', JSON.stringify(observedLinks))
+  for (const [column, before] of Object.entries(observedAppearance)) update = update.eq(column, before)
   const { data, error } = await update.select('id').maybeSingle()
   if (error?.code === '23505' && fields.username) return respond({ error: 'That username is taken' }, 409)
   if (!error && !data && observedLinks) return respond({ error: 'Social links changed while saving. Reload your profile.' }, 409)
+  if (!error && !data && Object.keys(observedAppearance).length) return respond({ error: 'Profile appearance changed on another device. Reload your profile.' }, 409)
   if (error || !data?.id) return respond({ error: 'Settings could not be saved' }, 503)
   return respond({ ok: true })
 }
