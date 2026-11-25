@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { creatorRouteAccount } from '@/lib/creatorRouteAccount'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { creatorWhop } from '@/lib/creatorWhop'
 import { isTrustedWhopUrl } from '@/lib/whopUrl'
 import type { CreatorMembership } from '@/lib/creatorMembership'
 import { safeApiError } from '@/lib/safeApiError'
-export async function POST(_request: Request, context: { params: Promise<{ productId: string }> }) {
- const supabase = await createClient()
- const { data: { user } } = await supabase.auth.getUser()
- if (!user) return NextResponse.json({ error: 'Not signed in.' }, { status: 401 })
+export async function POST(request: Request, context: { params: Promise<{ productId: string }> }) {
+ const account = await creatorRouteAccount(request, 'Not signed in.')
+ if (account.error) return account.error
+ const { userId } = account
  const { productId } = await context.params
  if (!/^[0-9a-f-]{36}$/i.test(productId)) return NextResponse.json({ error: 'Membership not found.' }, { status: 404 })
  const admin = createAdminClient()
- const { data: entitlement } = await admin.from('creator_entitlements').select('whop_membership_id,product_id,creator_id').eq('user_id', user.id).eq('product_id', productId).single()
+ const { data: entitlement } = await admin.from('creator_entitlements').select('whop_membership_id,product_id,creator_id').eq('user_id', userId).eq('product_id', productId).single()
  if (!entitlement?.whop_membership_id) return NextResponse.json({ error: 'Membership not found.' }, { status: 404 })
  try {
   const membership = await creatorWhop<CreatorMembership>(`/memberships/${encodeURIComponent(entitlement.whop_membership_id)}`)
