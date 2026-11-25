@@ -8,7 +8,7 @@ enum NativeSiteLink: Hashable {
     case settings(Settings), creatorStudio(AccountWorkspaceView.StudioSection), creatorPayouts, creatorStoreSetup, communityCreator(UUID?), researchWorkspace, admin
     case activityReplay, missions, launch
     case search(String), topic(String), explore
-    case scoreGame(String, String)
+    case scoreGame(GameLink)
     case marketplace(NativeMarketplaceTarget)
     case creatorStorefront(String, CreatorDetailView.Section), creatorOffer(UUID)
     case creatorAccess(UUID, CreatorAccessCompletionView.Outcome?)
@@ -275,7 +275,8 @@ enum NativeSiteLink: Hashable {
                         let sport = segments[1]
                         guard Self.matches(name, #"^[0-9]{1,14}$"#) ||
                             sport == "nfl" && Self.matches(name, #"^[0-9]{4}_[0-9]{2}_[A-Z]{2,3}_[A-Z]{2,3}$"#) else { return nil }
-                        self = .scoreGame(sport, name)
+                        let play = Self.queryValue(query, named: "play", pattern: #"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$"#)
+                        self = .scoreGame(.init(sport: sport, id: name, play: play))
                         return
                     }
                     guard name == "settings" else { return nil }
@@ -316,5 +317,33 @@ enum NativeSiteLink: Hashable {
         let matching = items.filter { $0.name == name }
         guard matching.count == 1, let value = matching[0].value, matches(value, pattern) else { return nil }
         return value
+    }
+}
+
+
+struct GameLink: Hashable {
+    let sport: String
+    let id: String
+    var play: String?
+
+    var url: URL? {
+        var parts = URLComponents()
+        parts.scheme = "https"
+        parts.host = SlipSurgeHTTP.site
+        parts.path = "/sports/\(sport)/\(id)"
+        if let play { parts.queryItems = [.init(name: "play", value: play)] }
+        return parts.url
+    }
+
+    /// SlipSurge shares put the game on its own final line. Leave ordinary inline links in the post body.
+    static func extract(from content: String) -> (text: String, link: Self, url: URL)? {
+        guard content.contains("/sports/") else { return nil }
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let boundary = trimmed.lastIndex(where: \.isNewline)
+        let start = boundary.map { trimmed.index(after: $0) } ?? trimmed.startIndex
+        let line = trimmed[start...].trimmingCharacters(in: .whitespaces)
+        guard !line.contains(where: \.isWhitespace), let url = URL(string: line),
+              case .scoreGame(let game) = NativeSiteLink(url) else { return nil }
+        return (trimmed[..<start].trimmingCharacters(in: .whitespacesAndNewlines), game, url)
     }
 }

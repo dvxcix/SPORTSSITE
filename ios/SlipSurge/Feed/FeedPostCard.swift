@@ -107,7 +107,13 @@ struct FeedPostCard: View {
 
     @ViewBuilder
     private var postBody: some View {
-        if !post.content.isEmpty { NativeSocialBody(content: post.content) }
+        if let shared = GameLink.extract(from: post.content) {
+            if !shared.text.isEmpty { NativeSocialBody(content: shared.text) }
+            Link(destination: shared.url) { GameLinkLabel(link: shared.link) }
+                .buttonStyle(SlipSurgePressStyle())
+        } else if !post.content.isEmpty {
+            NativeSocialBody(content: post.content)
+        }
         if let pick = post.pick {
             FeedPickCard(pick: pick, sport: post.sport)
         }

@@ -10,7 +10,9 @@ struct CourtBoard: Decodable {
         let abbreviation: String
         let fullName: String
 
-        var logo: URL? {
+        var logo: URL? { Self.logo(for: abbreviation) }
+
+        static func logo(for abbreviation: String) -> URL? {
             guard abbreviation.range(of: "^[A-Z]{2,3}$", options: .regularExpression) != nil else { return nil }
             let aliases = ["GSW": "gs", "NOP": "no", "NYK": "ny", "SAS": "sa", "UTA": "utah"]
             let code = aliases[abbreviation] ?? abbreviation.lowercased()

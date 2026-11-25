@@ -24,6 +24,8 @@ struct FeedComposerView: View {
     var initialPick: TrackedPickAPI.Leg? = nil
     var community: Community? = nil
     var page: Page? = nil
+    var initialText = ""
+    var preferredSport: String? = nil
     let onPost: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -210,7 +212,8 @@ struct FeedComposerView: View {
             .onAppear {
                 guard !initialized else { return }
                 initialized = true
-                if let preferred = community?.preferredSport ?? page?.preferredSport,
+                content = initialText
+                if let preferred = community?.preferredSport ?? page?.preferredSport ?? preferredSport,
                    ["NFL", "NBA", "NHL", "Soccer", "MMA", "CFB", "CBB"].contains(preferred) || allowMLB && preferred == "MLB" {
                     sport = preferred
                 }

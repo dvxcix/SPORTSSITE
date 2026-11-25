@@ -1,5 +1,9 @@
 import SwiftUI
 
+extension Notification.Name {
+    static let didShareGameToFeed = Self("slipsurge.didShareGameToFeed")
+}
+
 struct NativeFeedSelection: Hashable {
     let filter: FeedFilter
     let sport: String
@@ -37,6 +41,7 @@ struct FeedView: View {
     @State private var pending = Set<UUID>()
     @State private var postUpdates: [UUID: FeedPost] = [:]
     @State private var actionError = false
+    @State private var visible = false
 
     private enum State {
         case loading, ready, unavailable
@@ -61,6 +66,7 @@ struct FeedView: View {
 
     private var scope: Scope { Scope(viewer: api.userID, filter: filter, sport: sport) }
     private var selection: Selection { Selection(scope: scope, revision: revision) }
+    private var scoresAPI: DiscoverAPI { .init(account: api.account, userID: api.userID) }
     private var canCompose: Bool { api.userID != nil && (load == .ready || !firstPages.isEmpty) }
 
     init(api: FeedAPI, opensSelection: Binding<NativeFeedSelection?> = .constant(nil), scrollToTopRequest: Int = 0,
@@ -115,6 +121,11 @@ struct FeedView: View {
                     Text("SlipSurge").font(.headline.weight(.heavy)).accessibilityAddTraits(.isHeader)
                 }
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    ScoresView(api: scoresAPI)
+                } label: { Label("Live Games", systemImage: "scoreboard") }
+            }
             if api.userID != nil {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
@@ -157,6 +168,15 @@ struct FeedView: View {
             }
         }
         .refreshable { await firstPage() }
+        .onReceive(NotificationCenter.default.publisher(for: .didShareGameToFeed)) { notification in
+            guard let userID = api.userID, notification.object as? UUID == userID else { return }
+            firstPages.removeAll()
+            filter = .latest
+            sport = ""
+            revision += 1
+        }
+        .onAppear { visible = true }
+        .onDisappear { visible = false }
     }
 
     private var timeline: some View {
@@ -168,7 +188,7 @@ struct FeedView: View {
                 StoriesRail(api: .init(account: api.account, userID: api.userID), sports: availableSports, revision: revision) { member = $0 }
                     .padding(.horizontal, 14)
                     .padding(.bottom, 4)
-                Divider()
+                LiveGamesStrip(api: scoresAPI, active: resumeActive && visible)
 
                 switch load {
                 case .loading:

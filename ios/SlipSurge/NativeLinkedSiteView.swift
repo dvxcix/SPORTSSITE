@@ -35,7 +35,7 @@ struct NativeLinkedSiteView: View {
         case .pricing: NativeMembershipOverview(account: account)
         case .preview(.nba): CourtView(scope: .preview)
         case .preview(.nfl): SidelineView(api: SidelineAPI())
-        case .scoreGame(let sport, let id): linkedScore(sport: sport, id: id)
+        case .scoreGame(let game): linkedScore(game)
         case .registration: EmailAccountForm(account: account, flow: .registration)
         case .passwordRecovery: EmailAccountForm(account: account, flow: .recovery)
         default: EmptyView()
@@ -163,16 +163,16 @@ struct NativeLinkedSiteView: View {
         LinkedCommunityView(viewer: viewer, slug: slug, section: section)
     }
 
-    private func linkedScore(sport: String, id: String) -> some View {
+    private func linkedScore(_ link: GameLink) -> some View {
         struct Selection: Decodable { let date: String; let game: Scoreboard.Match }
         return NativeLinkLookup(title: "Game Center", load: {
             let result = try await viewer.readPublic(Selection.self, path: "/api/mobile/scores/resolve",
-                query: [.init(name: "sport", value: sport), .init(name: "id", value: id)])
-            guard result.game.id == id, result.game.sport == sport,
+                query: [.init(name: "sport", value: link.sport), .init(name: "id", value: link.id)])
+            guard result.game.id == link.id, result.game.sport == link.sport,
                   SlateDate.fromKey(result.date).map(SlateDate.key) == result.date else { throw URLError(.cannotParseResponse) }
             return result
         }) { result in
-            GameCenterView(api: viewer, game: result.game, date: result.date)
+            GameCenterView(api: viewer, game: result.game, date: result.date, play: link.play)
         }
     }
 }

@@ -2566,3 +2566,45 @@ physical-device push are still open.
   reopened the same sportsbook post aligned to the top. Native and
   production checks passed 286/286. The iPhone 16 Plus was left on Feed
   for review.
+
+## iOS live games and game conversation · 25 November 2026
+
+- Branch `codex/ios-parity-20261125`, continuing from `e645c853`. The
+  checkpoint containing this entry is the source to fetch on Windows or in
+  Cloud. The changes are native iOS; the live site and shared APIs were not
+  deployed or changed.
+- Reviewed Real’s date and league slate and its play-centered discussions on
+  the iPhone 16 Plus. The SlipSurge flow starts from Feed’s Live Games
+  shortcut or a current live matchup. The slate has one-tap dates, team and
+  league marks, live-first results, and native calendar selection. Scheduled
+  games now accept the scoreboard provider’s minute-precision start times.
+  Related references are
+  [Real–Sports](https://apps.apple.com/us/app/real-sports/id1514546162) and
+  [FotMob’s score and commentary layout](https://mobbin.com/screens/b359d965-ef41-44d1-863f-abe6dae1fb4d).
+- The game keeps the score and sections visible while scrolling. Live and
+  final games open to Plays; scheduled games open to Summary. Plays retain
+  scoring and period filters, team art, player art when provided, pitches
+  where available, and the existing reaction API. Game responses remain
+  visible on section return during refresh. The scoreboard and game views
+  poll existing endpoints while active.
+- Discuss carries the selected play into the shared Game Room. A published
+  room message can link directly back to that play. Room avatars open the
+  existing animated member preview. The composer uses the native photo,
+  GIPHY and emoji pickers and an inline keyboard-dismiss action. Share opens
+  the existing Feed composer with the matchup and link or uses the system
+  share sheet. Feed and Game Room turn standalone SlipSurge game links into
+  native cards. The timeline remains limited to the plays the existing API
+  provides.
+- Signed Debug built for the iPhone 18 Pro simulator and physical iPhone 16
+  Plus. The simulator showed Feed’s live rail, a date change, scheduled tip
+  times, real Heat–76ers play-by-play and box stats, the play-linked room
+  draft, GIPHY attachment, keyboard dismissal with the draft intact, and a
+  prefilled Feed post that was canceled. The simulator also opened the
+  selected play from a cold URL. The final build launched on the iPhone 16
+  Plus, then opened the same play with both team marks. A one-command
+  CoreDevice cold launch with a URL exited with signal 9; the normal
+  launch followed by opening that URL worked. App Store universal links
+  and physical cold-link delivery remain unverified. No production chat,
+  reaction, photo upload or Feed post was sent during QA.
+- Native and production suites passed 286/286, and `git diff --check`
+  passed. The iPhone 16 Plus was left on the selected play for review.

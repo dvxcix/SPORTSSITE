@@ -2,15 +2,14 @@ import SwiftUI
 
 struct GameCenterView: View {
     private enum Section: String, CaseIterable {
-        case overview = "Summary", room = "Game Room", plays = "Play-by-play", box = "Box Score", picks = "Picks"
+        case plays = "Plays", room = "Room", box = "Box", picks = "Picks", overview = "Summary"
 
-        var glyph: String {
+        var label: String {
             switch self {
-            case .overview: "sportscourt"
-            case .room: "bubble.left.and.bubble.right"
-            case .plays: "list.bullet"
-            case .box: "tablecells"
-            case .picks: "bolt"
+            case .plays: "Play-by-play"
+            case .room: "Game Room"
+            case .box: "Box Score"
+            default: rawValue
             }
         }
 
@@ -31,23 +30,41 @@ struct GameCenterView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var phase
-    @State private var section = Section.overview
-    @State private var data: GameCenterData?
-    @State private var loaded: Section?
+    @State private var section: Section
+    @State private var snapshots: [Section: GameCenterData] = [:]
+    @State private var lastResult: GameCenterData?
+    @State private var requests: [Section: UUID] = [:]
     @State private var error: (any Error)?
     @State private var revision = 0
+    @State private var visible = false
     @State private var selectedPost: UUID?
     @State private var selectedMember: String?
-    @State private var message = ""
+    @State private var memberPreview: MessagePerson?
+    @State private var draft = GameRoomDraft()
+    @State private var requestedPlay: String?
+    @State private var revealedPlay: String?
+    @State private var roomLastSeen: UUID?
+    @State private var nearRoomEnd = true
+    @State private var sharing = false
     @State private var queued: (id: UUID, text: String)?
     @State private var lastSent: UUID?
     @State private var busy = false
     @State private var failed = false
+    @State private var reacting = Set<String>()
     @State private var selectedPeriod = ""
+    @State private var scoringOnly = false
     @State private var team = ""
     @State private var pitchPlay: GameCenterData.Play?
 
-    private var reload: String { "\(section.query):\(revision)" }
+    init(api: DiscoverAPI, game: Scoreboard.Match, date: String, play: String? = nil) {
+        self.api = api
+        self.game = game
+        self.date = date
+        _section = State(initialValue: game.state == "pre" && play == nil ? .overview : .plays)
+        _requestedPlay = State(initialValue: play)
+    }
+
+    private var reload: String { "\(section.query):\(revision):\(phase):\(visible)" }
     private var path: String { "/api/mobile/scores/game" }
     private var periodName: String {
         switch game.sport {
@@ -61,46 +78,72 @@ struct GameCenterView: View {
     private var baseQuery: [URLQueryItem] { [.init(name: "sport", value: game.sport), .init(name: "game", value: game.id), .init(name: "date", value: date)] }
     private var feed: FeedAPI { FeedAPI(account: api.account, userID: api.userID) }
     private var color: Color { treatment(game.home.color) }
-    private var live: Bool { (data?.state ?? game.state) == "in" }
+    private var state: String { lastResult?.state ?? game.state }
+    private var live: Bool { state == "in" }
+    private var scheduledToStart: Bool {
+        state == "pre" && game.startDate.map { $0 <= .now } == true
+    }
+    private var matchTitle: String { "\(game.away.abbreviation) at \(game.home.abbreviation)" }
+    private var gameLink: GameLink { .init(sport: game.sport, id: game.id) }
+    private var roomLatest: UUID? { snapshots[.room]?.room?.last?.id }
+    private var targetPlay: String? {
+        guard section == .plays, let requestedPlay,
+              snapshots[.plays]?.plays?.contains(where: { $0.id == requestedPlay }) == true else { return nil }
+        return requestedPlay
+    }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 12) {
-                    scoreboard
-                    ResearchToolRail(title: "Game details", choices: Section.allCases, selection: $section, label: \.rawValue, glyph: \.glyph)
-                    if let data, loaded == section { details(data) }
-                    else { ResearchToolMessage(title: "Game details couldn’t load", error: error) { revision += 1 } }
-                    Color.clear.frame(height: 1).id("room-end")
-                }
-                .padding(16)
+        VStack(spacing: 0) {
+            scoreboard
+            SocialSectionBar(title: "Game sections", sections: Section.allCases, selection: $section) {
+                Text($0.rawValue).lineLimit(1).minimumScaleFactor(0.8).accessibilityLabel($0.label)
             }
-            .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom) {
-                if section == .room, api.userID != nil, loaded == .room { roomComposer }
-            }
-            .onChange(of: data?.room?.last?.id) { _, last in
-                if section == .room, let last, last == lastSent {
-                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.23)) { proxy.scrollTo("room-end", anchor: .bottom) }
-                }
-            }
+            gameContent
         }
-        .navigationTitle("\(game.away.abbreviation) at \(game.home.abbreviation)")
+        .navigationTitle(matchTitle)
         .navigationBarTitleDisplayMode(.inline)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
+        .tint(Brand.accent(for: scheme))
+        .socialDetail()
+        .toolbar {
+            if let url = gameLink.url {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu("Share game", systemImage: "square.and.arrow.up") {
+                        if api.userID != nil {
+                            Button("Post to Feed", systemImage: "square.and.pencil") { sharing = true }
+                        }
+                        ShareLink(item: url, subject: Text(matchTitle))
+                    }
+                }
+            }
+        }
         .navigationDestination(item: $selectedPost) { id in FeedThreadView(api: feed, id: id) }
         .navigationDestination(item: $selectedMember) { name in MemberProfileView(api: api, target: name) }
         .task(id: reload) {
-            await load(section)
+            guard phase == .active, visible else { return }
+            let requested = section
+            await load(requested)
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(section == .room ? 8 : 24)) } catch { return }
-                if phase == .active, section == .room || live { await load(section) }
+                do { try await Task.sleep(for: .seconds(requested == .room ? 8 : 24)) } catch { return }
+                if requested == .room || live || scheduledToStart { await load(requested) }
             }
         }
-        .refreshable { await load(section) }
-        .onChange(of: section) { _, _ in error = nil }
+        .onAppear { visible = true }
+        .onDisappear { visible = false }
+        .onChange(of: section) { error = nil }
         .alert("Game action couldn’t be confirmed", isPresented: $failed) { Button("OK", role: .cancel) {} }
+        .sheet(isPresented: $sharing) {
+            if let userID = api.userID, let url = gameLink.url {
+                FeedComposerView(account: api.account, userID: userID, allowMLB: game.sport == "mlb",
+                    initialText: "\(matchTitle)\n\(url.absoluteString)", preferredSport: game.sport == "soccer" ? "Soccer" : game.sport.uppercased()) {
+                    NotificationCenter.default.post(name: .didShareGameToFeed, object: userID)
+                }
+            }
+        }
+        .sheet(item: $memberPreview) { member in
+            ChatMemberPreview(viewer: api, member: member)
+        }
         .sheet(item: $pitchPlay) { play in
             NavigationStack {
                 MlbPitchDetailsView(pitches: play.pitches ?? [], title: play.title ?? "Pitch details")
@@ -113,39 +156,143 @@ struct GameCenterView: View {
         }
     }
 
-    private var scoreboard: some View {
-        ResearchToolCard(color: color) {
-            HStack {
-                ResearchArtwork(urls: LeagueArtwork.logo(game.sport).map { [$0] } ?? [], fallback: "sportscourt")
-                    .frame(width: 23, height: 23)
-                    .accessibilityLabel(LeagueArtwork.label(game.sport))
-                Spacer()
-                Text(data?.state == "pre" ? game.label : data?.status ?? game.label)
-                    .font(.caption.weight(.semibold)).foregroundStyle(live ? Brand.signal(-1, for: scheme) : .secondary)
+    private var gameContent: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: section == .room ? 3 : 10) {
+                    if let data = snapshots[section] {
+                        details(data)
+                    } else if error != nil {
+                        ContentUnavailableView {
+                            Label("Game details couldn’t load", systemImage: "exclamationmark.circle")
+                        } actions: {
+                            Button("Retry") { revision += 1 }
+                        }
+                    } else {
+                        ProgressView("Loading \(section.label)").frame(maxWidth: .infinity).padding(.vertical, 22)
+                    }
+                    if section == .room { roomEnd }
+                }
+                .padding(.horizontal, 14).padding(.vertical, 12)
             }
-        } content: {
-            HStack(alignment: .top, spacing: 13) {
-                teamSide(game.away, score: data?.awayScore ?? game.away.score)
-                Text("at").font(.caption).foregroundStyle(.secondary).padding(.top, 23)
-                teamSide(game.home, score: data?.homeScore ?? game.home.score)
+            .id(section)
+            .scrollDismissesKeyboard(.interactively)
+            .refreshable { await load(section) }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if section == .room {
+                    if let userID = api.userID, snapshots[.room] != nil {
+                        GameRoomComposer(draft: draft, link: gameLink, account: api.account, userID: userID, sending: busy) {
+                            Task { await send() }
+                        }
+                    } else if api.userID == nil, let account = URL(string: "https://\(SlipSurgeHTTP.site)/account") {
+                        Link("Sign in to join the room", destination: account)
+                            .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 48).background(.bar)
+                    }
+                }
             }
-            if let venue = data?.venue ?? game.venue { Label(venue, systemImage: "mappin").font(.footnote).foregroundStyle(.secondary) }
+            .overlay(alignment: .bottomTrailing) {
+                if section == .room, let roomLatest, roomLastSeen != roomLatest, !nearRoomEnd {
+                    Button("New messages", systemImage: "arrow.down") {
+                        scrollRoom(proxy, animated: true)
+                    }
+                    .font(.caption.bold()).buttonStyle(.borderedProminent).buttonBorderShape(.capsule)
+                    .padding(.trailing, 13).padding(.bottom, api.userID == nil ? 59 : 65)
+                }
+            }
+            .onChange(of: roomLatest, initial: true) {
+                guard section == .room, let roomLatest else { return }
+                if roomLastSeen == nil || nearRoomEnd || roomLatest == lastSent {
+                    scrollRoom(proxy, animated: roomLastSeen != nil)
+                }
+            }
+            .onChange(of: section) {
+                if section == .room, roomLatest != nil { scrollRoom(proxy, animated: false) }
+            }
+            .onChange(of: targetPlay, initial: true) {
+                if let targetPlay, revealedPlay != targetPlay {
+                    proxy.scrollTo(targetPlay, anchor: .top)
+                    revealedPlay = targetPlay
+                }
+            }
         }
     }
 
-    private func teamSide(_ team: Scoreboard.Match.Team, score: String?) -> some View {
-        VStack(spacing: 4) {
-            ResearchArtwork(urls: team.logo.map { [$0] } ?? [], fallback: "shield")
-                .frame(width: 46, height: 46)
-            Text(team.abbreviation).font(.subheadline.weight(.bold))
-            if let record = team.record { Text(record).font(.caption2).foregroundStyle(.secondary) }
-            if let score {
-                Text(score).font(.title2.weight(.heavy)).monospacedDigit()
-                    .contentTransition(reduceMotion ? .identity : .numericText())
-                    .animation(reduceMotion ? nil : .snappy(duration: 0.23), value: score)
+    @ViewBuilder private var roomEnd: some View {
+        let anchor = Color.clear.frame(height: 2).id("room-end").accessibilityHidden(true)
+        if #available(iOS 18, *) {
+            anchor.onScrollVisibilityChange { visible in
+                nearRoomEnd = visible
+                if visible { roomLastSeen = roomLatest }
+            }
+        } else {
+            anchor
+        }
+    }
+
+    private func scrollRoom(_ proxy: ScrollViewProxy, animated: Bool) {
+        withAnimation(animated && !reduceMotion ? .snappy(duration: 0.22) : nil) {
+            proxy.scrollTo("room-end", anchor: .bottom)
+        }
+        roomLastSeen = roomLatest
+    }
+
+    private var scoreboard: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 9) {
+                teamSide(game.away, score: lastResult?.awayScore ?? game.away.score)
+                Spacer(minLength: 0)
+                status
+                Spacer(minLength: 0)
+                teamSide(game.home, score: lastResult?.homeScore ?? game.home.score, home: true)
+            }
+            VStack(spacing: 5) {
+                status
+                HStack {
+                    teamSide(game.away, score: lastResult?.awayScore ?? game.away.score)
+                    Spacer()
+                    teamSide(game.home, score: lastResult?.homeScore ?? game.home.score, home: true)
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.horizontal, 15).padding(.vertical, 11)
+        .frame(maxWidth: .infinity)
+        .background {
+            LinearGradient(colors: [
+                treatment(game.away.color).opacity(0.20), Brand.surface(for: scheme),
+                treatment(game.home.secondary ?? game.home.color).opacity(0.20)
+            ], startPoint: .leading, endPoint: .trailing)
+            .background(Brand.surface(for: scheme))
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Scoreboard")
+    }
+
+    private var status: some View {
+        VStack(spacing: 4) {
+            ResearchArtwork(urls: LeagueArtwork.logo(game.sport).map { [$0] } ?? [], fallback: "sportscourt", pointSize: 19)
+                .frame(width: 19, height: 19)
+            MatchStatusLabel(label: state == "pre" ? game.label : lastResult?.status ?? game.label, live: live)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func teamSide(_ team: Scoreboard.Match.Team, score: String?, home: Bool = false) -> some View {
+        let logo = ResearchArtwork(urls: game.logo(for: team).map { [$0] } ?? [], fallback: "shield", pointSize: 35)
+            .frame(width: 35, height: 35)
+        return HStack(spacing: 6) {
+            if !home { logo }
+            VStack(alignment: home ? .trailing : .leading, spacing: 0) {
+                if let score {
+                    Text(score).font(.title3.weight(.heavy)).monospacedDigit()
+                        .contentTransition(reduceMotion ? .identity : .numericText())
+                        .animation(reduceMotion ? nil : .snappy(duration: 0.23), value: score)
+                }
+                Text(team.abbreviation).font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    .accessibilityLabel(team.name)
+            }
+            if home { logo }
+        }
+        .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .combine)
     }
 
@@ -153,6 +300,9 @@ struct GameCenterView: View {
     private func details(_ data: GameCenterData) -> some View {
         switch section {
         case .overview:
+            if let venue = data.venue ?? game.venue {
+                Label(venue, systemImage: "mappin").font(.footnote).foregroundStyle(.secondary)
+            }
             if let networks = data.broadcasts, !networks.isEmpty {
                 Label(Array(Set(networks)).sorted().joined(separator: " · "), systemImage: "tv").font(.subheadline)
             }
@@ -210,53 +360,113 @@ struct GameCenterView: View {
 
     @ViewBuilder
     private func playList(_ plays: [GameCenterData.Play]) -> some View {
-        let periods = orderedUnique(plays.compactMap(\.period))
+        let periods = orderedUnique(plays.reversed().compactMap(\.period))
         if !periods.isEmpty {
-            ResearchToolFilter(title: periodName, selection: selectedPeriod.isEmpty ? allPeriods : selectedPeriod) {
-                Picker(periodName, selection: $selectedPeriod) {
-                    Text(allPeriods).tag("")
-                    ForEach(periods, id: \.self) { Text($0).tag($0) }
+            HStack(spacing: 8) {
+                ResearchToolFilter(title: periodName, selection: selectedPeriod.isEmpty ? allPeriods : selectedPeriod) {
+                    Picker(periodName, selection: $selectedPeriod) {
+                        Text(allPeriods).tag("")
+                        ForEach(periods, id: \.self) { Text($0).tag($0) }
+                    }
                 }
+                Toggle("Scoring plays", systemImage: "bolt.fill", isOn: $scoringOnly)
+                    .toggleStyle(.button).font(.caption.weight(.semibold))
             }
         }
-        if plays.isEmpty { ContentUnavailableView("No play-by-play available", systemImage: "list.bullet") }
-        ForEach(plays.filter { selectedPeriod.isEmpty || $0.period == selectedPeriod }) { play($0) }
+        if let requestedPlay, !plays.contains(where: { $0.id == requestedPlay }) {
+            Label("This play is outside the available timeline.", systemImage: "clock")
+                .font(.subheadline).foregroundStyle(.secondary)
+        }
+        let filtered = plays.filter { (selectedPeriod.isEmpty || $0.period == selectedPeriod) && (!scoringOnly || $0.scoring) }
+        if filtered.isEmpty {
+            ContentUnavailableView(plays.isEmpty ? "No play-by-play available" : "No plays match these filters", systemImage: "list.bullet")
+        }
+        ForEach(filtered) { play($0).id($0.id) }
     }
 
     private func play(_ play: GameCenterData.Play) -> some View {
         let visuals = [game.away, game.home].first { $0.id == play.teamId }
-        return ResearchToolCard(color: treatment(visuals?.color)) {
-            HStack(spacing: 8) {
-                if let logo = visuals?.logo { ResearchArtwork(urls: [logo], fallback: "shield").frame(width: 25, height: 25) }
-                Text(play.title ?? "Play").font(.subheadline.weight(.bold))
-                Spacer()
-                Text([play.period, play.clock].compactMap { $0 }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
-            }
-        } content: {
-            Text(verbatim: play.text).font(.subheadline)
-            if play.scoring, let away = play.away, let home = play.home {
-                Text("\(game.away.abbreviation) \(away) – \(home) \(game.home.abbreviation)").font(.caption.bold()).monospacedDigit()
-            }
-            HStack(spacing: 8) {
-                ForEach(play.athletes) { athlete in
-                    ResearchArtwork(urls: athlete.headshot.map { [$0] } ?? [], fallback: "person.fill")
-                        .frame(width: 32, height: 32).accessibilityLabel(athlete.name)
+        let tone = treatment(visuals?.color)
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 7) {
+                if let visuals, let logo = game.logo(for: visuals) {
+                    ResearchArtwork(urls: [logo], fallback: "shield", pointSize: 23).frame(width: 23, height: 23)
                 }
-                Spacer()
+                Text(play.title ?? "Play").font(.subheadline.weight(.bold))
+                Spacer(minLength: 3)
+                Text([play.period, play.clock].compactMap { $0 }.joined(separator: " · "))
+                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            if !play.text.isEmpty { Text(verbatim: play.text).font(.subheadline) }
+            if play.scoring, let away = play.away, let home = play.home {
+                Text("\(game.away.abbreviation) \(away)  ·  \(game.home.abbreviation) \(home)")
+                    .font(.caption.weight(.heavy)).monospacedDigit()
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(.primary.opacity(0.07), in: .capsule)
+            }
+            HStack(spacing: 7) {
+                ForEach(play.athletes) { athlete in
+                    ResearchArtwork(urls: athlete.headshot.map { [$0] } ?? [], fallback: "person.fill", pointSize: 30)
+                        .frame(width: 28, height: 28).background(tone.opacity(0.15), in: .circle)
+                }
+                Spacer(minLength: 0)
+                if play.pitches?.isEmpty == false {
+                    Button("Pitch details", systemImage: "scope") { pitchPlay = play }
+                        .labelStyle(.iconOnly).frame(width: 44, height: 44)
+                }
                 if api.userID != nil {
-                    Menu("React", systemImage: "face.smiling") {
+                    Menu {
                         ForEach(["❤️","🔥","⚡","👏","😂","👀","🏆","👍"], id: \.self) { symbol in
                             Button(symbol) { Task { await react(symbol, to: play) } }
+                                .disabled(reacting.contains("\(play.id):\(symbol)"))
                         }
-                    }.labelStyle(.iconOnly)
+                    } label: {
+                        Image(systemName: "face.smiling").frame(width: 44, height: 44)
+                    }
+                    .accessibilityLabel("React to play")
                 }
+                Button {
+                    draft.play = api.userID == nil ? nil : play
+                    section = .room
+                } label: {
+                    Image(systemName: "bubble.left").frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Discuss this play in Game Room")
+                .buttonStyle(SlipSurgePressStyle())
             }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Brand.accent(for: scheme))
             if !play.reactions.isEmpty {
-                Text(play.reactions.keys.sorted().prefix(8).map { "\($0) \(play.reactions[$0]?.count ?? 0)" }.joined(separator: "  "))
-                    .font(.caption).foregroundStyle(.secondary)
+                ScrollView(.horizontal) {
+                    HStack(spacing: 6) {
+                        ForEach(play.reactions.keys.sorted(), id: \.self) { symbol in
+                            if let reaction = play.reactions[symbol] {
+                                Button {
+                                    Task { await react(symbol, to: play) }
+                                } label: {
+                                    Text("\(symbol) \(reaction.count)").font(.caption.monospacedDigit().weight(.semibold))
+                                        .padding(.horizontal, 7).frame(minHeight: 44)
+                                        .background {
+                                            Capsule().fill(reaction.mine ? Brand.accent(for: scheme).opacity(0.17) : .primary.opacity(0.07))
+                                                .frame(height: 25)
+                                        }
+                                }
+                                .buttonStyle(SlipSurgePressStyle())
+                                .disabled(api.userID == nil || reacting.contains("\(play.id):\(symbol)"))
+                                .accessibilityAddTraits(reaction.mine ? .isSelected : [])
+                            }
+                        }
+                    }
+                }
+                .scrollIndicators(.hidden)
             }
-            if play.pitches?.isEmpty == false {
-                Button("Pitch details", systemImage: "scope") { pitchPlay = play }.buttonStyle(.bordered)
+        }
+        .padding(.leading, 12).padding(.trailing, 8).padding(.top, 10).padding(.bottom, 4)
+        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+        .overlay(alignment: .leading) {
+            if play.scoring || play.id == revealedPlay {
+                Capsule().fill(play.id == revealedPlay ? Brand.accent(for: scheme) : tone.opacity(0.85))
+                    .frame(width: 3).padding(.vertical, 8).allowsHitTesting(false)
             }
         }
     }
@@ -282,7 +492,7 @@ struct GameCenterView: View {
         let groups = data.groups ?? []
         if !groups.isEmpty {
             ResearchArtworkPicker(title: "Team", options: [.init(id: "", title: "Both teams", icon: "sportscourt")] + [game.away, game.home].map {
-                .team(id: $0.abbreviation, title: $0.name, logo: $0.logo)
+                .team(id: $0.abbreviation, title: $0.name, logo: game.logo(for: $0))
             }, selection: $team)
         }
         ForEach(groups.filter { team.isEmpty || team == $0.team }) { group in
@@ -312,38 +522,58 @@ struct GameCenterView: View {
 
     @ViewBuilder
     private func room(_ messages: [GameCenterData.Message]) -> some View {
-        if messages.isEmpty { ContentUnavailableView("No room messages yet", systemImage: "bubble.left.and.bubble.right") }
+        if messages.isEmpty {
+            ContentUnavailableView("Start the game conversation", systemImage: "bubble.left.and.bubble.right",
+                description: Text("Talk about the matchup or bring a play into the room."))
+        }
         ForEach(messages) { note in
-            HStack(alignment: .top, spacing: 9) {
+            let name = note.sender?.displayName ?? note.sender?.username ?? "Member"
+            HStack(alignment: .top, spacing: 8) {
                 Button {
-                    if let username = note.sender?.username { selectedMember = username }
-                } label: {
-                    ResearchArtwork(urls: [note.sender?.avatarUrl].compactMap { $0 }.filter(FeedPostCard.allowedMedia), fallback: "person.crop.circle")
-                        .frame(width: 34, height: 34).clipShape(.circle)
-                }
-                .buttonStyle(.plain).disabled(note.sender?.username == nil)
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(note.sender?.displayName ?? note.sender?.username ?? "Member").font(.caption.weight(.bold))
-                        if let date = SidelineBoard.timestamp(note.createdAt) { Text(date, style: .relative).font(.caption2).foregroundStyle(.secondary) }
+                    if let sender = note.sender, let username = sender.username {
+                        memberPreview = .init(id: note.userId, username: username, displayName: sender.displayName,
+                            avatarUrl: sender.avatarUrl, isVerified: sender.isVerified)
                     }
-                    Text(verbatim: note.content).font(.subheadline)
+                } label: {
+                    NativeMemberAvatar(url: note.sender?.avatarUrl, name: name, size: 31)
+                        .frame(width: 44, height: 44)
                 }
-                Spacer(minLength: 4)
+                .accessibilityLabel("View \(name)’s profile")
+                .buttonStyle(SlipSurgePressStyle()).disabled(note.sender?.username == nil)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 5) {
+                        Text(name).font(.subheadline.weight(.bold))
+                        if note.sender?.isVerified == true {
+                            Image(systemName: "checkmark.seal.fill").font(.caption)
+                                .foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Verified")
+                        }
+                        if let date = SidelineBoard.timestamp(note.createdAt) {
+                            Text(date, style: .relative).font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
+                    if let shared = GameLink.extract(from: note.content) {
+                        GameRoomMessageBody(content: shared.text)
+                        if shared.link.id == game.id, shared.link.sport == game.sport, let play = shared.link.play {
+                            Button {
+                                selectedPeriod = ""
+                                scoringOnly = false
+                                revealedPlay = nil
+                                requestedPlay = play
+                                section = .plays
+                            } label: { GameLinkLabel(link: shared.link) }
+                            .buttonStyle(SlipSurgePressStyle())
+                        } else {
+                            Link(destination: shared.url) { GameLinkLabel(link: shared.link) }
+                                .buttonStyle(SlipSurgePressStyle())
+                        }
+                    } else {
+                        GameRoomMessageBody(content: note.content)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(10).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+            .padding(.vertical, 6)
         }
-    }
-
-    private var roomComposer: some View {
-        HStack {
-            TextField("Message Game Room", text: $message, axis: .vertical).lineLimit(1...3)
-                .padding(9).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 11))
-            Button("Send", systemImage: "arrow.up.circle.fill") { Task { await send() } }.labelStyle(.iconOnly)
-                .font(.title2).foregroundStyle(Brand.accent(for: scheme))
-                .disabled(busy || message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || message.utf16.count > 800)
-        }
-        .padding(9).background(.bar)
     }
 
     private func treatment(_ hex: String?) -> Color {
@@ -357,44 +587,58 @@ struct GameCenterView: View {
     }
 
     private func load(_ requested: Section) async {
+        let id = UUID()
+        requests[requested] = id
         do {
-            let result = try await api.readPublic(GameCenterData.self, path: path, query: baseQuery + [.init(name: "section", value: requested.query)])
-            guard !Task.isCancelled, requested == section, result.id == game.id, result.sport == game.sport else { return }
-            data = result
-            loaded = requested
-            error = nil
+            let result = try await api.readPublic(GameCenterData.self, path: path,
+                query: baseQuery + [.init(name: "section", value: requested.query)])
+            guard !Task.isCancelled, requests[requested] == id else { return }
+            guard result.id == game.id, result.sport == game.sport else { throw URLError(.cannotParseResponse) }
+            snapshots[requested] = result
+            if requested == section {
+                lastResult = result
+                error = nil
+            }
         } catch {
-            if !Task.isCancelled, requested == section { self.error = error }
+            if !Task.isCancelled, requests[requested] == id, requested == section { self.error = error }
         }
     }
 
     private func send() async {
         struct Action: Encodable { let kind = "post"; let id: UUID; let text: String }
         struct Response: Decodable { let ok: Bool }
-        guard !busy else { return }
+        let text = draft.message(for: gameLink)
+        guard !busy, !text.isEmpty, text.utf16.count <= 800 else { return }
         busy = true
         defer { busy = false }
-        let draft = message
-        let id = queued?.text == draft ? queued?.id ?? UUID() : UUID()
-        queued = (id, draft)
+        let id = queued.flatMap { $0.text == text ? $0.id : nil } ?? UUID()
+        queued = (id, text)
         lastSent = id
         do {
-            let response = try await api.write(Response.self, path: path, query: baseQuery, body: Action(id: id, text: draft))
+            let response = try await api.write(Response.self, path: path, query: baseQuery, body: Action(id: id, text: text))
             guard response.ok else { throw URLError(.cannotParseResponse) }
-            if message == draft { message = "" }
-            await load(section)
+            if draft.message(for: gameLink) == text {
+                draft.text = ""
+                draft.play = nil
+                draft.attachment = nil
+            }
             if queued?.id == id { queued = nil }
+            await load(.room)
         } catch { failed = true }
     }
 
     private func react(_ emoji: String, to play: GameCenterData.Play) async {
         struct Action: Encodable { let kind = "react"; let play: String; let emoji: String; let enabled: Bool }
         struct Response: Decodable { let ok: Bool }
+        let key = "\(play.id):\(emoji)"
+        guard api.userID != nil, reacting.insert(key).inserted else { return }
+        defer { reacting.remove(key) }
+        let requested = section
         do {
             let action = Action(play: play.id, emoji: emoji, enabled: play.reactions[emoji]?.mine != true)
             let result = try await api.write(Response.self, path: path, query: baseQuery, body: action)
             guard result.ok else { throw URLError(.cannotParseResponse) }
-            await load(section)
+            await load(requested)
         } catch { failed = true }
     }
 }
