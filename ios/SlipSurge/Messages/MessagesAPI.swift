@@ -97,6 +97,7 @@ struct MessagesAPI {
         var message: String?
         var text: String?
         var reply: String?
+        var image: URL?
         var emoji: String?
         var enabled: Bool?
         var status: String?

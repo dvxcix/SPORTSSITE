@@ -13,6 +13,11 @@ struct FeedComposerView: View {
     @State private var sport = "NFL"
     @State private var audience = Audience.everyone
     @State private var spoiler = false
+    @State private var image: URL?
+    @State private var uploading = false
+    @State private var pickBuilder = false
+    @State private var legs: [TrackedPickAPI.Leg] = []
+    @State private var wager = ""
     @State private var choices = ["", ""]
     @State private var duration = 24
     @State private var posting = false
@@ -20,14 +25,21 @@ struct FeedComposerView: View {
     @State private var attempted = false
 
     private enum Kind: String, CaseIterable, Encodable {
-        case text, analysis, poll
+        case text, analysis, poll, pick
         var label: String { self == .text ? "Post" : rawValue.capitalized }
     }
 
     private enum Audience: String, CaseIterable, Encodable {
         case everyone = "public"
         case followers
-        var label: String { self == .everyone ? "Public" : "Followers" }
+        case personal = "private"
+        var label: String {
+            switch self {
+            case .everyone: "Public"
+            case .followers: "Followers"
+            case .personal: "Only me"
+            }
+        }
     }
 
     private struct Draft: Encodable {
@@ -42,6 +54,7 @@ struct FeedComposerView: View {
         let sport: String
         let visibility: Audience
         let spoiler: Bool
+        let image: URL?
         let poll: Poll?
     }
 
@@ -50,11 +63,20 @@ struct FeedComposerView: View {
     }
 
     private var canPost: Bool {
-        !posting && content.utf16.count <= 500 &&
-            (kind == .poll
-                ? pollChoices.count >= 2 && pollChoices.allSatisfy { $0.utf16.count <= 80 }
-                : !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        guard !posting, !uploading, content.utf16.count <= 500 else { return false }
+        switch kind {
+        case .poll: return pollChoices.count >= 2 && pollChoices.allSatisfy { $0.utf16.count <= 80 }
+        case .pick: return !legs.isEmpty && (wager.isEmpty || parsedWager != nil)
+        case .text, .analysis: return image != nil || !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
     }
+
+    private var parsedWager: Double? {
+        guard let amount = try? Double(wager, format: .number), amount.isFinite, amount > 0 else { return nil }
+        return amount
+    }
+
+    private var personalAllowed: Bool { kind == .pick && legs.first?.sport == "NBA" }
 
     var body: some View {
         NavigationStack {
@@ -82,13 +104,44 @@ struct FeedComposerView: View {
                         }
                     }
                 }
+                if kind == .pick {
+                    Section(legs.count > 1 ? "\(legs.count)-leg parlay" : "Tracked pick") {
+                        ForEach(legs) { leg in
+                            HStack {
+                                ResearchArtwork(urls: LeagueArtwork.logo(leg.sport).map { [$0] } ?? [], fallback: "sportscourt")
+                                    .frame(width: 25, height: 25)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(leg.player_name).font(.subheadline.bold())
+                                    Text(leg.line).font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                ResearchToolBook(book: Sportsbook.normalized(leg.book), price: leg.odds)
+                            }
+                        }
+                        .onDelete { legs.remove(atOffsets: $0) }
+                        Button(legs.isEmpty ? "Add a pick" : "Add a leg", systemImage: "plus.circle") { pickBuilder = true }
+                            .disabled(legs.count >= 30)
+                        TextField("Stake (optional)", text: $wager).keyboardType(.decimalPad)
+                    }
+                }
                 Section {
-                    Picker("Sport", selection: $sport) {
+                    NativePhotoPicker(title: "Add photo", upload: { photo in
+                        try await NativeMediaUpload.upload(photo, kind: .posts, account: account, userID: userID)
+                    }, url: $image, uploading: $uploading)
+                    if let image {
+                        ResearchArtwork(urls: [image], fallback: "photo").frame(maxHeight: 170)
+                        Button("Remove photo", systemImage: "trash", role: .destructive) { self.image = nil }
+                    }
+                }
+                Section {
+                    if kind != .pick {
                         let sports = ["NFL", "NBA", "NHL", "Soccer", "MMA", "CFB", "CBB"]
-                        ForEach(allowMLB ? ["MLB"] + sports : sports, id: \.self) { Text($0).tag($0) }
+                        ResearchArtworkPicker(title: "Sport", options: (allowMLB ? ["MLB"] + sports : sports).map {
+                            .init(id: $0, title: LeagueArtwork.label($0), url: LeagueArtwork.logo($0), icon: "sportscourt")
+                        }, selection: $sport)
                     }
                     Picker("Audience", selection: $audience) {
-                        ForEach(Audience.allCases, id: \.self) { Text($0.label).tag($0) }
+                        ForEach(Audience.allCases.filter { $0 != .personal || personalAllowed }, id: \.self) { Text($0.label).tag($0) }
                     }
                     Toggle("Contains a spoiler", isOn: $spoiler)
                 }
@@ -97,16 +150,21 @@ struct FeedComposerView: View {
             .disabled(posting)
             .navigationTitle("Compose")
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: personalAllowed) { _, allowed in if !allowed, audience == .personal { audience = .everyone } }
+            .onChange(of: kind) { _, _ in notice = nil }
+            .sheet(isPresented: $pickBuilder) {
+                PickBuilderView(api: TrackedPickAPI(account: account, userID: userID), existing: legs, preferredSport: sport) { legs.append($0) }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.disabled(posting)
+                    Button("Cancel") { dismiss() }.disabled(posting || uploading)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(posting ? "Posting…" : "Post") { Task { await submit() } }
                         .disabled(!canPost)
                 }
             }
-            .interactiveDismissDisabled(posting)
+            .interactiveDismissDisabled(posting || uploading)
         }
     }
 
@@ -115,8 +173,23 @@ struct FeedComposerView: View {
         posting = true
         notice = nil
         defer { posting = false }
+        if kind == .pick, let sport = legs.first?.sport {
+            let pick = TrackedPickAPI.Draft(draftId: draftID, sport: sport, content: content, legs: legs,
+                visibility: audience.rawValue, isSpoiler: spoiler, wager: parsedWager, imageUrl: image)
+            do {
+                _ = try await TrackedPickAPI(account: account, userID: userID).post(pick)
+                onPost()
+                dismiss()
+            } catch let response as SlipSurgeHTTP.Status where (400...429).contains(response.code) {
+                struct Failure: Decodable { let error: String? }
+                notice = (try? JSONDecoder().decode(Failure.self, from: response.data))?.error ?? "Check your pick and try again."
+            } catch {
+                notice = "The post couldn’t be confirmed. Retry this draft to keep it from posting twice."
+            }
+            return
+        }
         let draft = Draft(
-            id: draftID, content: content, kind: kind, sport: sport, visibility: audience, spoiler: spoiler,
+            id: draftID, content: content, kind: kind, sport: sport, visibility: audience, spoiler: spoiler, image: image,
             poll: kind == .poll ? .init(options: pollChoices, duration: duration) : nil
         )
         do {
@@ -136,8 +209,6 @@ struct FeedComposerView: View {
             dismiss()
         } catch let error as SlipSurgeHTTP.Status where error.code == 409 {
             notice = "This draft may already be posted. Check the feed before making a new post."
-        } catch let error as SlipSurgeHTTP.Status where error.code == 404 {
-            notice = "Posting isn’t available from this build yet."
         } catch {
             notice = attempted ? "Couldn’t confirm the post. Retry this draft to avoid creating a duplicate." : "Your account could not be verified. Try again."
         }

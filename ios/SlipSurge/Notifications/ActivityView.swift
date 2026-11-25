@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ActivityView: View {
     let api: ActivityAPI
+    var opensNotification: UUID? = nil
     @Environment(\.colorScheme) private var scheme
     @State private var selection = Filter.all
     @State private var destination: ActivityNotification.Destination?
@@ -11,6 +12,7 @@ struct ActivityView: View {
     @State private var showClear = false
     @State private var mutationFailed = false
     @State private var revision = 0
+    @State private var opened = false
 
     private enum State {
         case loading, ready, unavailable, denied
@@ -63,7 +65,17 @@ struct ActivityView: View {
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))
-        .task(id: revision) { await load() }
+        .task(id: revision) {
+            await load()
+            if !opened, let id = opensNotification {
+                opened = true
+                if let matching = rows.first(where: { $0.id == id }) {
+                    open(matching)
+                } else if let matching = try? await api.load(id: id).first, matching.id == id {
+                    open(matching)
+                }
+            }
+        }
         .refreshable { if !busy { await load() } }
         .toolbar {
             if state == .ready, !rows.isEmpty {
@@ -108,8 +120,7 @@ struct ActivityView: View {
         }
         ForEach(filtered) { row in
             Button {
-                if !row.read { Task { await mutate { try await api.markRead([row.id]) } } }
-                if let target = row.destination { destination = target }
+                open(row)
             } label: {
                 notification(row)
             }
@@ -120,6 +131,11 @@ struct ActivityView: View {
                     .disabled(busy)
             }
         }
+    }
+
+    private func open(_ row: ActivityNotification) {
+        if !row.read { Task { await mutate { try await api.markRead([row.id]) } } }
+        if let target = row.destination { destination = target }
     }
 
     private func notification(_ row: ActivityNotification) -> some View {

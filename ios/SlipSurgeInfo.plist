@@ -18,5 +18,7 @@
     </array>
     <key>SlipSurgeSupabasePublishableKey</key>
     <string>$(SLIPSURGE_SUPABASE_PUBLISHABLE_KEY)</string>
+    <key>SLIPSURGE_APNS_ENVIRONMENT</key>
+    <string>$(SLIPSURGE_APNS_ENVIRONMENT)</string>
 </dict>
 </plist>

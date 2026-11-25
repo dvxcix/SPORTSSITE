@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 import { getSidelineGames, getSidelineOddsBundle } from '@/app/the-sideline/data'
 import type { NflMarketOffer } from '@/lib/nflOddsTypes'
 
@@ -17,8 +18,9 @@ function currentOffers(offer: NflMarketOffer) {
 }
 
 export async function GET(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const native = req.headers.has('authorization') ? await requireNativeAccount(req) : null
+  if (native?.error) return native.error
+  const user = native ? { id: native.userId } : (await (await createClient()).auth.getUser()).data.user
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
 
   const { searchParams } = new URL(req.url)

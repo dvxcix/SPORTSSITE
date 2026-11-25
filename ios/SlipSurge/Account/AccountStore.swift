@@ -145,6 +145,19 @@ final class AccountStore {
         guard onboardingComplete else { throw URLError(.cannotParseResponse) }
     }
 
+    func uploadSetupPhoto(_ photo: NativeMediaUpload.Photo, kind: NativeMediaUpload.Kind) async throws -> URL {
+        guard (kind == .avatars || kind == .banners), !isBusy, pendingVerification == nil,
+              let session else { throw URLError(.userAuthenticationRequired) }
+        isBusy = true
+        defer { isBusy = false }
+        let current = session.needsRefresh ? try await refreshSavedSession(session) : session
+        self.session = current
+        let id = current.user.id
+        let url = try await NativeMediaUpload.send(photo, kind: kind, token: current.accessToken, userID: id)
+        guard self.session?.user.id == id, !isSigningOut else { throw URLError(.userAuthenticationRequired) }
+        return url
+    }
+
     private func setupRequest(body: Data? = nil) async throws -> Data {
         guard let session, pendingVerification == nil else { throw URLError(.userAuthenticationRequired) }
         let current = session.needsRefresh ? try await refreshSavedSession(session) : session

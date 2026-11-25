@@ -216,10 +216,10 @@ struct FeedPostCard: View {
             .accessibilityLabel("\(value) \(label.lowercased())")
     }
 
-    static func allowedMedia(_ url: URL) -> Bool {
+    nonisolated static func allowedMedia(_ url: URL) -> Bool {
         guard url.scheme == "https", url.user == nil, url.password == nil, url.port == nil, let host = url.host else { return false }
         return host == SlipSurgeHTTP.site || host == "hkldweedwnxartkfhror.supabase.co" ||
-            host == "media.tenor.com" || host == "a.espncdn.com" || host == "cdn.nba.com" ||
+            host == "media.tenor.com" || host == "a.espncdn.com" || host == "cdn.nba.com" || host == "static.www.nfl.com" ||
             host == "cdn.discordapp.com" || host == "pbs.twimg.com" || host.hasSuffix(".public.blob.vercel-storage.com")
     }
 }

@@ -424,3 +424,37 @@ physical-device push are still open.
   duplicate-send prevention. Device Hub temporarily lost native window access,
   so post-deployment interactive QA needs a fresh pass. No live messages,
   transactions, or owner account changes were made as part of QA.
+
+## Native composer and device alert staging · 25 November 2026
+
+- Native message and branded Feed checkpoint `baa7d48d3e700d10f55c3636effd700ef11fec12`
+  is on the task branch. PR #14 production is READY and responded 401 to invalid
+  onboarding, settings, admin and Whop requests. The app's known-pattern email
+  and checkout callback URLs returned 303 into their respective iOS schemes.
+  The public web login, registration, Pricing and Feed kept returning 200.
+- PR #15 deployed Messages, Bookmarks and Feed artwork as
+  `63cd99edd4652c3dfc9cac061ff910c364fb1cbf`, with READY production
+  `dpl_5xfD75Kj8PCmUMeK8esafTTEwHnP`. Production guest picks included 33 player
+  portraits and team palettes, team marks, and eight posts with book data.
+  Messages, Bookmarks and Activity kept rejecting unauthenticated requests.
+  The signed iPhone 17e build displayed the branded pick cards and live Feed.
+- New source adds Photo Library selection and the existing storage pipeline for
+  Feed posts, direct and group messages, and onboarding. The native pick builder
+  uses the web's exact NBA and NFL pregame composer markets, including league,
+  matchup, player, line and book artwork. It keeps the web's same-book parlay
+  rules, tracked grades and pricing verification. A dedicated Supabase migration
+  makes native draft retries atomic with the web pick transaction. It has not
+  yet been applied or released. No live picks or media uploads were used for QA.
+- Added iOS device alert registration, service-only APNs storage, and alert
+  routing using the existing notification inbox. APNs checks are staged in source.
+  The Mac's default simulator build leaves APNs disabled. To enable on a signed
+  device, set `SLIPSURGE_DEVICE_ENTITLEMENTS = SlipSurgeDevice.entitlements` and
+  matching `SLIPSURGE_APNS_ENVIRONMENT` in the local Xcode configuration. The
+  server needs approved environment-specific `SLIPSURGE_APNS_DEVELOPMENT_*` or
+  `SLIPSURGE_APNS_PRODUCTION_*` variables for `TOPIC`, `TEAM_ID`, `KEY_ID`, and
+  `PRIVATE_KEY`. Physical-device signing, key configuration and delivery remain
+  unverified. The proposed APNs migration has not been applied.
+- Hub TypeScript, 199 focused checks and signed Xcode Debug passed for the new
+  source. Production tracked-pick schema inspection confirmed the current web
+  writer is service-only, atomic across posts/picks, rate-limited and preserves
+  spoilers. Native draft and APNs tables were absent before these changes.

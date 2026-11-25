@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { safeApiError } from '@/lib/safeApiError'
+import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
+import { ownOnboardingComplete } from '@/lib/supabase/ownOnboarding'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,8 +61,9 @@ const USER_MAX_BYTES = 8 * 1024 * 1024
 const ADMIN_MAX_BYTES = 15 * 1024 * 1024
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const native = req.headers.has('authorization') ? await requireNativeAccount(req, { allowSetup: true }) : null
+  if (native?.error) return native.error
+  const user = native ? { id: native.userId } : (await (await createClient()).auth.getUser()).data.user
   if (!user) return NextResponse.json({ error: 'You must be signed in to upload.' }, { status: 401 })
 
   const form = await req.formData()
@@ -72,6 +75,9 @@ export async function POST(req: Request) {
   }
   if (!(file instanceof File) || typeof kind !== 'string' || !ALLOWED_KINDS.has(kind)) {
     return NextResponse.json({ error: 'Invalid upload request.' }, { status: 400 })
+  }
+  if (native && kind !== 'avatars' && kind !== 'banners' && !await ownOnboardingComplete(native.supabase)) {
+    return NextResponse.json({ error: 'Finish your SlipSurge account setup' }, { status: 403 })
   }
 
   const admin = createAdminClient()

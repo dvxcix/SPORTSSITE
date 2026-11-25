@@ -3,14 +3,40 @@ import SwiftUI
 @main
 struct SlipSurgeApp: App {
     @AppStorage("appearance") private var appearance = Appearance.system
-
+    @UIApplicationDelegateAdaptor(PushNotifications.self) private var push
+    @Environment(\.scenePhase) private var phase
     @State private var account = AccountStore()
+    @State private var incoming: Incoming?
+
+    private struct Incoming: Identifiable { let id: UUID }
 
     var body: some Scene {
         WindowGroup {
             SlipSurgeTabs(account: account, appearance: $appearance)
-            .preferredColorScheme(appearance.scheme)
-            .onOpenURL { url in Task { await account.openEmail(url) } }
+                .environmentObject(push)
+                .preferredColorScheme(appearance.scheme)
+                .onOpenURL { url in Task { await account.openEmail(url) } }
+                .task(id: account.memberID) {
+                    push.onOpen = { incoming = Incoming(id: $0) }
+                    await push.updateAccount(account)
+                }
+                .onChange(of: phase) { _, state in
+                    if state == .active { Task { await push.sync() } }
+                }
+                .sheet(item: $incoming) { notice in
+                    NavigationStack {
+                        if let userID = account.memberID {
+                            ActivityView(api: ActivityAPI(account: account, userID: userID), opensNotification: notice.id)
+                                .toolbar {
+                                    ToolbarItem(placement: .cancellationAction) {
+                                        Button("Close", systemImage: "xmark") { incoming = nil }.labelStyle(.iconOnly)
+                                    }
+                                }
+                        } else {
+                            ContentUnavailableView("Sign in to view this notification", systemImage: "bell")
+                        }
+                    }
+                }
         }
     }
 }

@@ -7,10 +7,13 @@ struct ResearchArtworkPicker: View {
         var asset: String?
         var url: URL?
         var secondaryLogo: URL?
+        var playerTeamLogo: URL?
+        var playerColors: [Color] = []
         var icon = "circle.grid.2x2"
 
         static func sportsbook(_ key: String) -> Self {
-            .init(id: key, title: Sportsbook.name(key), asset: Sportsbook.artwork(key), icon: "chart.bar.xaxis")
+            let name = Sportsbook.normalized(key)
+            return .init(id: key, title: Sportsbook.name(name), asset: Sportsbook.artwork(name), icon: "chart.bar.xaxis")
         }
 
         static func team(id: String, title: String, logo: URL?) -> Self {
@@ -90,7 +93,20 @@ struct ResearchArtworkPicker: View {
 
     @ViewBuilder
     private func artwork(_ option: Option, size: CGFloat) -> some View {
-        if let secondary = option.secondaryLogo {
+        if let primary = option.playerColors.first {
+            ResearchArtwork(urls: option.url.map { [$0] } ?? [], fallback: option.icon)
+                .foregroundStyle(.white)
+                .frame(width: size, height: size)
+                .background(LinearGradient(colors: [primary, option.playerColors.dropFirst().first ?? primary],
+                    startPoint: .topLeading, endPoint: .bottomTrailing), in: .rect(cornerRadius: 7))
+                .overlay(alignment: .bottomTrailing) {
+                    if let logo = option.playerTeamLogo {
+                        ResearchArtwork(urls: [logo], fallback: "shield")
+                            .padding(1.5).frame(width: size * 0.46, height: size * 0.46)
+                            .background(.background, in: .circle)
+                    }
+                }
+        } else if let secondary = option.secondaryLogo {
             HStack(spacing: -3) {
                 ResearchArtwork(urls: option.url.map { [$0] } ?? [], fallback: option.icon)
                 ResearchArtwork(urls: [secondary], fallback: option.icon)

@@ -67,9 +67,10 @@ struct ActivityAPI {
 
     private static let path = "/api/mobile/notifications"
 
-    func load() async throws -> [ActivityNotification] {
+    func load(id: UUID? = nil) async throws -> [ActivityNotification] {
         struct Page: Decodable { let notifications: [ActivityNotification] }
-        let data = try await SlipSurgeHTTP.memberData(Self.path, account: account, userID: userID)
+        let query = id.map { [URLQueryItem(name: "id", value: $0.uuidString.lowercased())] } ?? []
+        let data = try await SlipSurgeHTTP.memberData(Self.path, query: query, account: account, userID: userID)
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return try decoder.decode(Page.self, from: data).notifications

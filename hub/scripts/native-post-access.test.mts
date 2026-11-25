@@ -12,6 +12,7 @@ const state = {
 Object.assign(globalThis, { nativePostFixture: state })
 
 const stubs: Record<string, string> = {
+  'server-only': '',
   '@/lib/mlbViewerAccess': 'export async function canViewMlb() { return false }',
   '@/lib/mentions': 'export async function notifyMentions() { globalThis.nativePostFixture.mentions++ }',
   '@/lib/supabase/nativeAccount': `
@@ -89,4 +90,16 @@ test('poll composition uses the website option shape and approved durations', as
   ])
   assert.equal((await send(poll)).status, 200)
   assert.equal(state.mentions, 2)
+})
+
+test('native image posts accept only their authenticated owner’s uploaded object', async () => {
+  process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://assets.example.com'
+  const id = '00000000-0000-4000-8000-000000000003'
+  const image = `https://assets.example.com/storage/v1/object/public/media/posts/author/${id}.jpg`
+  const photo = { ...draft, id, content: '', image }
+  assert.equal((await send({ ...photo, image: image.replace('/author/', '/neighbor/') })).status, 400)
+  assert.equal((await send({ ...photo, image: 'https://another.example.com/image.jpg' })).status, 400)
+  assert.equal((await send(photo)).status, 201)
+  assert.deepEqual(state.rows.get(id)?.media_urls, [image])
+  assert.equal((await send(photo)).status, 200)
 })

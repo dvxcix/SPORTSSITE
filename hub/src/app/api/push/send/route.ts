@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SETTINGS_KEY_BY_TYPE, type NotificationType } from '@/lib/notify'
@@ -6,6 +6,7 @@ import { isTrustedPushEndpoint } from '@/lib/pushEndpoint'
 import { hasBearerSecret } from '@/lib/requestAuth'
 import { safeInternalPath } from '@/lib/safeRedirect'
 import { shouldSuppressNotificationDelivery, type NotificationDeliverySettings } from '@/lib/notificationDelivery'
+import { sendApplePush } from '@/lib/applePushDelivery'
 
 export const revalidate = 0
 
@@ -66,6 +67,8 @@ export async function POST(request: Request) {
   if (shouldSuppressNotificationDelivery(deliverySettings, notification.type as NotificationType, (notification.data ?? {}) as Record<string, unknown>)) {
     return NextResponse.json({ ok: true, skipped: 'quiet hours' })
   }
+
+  after(() => sendApplePush(notification.user_id, notification.id))
 
   const { data: subscriptions } = await admin
     .from('push_subscriptions')

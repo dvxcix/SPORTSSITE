@@ -3,6 +3,7 @@ import SwiftUI
 struct AccountView: View {
     let account: AccountStore
     @Binding var appearance: Appearance
+    @EnvironmentObject private var push: PushNotifications
     @Environment(\.colorScheme) private var scheme
     @State private var code = ""
 
@@ -64,11 +65,18 @@ struct AccountView: View {
                             .disabled(account.isBusy)
                     }
                     Button("Sign out", role: .destructive) {
-                        Task { await account.signOut() }
+                        Task {
+                            if let id = account.memberID { await push.disconnect(account: account, userID: id) }
+                            await account.signOut()
+                        }
                     }
                     .disabled(account.isBusy)
                 }
                 .listRowBackground(Brand.surface(for: scheme))
+                if account.memberID != nil, PushNotifications.environment != nil {
+                    Section("Device alerts") { deviceAlerts }
+                        .listRowBackground(Brand.surface(for: scheme))
+                }
             }
             if let notice = account.notice {
                 Text(notice)
@@ -89,6 +97,22 @@ struct AccountView: View {
             .listRowBackground(Brand.surface(for: scheme))
         }
         .scrollContentBackground(.hidden)
+    }
+
+    @ViewBuilder
+    private var deviceAlerts: some View {
+        switch push.state {
+        case .unknown, .connecting: ProgressView("Checking device alerts")
+        case .available:
+            Button("Enable notifications", systemImage: "bell.badge") { Task { await push.requestPermission() } }
+        case .connected: Label("Notifications enabled", systemImage: "bell.badge.fill")
+        case .off:
+            Button("Open iOS notification settings", systemImage: "gear") {
+                if let url = URL(string: UIApplication.openNotificationSettingsURLString) { UIApplication.shared.open(url) }
+            }
+        case .unavailable:
+            Button("Retry device alerts", systemImage: "arrow.clockwise") { Task { await push.sync() } }
+        }
     }
 
     private var verificationFields: some View {

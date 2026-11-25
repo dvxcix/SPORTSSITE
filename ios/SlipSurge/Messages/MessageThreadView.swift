@@ -12,6 +12,8 @@ struct MessageThreadView: View {
     @State private var error: (any Error)?
     @State private var draft = ""
     @State private var lastSendAttempt: SendAttempt?
+    @State private var picture: URL?
+    @State private var uploading = false
     @State private var composing = false
     @State private var responding: MessageThread.Note?
     @State private var editing: MessageThread.Note?
@@ -31,6 +33,7 @@ struct MessageThreadView: View {
         let id: UUID
         let text: String
         let reply: UUID?
+        let image: URL?
     }
 
     var body: some View {
@@ -252,8 +255,22 @@ struct MessageThreadView: View {
                     .buttonStyle(.borderless).labelStyle(.iconOnly)
                 }
             }
+            if let picture, editing == nil {
+                HStack {
+                    ResearchArtwork(urls: [picture], fallback: "photo").frame(width: 82, height: 56).clipShape(.rect(cornerRadius: 7))
+                    Button("Remove photo", systemImage: "xmark.circle.fill") { self.picture = nil }.labelStyle(.iconOnly)
+                    Spacer()
+                }
+            }
             if thread.canSend || editing != nil {
                 HStack(alignment: .bottom, spacing: 9) {
+                    if editing == nil {
+                        NativePhotoPicker(title: "Attach a photo", upload: { photo in
+                            try await NativeMediaUpload.upload(photo, kind: .messages, account: api.account, userID: api.userID)
+                        }, url: $picture, uploading: $uploading)
+                        .labelStyle(.iconOnly).disabled(composing)
+                        .padding(.vertical, 7)
+                    }
                     TextField("Message", text: $draft, axis: .vertical)
                         .lineLimit(1...5).padding(.horizontal, 12).padding(.vertical, 9)
                         .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 17))
@@ -277,7 +294,7 @@ struct MessageThreadView: View {
         }
         .labelStyle(.iconOnly)
         .tint(Brand.accent(for: scheme))
-        .disabled(composing || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || draft.utf16.count > 1_000)
+        .disabled(composing || uploading || (draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (picture == nil || editing != nil)) || draft.utf16.count > 1_000)
         return Group {
             if #available(iOS 26, *) { button.buttonStyle(.glassProminent) }
             else { button.buttonStyle(.borderedProminent).buttonBorderShape(.circle) }
@@ -326,19 +343,21 @@ struct MessageThreadView: View {
     }
 
     private func send() async {
-        guard !composing else { return }
+        guard !composing, !uploading else { return }
         composing = true
         defer { composing = false }
         let submitted = draft
         let reply = responding?.id
-        if editing == nil, lastSendAttempt?.text != submitted || lastSendAttempt?.reply != reply {
-            lastSendAttempt = .init(id: UUID(), text: submitted, reply: reply)
+        let image = editing == nil ? picture : nil
+        if editing == nil, lastSendAttempt?.text != submitted || lastSendAttempt?.reply != reply || lastSendAttempt?.image != image {
+            lastSendAttempt = .init(id: UUID(), text: submitted, reply: reply, image: image)
         }
         guard let note = editing?.id ?? lastSendAttempt?.id else { return }
         let change = MessagesAPI.Change(action: editing == nil ? "send" : "edit", message: note.uuidString.lowercased(),
-            text: submitted, reply: reply?.uuidString.lowercased())
+            text: submitted, reply: reply?.uuidString.lowercased(), image: image)
         if await perform(change) {
             if draft == submitted { draft = "" }
+            if picture == image { picture = nil }
             editing = nil
             responding = nil
             lastSendAttempt = nil

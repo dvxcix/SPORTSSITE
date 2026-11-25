@@ -81,6 +81,8 @@ struct NativeOnboarding: View {
     @State private var draft: Draft?
     @State private var step = Step.profile
     @State private var teamSearch = ""
+    @State private var uploadingAvatar = false
+    @State private var uploadingBanner = false
     @State private var error: (any Error)?
     @State private var failed = false
     @State private var retry = 0
@@ -112,7 +114,7 @@ struct NativeOnboarding: View {
                         }
                     }
                     .font(.headline).frame(maxWidth: .infinity, minHeight: 44)
-                    .buttonStyle(.borderedProminent).disabled(account.isBusy)
+                    .buttonStyle(.borderedProminent).disabled(account.isBusy || uploadingAvatar || uploadingBanner)
                 } else {
                     ResearchToolMessage(title: "Setup couldn’t load", error: error) { retry += 1 }
                 }
@@ -131,8 +133,23 @@ struct NativeOnboarding: View {
         switch step {
         case .profile:
             VStack(alignment: .leading, spacing: 12) {
-                ResearchArtwork(urls: initial.avatarUrl.map { [$0] } ?? [], fallback: "person.crop.circle.fill")
-                    .frame(width: 64, height: 64).clipShape(.circle)
+                ZStack(alignment: .bottomLeading) {
+                    if let banner = draft.bannerUrl.wrappedValue, FeedPostCard.allowedMedia(banner) {
+                        ResearchArtwork(urls: [banner], fallback: "photo").frame(maxWidth: .infinity, maxHeight: 130)
+                    }
+                    let avatar = draft.avatarUrl.wrappedValue.flatMap { FeedPostCard.allowedMedia($0) ? [$0] : nil } ?? []
+                    ResearchArtwork(urls: avatar, fallback: "person.crop.circle.fill")
+                        .frame(width: 64, height: 64).clipShape(.circle).padding(5)
+                }
+                HStack {
+                    NativePhotoPicker(title: "Profile photo", upload: { try await account.uploadSetupPhoto($0, kind: .avatars) },
+                        url: draft.avatarUrl, uploading: $uploadingAvatar)
+                        .disabled(uploadingBanner)
+                    Spacer()
+                    NativePhotoPicker(title: "Cover photo", upload: { try await account.uploadSetupPhoto($0, kind: .banners) },
+                        url: draft.bannerUrl, uploading: $uploadingBanner)
+                        .disabled(uploadingAvatar)
+                }
                 if let username = initial.username { Text("@\(username)").font(.subheadline).foregroundStyle(.secondary) }
                 TextField("Display name", text: draft.displayName).textContentType(.name).textFieldStyle(.roundedBorder)
                 TextField("Bio", text: draft.bio, axis: .vertical).lineLimit(3...5).textFieldStyle(.roundedBorder)
