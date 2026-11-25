@@ -2687,3 +2687,7 @@ physical-device push are still open.
   data checks covered a newer provider packet, a stale packet, grouped
   substitutions, exact play targets, period breaks, and pending free
   throws. The native and production suites passed 287/287.
+- Final Feed observation from the iPhone 18 Pro simulator on code
+  checkpoint 6dc6117d showed MIA/PHI change from 56–70 to 58–70 to 58–72
+  without leaving Feed or manually refreshing. The clock advanced in the
+  same tile. The physical iPhone remained on the same game’s play feed.
