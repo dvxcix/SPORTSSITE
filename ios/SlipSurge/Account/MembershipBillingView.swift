@@ -3,39 +3,28 @@ import SwiftUI
 
 struct MembershipBillingView: View {
     private enum Offer: String, CaseIterable {
-        case monthly = "Monthly"
-        case annual = "Annual"
-        case discord = "Discord offer"
+        case monthly, annual, discord
 
-        var id: String {
-            switch self {
-            case .monthly: "plan_2uISqRWL3Re5v"
-            case .annual: "plan_Brp4I5MDssXY0"
-            case .discord: "plan_Q1Ey6RMgjS9XQ"
-            }
-        }
-
-        var price: String? {
-            switch self {
-            case .monthly: "$19.99 every 30 days"
-            case .annual: "$199.99 every 365 days"
-            case .discord: nil
-            }
-        }
+        var title: String { self == .discord ? "Discord offer" : rawValue.capitalized }
     }
 
     private struct Snapshot: Decodable {
         struct Existing: Decodable {
+            struct Quote: Decodable { let id: String; let price: String; let days: Int; let trialDays: Int }
             let purchasedTier: String
             let status: String?
             let currentPeriodEnd: String?
             let cancelAtPeriodEnd: Bool
             let provider: String?
-            let discordClaim: Bool?
+            let planLabel: String?
+            let connectedWhop: Bool?
+            let betaAccess: Bool?
+            let billingOptions: [String: Quote]?
         }
 
         let id: UUID
         let accessTier: String
+        let role: String?
         let membership: Existing
     }
 
@@ -55,14 +44,34 @@ struct MembershipBillingView: View {
     @State private var error: (any Error)?
     @State private var retry = 0
 
+    init(account: AccountStore, userID: UUID, preferredBillingPeriod: String = "monthly", refreshAccount: @escaping () async -> Void) {
+        self.account = account
+        self.userID = userID
+        self.refreshAccount = refreshAccount
+        _offer = State(initialValue: Offer(rawValue: preferredBillingPeriod) ?? .monthly)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 if let snapshot {
                     membershipCard(snapshot)
-                    if snapshot.membership.purchasedTier == "free", snapshot.accessTier != "ultimate", storefront == "USA" {
-                        choosePlan(discord: snapshot.membership.discordClaim == true)
+                    if snapshot.membership.connectedWhop == false {
+                        NavigationLink {
+                            AccountConnectionsView(api: .init(account: account, userID: userID), focusedProvider: .whop)
+                        } label: {
+                            Label { Text("Connect Whop") } icon: {
+                                Image("sign-in-whop").resizable().scaledToFit().frame(width: 22, height: 22)
+                            }
+                        }.buttonStyle(.bordered)
                     }
+                    if storefront == "USA", let options = snapshot.membership.billingOptions, !options.isEmpty {
+                        choosePlan(options)
+                    }
+                    NavigationLink {
+                        CreatorMembershipsView(api: .init(client: .init(account: account, userID: userID)))
+                    } label: { Label("Creator subscriptions", systemImage: "person.2") }
+                        .buttonStyle(.bordered)
                 } else {
                     ResearchToolMessage(title: "Membership couldn’t load", error: error) { retry += 1 }
                 }
@@ -91,7 +100,7 @@ struct MembershipBillingView: View {
         .confirmationDialog("Cancel renewal?", isPresented: $confirmCancel, titleVisibility: .visible) {
             Button("Cancel renewal", role: .destructive) { Task { await cancel() } }
         } message: {
-            Text("Your current benefits stay active through the end of the paid period.")
+            Text("Paid access continues through the end of your billing period. Trial access may end immediately.")
         }
     }
 
@@ -99,8 +108,13 @@ struct MembershipBillingView: View {
         ResearchToolCard(color: Brand.accent(for: scheme)) {
             Label("\(snapshot.accessTier.capitalized) access", systemImage: "bolt.fill").font(.title3.weight(.bold))
         } content: {
-            LabeledContent("Purchased plan", value: snapshot.membership.purchasedTier.capitalized)
+            LabeledContent("Purchased plan", value: snapshot.membership.planLabel ?? snapshot.membership.purchasedTier.capitalized)
             if snapshot.membership.provider == "whop" { LabeledContent("Billed through", value: "Whop") }
+            if snapshot.role == "admin" {
+                Label("Full access as an administrator", systemImage: "checkmark.shield").font(.caption).foregroundStyle(.secondary)
+            } else if snapshot.membership.betaAccess == true {
+                Text("Beta access is active for included tools. NBA research requires Ultimate.").font(.caption).foregroundStyle(.secondary)
+            }
             if let status = snapshot.membership.status {
                 LabeledContent("Status", value: status.replacingOccurrences(of: "_", with: " ").capitalized)
             }
@@ -111,18 +125,24 @@ struct MembershipBillingView: View {
             if snapshot.membership.provider == "whop", snapshot.membership.purchasedTier != "free", !snapshot.membership.cancelAtPeriodEnd {
                 Button("Cancel renewal", role: .destructive) { confirmCancel = true }
                     .font(.subheadline.weight(.semibold)).disabled(operation)
+            } else if snapshot.membership.provider == nil, snapshot.membership.purchasedTier != "free", !snapshot.membership.cancelAtPeriodEnd {
+                Link("Manage Whop billing", destination: URL(string: "https://whop.com/account")!)
             }
         }
     }
 
-    private func choosePlan(discord: Bool) -> some View {
+    private func choosePlan(_ options: [String: Snapshot.Existing.Quote]) -> some View {
         ResearchToolCard(color: Brand.accent(for: scheme)) {
             Text("Ultimate").font(.title2.weight(.heavy))
         } content: {
-            ResearchToolRail(title: "Billing period", choices: discord ? [.discord, .annual] : [.monthly, .annual],
-                selection: $offer, label: \.rawValue) { $0 == .discord ? "person.2" : "calendar" }
-            if let price = offer.price { Text(price).font(.headline.monospacedDigit()) }
-            if offer == .monthly { Text("3-day free trial for eligible new members.").font(.caption).foregroundStyle(.secondary) }
+            ResearchToolRail(title: "Billing period", choices: [Offer.monthly, .discord, .annual].filter { options[$0.rawValue] != nil },
+                selection: $offer, label: \.title) { $0 == .discord ? "person.2" : "calendar" }
+            if let quote = options[offer.rawValue] {
+                Text("\(quote.price) every \(quote.days) days").font(.headline.monospacedDigit())
+                if quote.trialDays > 0 {
+                    Text("\(quote.trialDays)-day free trial for eligible new members.").font(.caption).foregroundStyle(.secondary)
+                }
+            }
             ForEach(["Full NFL and NBA slates", "The Sideline and The Court", "Odds Boards, player research and ladders"], id: \.self) {
                 Label($0, systemImage: "checkmark").font(.subheadline)
             }
@@ -131,14 +151,14 @@ struct MembershipBillingView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image("sign-in-whop").renderingMode(.template).resizable().scaledToFit().frame(width: 21, height: 21)
-                    Text("Continue with Whop").font(.headline)
+                    Text(offer == .discord ? "Add Ultimate with Whop" : "Continue with Whop").font(.headline)
                     Spacer()
                     if operation { ProgressView() }
                 }
                 .padding(.horizontal, 12).frame(minHeight: 47)
                 .foregroundStyle(Color(rgb: 0x150E0C)).background(Color(rgb: 0xFA4616), in: .rect(cornerRadius: 12))
             }
-            .buttonStyle(SlipSurgePressStyle()).disabled(operation)
+            .buttonStyle(SlipSurgePressStyle()).disabled(operation || options[offer.rawValue] == nil)
         }
     }
 
@@ -150,7 +170,8 @@ struct MembershipBillingView: View {
             guard result.id == userID else { throw URLError(.cannotParseResponse) }
             if !Task.isCancelled {
                 snapshot = result
-                if offer == .monthly, result.membership.discordClaim == true { offer = .discord }
+                if let options = result.membership.billingOptions, options[offer.rawValue] == nil,
+                   let available = [Offer.discord, .monthly, .annual].first(where: { options[$0.rawValue] != nil }) { offer = available }
                 error = nil
             }
         } catch {
@@ -159,14 +180,14 @@ struct MembershipBillingView: View {
     }
 
     private func checkout() async {
-        guard !operation, storefront == "USA" else { return }
+        guard !operation, storefront == "USA", let quote = snapshot?.membership.billingOptions?[offer.rawValue] else { return }
         operation = true
         notice = nil
         defer { operation = false }
         do {
             struct Checkout: Decodable { let purchaseUrl: URL }
             let state = try ProviderSignIn.randomValue()
-            let data = try await send("/api/whop/checkout-session", values: ["planId": offer.id, "state": state])
+            let data = try await send("/api/whop/checkout-session", values: ["planId": quote.id, "state": state])
             let url = try JSONDecoder().decode(Checkout.self, from: data).purchaseUrl
             guard url.scheme == "https", url.user == nil, url.password == nil, url.port == nil,
                   let domain = url.host?.lowercased(), domain == "whop.com" || domain.hasSuffix(".whop.com") else {

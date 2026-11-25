@@ -379,6 +379,15 @@ struct AccountWorkspaceView: View {
                 NavigationLink { AdminEmailOperationsView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Email operations", systemImage: "envelope.badge.shield.half.filled") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink { AdminWhopView(api: .init(account: account, userID: userID)) } label: {
+                    ResearchToolCard(color: Color(rgb: 0xFA4616)) {
+                        Label {
+                            Text("Whop payments")
+                        } icon: {
+                            Image("sign-in-whop").resizable().scaledToFit().frame(width: 22, height: 22)
+                        }
+                    } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
             } else {
                 NavigationLink { AdminPipelineHealthView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Pipeline health", systemImage: "waveform.path") } content: {}

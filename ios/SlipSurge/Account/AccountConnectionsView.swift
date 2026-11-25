@@ -3,6 +3,7 @@ import SwiftUI
 
 struct AccountConnectionsView: View {
     let api: AccountConnectionsAPI
+    var focusedProvider: SignInProvider? = nil
 
     @Environment(\.webAuthenticationSession) private var browser
     @Environment(\.colorScheme) private var scheme
@@ -17,7 +18,7 @@ struct AccountConnectionsView: View {
         ScrollView {
             VStack(spacing: 13) {
                 if let connections {
-                    ForEach(connections) { card($0) }
+                    ForEach(connections.filter { focusedProvider == nil || $0.provider == focusedProvider }) { card($0) }
                 } else if failure == nil {
                     ProgressView("Loading connections").padding(24)
                 } else {
@@ -34,7 +35,7 @@ struct AccountConnectionsView: View {
         }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
-        .navigationTitle("Connected accounts")
+        .navigationTitle(focusedProvider?.title ?? "Connected accounts")
         .navigationBarTitleDisplayMode(.inline)
         .task { try? await load() }
         .refreshable { try? await load() }

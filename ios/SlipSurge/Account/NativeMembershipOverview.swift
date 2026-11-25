@@ -85,7 +85,7 @@ struct NativeMembershipOverview: View {
             if ultimate {
                 NavigationLink {
                     if let userID = account.memberID {
-                        MembershipBillingView(account: account, userID: userID, refreshAccount: {})
+                        MembershipBillingView(account: account, userID: userID, preferredBillingPeriod: billingPeriod, refreshAccount: {})
                     } else {
                         AccountSignInView(account: account, appearance: $appearance)
                     }

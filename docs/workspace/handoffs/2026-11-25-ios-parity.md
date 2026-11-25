@@ -1872,7 +1872,9 @@ physical-device push are still open.
   `dpl_Eft6wJGFUKyPCjcDF6hyAYmurYUq` and production
   `dpl_27Gk6sRiaaGSc3QDRwaNaEcjQi32` were READY. Signed live Browserbase
   showed the actual spending thresholds, cost summary, extractors and
-  sessions tabs. Guest requests to both admin routes and Edit Profile
+  sessions tabs. Signed Social Platforms loaded the configured provider
+  artwork, and Edit Profile showed the public social-links section.
+  Guest requests to both admin routes and Edit Profile
   returned 401. Public Feed returned 200. No admin writes or sessions ran.
 
 ## Native email operations and Feed resume anchors · 25 November 2026
@@ -1890,5 +1892,29 @@ physical-device push are still open.
   anchor when present. Older saves and missing posts use the scroll offset.
 - The signed iPhone 18 Pro Simulator build passed. Five targeted email and
   resume tests passed, including provider idempotency, account scoping and
-  the stored post anchor. Signed verification of the revised anchor and
-  rendered email preview follows this checkpoint.
+  the stored post anchor. Task `0c164b2ca75ee67bfb6993c41b9d7a8b2c49cc3d`
+  is pushed. PR #70 merged as `d95e60c201b64bf7f26bf122b134085aeba21008`.
+  Preview `dpl_2czt67yBmeJ7sRRMiRFG3YJC6gqH` and production
+  `dpl_5yhQ8oVSqKT6fA1GYbXeDwCbhiXp` were READY. The signed Simulator
+  displayed the Resend indicators and rendered the exact branded Security
+  email. The signed-webhooks indicator reported setup is needed. No test
+  email was sent. Guest email operations and template reads returned 401.
+
+## Native Whop merchant controls and membership billing · 25 November 2026
+
+- Whop Payments adds the commerce ledger and account-scoped fee table,
+  connection and webhook readiness, the explicitly confirmed native
+  creator-event test control and the original read-only billing verification.
+  The verification keeps its separate AAL2 rule, rate limit, provider
+  ownership checks and boolean-only results. Browser requests keep the
+  existing origin and assurance requirements.
+- Member billing reads current eligible offer IDs and pricing from the shared
+  membership policy. The native screen opens the selected term, shows the
+  existing plan label, links Whop accounts through the native connection
+  screen and opens creator subscriptions. It preserves the server's
+  purchased-tier and access gates and communicates the possible immediate
+  end of trial access when canceling.
+- Signed Simulator build, Hub TypeScript, 134 baseline tests, and 52
+  commerce, provider and billing verification checks passed. Live read
+  checks follow the API deployment. No checkouts, cancellations, provider
+  delivery tests, billing repairs or money movement ran in production QA.

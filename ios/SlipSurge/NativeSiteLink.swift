@@ -16,6 +16,7 @@ enum NativeSiteLink: Hashable {
     case nflEntity(NflDirectoryEntityView.Kind, String)
     case mlbTeam(Int)
     case adminMarketplace, adminCreatorBusiness, adminPipelineHealth, adminBrowserAutomation, adminSocialPlatforms, adminEmail, adminDiscord, adminDiscordComposer
+    case adminWhop(AdminWhopView.Page)
     case eventCreate, threadCreate(String?), storyCreate
 
     enum CommunitySection: Hashable {
@@ -137,6 +138,9 @@ enum NativeSiteLink: Hashable {
         case ["admin", "browserbase"]: self = .adminBrowserAutomation
         case ["admin", "social-platforms"]: self = .adminSocialPlatforms
         case ["admin", "settings", "email"]: self = .adminEmail
+        case ["admin", "monetization"]: self = .adminWhop(.activity)
+        case ["admin", "settings", "payments"]: self = .adminWhop(.connection)
+        case ["admin", "whop-renewal-shape"]: self = .adminWhop(.verification)
         case ["admin", "discord"]: self = .adminDiscord
         case ["admin", "discord", "compose"]: self = .adminDiscordComposer
         default:
@@ -246,7 +250,7 @@ enum NativeSiteLink: Hashable {
         case .notifications, .activityReplay, .missions, .search, .topic, .explore, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
             .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .creatorStoreSetup, .communityCreator, .researchWorkspace, .admin,
             .marketplace, .nbaEntity, .nflEntity, .mlbTeam, .creatorAccess, .adminMarketplace, .adminCreatorBusiness, .adminPipelineHealth,
-            .adminBrowserAutomation, .adminSocialPlatforms, .adminEmail, .adminDiscord, .adminDiscordComposer,
+            .adminBrowserAutomation, .adminSocialPlatforms, .adminEmail, .adminDiscord, .adminDiscordComposer, .adminWhop,
             .eventCreate, .threadCreate, .storyCreate,
             .community(_, .settings), .community(_, .channels): true
         default: false

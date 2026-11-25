@@ -5,7 +5,7 @@ import { getWhopPlatformCompanyId } from '@/lib/whopPlatform'
 import { whopFeeRows } from '@/lib/creatorFees'
 import { safeApiError } from '@/lib/safeApiError'
 export async function GET(request:Request){
- const auth=await creatorAdminAuth();if('error' in auth)return NextResponse.json({error:auth.error},{status:auth.status})
+ const auth=await creatorAdminAuth(request);if('error' in auth)return NextResponse.json({error:auth.error},{status:auth.status})
  try{
   const creatorId=new URL(request.url).searchParams.get('creator')
   let accountId=getWhopPlatformCompanyId()
