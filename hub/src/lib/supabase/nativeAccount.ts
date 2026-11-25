@@ -5,7 +5,7 @@ import { ownOnboardingComplete } from './ownOnboarding'
 
 const headers = { 'Cache-Control': 'private, no-store' }
 
-export async function requireNativeAccount(request: Request) {
+export async function requireNativeAccount(request: Request, { allowSetup = false } = {}) {
   const token = request.headers.get('authorization')?.match(/^Bearer\s+(\S+)$/i)?.[1]
   if (!token) return { error: NextResponse.json({ error: 'Sign in required' }, { status: 401, headers }) }
 
@@ -19,7 +19,7 @@ export async function requireNativeAccount(request: Request) {
     if (assurance.nextLevel === 'aal2' && assurance.currentLevel !== 'aal2') {
       return { error: NextResponse.json({ error: 'Two-factor verification required', code: 'MFA_REQUIRED' }, { status: 403, headers }) }
     }
-    if (!await ownOnboardingComplete(supabase)) {
+    if (!allowSetup && !await ownOnboardingComplete(supabase)) {
       return { error: NextResponse.json({ error: 'Finish your SlipSurge account setup', code: 'ONBOARDING_REQUIRED' }, { status: 403, headers }) }
     }
     return { supabase, userId }

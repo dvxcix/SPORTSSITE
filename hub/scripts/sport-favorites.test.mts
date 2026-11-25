@@ -156,12 +156,13 @@ test('normalizer keeps eight players from each league and bounds only that leagu
 })
 
 test('onboarding persists MLB, NFL and NBA favorites for every account tier', async () => {
-  const source = await readFile(new URL('../src/app/api/account/onboarding/route.ts', import.meta.url), 'utf8')
+  const source = await readFile(new URL('../src/lib/accountOnboardingServer.ts', import.meta.url), 'utf8')
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   for (const [entitlement, allowed] of [[{ account_type: 'admin' }, true], [{ account_type: 'user' }, true], [{ account_type: 'user', tier: 'ultimate' }, true], [{ account_type: 'user', tier: 'free', admin_granted_tier: 'ultimate' }, true]] as const) {
     let saved: Record<string, unknown> | null = null
     const profile = { id: 'owner', ...entitlement, favorite_teams: ['NYY'], favorite_players: [mlb], notification_settings: { dm: true }, interest_settings: {} }
     const imports: Record<string, unknown> = {
+      'server-only': {},
       'next/server': { NextResponse: { json: (body: unknown, options?: { status?: number }) => ({ body, status: options?.status ?? 200 }) } },
       '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'owner' } } }) } }) },
       '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: profile }) }) }), update: (value: Record<string, unknown>) => ({ eq: async () => { saved = value; return { error: null } } }) }) }) },
@@ -170,9 +171,9 @@ test('onboarding persists MLB, NFL and NBA favorites for every account tier', as
       '@/lib/favoriteCatalog': { getFavoriteCatalog: async () => catalog },
       '@/lib/safeApiError': { safeApiError: () => ({ status: 500 }) },
     }
-    const mod = { exports: {} as { POST: (request: Request) => Promise<{ status: number }> } }
+    const mod = { exports: {} as { saveAccountOnboarding: (request: Request, userId: string) => Promise<{ status: number }> } }
     new Function('require', 'exports', 'module', compiled)((key: string) => { assert.ok(key in imports, key); return imports[key] }, mod.exports, mod)
-    const result = await mod.exports.POST(new Request('https://example.com/api/account/onboarding', { method: 'POST', body: JSON.stringify({ displayName: 'Owner', teams: ['NYY', 'NFL:ATL', 'NBA:1'], favoritePlayers: [mlb, nfl, nba] }) }))
+    const result = await mod.exports.saveAccountOnboarding(new Request('https://example.com/api/account/onboarding', { method: 'POST', body: JSON.stringify({ displayName: 'Owner', teams: ['NYY', 'NFL:ATL', 'NBA:1'], favoritePlayers: [mlb, nfl, nba] }) }), 'owner')
     assert.equal(result.status, 200)
     assert.ok(saved)
     const values = saved as Record<string, unknown>
