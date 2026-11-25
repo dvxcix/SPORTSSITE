@@ -124,3 +124,42 @@ Mac's personal skill directory and were not applied to this native screen.
   saved work, social/creator features and notifications. The next code
   milestone is native session handling and one member-only research flow.
   This review checkpoint changes documentation only.
+
+## Native account and research checkpoint · 25 November 2026
+
+- Scope confirmed by the owner: complete website parity with phone-sized SwiftUI
+  flows across guest, regular, Ultimate, creator and admin accounts. Covers
+  authentication with Discord, X and Whop, payments, social/feeds, all research
+  and existing brand/team/player/sportsbook artwork. See the native acceptance
+  table in `docs/ios/README.md` and the full web source inventory and page ledger.
+- Implemented native Home, Research and Account navigation, configured email
+  sign-in for the Mac's development build and added Keychain persistence,
+  serialized renewal, TOTP challenge handling, sign-out and the website's
+  existing onboarding check. External registration, recovery and browse links
+  remain available while native work continues.
+- Added The Court's scoped pregame preview, including real team artwork,
+  roster, player details, observed averages and sportsbook prices. Added
+  site-sourced primary and secondary gradients, portraits and sportsbook logos
+  to the Court and Sideline. The member Sideline client uses the existing
+  protected odds endpoint. Added branch-only aliases for the member Court
+  schedule and board, with account, MFA and onboarding checks ahead of the
+  original tier-gated readers.
+- Simulator: signed Debug build and launch on iPhone 18 Pro / iOS 27.2.
+  Observed the saved Detroit–Orlando snapshot and John Collins's team artwork,
+  11.1 points average and the FanDuel 12.5 line (over −102, under −125).
+  Verified one synthetic invalid login shows the native error and clears the
+  password. The Simulator Keychain initializes with simulator-only signing
+  entitlements. No successful member login, refresh/logout round trip or
+  actual authenticator challenge has been claimed.
+- Server fixtures verified native Court rejections and exact delegation, and
+  the existing public workspace checks still pass (8 total). The unchanged web
+  production source smoke suite passed 134/134.
+- Backend aliases have not been deployed. No production database, payment,
+  access grant, connected-account setting or notification delivery was changed.
+  The user can enter an existing account directly in Simulator if available for
+  a positive check. Never request credentials through chat.
+- Continue with real member verification, secure native Discord/X/Whop handoff,
+  the public/member feed and remaining parity ledger. The web cookie feed
+  pagination endpoint responds 401 for signed-out callers. Reuse its existing
+  RLS, filtering and spoiler rules in a bounded native read interface before
+  certifying the guest or member feed.

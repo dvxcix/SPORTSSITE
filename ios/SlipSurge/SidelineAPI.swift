@@ -12,13 +12,15 @@ struct SidelineBoard: Decodable {
         let game: String
         let abbreviation: String
         let logo: URL?
+        let primary: String
+        let secondary: String
 
         init(from decoder: Decoder) throws {
             var row = try decoder.unkeyedContainer()
             game = try row.decode(String.self)
             abbreviation = try row.decode(String.self)
-            _ = try row.decode(String.self) // Primary team color
-            _ = try row.decode(String.self) // Secondary team color
+            primary = try row.decode(String.self)
+            secondary = try row.decode(String.self)
             logo = try row.decodeIfPresent(URL.self)
         }
     }
@@ -110,7 +112,7 @@ struct SidelineBoard: Decodable {
         return deadline
     }
 
-    private static func timestamp(_ value: String) -> Date? {
+    static func timestamp(_ value: String) -> Date? {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.date(from: value) ?? ISO8601DateFormatter().date(from: value)
@@ -123,31 +125,47 @@ struct OddsSelection: Equatable {
 }
 
 struct SidelineAPI {
-    func board(for selection: OddsSelection) async throws -> SidelineBoard {
-        var url = URLComponents()
-        url.scheme = "https"
-        url.host = "www.slipsurge.com"
-        url.path = "/preview/nfl/data"
-        url.queryItems = [
-            URLQueryItem(name: "resource", value: "/api/the-sideline/odds-board"),
+    enum Scope {
+        case featured
+        case member(AccountStore, UUID)
+    }
+
+    var scope: Scope = .featured
+
+    var isFeatured: Bool {
+        if case .featured = scope { return true }
+        return false
+    }
+
+    func board(for selection: OddsSelection, date: String) async throws -> SidelineBoard {
+        let resource = "/api/the-sideline/odds-board"
+        let filters = [
             URLQueryItem(name: "market", value: selection.market),
             URLQueryItem(name: "book", value: selection.book)
         ]
-        guard let endpoint = url.url else { throw URLError(.badURL) }
-        var request = URLRequest(url: endpoint, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 120)
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        let session = URLSession(configuration: .ephemeral)
-        defer { session.finishTasksAndInvalidate() }
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse,
-              http.url?.host == url.host, http.statusCode == 200 else {
-            throw URLError(.badServerResponse)
+        let board: SidelineBoard
+        switch scope {
+        case .featured:
+            board = try await SlipSurgeHTTP.get(
+                "/preview/nfl/data", query: [URLQueryItem(name: "resource", value: resource)] + filters
+            )
+        case .member(let account, let userID):
+            let query = [URLQueryItem(name: "date", value: date)] + filters
+            let token = try await account.accessToken(for: userID)
+            do {
+                board = try await SlipSurgeHTTP.get(resource, query: query, token: token)
+            } catch let error as SlipSurgeHTTP.Status where error.code == 401 {
+                let refreshed = try await account.accessToken(for: userID, replacing: token)
+                board = try await SlipSurgeHTTP.get(resource, query: query, token: refreshed)
+            }
         }
-        let board = try JSONDecoder().decode(SidelineBoard.self, from: data)
+
+        let gameIDs = Set(board.games.map(\.id))
         guard board.market == selection.market, board.book == selection.book,
-              board.games.count <= 1,
+              (isFeatured ? board.games.count <= 1 : board.date == date && board.games.count <= 24),
+              gameIDs.count == board.games.count,
               board.quotes.allSatisfy({ quote in
-                  quote.id.player.game == board.games.first?.id &&
+                  gameIDs.contains(quote.id.player.game) &&
                   quote.id.market == selection.market && quote.id.book == selection.book
               }),
               Set(board.quotes.map(\.id)).count == board.quotes.count else {

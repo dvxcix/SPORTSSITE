@@ -5,12 +5,13 @@ struct SidelineView: View {
         case loading
         case loaded(SidelineBoard)
         case failed
+        case denied
     }
 
     let api: SidelineAPI
-    @Binding var appearance: Appearance
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
+    @State private var slateDate = Date.now
     @State private var selection = OddsSelection()
     @State private var revision = 0
     @State private var state = LoadState.loading
@@ -19,17 +20,31 @@ struct SidelineView: View {
 
     var body: some View {
         List {
+            if !api.isFeatured {
+                DatePicker("Slate date", selection: $slateDate, in: ...Date.now, displayedComponents: .date)
+                    .environment(\.timeZone, SlateDate.zone)
+                    .listRowBackground(Brand.surface(for: scheme))
+            }
             switch state {
             case .loading:
-                ProgressView("Loading featured matchup")
+                ProgressView("Loading NFL research")
                     .listRowBackground(Brand.surface(for: scheme))
             case .failed:
                 ContentUnavailableView {
                     Label("Research unavailable", systemImage: "wifi.exclamationmark")
                 } description: {
-                    Text("The featured matchup could not load.")
+                    Text("NFL research could not load.")
                 } actions: {
                     Button("Retry") { revision += 1 }
+                }
+                .listRowBackground(Brand.surface(for: scheme))
+            case .denied:
+                ContentUnavailableView {
+                    Label("Sideline access required", systemImage: "lock")
+                } description: {
+                    Text("The full slate requires Ultimate membership or NFL early access.")
+                } actions: {
+                    NavigationLink("View featured matchup") { SidelineView(api: SidelineAPI()) }
                 }
                 .listRowBackground(Brand.surface(for: scheme))
             case let .loaded(board):
@@ -41,20 +56,8 @@ struct SidelineView: View {
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))
         .navigationTitle("The Sideline")
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Picker("Appearance", selection: $appearance) {
-                        ForEach(Appearance.allCases, id: \.self) { option in
-                            Text(option.rawValue).tag(option)
-                        }
-                    }
-                } label: {
-                    Label("Appearance", systemImage: "circle.lefthalf.filled")
-                }
-            }
-        }
         .task(id: revision) { await loadAndRevalidate() }
+        .onChange(of: slateDate) { _, _ in revision += 1 }
         .refreshable { revision += 1 }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active, case .loaded = state { revision += 1 }
@@ -63,9 +66,9 @@ struct SidelineView: View {
 
     @ViewBuilder
     private func boardSections(_ board: SidelineBoard) -> some View {
-        Section("NFL featured matchup · \(board.date)") {
+        Section("\(api.isFeatured ? "NFL featured matchup" : "NFL slate") · \(board.date)") {
             if board.games.isEmpty {
-                Text("No featured matchup available.")
+                Text("No NFL matchups available.")
             }
             ForEach(board.games) { game in
                 HStack {
@@ -87,10 +90,8 @@ struct SidelineView: View {
                 Picker("Market", selection: $selection.market) {
                     ForEach(markets, id: \.self) { Text(label($0)).tag($0) }
                 }
-                Picker("Sportsbook", selection: $selection.book) {
-                    ForEach(books, id: \.self) { Text(label($0)).tag($0) }
-                }
-                .disabled(board.books.isEmpty)
+                SportsbookPicker(books: books, selection: $selection.book)
+                    .disabled(board.books.isEmpty)
             }
             .onChange(of: selection) { _, _ in revision += 1 }
             .listRowBackground(Brand.surface(for: scheme))
@@ -100,17 +101,27 @@ struct SidelineView: View {
             Text("No verified prices for this selection.")
                 .listRowBackground(Brand.surface(for: scheme))
         } else {
-            Section {
-                ForEach(board.quotes) { quote in
-                    QuoteRow(
-                        quote: quote,
-                        artwork: board.identities.first { $0.player == quote.id.player }?.urls ?? []
-                    )
+            let byGame = Dictionary(grouping: board.quotes, by: { $0.id.player.game })
+            let portraits = Dictionary(grouping: board.identities, by: \.player)
+            let teamLooks = Dictionary(grouping: board.teams, by: \.game)
+            ForEach(board.games) { game in
+                if let quotes = byGame[game.id] {
+                    Section {
+                        ForEach(quotes) { quote in
+                            QuoteRow(
+                                quote: quote,
+                                artwork: portraits[quote.id.player]?.first?.urls ?? [],
+                                team: teamLooks[game.id]?.first { $0.abbreviation == quote.id.player.team }
+                            )
+                        }
+                    } header: {
+                        Text("\(game.away) at \(game.home) · \(Sportsbook.name(board.book))")
+                    } footer: {
+                        Text("Prices reflect the recorded pregame observations.")
+                    }
+                    .listRowBackground(Brand.surface(for: scheme))
                 }
-            } footer: {
-                Text("Prices reflect the recorded pregame observations.")
             }
-            .listRowBackground(Brand.surface(for: scheme))
         }
     }
 
@@ -128,7 +139,7 @@ struct SidelineView: View {
         state = .loading
         let requested = selection
         do {
-            let board = try await api.board(for: requested)
+            let board = try await api.board(for: requested, date: SlateDate.key(slateDate))
             try Task.checkCancellation()
             let deadline = try board.refreshDeadline()
             markets = Array(Set(board.markets + [requested.market])).sorted()
@@ -138,6 +149,8 @@ struct SidelineView: View {
                 try await Task.sleep(for: .seconds(max(0, deadline.timeIntervalSinceNow)))
                 revision += 1
             }
+        } catch let error as SlipSurgeHTTP.Status where error.code == 403 && !api.isFeatured {
+            if !Task.isCancelled { state = .denied }
         } catch {
             if !Task.isCancelled { state = .failed }
         }
@@ -159,11 +172,15 @@ struct SidelineView: View {
 private struct QuoteRow: View {
     let quote: SidelineBoard.Quote
     let artwork: [URL]
+    let team: SidelineBoard.Team?
 
     var body: some View {
         HStack(alignment: .top) {
-            ResearchArtwork(urls: artwork, fallback: "person.crop.circle")
-                .frame(width: 36, height: 36)
+            PlayerArtwork(
+                portraits: artwork, logo: team?.logo,
+                primary: Color(hex: team?.primary) ?? Color(rgb: 0x263542),
+                secondary: Color(hex: team?.secondary) ?? Color(rgb: 0x141C25)
+            )
             VStack(alignment: .leading, spacing: 3) {
                 Text(quote.id.player.name).font(.headline)
                 Text("\(quote.id.player.team) · \(quote.position)")
@@ -179,33 +196,5 @@ private struct QuoteRow: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Line \(quote.id.line.formatted()), odds \(quote.price)")
         }
-    }
-}
-
-private struct ResearchArtwork: View {
-    let urls: [URL]
-    let fallback: String
-    @State private var attempt = 0
-
-    var body: some View {
-        Group {
-            if urls.indices.contains(attempt) {
-                AsyncImage(url: urls[attempt]) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFit()
-                    case .failure:
-                        Image(systemName: fallback)
-                            .task { attempt += 1 }
-                    default:
-                        Image(systemName: fallback)
-                    }
-                }
-            } else {
-                Image(systemName: fallback)
-            }
-        }
-        .onChange(of: urls) { _, _ in attempt = 0 }
-        .accessibilityHidden(true)
     }
 }

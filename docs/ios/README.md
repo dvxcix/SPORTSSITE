@@ -173,3 +173,39 @@ The signed-out Sideline preview is implemented. It uses the existing public
 one-game dispatcher, so it needs an internet connection and no credentials or
 local backend. See the [Mac checkpoint](../workspace/handoffs/2026-11-25-ios-parity.md#mac-implementation-checkpoint--25-november-2026)
 for verified behavior, limits and the next member-session slice.
+
+## Native parity acceptance
+
+Use the website source inventory and the dated page-by-page ledger together.
+A route counts as verified when its mobile interactions, server permissions,
+data fidelity and failure states have been exercised for the applicable roles.
+Safari links are usable entry points while native screens are being built. Keep
+their native implementations open in this ledger.
+
+| Flow | Current native coverage | Still open |
+| --- | --- | --- |
+| Visitor and discovery | SwiftUI Home and Research tabs, one featured matchup for NBA and NFL, external entry points for public browsing and legal pages | Native public feed, creator and community discovery, profiles, scores, records, pricing and remaining external pages |
+| Identity | Native email/password form, Keychain session storage, refresh and local sign-out, authenticator code and onboarding-status logic | Positive account, refresh, logout and TOTP device tests, provider sign-in for Discord/X/Whop, Apple-equivalent login for distribution, registration, recovery, onboarding and linked accounts |
+| Research | Sideline's featured NFL odds and authenticated slate client, Court's featured NBA roster, frozen averages and player odds. Both use website artwork and team colors | Authenticated role testing, Court endpoint release, remaining NBA/NFL tools and Live views, MLB, score tools, histories, saved research, watchlists and resume |
+| Social | Public website entry points from Home | Native feed, composer, picks, reactions, comments, reposts, polls, bookmarks, reports, blocking, moderation, communities, channels, messages and notifications |
+| Membership, creators and admins | Existing server tier checks retained for research requests | StoreKit and region-specific checkout and restore, Whop entitlement continuity, creator and admin workspaces and their role/assurance checks |
+
+### Local account configuration
+
+Set the primary Supabase project's **publishable client key** as
+`SLIPSURGE_SUPABASE_PUBLISHABLE_KEY` in the ignored `ios/LocalAuth.xcconfig`.
+Use the simulator's normal Xcode signing for account work so that Keychain is
+available. The repository still builds the public research app without account
+configuration. Keep account credentials and tokens out of build settings and
+the repository.
+
+The Court's native member schedule and board use `/api/mobile/court/*`. Those
+branch-only routes require a verified bearer account, MFA where configured and
+completed onboarding before delegating to the existing tier-gated readers.
+Release the reviewed routes through the normal GitHub/Vercel workflow before
+certifying the live native member Court.
+
+Apple's [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
+sections 3.1 and 4.8 apply to the subscription and third-party login work.
+Verify the eligible storefront, payment/restore test environments and account
+linkage before certifying those flows.

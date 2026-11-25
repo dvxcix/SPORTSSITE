@@ -4,11 +4,11 @@ import SwiftUI
 struct SlipSurgeApp: App {
     @AppStorage("appearance") private var appearance = Appearance.system
 
+    @State private var account = AccountStore()
+
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                SidelineView(api: SidelineAPI(), appearance: $appearance)
-            }
+            SlipSurgeTabs(account: account, appearance: $appearance)
             .preferredColorScheme(appearance.scheme)
         }
     }
@@ -46,7 +46,13 @@ enum Brand {
     }
 }
 
-private extension Color {
+extension Color {
+    init?(hex: String?) {
+        guard let hex, hex.count == 7, hex.hasPrefix("#"),
+              let rgb = UInt32(hex.dropFirst(), radix: 16) else { return nil }
+        self.init(rgb: rgb)
+    }
+
     init(rgb: UInt32) {
         self.init(
             red: Double((rgb >> 16) & 255) / 255,
