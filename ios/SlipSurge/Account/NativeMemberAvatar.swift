@@ -81,7 +81,7 @@ struct NativeMemberAvatar: View {
 
     var body: some View {
         ResearchArtwork(urls: [url].compactMap { $0 }.filter(FeedPostCard.allowedMedia), fallback: "person.crop.circle.fill",
-            contentMode: .fill, fallbackText: initials)
+            contentMode: .fill, fallbackText: initials, pointSize: size)
             .font(.system(size: size * 0.3, weight: .semibold))
             .frame(width: size, height: size)
             .background(Brand.surface(for: scheme), in: .circle)

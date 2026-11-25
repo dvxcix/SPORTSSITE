@@ -94,28 +94,28 @@ struct ResearchArtworkPicker: View {
     @ViewBuilder
     private func artwork(_ option: Option, size: CGFloat) -> some View {
         if let primary = option.playerColors.first {
-            ResearchArtwork(urls: option.url.map { [$0] } ?? [], fallback: option.icon)
+            ResearchArtwork(urls: option.url.map { [$0] } ?? [], fallback: option.icon, pointSize: size)
                 .foregroundStyle(.white)
                 .frame(width: size, height: size)
                 .background(LinearGradient(colors: [primary, option.playerColors.dropFirst().first ?? primary],
                     startPoint: .topLeading, endPoint: .bottomTrailing), in: .rect(cornerRadius: 7))
                 .overlay(alignment: .bottomTrailing) {
                     if let logo = option.playerTeamLogo {
-                        ResearchArtwork(urls: [logo], fallback: "shield")
+                        ResearchArtwork(urls: [logo], fallback: "shield", pointSize: size * 0.46)
                             .padding(1.5).frame(width: size * 0.46, height: size * 0.46)
                             .background(.background, in: .circle)
                     }
                 }
         } else if let secondary = option.secondaryLogo {
             HStack(spacing: -3) {
-                ResearchArtwork(urls: option.url.map { [$0] } ?? [], fallback: option.icon)
-                ResearchArtwork(urls: [secondary], fallback: option.icon)
+                ResearchArtwork(urls: option.url.map { [$0] } ?? [], fallback: option.icon, pointSize: size)
+                ResearchArtwork(urls: [secondary], fallback: option.icon, pointSize: size)
             }
             .frame(width: size * 1.55, height: size)
         } else if let asset = option.asset {
             Image(asset).resizable().scaledToFit().frame(width: size, height: size).accessibilityHidden(true)
         } else {
-            ResearchArtwork(urls: option.url.map { [$0] } ?? [], fallback: option.icon)
+            ResearchArtwork(urls: option.url.map { [$0] } ?? [], fallback: option.icon, pointSize: size)
                 .frame(width: size, height: size)
         }
     }

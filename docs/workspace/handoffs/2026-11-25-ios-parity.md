@@ -2535,3 +2535,34 @@ physical-device push are still open.
   the empty Requests screen, room switching and the signed-in settings
   link. The native and production suites passed 286 checks. Live sending
   and request moderation were outside those checks.
+
+## iOS artwork, Feed and loading responsiveness · 25 November 2026
+
+- Reuse the native API connection while retaining explicit request
+  authorization and redirect handling. Artwork and post photos are decoded
+  off the main thread at sizes suited to their views. Decoded thumbnails and
+  larger artwork have separate memory budgets so photos do not evict every
+  avatar and logo. Visible avatar decorations still animate.
+- Feed keeps visible rows during refresh and can show a recently visited
+  section from the current account’s in-memory first page. Freshness checks
+  and explicit refreshes use the live endpoint. Session and access failures
+  clear those previews. Scrolling records the resume measurement without
+  changing view state on each visibility update. Feed and social page loads
+  avoid whole-list animations.
+- Inbox can render recent Activity and Messages responses from its unread
+  poll while fetching current data. An unchanged chat poll leaves the
+  displayed messages in place. Profiles retain their current page on Back.
+- In six sampled switches between Latest and Picks on the iPhone 18 Pro
+  simulator, the baseline showed the loader six times and the revised build
+  showed feed content six times. In one matching 16-second Time Profiler
+  scroll per build, sampled ImageIO work was 599 ms before and 464 ms after.
+  Phone startup reached the first sampled signed-in Feed in 4.09 seconds
+  before and 4.26 seconds on the final build. Cold startup remains a separate
+  performance target. Trace and capture files are local to the Mac.
+- Xcode Debug builds passed for Simulator and the iPhone 16 Plus, and the
+  final signed build was installed and launched on the phone. Verified a
+  real post photo, Inbox and Picks Room on the phone. On the simulator,
+  pull-to-refresh kept existing posts visible and a saved Feed resume
+  reopened the same sportsbook post aligned to the top. Native and
+  production checks passed 286/286. The iPhone 16 Plus was left on Feed
+  for review.

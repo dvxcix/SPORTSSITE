@@ -76,7 +76,7 @@ struct ChatMemberPreview: View {
                 LinearGradient(colors: [(colors.first ?? Brand.accent(for: scheme)).opacity(0.46),
                     colors.dropFirst().first ?? Brand.surface(for: scheme)], startPoint: .topLeading, endPoint: .bottomTrailing)
                 if let banner = profile?.bannerUrl, FeedPostCard.allowedMedia(banner) {
-                    AsyncImage(url: banner) { image in image.resizable().scaledToFill() } placeholder: { Color.clear }
+                    ResearchArtwork(urls: [banner], fallback: nil, contentMode: .fill, pointSize: 420)
                         .frame(width: proxy.size.width, height: proxy.size.height).clipped()
                 }
             }

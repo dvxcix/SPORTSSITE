@@ -11,6 +11,22 @@ final class InboxUnread {
     private var memberID: UUID?
     private var counts: [InboxSection: Int] = [:]
     @ObservationIgnored private var revisions: [InboxSection: Int] = [:]
+    @ObservationIgnored private var activitySnapshot: Snapshot<[ActivityNotification]>?
+    @ObservationIgnored private var messagesSnapshot: Snapshot<MessageInbox>?
+
+    private struct Snapshot<Value> {
+        let value: Value
+        let received = Date.now
+        var recentValue: Value? { Date.now.timeIntervalSince(received) < 30 ? value : nil }
+    }
+
+    func recentActivity(for memberID: UUID) -> [ActivityNotification]? {
+        self.memberID == memberID ? activitySnapshot?.recentValue : nil
+    }
+
+    func recentMessages(for memberID: UUID) -> MessageInbox? {
+        self.memberID == memberID ? messagesSnapshot?.recentValue : nil
+    }
 
     func count(for section: InboxSection, memberID: UUID?) -> Int {
         self.memberID == memberID ? counts[section, default: 0] : 0
@@ -22,6 +38,10 @@ final class InboxUnread {
 
     func update(_ count: Int, for section: InboxSection, memberID: UUID) {
         setMember(memberID)
+        switch section {
+        case .activity: activitySnapshot = nil
+        case .messages: messagesSnapshot = nil
+        }
         if counts[section] != count { counts[section] = count }
         revisions[section, default: 0] += 1
     }
@@ -43,19 +63,27 @@ final class InboxUnread {
         self.memberID = memberID
         counts = [:]
         revisions = [:]
+        activitySnapshot = nil
+        messagesSnapshot = nil
     }
 
     private func refresh(_ section: InboxSection, account: AccountStore, memberID: UUID) async {
         let revision = revisions[section, default: 0]
         let count: Int
+        var activity: [ActivityNotification]?
+        var messages: MessageInbox?
         do {
             switch section {
             case .activity:
-                count = try await ActivityAPI(account: account, userID: memberID).load().unreadCount
+                let loaded = try await ActivityAPI(account: account, userID: memberID).load()
+                activity = loaded
+                count = loaded.unreadCount
             case .messages:
-                count = try await MessagesAPI(account: account, userID: memberID).inbox().unreadCount
+                let loaded = try await MessagesAPI(account: account, userID: memberID).inbox()
+                messages = loaded
+                count = loaded.unreadCount
             }
-        } catch let status as SlipSurgeHTTP.Status where status.code == 403 {
+        } catch let status as SlipSurgeHTTP.Status where [401, 403, 404].contains(status.code) {
             count = 0
         } catch {
             return
@@ -64,5 +92,7 @@ final class InboxUnread {
         guard !Task.isCancelled, account.memberID == memberID, self.memberID == memberID,
               revisions[section, default: 0] == revision else { return }
         update(count, for: section, memberID: memberID)
+        if let activity { activitySnapshot = Snapshot(value: activity) }
+        if let messages { messagesSnapshot = Snapshot(value: messages) }
     }
 }

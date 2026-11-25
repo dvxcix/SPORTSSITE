@@ -64,10 +64,10 @@ struct MemberProfileHeader: View {
                 LinearGradient(colors: [primary.opacity(0.55), secondary, Brand.surface(for: scheme)],
                     startPoint: .topLeading, endPoint: .bottomTrailing)
                 if let url = profile.bannerUrl, FeedPostCard.allowedMedia(url) {
-                    AsyncImage(url: url) { image in image.resizable().scaledToFill() } placeholder: { Color.clear }
+                    ResearchArtwork(urls: [url], fallback: nil, contentMode: .fill, pointSize: 450)
                         .frame(width: geometry.size.width, height: geometry.size.height).clipped()
                 } else if let team = profile.teams.first, let logo = team.logo {
-                    ResearchArtwork(urls: [logo], fallback: "shield").frame(width: 105, height: 105)
+                    ResearchArtwork(urls: [logo], fallback: "shield", pointSize: 105).frame(width: 105, height: 105)
                         .rotationEffect(.degrees(-10)).opacity(0.48)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing).padding(.trailing, 12)
                         .accessibilityHidden(true)

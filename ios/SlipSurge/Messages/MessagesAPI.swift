@@ -8,7 +8,7 @@ struct MessageDestination: Hashable {
     var query: [URLQueryItem] { [.init(name: "kind", value: kind.rawValue), .init(name: "id", value: id.uuidString.lowercased())] }
 }
 
-struct MessagePerson: Decodable, Identifiable {
+struct MessagePerson: Decodable, Identifiable, Equatable {
     let id: UUID
     let username: String
     let displayName: String?
@@ -58,7 +58,7 @@ struct MessageInbox: Decodable {
     }
 }
 
-struct MessageThread: Decodable {
+struct MessageThread: Decodable, Equatable {
     struct Note: Decodable, Identifiable, Equatable {
         struct Author: Decodable, Equatable {
             let username: String
@@ -87,14 +87,14 @@ struct MessageThread: Decodable {
         let sender: Author?
     }
 
-    struct Participant: Decodable, Identifiable {
+    struct Participant: Decodable, Identifiable, Equatable {
         let id: UUID
         let role: String
         let muted: Bool
         let user: MessagePerson?
     }
 
-    struct Reaction: Decodable {
+    struct Reaction: Decodable, Equatable {
         let messageId: UUID
         let emoji: String
         let mine: Bool

@@ -4,6 +4,7 @@ struct ActivityView: View {
     let api: ActivityAPI
     var opensNotification: UUID? = nil
     var inInbox = false
+    var initialActivity: (() -> [ActivityNotification]?)? = nil
     var onUnreadChange: (Int) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
     @State private var selection = Filter.all
@@ -71,6 +72,10 @@ struct ActivityView: View {
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))
         .task(id: revision) {
+            if state == .loading, let initial = initialActivity?() {
+                rows = initial
+                state = .ready
+            }
             await load()
             if !opened, let id = opensNotification {
                 opened = true
@@ -180,13 +185,14 @@ struct ActivityView: View {
             rows = loaded
             state = .ready
             onUnreadChange(loaded.unreadCount)
-        } catch let response as SlipSurgeHTTP.Status where response.code == 403 {
+        } catch let response as SlipSurgeHTTP.Status where [401, 403, 404].contains(response.code) {
             if !Task.isCancelled {
+                rows = []
                 state = .denied
                 onUnreadChange(0)
             }
         } catch {
-            if !Task.isCancelled { state = .unavailable }
+            if !Task.isCancelled, state != .ready { state = .unavailable }
         }
     }
 

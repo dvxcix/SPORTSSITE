@@ -49,7 +49,7 @@ struct NativeEmojiPicker: View {
                             LazyVGrid(columns: columns) {
                                 ForEach(entries) { entry in
                                     tile(":\(entry.code):", label: entry.code) {
-                                        ResearchArtwork(urls: [entry.imageUrl], fallback: "face.smiling").frame(width: 26, height: 26)
+                                        ResearchArtwork(urls: [entry.imageUrl], fallback: "face.smiling", pointSize: 26).frame(width: 26, height: 26)
                                     }
                                 }
                             }
@@ -110,7 +110,7 @@ struct NativeReactionArtwork: View {
     var body: some View {
         let code = symbol.trimmingCharacters(in: CharacterSet(charactersIn: ":"))
         if symbol.hasPrefix(":"), symbol.hasSuffix(":"), let asset = library?.entry(for: code) {
-            ResearchArtwork(urls: [asset.imageUrl], fallback: "face.smiling").frame(width: size, height: size)
+            ResearchArtwork(urls: [asset.imageUrl], fallback: "face.smiling", pointSize: size).frame(width: size, height: size)
         } else { Text(symbol) }
     }
 }

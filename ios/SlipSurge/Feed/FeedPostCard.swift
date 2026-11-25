@@ -381,18 +381,8 @@ struct FeedMedia: View {
                 Button("Load video", systemImage: "play.rectangle") { player = AVPlayer(url: url) }
             }
         } else {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().scaledToFit().frame(maxHeight: 360)
-                        .clipShape(.rect(cornerRadius: 8))
-                        .accessibilityLabel("Post image")
-                case .failure:
-                    Label("Media unavailable", systemImage: "photo")
-                default:
-                    ProgressView().accessibilityLabel("Loading post image")
-                }
-            }
+            PostArtwork(url: url, label: "Post image", maxHeight: 360)
+                .clipShape(.rect(cornerRadius: 8))
         }
     }
 }

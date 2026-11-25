@@ -4,6 +4,7 @@ struct MessagesView: View {
     let api: MessagesAPI
     var startsComposing = false
     var inInbox = false
+    var initialInbox: (() -> MessageInbox?)? = nil
     var onUnreadChange: (Int) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
     @State private var inbox: MessageInbox?
@@ -68,7 +69,10 @@ struct MessagesView: View {
         .onChange(of: selection) { _, destination in
             if destination == nil { revision += 1 }
         }
-        .task(id: revision) { await load() }
+        .task(id: revision) {
+            if inbox == nil { inbox = initialInbox?() }
+            await load()
+        }
         .onChange(of: startsComposing, initial: true) { if startsComposing { composing = true } }
         .refreshable { await load() }
         .alert("Request couldn’t be updated", isPresented: $actionError) { Button("OK", role: .cancel) {} }
@@ -209,7 +213,13 @@ struct MessagesView: View {
             error = nil
             onUnreadChange(value.unreadCount)
         } catch {
-            if !Task.isCancelled { self.error = error }
+            if !Task.isCancelled {
+                if let response = error as? SlipSurgeHTTP.Status, [401, 403, 404].contains(response.code) {
+                    inbox = nil
+                    onUnreadChange(0)
+                }
+                self.error = error
+            }
         }
     }
 

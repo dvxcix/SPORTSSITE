@@ -55,7 +55,7 @@ struct StoriesRail: View {
                                         StoryAvatar(author: story.author, size: 58)
                                             .overlay(alignment: .bottomTrailing) {
                                                 if let sport = story.sport, let logo = LeagueArtwork.logo(sport) {
-                                                    ResearchArtwork(urls: [logo], fallback: "sportscourt")
+                                                    ResearchArtwork(urls: [logo], fallback: "sportscourt", pointSize: 15)
                                                         .frame(width: 15, height: 15).padding(4)
                                                         .background(Brand.surface(for: scheme), in: Circle())
                                                 }

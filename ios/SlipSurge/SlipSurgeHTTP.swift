@@ -2,6 +2,14 @@ import Foundation
 
 enum SlipSurgeHTTP {
     static let site = "www.slipsurge.com"
+    private static let session: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.httpShouldSetCookies = false
+        configuration.httpCookieStorage = nil
+        configuration.urlCredentialStorage = nil
+        configuration.urlCache = nil
+        return URLSession(configuration: configuration, delegate: NoRedirects(), delegateQueue: nil)
+    }()
 
     struct Status: Error {
         let code: Int
@@ -58,8 +66,6 @@ enum SlipSurgeHTTP {
     }
 
     static func send(_ request: URLRequest) async throws -> Data {
-        let session = URLSession(configuration: .ephemeral, delegate: NoRedirects(), delegateQueue: nil)
-        defer { session.finishTasksAndInvalidate() }
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         guard (200..<300).contains(http.statusCode) else { throw Status(code: http.statusCode, data: data) }
@@ -67,8 +73,6 @@ enum SlipSurgeHTTP {
     }
 
     static func download(_ request: URLRequest) async throws -> (URL, HTTPURLResponse) {
-        let session = URLSession(configuration: .ephemeral, delegate: NoRedirects(), delegateQueue: nil)
-        defer { session.finishTasksAndInvalidate() }
         let (file, response) = try await session.download(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             try? FileManager.default.removeItem(at: file)

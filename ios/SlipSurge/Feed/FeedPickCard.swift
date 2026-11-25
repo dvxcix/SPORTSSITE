@@ -13,7 +13,7 @@ struct FeedPickCard: View {
         VStack(alignment: .leading, spacing: 11) {
             HStack(spacing: 8) {
                 if let league {
-                    ResearchArtwork(urls: LeagueArtwork.logo(league).map { [$0] } ?? [], fallback: "sportscourt")
+                    ResearchArtwork(urls: LeagueArtwork.logo(league).map { [$0] } ?? [], fallback: "sportscourt", pointSize: 22)
                         .frame(width: 24, height: 24)
                         .accessibilityLabel(LeagueArtwork.label(league))
                 }
@@ -70,7 +70,7 @@ struct FeedPickCard: View {
         let logo = line.teamLogo.flatMap { FeedPostCard.allowedMedia($0) ? $0 : nil }
         return HStack(spacing: 11) {
             if portraits.isEmpty, let logo {
-                ResearchArtwork(urls: [logo], fallback: "shield")
+                ResearchArtwork(urls: [logo], fallback: "shield", pointSize: 24)
                     .padding(5).frame(width: 44, height: 44)
                     .background(primary.opacity(scheme == .dark ? 0.55 : 0.24), in: .rect(cornerRadius: 10))
             } else {

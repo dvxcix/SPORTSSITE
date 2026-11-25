@@ -17,7 +17,6 @@ struct DiscoverView: View {
     var opensCommunity: UUID? = nil
     @Binding var opensDestination: DiscoverDestination?
     @Environment(\.colorScheme) private var scheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var section = Section.communities
     @State private var communities: DiscoverAPI.Communities?
     @State private var creators: DiscoverAPI.Creators?
@@ -390,7 +389,7 @@ struct DiscoverView: View {
 
     private func joinedCommunityRow(_ group: DiscoverAPI.Communities.Community) -> some View {
         HStack(spacing: 12) {
-            ResearchArtwork(urls: [group.avatarUrl, group.bannerUrl].compactMap { $0 }, fallback: "person.2.fill", contentMode: .fill)
+            ResearchArtwork(urls: [group.avatarUrl, group.bannerUrl].compactMap { $0 }, fallback: "person.2.fill", contentMode: .fill, pointSize: 44)
                 .frame(width: 44, height: 44)
                 .clipShape(.rect(cornerRadius: 12))
                 .accessibilityHidden(true)
@@ -456,15 +455,15 @@ struct DiscoverView: View {
             case .communities:
                 let data = try await api.read(DiscoverAPI.Communities.self, resource: "communities")
                 guard !Task.isCancelled else { return }
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.22)) { communities = data }
+                communities = data
             case .creators:
                 let data = try await api.read(DiscoverAPI.Creators.self, resource: "creators")
                 guard !Task.isCancelled else { return }
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.22)) { creators = data }
+                creators = data
             case .records:
                 let data = try await api.read(DiscoverAPI.Records.self, resource: "records")
                 guard !Task.isCancelled else { return }
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.22)) { records = data }
+                records = data
             }
         } catch {
             if !Task.isCancelled, requested == section { self.error = error }
@@ -485,17 +484,14 @@ struct DiscoverIdentityCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let banner {
-                AsyncImage(url: banner) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Brand.accent(for: scheme).opacity(0.15)
-                }
-                .frame(height: 104).clipped()
-                .accessibilityHidden(true)
+                ResearchArtwork(urls: [banner], fallback: nil, contentMode: .fill, pointSize: 410)
+                    .frame(height: 104)
+                    .background(Brand.accent(for: scheme).opacity(0.15))
+                    .clipped()
             }
             VStack(alignment: .leading, spacing: 9) {
                 HStack(spacing: 10) {
-                    ResearchArtwork(urls: avatar.map { [$0] } ?? [], fallback: symbol)
+                    ResearchArtwork(urls: avatar.map { [$0] } ?? [], fallback: symbol, pointSize: 43)
                         .frame(width: 43, height: 43)
                         .background(Brand.accent(for: scheme).opacity(0.14), in: .rect(cornerRadius: 10))
                         .clipShape(.rect(cornerRadius: 10))

@@ -13,7 +13,6 @@ struct FeedThreadView: View {
     var onPostRemoved: () -> Void = {}
 
     @Environment(\.colorScheme) private var scheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
     @State private var thread: FeedThread?
     @State private var unavailable = false
@@ -222,7 +221,7 @@ struct FeedThreadView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 let avatar = item.author?.avatarUrl.flatMap { FeedPostCard.allowedMedia($0) ? $0 : nil }
-                ResearchArtwork(urls: avatar.map { [$0] } ?? [], fallback: "person.crop.circle")
+                ResearchArtwork(urls: avatar.map { [$0] } ?? [], fallback: "person.crop.circle", pointSize: 30)
                     .frame(width: 30, height: 30).clipShape(.circle)
                 Text(item.author?.displayName ?? item.author?.username ?? "SlipSurge member").font(.subheadline.weight(.semibold))
                 Spacer()
@@ -312,10 +311,8 @@ struct FeedThreadView: View {
             let value = try await api.thread(id)
             guard !Task.isCancelled else { return }
             onPostChange(value.post)
-            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
-                thread = value
-                unavailable = false
-            }
+            thread = value
+            unavailable = false
         } catch {
             guard !Task.isCancelled else { return }
             // A revoked entitlement must remove any previously displayed content.

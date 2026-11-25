@@ -31,11 +31,13 @@ struct InboxView: View {
         if let memberID = account.memberID {
             switch section {
             case .activity:
-                ActivityView(api: .init(account: account, userID: memberID), inInbox: true) {
+                ActivityView(api: .init(account: account, userID: memberID), inInbox: true,
+                    initialActivity: { unread.recentActivity(for: memberID) }) {
                     update(.activity, count: $0, memberID: memberID)
                 }
             case .messages:
-                MessagesView(api: .init(account: account, userID: memberID), inInbox: true) {
+                MessagesView(api: .init(account: account, userID: memberID), inInbox: true,
+                    initialInbox: { unread.recentMessages(for: memberID) }) {
                     update(.messages, count: $0, memberID: memberID)
                 }
             }

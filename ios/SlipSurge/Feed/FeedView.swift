@@ -23,6 +23,9 @@ struct FeedView: View {
     @State private var cursor: String?
     @State private var load = State.loading
     @State private var loadedSelection: Selection?
+    @State private var firstPages: [Scope: Snapshot] = [:]
+    @State private var refreshFailed = false
+    @State private var refreshing = false
     @State private var isLoadingMore = false
     @State private var paginationError = false
     @State private var revision = 0
@@ -39,14 +42,26 @@ struct FeedView: View {
         case loading, ready, unavailable
     }
 
-    private struct Selection: Equatable {
+    private struct Scope: Hashable {
+        let viewer: UUID?
         let filter: FeedFilter
         let sport: String
+    }
+
+    private struct Selection: Equatable {
+        let scope: Scope
         let revision: Int
     }
 
-    private var selection: Selection { Selection(filter: filter, sport: sport, revision: revision) }
-    private var canCompose: Bool { api.userID != nil && load == .ready }
+    private struct Snapshot {
+        let posts: [FeedPost]
+        let cursor: String?
+        let fetchedAt: Date
+    }
+
+    private var scope: Scope { Scope(viewer: api.userID, filter: filter, sport: sport) }
+    private var selection: Selection { Selection(scope: scope, revision: revision) }
+    private var canCompose: Bool { api.userID != nil && (load == .ready || !firstPages.isEmpty) }
 
     init(api: FeedAPI, opensSelection: Binding<NativeFeedSelection?> = .constant(nil), scrollToTopRequest: Int = 0,
          resumeOffer: NativeResumeOffer? = nil) {
@@ -65,6 +80,7 @@ struct FeedView: View {
                     }
                     recordPosition(0)
                 }
+                .onChange(of: scope) { proxy.scrollTo("feed-start", anchor: .top) }
         }
         .safeAreaInset(edge: .top, spacing: 0) { scopes }
         .safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) {
@@ -109,7 +125,7 @@ struct FeedView: View {
         }
         .navigationDestination(item: $discussion) { id in
             FeedThreadView(api: api, id: id, original: postUpdates[id] ?? posts.first { $0.postID == id },
-                onPostChange: { postUpdates[id] = $0 }, onPostRemoved: { posts.removeAll { $0.postID == id } })
+                onPostChange: { postUpdates[id] = $0 }, onPostRemoved: { removePost(id) })
         }
         .alert("Change couldn’t be confirmed", isPresented: $actionError) {
             Button("OK", role: .cancel) {}
@@ -117,6 +133,7 @@ struct FeedView: View {
         .sheet(isPresented: $composing) {
             if let userID = api.userID {
                 FeedComposerView(account: api.account, userID: userID, allowMLB: availableSports.contains("MLB")) {
+                    firstPages.removeAll()
                     filter = .latest
                     sport = ""
                     revision += 1
@@ -134,7 +151,10 @@ struct FeedView: View {
             opensSelection = nil
         }
         .task(id: selection) {
-            if loadedSelection != selection || load != .ready { await firstPage() }
+            if loadedSelection != selection || load != .ready {
+                let revisionChanged = loadedSelection.map { $0.revision != revision } ?? false
+                await firstPage(force: revisionChanged)
+            }
         }
         .refreshable { await firstPage() }
     }
@@ -160,6 +180,10 @@ struct FeedView: View {
                         Button("Retry") { revision += 1 }
                     }
                 case .ready:
+                    if refreshFailed {
+                        Button("Couldn’t refresh. Retry", systemImage: "arrow.clockwise") { Task { await firstPage() } }
+                            .font(.subheadline).padding(.horizontal, 15).padding(.vertical, 8)
+                    }
                     feedRows
                 }
             }
@@ -189,7 +213,7 @@ struct FeedView: View {
                     } label: {
                         HStack(spacing: 5) {
                             if !league.isEmpty {
-                                ResearchArtwork(urls: LeagueArtwork.logo(league).map { [$0] } ?? [], fallback: "sportscourt")
+                                ResearchArtwork(urls: LeagueArtwork.logo(league).map { [$0] } ?? [], fallback: "sportscourt", pointSize: 17)
                                     .frame(width: 17, height: 17).accessibilityHidden(true)
                             }
                             Text(league.isEmpty ? "All sports" : LeagueArtwork.label(league))
@@ -216,7 +240,8 @@ struct FeedView: View {
 
     @ViewBuilder private func feedScroll(_ content: some View) -> some View {
         let intent = resume?.feedRestore.flatMap { target in
-            target.selection.filter == filter && target.selection.sport == sport && load == .ready ? target : nil
+            target.selection.filter == filter && target.selection.sport == sport &&
+                loadedSelection == selection && load == .ready && !refreshing ? target : nil
         }
         if #available(iOS 18, *) {
             content.modifier(FeedResumeScroll(intent: intent, posts: posts.map(\.id),
@@ -225,7 +250,7 @@ struct FeedView: View {
                 loadMore: {
                     guard let cursor else { return false }
                     await nextPage(cursor)
-                    return !paginationError
+                    return !paginationError && self.cursor != cursor
                 }))
         } else {
             content.onChange(of: intent) { _, target in
@@ -251,7 +276,8 @@ struct FeedView: View {
             }, discussion: { discussion = post.postID },
             showAuthor: post.author.map { author in { member = author.username } }, actionsAPI: api,
             postChanged: { removed in
-                if removed { posts.removeAll { $0.postID == post.postID } }
+                firstPages.removeAll()
+                if removed { removePost(post.postID) }
                 Task { await firstPage() }
             })
             .padding(.horizontal, 15)
@@ -264,7 +290,7 @@ struct FeedView: View {
             Button(paginationError ? "Retry loading more" : "Load more") {
                 Task { await nextPage(cursor) }
             }
-            .disabled(isLoadingMore)
+            .disabled(isLoadingMore || refreshing)
             .buttonStyle(.bordered)
             .controlSize(.large)
             .frame(maxWidth: .infinity)
@@ -272,19 +298,30 @@ struct FeedView: View {
         }
     }
 
-    private func firstPage() async {
+    private func firstPage(force: Bool = true) async {
         let requested = selection
         generation += 1
         let current = generation
-        load = .loading
-        cursor = nil
-        posts = []
-        postUpdates = [:]
+        refreshing = true
+        defer { if current == generation { refreshing = false } }
         isLoadingMore = false
         paginationError = false
+        refreshFailed = false
+
+        if loadedSelection?.scope == requested.scope, load == .ready {
+            loadedSelection = requested
+        } else if !force, let saved = firstPages[requested.scope], Date.now.timeIntervalSince(saved.fetchedAt) < 120 {
+            show(saved, for: requested)
+            if Date.now.timeIntervalSince(saved.fetchedAt) < 30 { return }
+        } else {
+            load = .loading
+            posts = []
+            cursor = nil
+        }
+
         do {
             let page = try await api.page(
-                filter: requested.filter, sport: requested.sport.isEmpty ? nil : requested.sport, cursor: nil
+                filter: requested.scope.filter, sport: requested.scope.sport.isEmpty ? nil : requested.scope.sport, cursor: nil
             )
             guard !Task.isCancelled, requested == selection, current == generation else { return }
             availableSports = ["NBA", "NFL", "MLB"].filter(page.sports.contains)
@@ -293,15 +330,42 @@ struct FeedView: View {
                 return
             }
             var seen = Set<FeedPost.ID>()
-            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.24)) {
-                posts = page.posts.filter { seen.insert($0.id).inserted }
-                cursor = page.hasMore ? page.nextCursor : nil
-                loadedSelection = requested
-                load = .ready
+            let snapshot = Snapshot(posts: page.posts.filter { seen.insert($0.id).inserted },
+                cursor: page.hasMore ? page.nextCursor : nil, fetchedAt: .now)
+            firstPages[requested.scope] = snapshot
+            if firstPages.count > 8, let oldest = firstPages.min(by: { $0.value.fetchedAt < $1.value.fetchedAt }) {
+                firstPages.removeValue(forKey: oldest.key)
             }
+            for post in snapshot.posts { postUpdates.removeValue(forKey: post.postID) }
+            show(snapshot, for: requested)
         } catch {
-            if !Task.isCancelled, requested == selection, current == generation { load = .unavailable }
+            guard !Task.isCancelled, requested == selection, current == generation else { return }
+            let accessDenied = [401, 403, 404].contains((error as? SlipSurgeHTTP.Status)?.code ?? 0)
+            if accessDenied {
+                firstPages.removeAll()
+                posts = []
+                postUpdates = [:]
+                cursor = nil
+                load = .unavailable
+            } else if load == .ready, loadedSelection == requested {
+                refreshFailed = true
+            } else {
+                load = .unavailable
+            }
         }
+    }
+
+    private func show(_ page: Snapshot, for selection: Selection) {
+        posts = page.posts
+        cursor = page.cursor
+        loadedSelection = selection
+        load = .ready
+    }
+
+    private func removePost(_ id: UUID) {
+        posts.removeAll { $0.postID == id }
+        postUpdates.removeValue(forKey: id)
+        firstPages.removeAll()
     }
 
     private func apply(_ action: FeedAPI.Mutation, to id: UUID) async {
@@ -309,18 +373,19 @@ struct FeedView: View {
         defer { pending.remove(id) }
         do {
             try await api.mutate(id, action: action)
+            firstPages.removeAll()
         } catch {
             actionError = true
         }
         if let latest = try? await api.thread(id) {
-            withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) { postUpdates[id] = latest.post }
+            postUpdates[id] = latest.post
         } else {
             await firstPage()
         }
     }
 
     private func nextPage(_ expectedCursor: String) async {
-        guard !isLoadingMore else { return }
+        guard !refreshing, !isLoadingMore, loadedSelection == selection, cursor == expectedCursor else { return }
         let requested = selection
         let current = generation
         isLoadingMore = true
@@ -328,14 +393,12 @@ struct FeedView: View {
         defer { if requested == selection, current == generation { isLoadingMore = false } }
         do {
             let page = try await api.page(
-                filter: requested.filter, sport: requested.sport.isEmpty ? nil : requested.sport, cursor: expectedCursor
+                filter: requested.scope.filter, sport: requested.scope.sport.isEmpty ? nil : requested.scope.sport, cursor: expectedCursor
             )
             guard !Task.isCancelled, requested == selection, current == generation, cursor == expectedCursor else { return }
             var seen = Set(posts.map(\.id))
-            withAnimation(reduceMotion ? nil : .smooth(duration: 0.23)) {
-                posts += page.posts.filter { seen.insert($0.id).inserted }
-                cursor = page.hasMore ? page.nextCursor : nil
-            }
+            posts += page.posts.filter { seen.insert($0.id).inserted }
+            cursor = page.hasMore ? page.nextCursor : nil
         } catch {
             if !Task.isCancelled, requested == selection, current == generation, cursor == expectedCursor { paginationError = true }
         }
@@ -350,6 +413,12 @@ private struct FeedResumeScroll: ViewModifier {
         var topInset: CGFloat = 0
     }
 
+    // These measurements serve resume tasks and the idle callback, not the view tree.
+    @MainActor private final class Measurements {
+        var geometry = Geometry()
+        var visible: [FeedPost.ID] = []
+    }
+
     let intent: NativeResumeStore.FeedRestore?
     let posts: [FeedPost.ID]
     let record: (Int, UUID?) -> Void
@@ -357,27 +426,29 @@ private struct FeedResumeScroll: ViewModifier {
     let findPost: (UUID) -> FeedPost.ID?
     let loadMore: () async -> Bool
     @State private var position = ScrollPosition(idType: FeedPost.ID.self)
-    @State private var geometry = Geometry()
-    @State private var visible = Set<FeedPost.ID>()
+    @State private var measurements = Measurements()
 
     func body(content: Content) -> some View {
+        let restoring = intent != nil
         content
             .scrollPosition($position)
             .onScrollGeometryChange(for: Geometry.self, of: { value in
+                guard restoring else { return Geometry() }
                 let maxOffset = value.contentSize.height + value.contentInsets.top + value.contentInsets.bottom - value.containerSize.height
                 return Geometry(offset: max(0, Int((value.contentOffset.y + value.contentInsets.top).rounded())),
                     limit: max(0, Int(maxOffset.rounded())), topInset: value.contentInsets.top)
             }) { _, value in
-                if intent != nil { geometry = value }
+                if restoring { measurements.geometry = value }
             }
             .onScrollPhaseChange { old, next, context in
                 if next == .idle, old == .interacting || old == .decelerating {
                     let point = context.geometry.contentOffset.y + context.geometry.contentInsets.top
                     let offset = min(10_000_000, max(0, Int(point.rounded())))
+                    let visible = Set(measurements.visible)
                     record(offset, offset > 0 ? posts.first(where: visible.contains)?.post : nil)
                 }
             }
-            .onScrollTargetVisibilityChange(idType: FeedPost.ID.self, threshold: 0.25) { visible = Set($0) }
+            .onScrollTargetVisibilityChange(idType: FeedPost.ID.self, threshold: 0.25) { measurements.visible = $0 }
             .task(id: intent?.id) {
                 if let intent {
                     await restore(intent)
@@ -399,7 +470,7 @@ private struct FeedResumeScroll: ViewModifier {
                     consume(target)
                     return
                 }
-                guard target.anchor != nil || geometry.limit < target.offset, await loadMore() else { break }
+                guard target.anchor != nil || measurements.geometry.limit < target.offset, await loadMore() else { break }
                 try await Task.sleep(for: .milliseconds(150))
             }
             try Task.checkCancellation()
@@ -408,14 +479,16 @@ private struct FeedResumeScroll: ViewModifier {
                 consume(target)
                 return
             }
+            let geometry = measurements.geometry
             let desired = min(target.offset, geometry.limit > 0 ? geometry.limit : target.offset)
             var point = CGFloat(desired) - geometry.topInset
             position.scrollTo(y: point)
             // Lazy rows can update the layout after the first jump.
             for _ in 0..<2 {
                 try await Task.sleep(for: .milliseconds(200))
-                let correction = desired - geometry.offset
-                guard abs(correction) > 3, geometry.limit > 0 else { break }
+                let measured = measurements.geometry
+                let correction = desired - measured.offset
+                guard abs(correction) > 3, measured.limit > 0 else { break }
                 point += CGFloat(correction)
                 position.scrollTo(y: point)
             }

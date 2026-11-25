@@ -164,9 +164,23 @@ struct SidelineBoard: Decodable {
     }
 
     static func timestamp(_ value: String) -> Date? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.date(from: value) ?? ISO8601DateFormatter().date(from: value)
+        timestampParser.parse(value)
+    }
+
+    private static let timestampParser = TimestampParser()
+
+    private final class TimestampParser: @unchecked Sendable {
+        private let lock = NSLock()
+        private let fractional: ISO8601DateFormatter = {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            return formatter
+        }()
+        private let standard = ISO8601DateFormatter()
+
+        func parse(_ value: String) -> Date? {
+            lock.withLock { fractional.date(from: value) ?? standard.date(from: value) }
+        }
     }
 }
 

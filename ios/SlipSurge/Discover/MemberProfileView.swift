@@ -231,7 +231,9 @@ struct MemberProfileView: View {
                 }
             }
         }
-        .task(id: fetchKey) { await load() }
+        .task(id: fetchKey) {
+            if loadedKey != fetchKey { await load() }
+        }
         .refreshable { await load() }
     }
 

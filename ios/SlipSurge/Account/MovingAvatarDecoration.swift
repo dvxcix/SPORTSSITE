@@ -107,7 +107,7 @@ private struct AvatarFramePlayer: UIViewRepresentable {
         players.add(player)
         guard link == nil else { return }
         let displayLink = CADisplayLink(target: self, selector: #selector(tick(_:)))
-        displayLink.preferredFrameRateRange = .init(minimum: 30, maximum: 60, preferred: 60)
+        displayLink.preferredFrameRateRange = .init(minimum: 24, maximum: 30, preferred: 30)
         displayLink.add(to: .main, forMode: .common)
         link = displayLink
     }
@@ -162,7 +162,7 @@ private struct AvatarFramePlayer: UIViewRepresentable {
         }
     }
 
-    private static let resources: (index: Index, bytes: Data)? = {
+    nonisolated private static let resources: (index: Index, bytes: Data)? = {
         guard let metadata = Bundle.main.url(forResource: "AvatarMotion", withExtension: "json"),
               let pack = Bundle.main.url(forResource: "AvatarMotion", withExtension: "bin"),
               let data = try? Data(contentsOf: metadata),
@@ -188,12 +188,15 @@ private struct AvatarFramePlayer: UIViewRepresentable {
         let cacheKey = "\(key.id)-\(key.pixels)" as NSString
         if let sprite = cache.object(forKey: cacheKey) { return sprite }
         if let request = requests[key] { return await request.value }
-        guard let resources, let entry = resources.index.items[key.id],
-              entry.frames > 1, entry.duration > 0, entry.offset >= 0, entry.length > 0,
-              entry.offset <= resources.bytes.count, entry.length <= resources.bytes.count - entry.offset else { return nil }
-        let request = Task {
+        let request: Task<Sprite?, Never> = Task {
             await withCheckedContinuation { continuation in
                 decodeQueue.addOperation {
+                    guard let resources, let entry = resources.index.items[key.id],
+                          entry.frames > 1, entry.duration > 0, entry.offset >= 0, entry.length > 0,
+                          entry.offset <= resources.bytes.count, entry.length <= resources.bytes.count - entry.offset else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
                     let data = resources.bytes.subdata(in: entry.offset..<(entry.offset + entry.length))
                     continuation.resume(returning: decode(data, entry: entry, index: resources.index, key: key))
                 }

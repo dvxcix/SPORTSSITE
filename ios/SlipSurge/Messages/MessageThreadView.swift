@@ -271,9 +271,11 @@ struct MessageThreadView: View {
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
             .scrollBounceBehavior(.always, axes: .vertical)
-            .onChange(of: visible.last?.id, initial: true) { _, last in
+            .onChange(of: visible.last?.id, initial: true) { previous, last in
                 if term.isEmpty, atBottom || visible.last?.senderId == api.userID {
-                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.23)) { proxy.scrollTo("latest-message", anchor: .bottom) }
+                    withAnimation(previous == nil || reduceMotion ? nil : .snappy(duration: 0.23)) {
+                        proxy.scrollTo("latest-message", anchor: .bottom)
+                    }
                     read(last)
                 }
             }
@@ -344,7 +346,7 @@ struct MessageThreadView: View {
                             if NativeGIFSource.canPlay(url) {
                                 NativeGIFPlayback(url: url, maxHeight: 200, maxWidth: 240).clipShape(.rect(cornerRadius: 10))
                             } else {
-                                AsyncImage(url: url) { artwork in artwork.resizable().scaledToFit() } placeholder: { ProgressView() }
+                                PostArtwork(url: url, label: "Message image", maxHeight: 200, pointSize: 240)
                                     .frame(maxWidth: 240, maxHeight: 200)
                                     .clipShape(.rect(cornerRadius: 10))
                             }
@@ -460,7 +462,7 @@ struct MessageThreadView: View {
                 HStack(spacing: 10) {
                     Group {
                         if gif { NativeGIFPlayback(url: roomPicture, maxHeight: 54, maxWidth: 76) }
-                        else { ResearchArtwork(urls: [roomPicture], fallback: "photo", contentMode: .fill) }
+                        else { ResearchArtwork(urls: [roomPicture], fallback: "photo", contentMode: .fill, pointSize: 76) }
                     }
                     .frame(width: 76, height: 54)
                     .clipShape(.rect(cornerRadius: 9))
@@ -613,9 +615,11 @@ struct MessageThreadView: View {
         do {
             let value = try await api.thread(destination)
             if !Task.isCancelled, version == fetchVersion {
-                preserveVisibleHistory(next: value)
-                thread = value
-                error = nil
+                if thread != value {
+                    preserveVisibleHistory(next: value)
+                    thread = value
+                }
+                if error != nil { error = nil }
                 if atBottom { read(value.messages.last?.id) }
             }
         } catch {
