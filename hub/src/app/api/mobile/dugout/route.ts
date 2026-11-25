@@ -5,6 +5,7 @@ import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
 import { hasTierAccess } from '@slipsurge/core/tiers'
 import { loadDugoutData, MARKET_BOOK_TO_OPEN_FIELD } from '@/lib/dugoutData'
 import type { MlbPublicMovement } from '@/lib/mlbPublicMovement'
+import type { HrFeedEvent } from '@/lib/hrFeed'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { getEffectiveTier } from '@/lib/requireTier'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
@@ -167,12 +168,23 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Sign in required' }, { status: 401, headers })
   }
 
+  const recap = query.get('view') === 'recap'
+  const batterCostAccess = hasTierAccess(gate.tier, 'ultimate')
+  if (recap && (!batterCostAccess || mode !== 'pregame')) {
+    return NextResponse.json({ error: 'Ultimate access required for the pregame recap' }, { status: 403, headers })
+  }
+
   url.search = new URLSearchParams({ date, mode, research: '1' }).toString()
   const response = await loadDugoutData(new Request(url), { tier: gate.tier, userId: account.userId })
   if (!response.ok) return response
-  const board = await response.json() as { date: string; games: DugoutGame[] }
+  const board = await response.json() as { date: string; games: DugoutGame[]; hrFeed?: HrFeedEvent[] }
   const publicAccess = hasTierAccess(gate.tier, 'advanced')
-  const batterCostAccess = hasTierAccess(gate.tier, 'ultimate')
+  const officialGames = new Set(board.games.map(value => value.gamePk))
+  const homeRuns = recap ? (board.hrFeed ?? []).filter(hit => officialGames.has(hit.game_pk) && Number.isInteger(hit.ab_index))
+    .map(hit => ({ gameId: hit.game_pk, playerId: hit.mlb_id, playerName: hit.player_name, pitcherName: hit.pitcher_name,
+      atBat: hit.ab_index, inning: hit.inning, half: hit.half, description: hit.desc, exitVelocity: hit.exit_velocity,
+      launchAngle: hit.launch_angle, distance: hit.hit_distance, time: hit.hr_time, runs: hit.rbi_on_play,
+      firstHomeRun: hit.is_first_hr_of_game, grandSlam: hit.is_grand_slam })) : undefined
   return NextResponse.json({ date: board.date, mode, publicAccess, batterCostAccess,
-    games: board.games.map(value => game(value, publicAccess, batterCostAccess)) }, { headers })
+    games: board.games.map(value => game(value, publicAccess, batterCostAccess)), homeRuns }, { headers })
 }
