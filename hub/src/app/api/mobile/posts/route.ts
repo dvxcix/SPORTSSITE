@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { notifyMentions } from '@/lib/mentions'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
+import { isOwnedNativeMedia } from '@/lib/nativeMedia'
 
 const headers = { 'Cache-Control': 'private, no-store' }
 const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i
@@ -26,9 +27,11 @@ export async function POST(request: Request) {
     return invalid()
   }
   if (!value || typeof value !== 'object' || Array.isArray(value) ||
-      Object.keys(value).some(key => !['id', 'content', 'kind', 'sport', 'visibility', 'spoiler', 'poll'].includes(key))) return invalid()
+      Object.keys(value).some(key => !['id', 'content', 'kind', 'sport', 'visibility', 'spoiler', 'poll', 'image'].includes(key))) return invalid()
 
-  const { id, content, kind, sport, visibility, spoiler, poll } = value as Record<string, unknown>
+  const { id, content, kind, sport, visibility, spoiler, poll, image } = value as Record<string, unknown>
+  const media = image == null ? null : isOwnedNativeMedia(image, userId, 'posts') ? image : null
+  if (image != null && !media) return invalid()
   if (typeof id !== 'string' || !uuid.test(id) || typeof content !== 'string' || content.length > 500 ||
       (kind !== 'text' && kind !== 'analysis' && kind !== 'poll') ||
       (sport !== null && (typeof sport !== 'string' || !sports.includes(sport))) ||
@@ -49,16 +52,16 @@ export async function POST(request: Request) {
       options: poll.options.map(text => ({ text: text.trim(), votes: 0 })),
       ends_at: new Date(Date.now() + poll.duration * 3600 * 1000).toISOString(),
     }
-  } else if (!content.trim() || poll != null) return invalid()
+  } else if ((!content.trim() && !media) || poll != null) return invalid()
 
   const draft = {
     id, author_id: userId, content: content.trim(), post_type: kind, sport, visibility,
-    is_spoiler: spoiler, group_id: null, page_id: null, pick_data: null, poll_data: pollData, media_urls: [],
+    is_spoiler: spoiler, group_id: null, page_id: null, pick_data: null, poll_data: pollData, media_urls: media ? [media] : [],
   }
   const { data, error } = await supabase.from('posts').insert(draft).select('id').single()
   if (error?.code === '23505') {
     const { data: existing, error: readError } = await supabase.from('posts')
-      .select('id,content,post_type,sport,visibility,is_spoiler,group_id,page_id,poll_data,created_at')
+      .select('id,content,post_type,sport,visibility,is_spoiler,group_id,page_id,poll_data,media_urls,created_at')
       .eq('id', id).eq('author_id', userId).maybeSingle()
     if (readError) return NextResponse.json({ error: 'Could not verify the posted draft' }, { status: 503, headers })
     const samePoll = pollData
@@ -68,7 +71,7 @@ export async function POST(request: Request) {
       : !existing?.poll_data
     if (!existing || existing.content !== draft.content || existing.post_type !== kind ||
         existing.sport !== sport || existing.visibility !== visibility || existing.is_spoiler !== spoiler ||
-        existing.group_id !== null || existing.page_id !== null || !samePoll) {
+        existing.group_id !== null || existing.page_id !== null || (existing.media_urls?.[0] ?? null) !== media || !samePoll) {
       return NextResponse.json({ error: 'This draft no longer matches the saved post. Check the feed before trying again.' }, { status: 409, headers })
     }
     return NextResponse.json({ id: existing.id }, { headers })

@@ -19,11 +19,14 @@ export async function GET(request: Request) {
   const account = await notificationAccount(request)
   if (account.error) return account.error
   const { userId, supabase } = account
+  const id = new URL(request.url).searchParams.get('id')
+  if (id !== null && !uuid.test(id)) return NextResponse.json({ error: 'Invalid notification' }, { status: 400, headers })
   try {
     const blocked = await getBlockedEitherWayIds(supabase, userId)
     let query = supabase.from('notifications')
       .select('id,type,message,body,link,read,created_at,actor_id,target_id,target_type,actor:users!notifications_actor_id_fkey(username,display_name,avatar_url)')
       .eq('user_id', userId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(50)
+    if (id) query = query.eq('id', id)
     if (blocked.length) query = query.or(`actor_id.is.null,actor_id.not.in.(${blocked.join(',')})`)
     const { data, error } = await query
     if (error) return unavailable()

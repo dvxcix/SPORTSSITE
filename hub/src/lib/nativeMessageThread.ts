@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { isAccountId, isBlockedEitherWay } from '@/lib/blocks'
 import { loadDmHistory, loadGroupHistory } from '@/lib/conversationHistory'
 import { notify } from '@/lib/notify'
+import { isOwnedNativeMedia } from '@/lib/nativeMedia'
 
 type Context = { kind: 'direct' | 'group'; id: string }
 type Partner = { id: string; username: string; display_name: string | null; avatar_url: string | null; allow_dms: boolean }
@@ -118,7 +119,8 @@ export async function updateNativeThread(client: SupabaseClient, userId: string,
   const text = typeof action.text === 'string' ? action.text.trim() : ''
   if (verb === 'send') {
     if (message) return message.sender_id === userId ? 200 : 409
-    if (!text || text.length > 1_000) return 400
+    const media = action.image == null ? null : isOwnedNativeMedia(action.image, userId, 'messages') ? action.image : null
+    if ((!text && !media) || text.length > 1_000 || (action.image != null && !media)) return 400
     if (room.partner && !room.partner.allow_dms) return 403
     let reply: string | null = null
     if (action.reply != null) {
@@ -128,8 +130,8 @@ export async function updateNativeThread(client: SupabaseClient, userId: string,
       if (!result.data) return 404
       reply = result.data.id
     }
-    const scope = direct ? { dm_recipient_id: id, message_type: 'text' } : { conversation_id: id }
-    const insert = await client.from(table).insert({ ...scope, id: messageId, sender_id: userId, content: text, reply_to_id: reply })
+    const scope = direct ? { dm_recipient_id: id, message_type: media ? 'media' : 'text' } : { conversation_id: id }
+    const insert = await client.from(table).insert({ ...scope, id: messageId, sender_id: userId, content: text, reply_to_id: reply, media_urls: media ? [media] : [] })
     if (insert.error) {
       if (insert.error.code === '23505') {
         const latest = await scopedMessage(client, userId, context, messageId).maybeSingle()
