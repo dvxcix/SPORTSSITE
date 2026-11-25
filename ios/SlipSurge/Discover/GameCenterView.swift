@@ -51,6 +51,10 @@ struct GameCenterView: View {
     @State private var busy = false
     @State private var failed = false
     @State private var reacting = Set<String>()
+    @State private var timeline = GameTimeline()
+    @State private var scoringTimeline = GameTimeline()
+    @State private var nearPlayStart = true
+    @State private var latestSeenPlay: String?
     @State private var selectedPeriod = ""
     @State private var scoringOnly = false
     @State private var team = ""
@@ -86,6 +90,14 @@ struct GameCenterView: View {
     private var matchTitle: String { "\(game.away.abbreviation) at \(game.home.abbreviation)" }
     private var gameLink: GameLink { .init(sport: game.sport, id: game.id) }
     private var roomLatest: UUID? { snapshots[.room]?.room?.last?.id }
+    private var newestPlay: String? { timeline.entries.first(where: includesPlay)?.id }
+    private var cue: GameTimeline.Cue? {
+        guard live, section == .plays else { return nil }
+        return timeline.currentCue(status: lastResult?.status ?? game.status)
+    }
+    private var wantsRoster: Bool {
+        visible && phase == .active && state != "pre" && (section == .plays || section == .overview)
+    }
     private var targetPlay: String? {
         guard section == .plays, let requestedPlay,
               snapshots[.plays]?.plays?.contains(where: { $0.id == requestedPlay }) == true else { return nil }
@@ -95,6 +107,14 @@ struct GameCenterView: View {
     var body: some View {
         VStack(spacing: 0) {
             scoreboard
+            Group {
+                if let cue {
+                    GameLiveCue(cue: cue, game: game)
+                        .id(cue.id)
+                        .transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: -5)))
+                }
+            }
+            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: cue?.id)
             SocialSectionBar(title: "Game sections", sections: Section.allCases, selection: $section) {
                 Text($0.rawValue).lineLimit(1).minimumScaleFactor(0.8).accessibilityLabel($0.label)
             }
@@ -124,10 +144,14 @@ struct GameCenterView: View {
             guard phase == .active, visible else { return }
             let requested = section
             await load(requested)
+            let interval = requested == .room || requested == .plays ? 8 : 24
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(requested == .room ? 8 : 24)) } catch { return }
+                do { try await Task.sleep(for: .seconds(interval)) } catch { return }
                 if requested == .room || live || scheduledToStart { await load(requested) }
             }
+        }
+        .task(id: wantsRoster) {
+            if wantsRoster, snapshots[.box] == nil { await load(.box) }
         }
         .onAppear { visible = true }
         .onDisappear { visible = false }
@@ -159,7 +183,8 @@ struct GameCenterView: View {
     private var gameContent: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: section == .room ? 3 : 10) {
+                LazyVStack(alignment: .leading, spacing: section == .room ? 3 : 9) {
+                    if section == .plays { playStart }
                     if let data = snapshots[section] {
                         details(data)
                     } else if error != nil {
@@ -191,6 +216,16 @@ struct GameCenterView: View {
                 }
             }
             .overlay(alignment: .bottomTrailing) {
+                if section == .plays, live, let newestPlay, latestSeenPlay != newestPlay, !nearPlayStart {
+                    Button("New plays", systemImage: "arrow.up") {
+                        withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) {
+                            proxy.scrollTo("plays-start", anchor: .top)
+                        }
+                        latestSeenPlay = newestPlay
+                    }
+                    .font(.caption.bold()).buttonStyle(.borderedProminent).buttonBorderShape(.capsule)
+                    .padding(12)
+                }
                 if section == .room, let roomLatest, roomLastSeen != roomLatest, !nearRoomEnd {
                     Button("New messages", systemImage: "arrow.down") {
                         scrollRoom(proxy, animated: true)
@@ -207,6 +242,10 @@ struct GameCenterView: View {
             }
             .onChange(of: section) {
                 if section == .room, roomLatest != nil { scrollRoom(proxy, animated: false) }
+                if section == .plays { latestSeenPlay = newestPlay; nearPlayStart = true }
+            }
+            .onChange(of: newestPlay, initial: true) {
+                if nearPlayStart { latestSeenPlay = newestPlay }
             }
             .onChange(of: targetPlay, initial: true) {
                 if let targetPlay, revealedPlay != targetPlay {
@@ -214,6 +253,18 @@ struct GameCenterView: View {
                     revealedPlay = targetPlay
                 }
             }
+        }
+    }
+
+    @ViewBuilder private var playStart: some View {
+        let anchor = Color.clear.frame(height: 2).id("plays-start").accessibilityHidden(true)
+        if #available(iOS 18, *) {
+            anchor.onScrollVisibilityChange { visible in
+                nearPlayStart = visible
+                if visible { latestSeenPlay = newestPlay }
+            }
+        } else {
+            anchor
         }
     }
 
@@ -320,12 +371,12 @@ struct GameCenterView: View {
                     }
                 } content: { EmptyView() }
             }
-            if let scoring = data.plays, !scoring.isEmpty {
+            if !scoringTimeline.entries.isEmpty {
                 Text("Scoring plays").font(.headline).accessibilityAddTraits(.isHeader)
-                ForEach(scoring) { play($0) }
+                ForEach(scoringTimeline.entries) { playCard($0) }
             }
         case .plays:
-            playList(data.plays ?? [])
+            playList
         case .box:
             boxScore(data)
         case .picks:
@@ -358,9 +409,9 @@ struct GameCenterView: View {
         }
     }
 
-    @ViewBuilder
-    private func playList(_ plays: [GameCenterData.Play]) -> some View {
-        let periods = orderedUnique(plays.reversed().compactMap(\.period))
+    @ViewBuilder private var playList: some View {
+        let entries = timeline.entries
+        let periods = orderedUnique(entries.reversed().compactMap { $0.play.period })
         if !periods.isEmpty {
             HStack(spacing: 8) {
                 ResearchToolFilter(title: periodName, selection: selectedPeriod.isEmpty ? allPeriods : selectedPeriod) {
@@ -373,102 +424,28 @@ struct GameCenterView: View {
                     .toggleStyle(.button).font(.caption.weight(.semibold))
             }
         }
-        if let requestedPlay, !plays.contains(where: { $0.id == requestedPlay }) {
+        if let requestedPlay, !entries.contains(where: { $0.id == requestedPlay }) {
             Label("This play is outside the available timeline.", systemImage: "clock")
                 .font(.subheadline).foregroundStyle(.secondary)
         }
-        let filtered = plays.filter { (selectedPeriod.isEmpty || $0.period == selectedPeriod) && (!scoringOnly || $0.scoring) }
+        let filtered = entries.filter(includesPlay)
         if filtered.isEmpty {
-            ContentUnavailableView(plays.isEmpty ? "No play-by-play available" : "No plays match these filters", systemImage: "list.bullet")
+            ContentUnavailableView(entries.isEmpty ? "No play-by-play available" : "No plays match these filters", systemImage: "list.bullet")
         }
-        ForEach(filtered) { play($0).id($0.id) }
+        ForEach(filtered) { playCard($0).id($0.id) }
     }
 
-    private func play(_ play: GameCenterData.Play) -> some View {
-        let visuals = [game.away, game.home].first { $0.id == play.teamId }
-        let tone = treatment(visuals?.color)
-        return VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 7) {
-                if let visuals, let logo = game.logo(for: visuals) {
-                    ResearchArtwork(urls: [logo], fallback: "shield", pointSize: 23).frame(width: 23, height: 23)
-                }
-                Text(play.title ?? "Play").font(.subheadline.weight(.bold))
-                Spacer(minLength: 3)
-                Text([play.period, play.clock].compactMap { $0 }.joined(separator: " · "))
-                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-            }
-            if !play.text.isEmpty { Text(verbatim: play.text).font(.subheadline) }
-            if play.scoring, let away = play.away, let home = play.home {
-                Text("\(game.away.abbreviation) \(away)  ·  \(game.home.abbreviation) \(home)")
-                    .font(.caption.weight(.heavy)).monospacedDigit()
-                    .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(.primary.opacity(0.07), in: .capsule)
-            }
-            HStack(spacing: 7) {
-                ForEach(play.athletes) { athlete in
-                    ResearchArtwork(urls: athlete.headshot.map { [$0] } ?? [], fallback: "person.fill", pointSize: 30)
-                        .frame(width: 28, height: 28).background(tone.opacity(0.15), in: .circle)
-                }
-                Spacer(minLength: 0)
-                if play.pitches?.isEmpty == false {
-                    Button("Pitch details", systemImage: "scope") { pitchPlay = play }
-                        .labelStyle(.iconOnly).frame(width: 44, height: 44)
-                }
-                if api.userID != nil {
-                    Menu {
-                        ForEach(["❤️","🔥","⚡","👏","😂","👀","🏆","👍"], id: \.self) { symbol in
-                            Button(symbol) { Task { await react(symbol, to: play) } }
-                                .disabled(reacting.contains("\(play.id):\(symbol)"))
-                        }
-                    } label: {
-                        Image(systemName: "face.smiling").frame(width: 44, height: 44)
-                    }
-                    .accessibilityLabel("React to play")
-                }
-                Button {
-                    draft.play = api.userID == nil ? nil : play
-                    section = .room
-                } label: {
-                    Image(systemName: "bubble.left").frame(width: 44, height: 44)
-                }
-                .accessibilityLabel("Discuss this play in Game Room")
-                .buttonStyle(SlipSurgePressStyle())
-            }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Brand.accent(for: scheme))
-            if !play.reactions.isEmpty {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 6) {
-                        ForEach(play.reactions.keys.sorted(), id: \.self) { symbol in
-                            if let reaction = play.reactions[symbol] {
-                                Button {
-                                    Task { await react(symbol, to: play) }
-                                } label: {
-                                    Text("\(symbol) \(reaction.count)").font(.caption.monospacedDigit().weight(.semibold))
-                                        .padding(.horizontal, 7).frame(minHeight: 44)
-                                        .background {
-                                            Capsule().fill(reaction.mine ? Brand.accent(for: scheme).opacity(0.17) : .primary.opacity(0.07))
-                                                .frame(height: 25)
-                                        }
-                                }
-                                .buttonStyle(SlipSurgePressStyle())
-                                .disabled(api.userID == nil || reacting.contains("\(play.id):\(symbol)"))
-                                .accessibilityAddTraits(reaction.mine ? .isSelected : [])
-                            }
-                        }
-                    }
-                }
-                .scrollIndicators(.hidden)
-            }
-        }
-        .padding(.leading, 12).padding(.trailing, 8).padding(.top, 10).padding(.bottom, 4)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
-        .overlay(alignment: .leading) {
-            if play.scoring || play.id == revealedPlay {
-                Capsule().fill(play.id == revealedPlay ? Brand.accent(for: scheme) : tone.opacity(0.85))
-                    .frame(width: 3).padding(.vertical, 8).allowsHitTesting(false)
-            }
-        }
+    private func includesPlay(_ entry: GameTimeline.Entry) -> Bool {
+        (selectedPeriod.isEmpty || entry.play.period == selectedPeriod) && (!scoringOnly || entry.play.scoring)
+    }
+
+    private func playCard(_ entry: GameTimeline.Entry) -> some View {
+        GamePlayCard(entry: entry, game: game, highlighted: entry.id == revealedPlay, canReact: api.userID != nil,
+            react: { emoji, enabled in await react(emoji, to: entry.play, enabled: enabled) },
+            discuss: {
+                draft.play = api.userID == nil ? nil : entry.play
+                section = .room
+            }, showPitches: { pitchPlay = entry.play })
     }
 
     @ViewBuilder
@@ -595,6 +572,13 @@ struct GameCenterView: View {
             guard !Task.isCancelled, requests[requested] == id else { return }
             guard result.id == game.id, result.sport == game.sport else { throw URLError(.cannotParseResponse) }
             snapshots[requested] = result
+            let groups = snapshots[.box]?.groups ?? []
+            if requested == .plays || requested == .box {
+                timeline = GameTimeline(plays: snapshots[.plays]?.plays ?? [], groups: groups, basketball: game.sport == "nba")
+            }
+            if requested == .overview || requested == .box {
+                scoringTimeline = GameTimeline(plays: snapshots[.overview]?.plays ?? [], groups: groups, basketball: game.sport == "nba")
+            }
             if requested == section {
                 lastResult = result
                 error = nil
@@ -627,7 +611,7 @@ struct GameCenterView: View {
         } catch { failed = true }
     }
 
-    private func react(_ emoji: String, to play: GameCenterData.Play) async {
+    private func react(_ emoji: String, to play: GameCenterData.Play, enabled: Bool) async {
         struct Action: Encodable { let kind = "react"; let play: String; let emoji: String; let enabled: Bool }
         struct Response: Decodable { let ok: Bool }
         let key = "\(play.id):\(emoji)"
@@ -635,7 +619,7 @@ struct GameCenterView: View {
         defer { reacting.remove(key) }
         let requested = section
         do {
-            let action = Action(play: play.id, emoji: emoji, enabled: play.reactions[emoji]?.mine != true)
+            let action = Action(play: play.id, emoji: emoji, enabled: enabled)
             let result = try await api.write(Response.self, path: path, query: baseQuery, body: action)
             guard result.ok else { throw URLError(.cannotParseResponse) }
             await load(requested)

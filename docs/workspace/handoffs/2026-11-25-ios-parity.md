@@ -2608,3 +2608,35 @@ physical-device push are still open.
   reaction, photo upload or Feed post was sent during QA.
 - Native and production suites passed 286/286, and `git diff --check`
   passed. The iPhone 16 Plus was left on the selected play for review.
+
+## iOS live play presentation and reactions · 25 November 2026
+
+- Continued from 7a2082d0 on codex/ios-parity-20261125. Reviewed Real’s
+  Heat–76ers game live in Device Hub, including changing reaction counts,
+  player and team marks, clock and score per play, and the free-throw
+  sequence. Device Hub occasionally reported screen sharing unavailable
+  while switching focus to the iPhone 16 Plus on 27.2.1 and reconnected.
+- The native timeline now separates what happened, who did it, supporting
+  context, and the play’s score and clock. The portrait uses the player’s
+  primary and secondary team colors and club logo. The existing box-score
+  roster fills in portraits when the play payload omits athletes. A captured
+  NBA response with zero play athletes resolved portraits on 180 of 194
+  plays, including the named Heat–76ers shooters.
+- The visible live game can surface a team timeout with its logo and a
+  pending free throw with the shooter when the provider supplies enough
+  evidence. Focused checks covered timeout ownership, clock expiry, made
+  and missed presentation, and incomplete and completed free-throw
+  sequences. The real Philadelphia timeout and Giannis free throw rendered
+  on the signed simulator. The physical build also displayed the real
+  Philadelphia timeout.
+- Play rows have a one-tap fire reaction, reaction counts and animated
+  feedback for a local tap or a received increase. Reduce Motion disables
+  the bursts. A local simulator fixture using the same SwiftUI component
+  confirmed a tap and an incoming increase produced separate bursts. Recent
+  play and reaction updates poll every eight seconds with Plays visible and
+  active. The upstream score source controls data freshness. The existing
+  reaction endpoint, Game Room and feed sharing remain in use.
+- Xcode Debug builds passed for the iPhone 18 Pro simulator and the iPhone
+  16 Plus. All 286 native and production checks and git diff --check passed.
+  The website and backend were unchanged. No production reaction or test
+  post was sent.
