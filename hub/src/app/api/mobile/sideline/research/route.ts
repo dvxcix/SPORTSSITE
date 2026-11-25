@@ -6,6 +6,7 @@ import { requireNflAccess } from '@/lib/nflAccess'
 import { defaultNflSample, nflSampleReference, parseNflSample } from '@/lib/nflSample'
 import { nflPregameOpen } from '@/lib/nflPregameResearchData'
 import { nativeNflCheatsheets, nativeNflMismatch } from '@/lib/nativeNflResearch'
+import { loadNflMatrices } from '@/lib/nflMatrixData'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 
 export const maxDuration = 120
@@ -28,6 +29,7 @@ export async function GET(request: NextRequest) {
   }
   const gate = await requireNflAccess()
   if (gate.error) return gate.error
+  if (gate.userId !== account.userId) return NextResponse.json({ error: 'NFL access unavailable' }, { status: 403, headers })
   const id = params.get('game') ?? '', exactDate = params.get('date') ?? ''
   const tool = params.get('tool'), market = params.get('market') ?? 'anytime_td', book = params.get('book') ?? 'fanduel'
   const window = params.get('window') ?? 'season', sample = params.get('sample')
@@ -43,6 +45,7 @@ export async function GET(request: NextRequest) {
     const game = schedule.date === exactDate ? schedule.games.find(item => item.id === id) : undefined
     if (!game) return NextResponse.json({ error: 'Matchup not found' }, { status: 404, headers })
     const reference = sample == null ? defaultNflSample(game) : parseNflSample(sample)
+    const matricesPromise = tool === 'mm' ? loadNflMatrices(account.userId) : null
     const marketView = async () => (await getSidelineOddsBundle(game)).odds
     const load = async () => {
       const board = await marketView()
@@ -54,8 +57,9 @@ export async function GET(request: NextRequest) {
         id: player.gsisId ?? `bdl-${player.id}`, bdlId: player.id, teamId: player.teamId ?? null,
         team: player.team, name: player.name, position: player.position,
       }))
-      const lens = await getCachedSidelineBoardLens(game, roster, reference)
-      return { board, lens, projection: nativeNflMismatch(game, lens.windows[window as SidelineWindow], board, market) }
+      const [lens, matrixResult] = await Promise.all([getCachedSidelineBoardLens(game, roster, reference), matricesPromise])
+      const projection = nativeNflMismatch(game, lens, window as SidelineWindow, board, market, matrixResult?.data ?? [])
+      return { board, lens, projection: { ...projection, matricesUnavailable: Boolean(matrixResult?.error) } }
     }
     const beganOpen = nflPregameOpen(game)
     let result = await load()
