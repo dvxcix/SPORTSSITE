@@ -12,14 +12,16 @@ export async function GET(request: Request) {
   const gate = await requireNflAccess()
   if (gate.error) return gate.error
 
-  const date = new URL(request.url).searchParams.get('date')
+  const params = new URL(request.url).searchParams
+  const date = params.get('date'), game = params.get('game')
   const headers = { 'Cache-Control': 'private, no-store' }
-  if (date !== null && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date)) {
-    return NextResponse.json({ error: 'Choose a valid date' }, { status: 400, headers })
+  if (date !== null && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) ||
+      game !== null && !/^\d{4}_\d{2}_[A-Z]{2,3}_[A-Z]{2,3}$/.test(game)) {
+    return NextResponse.json({ error: 'Choose a valid date and matchup' }, { status: 400, headers })
   }
 
   try {
-    const schedule = await getSidelineGames(date ?? undefined)
+    const schedule = await getSidelineGames(date ?? undefined, date == null ? game ?? undefined : undefined)
     const games = date && schedule.date !== date ? [] : schedule.games.map(game => ({
       id: game.id,
       kickoff: nflKickoffAt(game)?.toISOString() ?? null,
