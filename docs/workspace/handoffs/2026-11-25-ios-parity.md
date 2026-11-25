@@ -652,7 +652,9 @@ physical-device push are still open.
   Preview `dpl_BhGuX7uAPQkfKN6ib2qGjEmh9oof` and production
   `dpl_4dWWBMEeczJtkY1T17hmcMToxonA` reported READY. Five invalid or anonymous
   channel and settings requests returned 401. Groups, Feed and NFL preview
-  returned 200.
+  returned 200. The signed-in iPhone 18 Pro opened the production Live Rooms
+  directory and General Sports. The selected room showed its empty history
+  and available composer. No message was sent.
 
 ## NFL Matrices and live Simulator research · 25 November 2026
 
@@ -694,7 +696,10 @@ physical-device push are still open.
   checks passed. Backend deployment, signed-in Simulator evaluation on an
   existing or disposable Matrix, and slate-wide displays follow. Task
   checkpoint `062c46b19390ad2239b315095d86857c008da1d0` is pushed. PR #26
-  preview `dpl_7tVdHcrv85VqKabkdo2NE5y8mjZf` reported READY.
+  preview `dpl_7tVdHcrv85VqKabkdo2NE5y8mjZf` and production
+  `dpl_7YDp2TSkQ1fSnrhjPcG3hMCFcAFY` reported READY on
+  `b80534c365ad2977d0e08e5bf6c885a855fd553f`. Five invalid Matrix requests
+  returned 401. NBA preview and Feed returned 200.
 
 ## Native Stories · 25 November 2026
 
@@ -710,4 +715,32 @@ physical-device push are still open.
   website rollout was preserved. No real Stories were published in QA.
 - Signed Xcode Debug, Hub TypeScript and 203 focused checks passed. The prior
   NFL research fixture was updated to test the new same-member Matrix check
-  while retaining its verification of frozen kickoff-time data.
+  while retaining its verification of frozen kickoff-time data. Task
+  checkpoint `7bb7a6bfde6bcde1ab89033aa01175abe2121b2a` is pushed. PR #27
+  merged as `a9a24ffdc0e16b906e1ea411a78775996f297a3f` with preview
+  `dpl_HjdF7MjYq5UwCHKbnACozWQmYM3w` and production
+  `dpl_3mP75ThDmVi1FvcaYkMMdqRvPtoS` READY. The guest request returned 200
+  with the existing feature disabled. Invalid reads and writes returned 401.
+
+## Creator storefront, membership and payouts · 25 November 2026
+
+- A verified account can open guided SwiftUI setup through Account or Studio.
+  It saves the same storefront draft, owner media, sports and topics. It can
+  link a compatible community or create one through the canonical setup,
+  publish changes and manage the availability of paid offers. Whop onboarding
+  and offer creation reuse the existing payment and membership checks.
+- Studio now opens a native balance, payout history, payout details and 30- or
+  90-day revenue chart. The verified Whop portal handles withdrawal and
+  identity verification in a system browser sheet. Test accounts cannot
+  request the portal. The iOS app receives display data and a hosted link.
+- Creator and community cards open native membership details. Members can
+  restore access, open their actual community, and manage eligible Whop plans.
+  The signed-in checkout route binds a random app return to the existing offer
+  and buyer. The app still fetches actual provider-backed access after return.
+  New external checkout is shown for the US App Store storefront, consistent
+  with the existing native Ultimate billing screen.
+- Signed Xcode Debug and Hub TypeScript passed. The focused creator, Discord,
+  Whop, wallet, research access and production suites passed all 281 checks.
+  They exercise native buyer identity and return state, denied native wallet
+  authorization, and the existing cookie workflows. No actual checkout,
+  provider enrollment, withdrawal or storefront publication was submitted.

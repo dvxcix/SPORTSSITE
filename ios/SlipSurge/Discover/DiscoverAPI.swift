@@ -15,6 +15,9 @@ struct DiscoverAPI {
             let accessType: String
             let price: Double?
             let invitationId: UUID?
+            let creatorProductId: UUID?
+            let productType: String?
+            let billingPeriodDays: Int?
         }
 
         let groups: [Community]
@@ -37,6 +40,7 @@ struct DiscoverAPI {
                 let description: String?
                 let price: Double
                 let currency: String?
+                let productType: String?
                 let billingPeriodDays: Int?
             }
 

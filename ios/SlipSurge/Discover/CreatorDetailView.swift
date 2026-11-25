@@ -50,6 +50,15 @@ struct CreatorDetailView: View {
                         let cycle = membership.billingPeriodDays.map { " / \($0) days" } ?? ""
                         Text(membership.price.formatted(.currency(code: membership.currency ?? "USD")) + cycle)
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                        if let id = UUID(uuidString: membership.id) {
+                            NavigationLink {
+                                CreatorMembershipView(account: api.account, offer: .init(id: id, title: membership.title,
+                                    description: membership.description, price: membership.price, currency: membership.currency,
+                                    productType: membership.productType, status: "active", billingPeriodDays: membership.billingPeriodDays),
+                                    creatorID: creator.id, artwork: creator.storefront?.logoUrl ?? creator.avatarUrl)
+                            } label: { Label("View membership", systemImage: "chevron.right") }
+                            .buttonStyle(.bordered)
+                        }
                     }
                 }
             }

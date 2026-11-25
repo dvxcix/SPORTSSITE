@@ -2,11 +2,12 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import ts from 'typescript'
+import { creatorBrowserRouteImport } from './creator-route-fixture.mjs'
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8')
 function compile(path,imports={},extra={}){
  const module={exports:{}}
  const source=ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
- new Function('require','module','exports','fetch','process',source)(name=>{if(name==='server-only')return {};assert.ok(name in imports,'Unexpected import '+name);return imports[name]},module,module.exports,extra.fetch||fetch,extra.process||process)
+ new Function('require','module','exports','fetch','process',source)(name=>{if(name==='server-only')return {};if(name in imports)return imports[name];const creatorImport=creatorBrowserRouteImport(name,compile,imports);assert.ok(creatorImport,'Unexpected import '+name);return creatorImport},module,module.exports,extra.fetch||fetch,extra.process||process)
  return module.exports
 }
 function db(resolve){const calls=[];return{calls,from(table){const call={table,filters:[]};calls.push(call);const query=new Proxy({},{get:(_,key)=>key==='then'?(yes,no)=>Promise.resolve(resolve(call)).then(yes,no):(...args)=>{if(['insert','update'].includes(key))call.values=args[0];else if(key==='select')call.columns=args[0];else call.filters.push([key,...args]);return query}});return query},rpc(name,args){const call={rpc:name,args};calls.push(call);return Promise.resolve(resolve(call))}}}
@@ -152,6 +153,7 @@ function embeddedCheckout(options={}){
  const admin=db(call=>{
   if(call.table==='creator_products')return {data:{id:ids.product,creator_id:options.owner?ids.user:ids.creator,status:options.paused?'paused':'active',whop_plan_id:'plan_owned'},error:null}
   if(call.table==='creator_entitlements')return {data:options.entitled?{status:'active',current_period_end:'2099-01-01'}:null,error:null}
+  if(call.table==='groups')return {data:options.hiddenGroup?[{id:ids.product}]:[],error:null}
   return {data:{whop_connected_company_id:'biz_creator'},error:null}
  })
  const next={NextResponse:{json:(body,init={})=>new Response(JSON.stringify(body),{status:init.status||200,headers:init.headers})}}
@@ -163,8 +165,15 @@ function embeddedCheckout(options={}){
   '@/lib/creatorWebhookConfig':{creatorDeliveryReady:async()=>!options.disconnected},
   '@/lib/safeApiError':{safeApiError:(_tag,_cause,message,status=500)=>next.NextResponse.json({error:message},{status})},
   '@/lib/whopUrl':{isTrustedWhopUrl:value=>{try{return new URL(value).protocol==='https:'&&new URL(value).hostname==='whop.com'}catch{return false}}},
+  ...(options.native ? {
+   '@/lib/creatorRouteAccount':compile('src/lib/creatorRouteAccount.ts',{
+    'next/server':next,'@/lib/supabase/server':{createClient:async()=>{throw Error('Native checkout used browser cookies')}},
+    '@/lib/supabase/nativeAccount':{requireNativeAccount:async()=>options.denied?{error:next.NextResponse.json({error:'Unauthorized'},{status:401})}:{supabase:{},userId:ids.user}},
+   }),
+   '@/lib/mlbViewerAccess':{canViewMlb:async()=>false},
+  }:{}),
  })
- return {providerCalls,admin,run:()=>route.POST(new Request('https://www.slipsurge.com/api/creator/products/'+ids.product+'/checkout',{method:'POST',body:JSON.stringify({creator_id:'attacker',account_id:'biz_attacker',price:0})}),{params:Promise.resolve({productId:ids.product})})}
+ return {providerCalls,admin,run:()=>route.POST(new Request('https://www.slipsurge.com/api/creator/products/'+ids.product+'/checkout',{method:'POST',headers:options.native?{Authorization:'Bearer verified-fixture'}:{},body:JSON.stringify({creator_id:'attacker',account_id:'biz_attacker',price:0,state:options.state})}),{params:Promise.resolve({productId:ids.product})})}
 }
 test('embedded creator checkout is configured for the server-owned account, variant and signed-in buyer',async()=>{
  const f=embeddedCheckout(),response=await f.run(),data=await response.json();assert.equal(response.status,200);assert.equal(data.checkoutConfigurationId,'ch_verified');assert.equal(response.headers.get('cache-control'),'private, no-store')
@@ -177,5 +186,18 @@ test('embedded checkout rejects missing, legacy and malformed provider configura
 test('embedded checkout retains owner, active-member, publication, provider readiness and rate gates',async()=>{
  for(const [options,status]of[[{owner:true},409],[{entitled:true},409],[{paused:true},404],[{restricted:true},409],[{wrongAccount:true},502],[{disconnected:true},503],[{limited:true},429]]){
   const f=embeddedCheckout(options),response=await f.run();assert.equal(response.status,status);assert.equal(f.providerCalls.length,0);if(options.entitled)assert.equal((await response.json()).accessUrl,'/creators/access/complete?product='+ids.product)
+ }
+})
+
+test('native creator checkout keeps the same buyer, adds a fixed app return and rejects hidden offers',async()=>{
+ const state='x'.repeat(43),fixture=embeddedCheckout({native:true,state})
+ assert.equal((await fixture.run()).status,200)
+ assert.equal(fixture.providerCalls[0].body.redirect_url,'https://www.slipsurge.com/auth/native/checkout?state='+state)
+ assert.equal(fixture.providerCalls[0].body.metadata.internal_user_id,ids.user)
+ assert.equal(fixture.providerCalls[0].body.account_id,'biz_creator')
+ for(const [options,status]of[[{state:'invalid'},400],[{state,denied:true},401],[{state,hiddenGroup:true},404]]){
+  const blocked=embeddedCheckout({native:true,...options})
+  assert.equal((await blocked.run()).status,status)
+  assert.equal(blocked.providerCalls.length,0)
  }
 })

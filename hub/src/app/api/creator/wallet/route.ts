@@ -4,9 +4,9 @@ import { readCreatorWallet } from '@/lib/creatorWalletProvider'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 
 export const dynamic = 'force-dynamic'
-const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie', 'X-Content-Type-Options': 'nosniff' }
+const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie, Authorization', 'X-Content-Type-Options': 'nosniff' }
 export async function GET(request: NextRequest) {
-  const auth = await creatorWalletAuth()
+  const auth = await creatorWalletAuth(request)
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status, headers })
   const query = request.nextUrl.searchParams, after = query.get('after')
   if ([...query.keys()].some(key => key !== 'after') || query.getAll('after').length > 1 || after !== null && (!after.length || after.length > 512)) return NextResponse.json({ error: 'Invalid payout page.' }, { status: 400, headers })

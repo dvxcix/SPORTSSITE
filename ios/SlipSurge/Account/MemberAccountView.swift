@@ -126,11 +126,14 @@ struct MemberAccountView: View {
             } label: {
                 Label("Manage membership", systemImage: "creditcard")
             }
+            NavigationLink {
+                CreatorMembershipsView(api: .init(client: .init(account: account, userID: userID)))
+            } label: { Label("Creator memberships", systemImage: "person.2") }
         }
         .listRowBackground(Brand.surface(for: scheme))
 
-        if details.canOpenStudio == true || details.role == "creator" || details.role == "admin" {
-            Section("Workspaces") {
+        Section("Workspaces") {
+            if details.canOpenStudio == true || details.role == "creator" || details.role == "admin" {
                 NavigationLink {
                     AccountWorkspaceView(account: account, userID: userID, workspace: .studio)
                 } label: {
@@ -143,9 +146,13 @@ struct MemberAccountView: View {
                         Label("Admin", systemImage: "checkmark.shield")
                     }
                 }
+            } else {
+                NavigationLink {
+                    CreatorStoreView(api: .init(account: account, userID: userID))
+                } label: { Label("Set up your storefront", systemImage: "storefront") }
             }
-            .listRowBackground(Brand.surface(for: scheme))
         }
+        .listRowBackground(Brand.surface(for: scheme))
     }
 
     private func tierLabel(_ rawValue: String) -> String {

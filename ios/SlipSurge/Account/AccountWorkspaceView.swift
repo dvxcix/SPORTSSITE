@@ -74,6 +74,9 @@ struct AccountWorkspaceView: View {
     @State private var removing: Removal?
     @State private var scheduleProblem: String?
     @State private var changingSchedule = false
+    @State private var changingOffer: Studio.Offer?
+    @State private var offerBusy = false
+    @State private var offerProblem: String?
 
     private struct Editor: Identifiable {
         let id = UUID()
@@ -118,6 +121,15 @@ struct AccountWorkspaceView: View {
             isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }), titleVisibility: .visible, presenting: removing) { removal in
             Button(removal.isDelete ? "Delete draft" : "Cancel scheduled post", role: .destructive) { Task { await remove(removal) } }
         }
+        .confirmationDialog(changingOffer?.status == "active" ? "Pause this offer?" : "Publish this offer?",
+            isPresented: Binding(get: { changingOffer != nil }, set: { if !$0 { changingOffer = nil } }),
+            titleVisibility: .visible, presenting: changingOffer) { offer in
+            if offer.status == "active" {
+                Button("Pause offer", role: .destructive) { Task { await updateOffer(offer, status: "paused") } }
+            } else {
+                Button("Publish offer") { Task { await updateOffer(offer, status: "active") } }
+            }
+        }
     }
 
     private func studioContent(_ studio: Studio) -> some View {
@@ -134,6 +146,14 @@ struct AccountWorkspaceView: View {
             if let state = studio.paymentStatus {
                 Label(pretty(state), systemImage: "creditcard").font(.subheadline)
             }
+            NavigationLink {
+                CreatorStoreView(api: .init(account: account, userID: userID))
+            } label: { Label("Storefront", systemImage: "storefront") }
+            .buttonStyle(.bordered)
+            NavigationLink {
+                CreatorWalletView(api: .init(account: account, userID: userID))
+            } label: { Label("Balance & payouts", systemImage: "wallet.bifold") }
+            .buttonStyle(.bordered)
             ResearchToolRail(title: "Creator Studio", choices: StudioTab.allCases, selection: $studioTab, label: \.rawValue, compact: true)
             switch studioTab {
             case .offers:
@@ -142,6 +162,7 @@ struct AccountWorkspaceView: View {
                 } label: { Label("View members", systemImage: "person.2") }
                 .buttonStyle(.bordered)
                 if studio.offers.isEmpty { ContentUnavailableView("No membership offers", systemImage: "creditcard") }
+                if let offerProblem { Text(offerProblem).font(.subheadline).foregroundStyle(.red) }
                 ForEach(studio.offers) { offer in
                     ResearchToolCard(color: Brand.accent(for: scheme)) {
                         Text(offer.title).font(.headline)
@@ -150,6 +171,11 @@ struct AccountWorkspaceView: View {
                         Text(offer.price.formatted(.currency(code: offer.currency?.uppercased() ?? "USD")) + (offer.billingPeriodDays.map { " / \($0) days" } ?? ""))
                             .font(.subheadline.weight(.semibold))
                         Text(pretty(offer.status)).font(.caption).foregroundStyle(.secondary)
+                        if ["active", "paused", "draft"].contains(offer.status) {
+                            Button(offer.status == "active" ? "Pause offer" : "Publish offer", systemImage: offer.status == "active" ? "pause.circle" : "arrow.up.circle") {
+                                changingOffer = offer
+                            }.buttonStyle(.bordered).disabled(offerBusy)
+                        }
                     }
                 }
             case .groups:
@@ -195,6 +221,20 @@ struct AccountWorkspaceView: View {
                 }
             }
         }
+    }
+
+    private func updateOffer(_ offer: Studio.Offer, status: String) async {
+        guard !offerBusy else { return }
+        offerBusy = true
+        offerProblem = nil
+        defer { offerBusy = false }
+        do {
+            try await CreatorStoreAPI(account: account, userID: userID).setOffer(offer.id, status: status)
+            await load()
+        } catch let error as SlipSurgeHTTP.Status {
+            struct Details: Decodable { let error: String }
+            offerProblem = (try? JSONDecoder().decode(Details.self, from: error.data))?.error ?? "This offer change couldn’t be confirmed."
+        } catch { offerProblem = "This offer change couldn’t be confirmed." }
     }
 
     private func adminContent(_ admin: Admin) -> some View {

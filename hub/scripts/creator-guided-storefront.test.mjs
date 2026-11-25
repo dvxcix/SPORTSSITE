@@ -4,8 +4,9 @@ import fs from 'node:fs'
 import ts from 'typescript'
 import {NextRequest,NextResponse} from 'next/server.js'
 import {PGlite} from '@electric-sql/pglite'
+import { creatorBrowserRouteImport } from './creator-route-fixture.mjs'
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8')
-function compile(path,imports={}){const module={exports:{}};new Function('require','module','exports',ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(name=>{if(name==='server-only')return {};assert.ok(name in imports,'Unexpected import '+name);return imports[name]},module,module.exports);return module.exports}
+function compile(path,imports={}){const module={exports:{}};new Function('require','module','exports',ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(name=>{if(name==='server-only')return {};const creatorImport=creatorBrowserRouteImport(name,compile,imports);if(creatorImport)return creatorImport;assert.ok(name in imports,'Unexpected import '+name);return imports[name]},module,module.exports);return module.exports}
 const domain=compile('src/lib/creatorStorefront.ts'),owner='00000000-0000-4000-8000-000000000001',other='00000000-0000-4000-8000-000000000002',groupId='00000000-0000-4000-8000-000000000201',productId='00000000-0000-4000-8000-000000000301'
 const draft={name:'Court Notes',bio:'Basketball research and original film analysis.',logo_url:null,cover_url:null,sports:['NBA'],tags:['Film study'],access_mode:'free',setup_step:2,product_id:null}
 const req=(body,origin='https://www.slipsurge.com')=>new NextRequest('https://www.slipsurge.com/api/creator/storefront',{method:'POST',headers:{origin,'Content-Type':'application/json'},body:JSON.stringify(body)})

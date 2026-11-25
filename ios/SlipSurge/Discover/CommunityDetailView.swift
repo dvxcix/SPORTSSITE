@@ -42,8 +42,8 @@ struct CommunityDetailView: View {
                     count: group.memberCount.map { "\($0.formatted()) members" })
                 if let feedback { Text(feedback).font(.footnote).foregroundStyle(.secondary) }
                 if api.userID == nil {
-                    Label("Sign in to join the conversation.", systemImage: "person.crop.circle")
-                        .font(.subheadline).foregroundStyle(.secondary)
+                    if group.creatorProductId != nil { paidMembership }
+                    else { Label("Sign in to join the conversation.", systemImage: "person.crop.circle").font(.subheadline).foregroundStyle(.secondary) }
                 } else if let invitation = group.invitationId, !responseComplete {
                     invitationActions(invitation)
                 } else if let page {
@@ -72,9 +72,11 @@ struct CommunityDetailView: View {
                         }
                     } else {
                         Label("Members-only community", systemImage: "lock").foregroundStyle(.secondary)
+                        paidMembership
                     }
                 } else if group.accessType == "paid", !initialMember, (error as? SlipSurgeHTTP.Status)?.code == 404 {
                     Label("Membership required", systemImage: "lock").foregroundStyle(.secondary)
+                    paidMembership
                 } else {
                     ResearchToolMessage(title: "Community couldn’t load", error: error) { Task { await load(feed) } }
                 }
@@ -105,6 +107,19 @@ struct CommunityDetailView: View {
             Button("Leave community", role: .destructive) { Task { await changeMembership(false) } }
         } message: {
             if group.accessType == "paid" { Text("Leaving the community keeps your paid membership active.") }
+        }
+    }
+
+    @ViewBuilder
+    private var paidMembership: some View {
+        if let offer = group.creatorProductId {
+            NavigationLink {
+                CreatorMembershipView(account: api.account, offer: .init(id: offer, title: group.name,
+                    description: group.description, price: group.price, currency: "USD", productType: group.productType,
+                    status: group.price != nil ? "active" : "paused", billingPeriodDays: group.billingPeriodDays),
+                    creatorID: nil, artwork: group.avatarUrl)
+            } label: { Label("View membership", systemImage: "lock.open") }
+            .buttonStyle(.borderedProminent)
         }
     }
 
