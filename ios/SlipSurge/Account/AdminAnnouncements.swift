@@ -42,7 +42,7 @@ private struct AnnouncementsAdminAPI {
 }
 
 struct AdminAnnouncementsView: View {
-    private enum Page: String, CaseIterable { case banner = "Site Banner", changelog = "Changelog" }
+    enum Page: String, CaseIterable { case banner = "Site Banner", changelog = "Changelog" }
     private struct Editor: Identifiable {
         let id = UUID()
         let release: SiteAnnouncements.Release?
@@ -50,7 +50,7 @@ struct AdminAnnouncementsView: View {
 
     let account: AccountStore
     let userID: UUID
-    @State private var page = Page.banner
+    @State private var page: Page
     @State private var data: AnnouncementsAdminAPI.Data?
     @State private var edit: Editor?
     @State private var pendingDelete: SiteAnnouncements.Release?
@@ -59,6 +59,12 @@ struct AdminAnnouncementsView: View {
     @State private var revision = 0
 
     private var api: AnnouncementsAdminAPI { .init(account: account, userID: userID) }
+
+    init(account: AccountStore, userID: UUID, page: Page = .banner) {
+        self.account = account
+        self.userID = userID
+        _page = State(initialValue: page)
+    }
 
     var body: some View {
         Group {

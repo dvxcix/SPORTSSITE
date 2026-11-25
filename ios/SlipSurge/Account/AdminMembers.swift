@@ -86,7 +86,7 @@ struct AdminMembersView: View {
     @State private var query = ""
     @State private var type = ""
     @State private var tier = ""
-    @State private var banned = false
+    @State private var banned: Bool
     @State private var result: [AdminMember]?
     @State private var hasMore = false
     @State private var page = 0
@@ -94,6 +94,11 @@ struct AdminMembersView: View {
     @State private var loading = false
 
     private var filter: Filter { .init(q: query, type: type, tier: tier, banned: banned) }
+
+    init(api: AdminMembersAPI, banned: Bool = false) {
+        self.api = api
+        _banned = State(initialValue: banned)
+    }
 
     var body: some View {
         List {

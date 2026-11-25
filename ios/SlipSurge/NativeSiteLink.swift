@@ -18,6 +18,7 @@ enum NativeSiteLink: Hashable {
     case adminMarketplace, adminCreatorBusiness, adminPipelineHealth, adminBrowserAutomation, adminSocialPlatforms, adminEmail, adminDiscord, adminDiscordComposer
     case adminWhop(AdminWhopView.Page)
     case adminPlatformSettings(AdminPlatformSettingsView.Page)
+    case adminSection(AdminSection)
     case eventCreate, threadCreate(String?), storyCreate
 
     enum CommunitySection: Hashable {
@@ -25,6 +26,11 @@ enum NativeSiteLink: Hashable {
     }
 
     enum Preview: String { case nba, nfl }
+
+    enum AdminSection: Hashable {
+        case reports, deletions, members, banned, badges, nflAccess, audit, notifications
+        case groups, events, forum, posts, stories, articles, pages, emoji, rollouts, banner, changelog
+    }
 
     enum Settings: String {
         case account, profile, connections, security, privacy, notifications, interests, membership, blocked, research
@@ -148,6 +154,25 @@ enum NativeSiteLink: Hashable {
         case ["admin", "whop-renewal-shape"]: self = .adminWhop(.verification)
         case ["admin", "discord"]: self = .adminDiscord
         case ["admin", "discord", "compose"]: self = .adminDiscordComposer
+        case ["admin", "reports"], ["admin", "content", "reports"]: self = .adminSection(.reports)
+        case ["admin", "users", "deletions"]: self = .adminSection(.deletions)
+        case ["admin", "users"], ["admin", "users", "verify"]: self = .adminSection(.members)
+        case ["admin", "users", "banned"]: self = .adminSection(.banned)
+        case ["admin", "badges"]: self = .adminSection(.badges)
+        case ["admin", "nfl-access"]: self = .adminSection(.nflAccess)
+        case ["admin", "audit"]: self = .adminSection(.audit)
+        case ["admin", "notifications"]: self = .adminSection(.notifications)
+        case ["admin", "groups"], ["admin", "live"]: self = .adminSection(.groups)
+        case ["admin", "events"]: self = .adminSection(.events)
+        case ["admin", "forum"]: self = .adminSection(.forum)
+        case ["admin", "content", "posts"]: self = .adminSection(.posts)
+        case ["admin", "content", "stories"]: self = .adminSection(.stories)
+        case ["admin", "content", "blogs"]: self = .adminSection(.articles)
+        case ["admin", "pages"]: self = .adminSection(.pages)
+        case ["admin", "emojis"]: self = .adminSection(.emoji)
+        case ["admin", "settings", "features"]: self = .adminSection(.rollouts)
+        case ["admin", "site-banner"]: self = .adminSection(.banner)
+        case ["admin", "changelog"]: self = .adminSection(.changelog)
         default:
             if segments.count == 2 {
                 let name = segments[1]
@@ -255,7 +280,7 @@ enum NativeSiteLink: Hashable {
         case .notifications, .activityReplay, .missions, .search, .topic, .explore, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
             .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .creatorStoreSetup, .communityCreator, .researchWorkspace, .admin,
             .marketplace, .nbaEntity, .nflEntity, .mlbTeam, .creatorAccess, .adminMarketplace, .adminCreatorBusiness, .adminPipelineHealth,
-            .adminBrowserAutomation, .adminSocialPlatforms, .adminEmail, .adminDiscord, .adminDiscordComposer, .adminWhop,
+            .adminBrowserAutomation, .adminSocialPlatforms, .adminEmail, .adminDiscord, .adminDiscordComposer, .adminWhop, .adminPlatformSettings, .adminSection,
             .eventCreate, .threadCreate, .storyCreate,
             .community(_, .settings), .community(_, .channels): true
         default: false

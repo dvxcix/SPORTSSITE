@@ -1990,3 +1990,31 @@ physical-device push are still open.
   nullable rows, stale edits and an exact long code value. Next verify the live
   reads and both signup steps after the narrow release. No production setting
   or registration was submitted during QA.
+- First task checkpoint `c51f340617dc72a5d23b0ad8e6d0840b3b5f2489` is pushed.
+  PR #73 merged as `3eda8a0c10d45d8cf580b6c9386bfcaf9eed7484` with preview
+  `dpl_E7iL4htLkvw6AW7g8BxNzb9QzKwB` and production
+  `dpl_7SmAeTgVDQRG848657xE6dZc6Rra` READY. The reviewed function migration
+  was applied individually as `20261125164733_native_platform_setting_edits`.
+  Its tracked source bears the proposed version `20261125172000`. Do not
+  replay it. Live metadata confirmed invoker execution with no anonymous
+  grant. The registration API returned the current status and seven sports
+  with no-store headers. An anonymous admin request returned 401. The
+  signed Simulator opened live Platform Settings and Social Login after the
+  native admin deep-link routing correction. No live settings were edited.
+
+## NFL tester controls and admin links · 25 November 2026
+
+- Native Admin → Members → NFL early access uses the existing member
+  directory, NFL beta grants, pagination and audit service.
+  The app shows member avatars and the NFL shield. Both grant and revoke
+  require confirmation. The native API preserves the existing administrator
+  and enrolled-MFA requirements. It writes only the NFL early-access row.
+- Links to existing native admin sections now open those sections directly,
+  including changelog, banners, banned members, reports, deletion requests,
+  posts, stories, articles, pages, events, forum and audit. The same change
+  routes the platform settings links through the signed-in destination.
+- Signed Simulator build, Hub TypeScript and 140 checks passed. The NFL
+  fixture exercised web and native grant and revoke, invalid requests,
+  regular/Ultimate role denial, MFA, and the preserved user role. No live
+  grant or revocation ran. Signed live directory and route checks follow
+  the narrow Hub release.

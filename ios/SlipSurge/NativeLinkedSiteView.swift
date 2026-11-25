@@ -103,10 +103,33 @@ struct NativeLinkedSiteView: View {
         case .adminSocialPlatforms: AdminSocialPlatformsView(api: viewer)
         case .adminEmail: AdminEmailOperationsView(api: viewer)
         case .adminPlatformSettings(let page): AdminPlatformSettingsView(api: viewer, page: page)
+        case .adminSection(let section): adminSection(section, userID: userID)
         case .adminWhop(let page): AdminWhopView(api: viewer, page: page)
         case .adminDiscord: AdminDiscordView(api: .init(viewer: viewer))
         case .adminDiscordComposer: AdminDiscordComposer(api: .init(viewer: viewer))
         default: EmptyView()
+        }
+    }
+
+    @ViewBuilder private func adminSection(_ section: NativeSiteLink.AdminSection, userID: UUID) -> some View {
+        switch section {
+        case .reports, .deletions:
+            AdminQueueView(account: account, userID: userID, queue: section == .reports ? .reports : .deletions)
+        case .members, .banned:
+            AdminMembersView(api: .init(account: account, userID: userID), banned: section == .banned)
+        case .badges: AdminBadgeStudio(viewer: viewer)
+        case .nflAccess: AdminNflAccessView(api: viewer)
+        case .audit: AdminOperationsView(viewer: viewer, mode: .audit)
+        case .notifications: AdminOperationsView(viewer: viewer, mode: .notifications)
+        case .groups: AdminOperationsView(viewer: viewer, mode: .groups)
+        case .events: AdminCommunityEventsView(api: .init(viewer: viewer))
+        case .forum: AdminForumView(api: .init(viewer: viewer))
+        case .posts, .stories: AdminSocialContent(viewer: viewer, kind: section == .posts ? .posts : .stories)
+        case .articles, .pages: AdminPublicationsView(viewer: viewer, kind: section == .articles ? .articles : .pages)
+        case .emoji: AdminEmojiStudio(viewer: viewer)
+        case .rollouts: AdminFeatureRollouts(account: account, userID: userID)
+        case .banner, .changelog:
+            AdminAnnouncementsView(account: account, userID: userID, page: section == .banner ? .banner : .changelog)
         }
     }
 
