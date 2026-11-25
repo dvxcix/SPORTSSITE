@@ -999,8 +999,8 @@ physical-device push are still open.
   library requests returned 401. Guest Feed returned 200.
 - On the signed iPhone 18 Pro Simulator, Pete Crow-Armstrong’s September 25
   Anytime Home Run quote saved privately from The Dugout and appeared in
-  Workspace at the exact BetRivers +500 with club art. Cleanup of that single
-  temporary quote follows. The signed Pitcher Report correctly displayed an
+  Workspace at the exact BetRivers +500 with club art. The disposal check
+  removed the temporary quote and showed an empty Watchlist. The signed Pitcher Report displayed an
   unavailable archived window and its three sample sizes for the same date.
 
 ## Native Odds Movement Terminal and Synergy · 25 November 2026
@@ -1018,3 +1018,22 @@ physical-device push are still open.
   pregame archive for this tool.
 - Signed Xcode Debug, Hub TypeScript, and 29 focused archive, identity, freeze,
   and access checks passed. Production and signed runtime checks follow.
+- Task checkpoint `0af5df88e9ff80646d0f6c3a11ef11ca96f95942` is pushed. PR #38
+  merged as `8ebfd9b7e0a040c928e0911593b869a67aec0720`. Preview
+  `dpl_7XFiBRUxrVsviQD8CD552xg2UhXy` and production
+  `dpl_A9Zn18NHynxS7G3P9ghiffdfkKRk` reported READY. Both new native requests
+  returned 401 without a signed-in account.
+
+## Native MLB Matrix editor and marketplace · 25 November 2026
+
+- The Dugout opens the existing account’s MLB Matrices. Native classic and
+  pipeline editing use the website’s field keys, filters, market books, MM
+  windows, ordered tie rules, rank and group steps, and Unless conditions.
+  The app delegates to the existing tier and ownership rules, keeps the
+  saved Matrix version on edits, and keeps the season visibility gate.
+- The app opens and imports shared Element Codes, browses the existing
+  Marketplace, and allows eligible members to publish a saved Matrix or
+  remove a listing they own. Changes use the same account and saved library.
+- Signed Xcode Debug, Hub TypeScript and 32 focused MLB, NBA and NFL Matrix,
+  archive, and access checks passed. The signed create/edit/delete and basic
+  listing/import walkthroughs need the narrow production release.
