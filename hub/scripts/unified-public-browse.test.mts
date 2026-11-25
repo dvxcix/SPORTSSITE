@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { isPublicBrowsePath, isPublicBrowseRequest, usesVisitorBrowseFrame } from '../src/lib/publicBrowsePolicy'
+import { isNativePublicRead, isPublicBrowsePath, isPublicBrowseRequest, usesVisitorBrowseFrame } from '../src/lib/publicBrowsePolicy'
 
 test('visitors can read public discovery and public social detail pages',()=>{
   for(const path of ['/feed','/groups','/sports','/leaderboard','/explore','/profile/sports_member','/groups/community-room','/posts/00000000-0000-4000-8000-000000000301']){
@@ -22,4 +22,10 @@ test('encoded separators and appended route segments cannot expand the public po
 test('existing public info pages share visitor navigation without opening protected workspaces',()=>{
   for(const path of ['/about','/faq','/pricing','/support','/terms','/privacy','/responsible-gambling','/feed','/profile/member'])assert.equal(usesVisitorBrowseFrame(path),true,path)
   for(const path of ['/messages','/admin','/settings','/creators/studio','/the-paint','/the-sideline'])assert.equal(usesVisitorBrowseFrame(path),false,path)
+})
+
+test('native information is an exact read-only guest route', () => {
+  assert.equal(isNativePublicRead('/api/mobile/information', 'GET'), true)
+  assert.equal(isNativePublicRead('/api/mobile/information', 'POST'), false)
+  assert.equal(isNativePublicRead('/api/mobile/information/account', 'GET'), false)
 })
