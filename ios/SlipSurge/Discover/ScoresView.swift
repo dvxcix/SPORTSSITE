@@ -60,7 +60,7 @@ struct Scoreboard: Decodable {
 
     static func load(date: String) async throws -> Self {
         let request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: "/api/mobile/scores",
-            query: [.init(name: "date", value: date)])
+            query: [.init(name: "date", value: date), .init(name: "freshness", value: "live")], timeout: 10)
         let board = try JSONDecoder().decode(Self.self, from: await SlipSurgeHTTP.send(request))
         guard board.date == date else { throw URLError(.cannotParseResponse) }
         return board
@@ -73,8 +73,7 @@ struct ScoresView: View {
     @Environment(\.scenePhase) private var phase
     @State private var date: Date
     @State private var league: String
-    @State private var error: (any Error)?
-    @State private var board: Scoreboard?
+    @State private var liveBoard = LiveScoreboard()
     @State private var revision = 0
 
     init(api: DiscoverAPI, date: Date = .now, league: String = "") {
@@ -84,7 +83,7 @@ struct ScoresView: View {
     }
 
     private var day: String { SlateDate.key(date) }
-    private var scoreboard: Scoreboard? { board?.date == day ? board : nil }
+    private var scoreboard: Scoreboard? { liveBoard.board(for: day) }
     private var leagues: [String] { scoreboard?.leagues.map(\.id) ?? [] }
     private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
@@ -117,12 +116,12 @@ struct ScoresView: View {
                             leagueSection(group)
                         }
                     } else {
-                        ResearchToolMessage(title: "Scores couldn’t load", error: error) { revision += 1 }
+                        ResearchToolMessage(title: "Scores couldn’t load", error: liveBoard.error) { revision += 1 }
                     }
                 }
                 .padding(14)
             }
-            .refreshable { await load(day) }
+            .refreshable { await liveBoard.refresh(day: day) }
         }
         .navigationTitle("Live Games")
         .navigationBarTitleDisplayMode(.inline)
@@ -130,16 +129,11 @@ struct ScoresView: View {
         .foregroundStyle(Brand.text(for: scheme))
         .task(id: "\(day):\(revision):\(phase)") {
             guard phase == .active else { return }
-            let requested = day
-            await load(requested)
-            while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(30)) } catch { return }
-                if requested == SlateDate.key(.now) || scoreboard?.leagues.contains(where: { $0.games.contains(where: \.live) }) == true {
-                    await load(requested)
-                }
-            }
+            await liveBoard.follow(through: day)
         }
-        .onChange(of: day) { error = nil }
+        .onChange(of: leagues) { _, current in
+            if !current.isEmpty, !league.isEmpty, !current.contains(league) { league = "" }
+        }
     }
 
     private var dates: some View {
@@ -214,17 +208,6 @@ struct ScoresView: View {
         }
     }
 
-    private func load(_ requested: String) async {
-        do {
-            let result = try await Scoreboard.load(date: requested)
-            guard !Task.isCancelled, day == requested else { return }
-            board = result
-            error = nil
-            if !league.isEmpty, !result.leagues.contains(where: { $0.id == league }) { league = "" }
-        } catch {
-            if !Task.isCancelled, day == requested { self.error = error }
-        }
-    }
 }
 
 struct LiveGamesStrip: View {
@@ -232,15 +215,21 @@ struct LiveGamesStrip: View {
     let active: Bool
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var phase
-    @State private var board: Scoreboard?
+    @State private var liveBoard = LiveScoreboard()
 
     var body: some View {
-        let games = board?.leagues.flatMap(\.games).filter(\.live) ?? []
+        let today = SlateDate.key(.now)
+        let board = liveBoard.board(for: today)
+        let games = board?.leagues.flatMap(\.games) ?? []
+        let live = games.filter(\.live)
+        let upcoming = games.filter { $0.state == "pre" }.sorted { $0.start < $1.start }
+        let completed = games.filter { $0.state == "post" }.reversed()
+        let slate = live + upcoming + completed
         VStack(spacing: 0) {
-            if let board, !games.isEmpty {
+            if let board, !slate.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Label("Live now", systemImage: "dot.radiowaves.left.and.right")
+                        Label(live.isEmpty ? "Games today" : "Live now", systemImage: live.isEmpty ? "scoreboard" : "dot.radiowaves.left.and.right")
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(Brand.text(for: scheme))
                             .accessibilityAddTraits(.isHeader)
@@ -257,7 +246,7 @@ struct LiveGamesStrip: View {
                     .padding(.horizontal, 14)
                     ScrollView(.horizontal) {
                         LazyHStack(spacing: 8) {
-                            ForEach(games, id: \.scoreIdentity) { match in
+                            ForEach(slate, id: \.scoreIdentity) { match in
                                 NavigationLink {
                                     GameCenterView(api: api, game: match, date: board.date)
                                 } label: {
@@ -277,13 +266,7 @@ struct LiveGamesStrip: View {
         }
         .task(id: active && phase == .active) {
             guard active, phase == .active else { return }
-            repeat {
-                let day = SlateDate.key(.now)
-                if board?.date != day { board = nil }
-                if let result = try? await Scoreboard.load(date: day), !Task.isCancelled { board = result }
-                let hasLiveGames = board?.leagues.contains { $0.games.contains(where: \.live) } == true
-                do { try await Task.sleep(for: .seconds(hasLiveGames ? 30 : 60)) } catch { return }
-            } while !Task.isCancelled
+            await liveBoard.follow(through: SlateDate.key(.now), todayOnly: true)
         }
     }
 }

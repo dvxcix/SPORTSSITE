@@ -9,6 +9,18 @@ struct GameTimeline {
         var portrait: URL? { headshot.flatMap { FeedPostCard.allowedMedia($0) ? $0 : nil } }
     }
 
+    enum Context {
+        case timeout, substitution, period
+
+        var glyph: String {
+            switch self {
+            case .timeout: "pause.fill"
+            case .substitution: "arrow.left.arrow.right"
+            case .period: "flag.checkered"
+            }
+        }
+    }
+
     struct Entry: Identifiable {
         let play: GameCenterData.Play
         let headline: String
@@ -16,10 +28,51 @@ struct GameTimeline {
         let person: Person?
         let secondary: Person?
         let madeShot: Bool?
-        let timeout: Bool
+        let context: Context?
         let freeThrow: FreeThrow?
 
         var id: String { play.id }
+
+        var contextTitle: String {
+            if context == .substitution, let person { return "\(person.name) checks in" }
+            return headline
+        }
+    }
+
+    struct Row: Identifiable {
+        let entries: [Entry]
+        var id: String { entries[0].id }
+        var first: Entry { entries[0] }
+
+        var substitutions: String? {
+            guard entries.count > 1 else { return nil }
+            let incoming = entries.compactMap { $0.person?.name }
+            let outgoing = entries.compactMap { $0.secondary?.name }
+            let inLabel = incoming.isEmpty ? nil : "In " + incoming.joined(separator: ", ")
+            let outLabel = outgoing.isEmpty ? nil : "Out " + outgoing.joined(separator: ", ")
+            let clubs = [inLabel, outLabel].compactMap { $0 }
+            return clubs.isEmpty ? "\(entries.count) substitutions" : clubs.joined(separator: " · ")
+        }
+    }
+
+    static func rows(_ entries: [Entry], keeping requested: String?) -> [Row] {
+        var rows: [Row] = []
+        var substitutions: [Entry] = []
+        for entry in entries {
+            if let first = substitutions.first,
+               entry.context != .substitution || entry.play.teamId != first.play.teamId ||
+               entry.play.clock != first.play.clock || entry.play.period != first.play.period || entry.id == requested {
+                rows.append(.init(entries: substitutions))
+                substitutions.removeAll(keepingCapacity: true)
+            }
+            if entry.context == .substitution && entry.id != requested {
+                substitutions.append(entry)
+            } else {
+                rows.append(.init(entries: [entry]))
+            }
+        }
+        if !substitutions.isEmpty { rows.append(.init(entries: substitutions)) }
+        return rows
     }
 
     struct FreeThrow {
@@ -47,7 +100,13 @@ struct GameTimeline {
             let people = play.athletes.isEmpty ? roster.people(in: text) : play.athletes.map(roster.person)
             let primary = people.first
             let secondary = people.dropFirst().first
-            let timeout = lower.contains("timeout") || text.lowercased().hasSuffix("timeout")
+            let context: Context?
+            switch lower {
+            case _ where lower.contains("timeout") || text.lowercased().hasSuffix("timeout"): context = .timeout
+            case _ where lower.contains("substitution"): context = .substitution
+            case "end period", "start period", "end of period", "start of period", "halftime", "end of game": context = .period
+            default: context = nil
+            }
             let attempt = basketball ? Self.freeThrow(in: title) : nil
             let outcome = basketball ? Self.shotOutcome(in: text, shooter: primary) : nil
             var headline = title.isEmpty ? (text.isEmpty ? "Play" : text) : title
@@ -58,14 +117,19 @@ struct GameTimeline {
             } else if let outcome {
                 headline = outcome.headline
                 detail = outcome.detail
-            } else if timeout {
+            } else if context == .timeout {
                 headline = "Timeout"
+                detail = nil
+            } else if context == .substitution {
+                detail = secondary.map { "\($0.name) checks out" } ?? detail
+            } else if context == .period, !text.isEmpty {
+                headline = text
                 detail = nil
             } else if let primary, text.caseInsensitiveCompare("\(primary.name) \(headline)") == .orderedSame {
                 detail = nil
             }
             return Entry(play: play, headline: headline, detail: detail, person: primary, secondary: secondary,
-                         madeShot: outcome?.made, timeout: timeout, freeThrow: attempt)
+                         madeShot: outcome?.made, context: context, freeThrow: attempt)
         }
     }
 
@@ -73,17 +137,21 @@ struct GameTimeline {
         guard let latest = entries.first else { return nil }
         let play = latest.play
         let clock = [play.period, play.clock].compactMap { $0 }.joined(separator: " · ")
-        if let status {
+        if let status, latest.context != .period || !Self.isPeriodBreak(status) {
             guard let current = Self.seconds(in: status), let time = play.clock.flatMap(Self.seconds),
                   abs(current - time) <= 2 else { return nil }
         }
+        if latest.context == .period {
+            let score = if let away = play.away, let home = play.home { "\(away)–\(home)" } else { clock }
+            return Cue(id: play.id, headline: latest.headline, detail: score, teamID: nil,
+                       person: nil, glyph: Context.period.glyph)
+        }
 
-        // Substitutions at a stopped clock don't end the timeout or the free-throw sequence.
+        // A change of players doesn't clear a timeout or free throws at the same stopped clock.
         let stoppage = entries.prefix { $0.play.period == play.period && $0.play.clock == play.clock }
-            .first { $0.play.title?.localizedCaseInsensitiveContains("substitution") != true }
-        guard let stoppage else { return nil }
+            .first { $0.context != .substitution } ?? latest
         let event = stoppage.play
-        if stoppage.timeout {
+        if stoppage.context == .timeout {
             return Cue(id: event.id, headline: "Team timeout", detail: clock, teamID: event.teamId,
                        person: nil, glyph: "pause.fill")
         }
@@ -97,7 +165,22 @@ struct GameTimeline {
             return Cue(id: event.id, headline: "Free throws coming", detail: clock, teamID: event.teamId,
                        person: stoppage.person, glyph: "basketball")
         }
+        if latest.context == .substitution {
+            let changes = entries.prefix {
+                $0.context == .substitution && $0.play.teamId == play.teamId &&
+                $0.play.period == play.period && $0.play.clock == play.clock
+            }
+            let detail = Row(entries: Array(changes)).substitutions
+            return Cue(id: play.id, headline: detail == nil ? latest.contextTitle : "Lineup change",
+                       detail: detail ?? latest.detail ?? clock, teamID: play.teamId,
+                       person: detail == nil ? latest.person : nil, glyph: Context.substitution.glyph)
+        }
         return nil
+    }
+
+    private static func isPeriodBreak(_ status: String) -> Bool {
+        let status = status.lowercased()
+        return status.contains("halftime") || status.hasPrefix("end") || status.contains("intermission") || status == "final"
     }
 
     private static func seconds(in text: String) -> Double? {

@@ -41,15 +41,17 @@ function mlbCard(game: MLBGame) {
 }
 
 export async function GET(request: Request) {
-  const date = new URL(request.url).searchParams.get('date') ?? ''
+  const query = new URL(request.url).searchParams
+  const date = query.get('date') ?? ''
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) {
     return NextResponse.json({ error: 'Choose a valid date' }, { status: 400, headers: HEADERS })
   }
 
   const day = new Date(date + 'T12:00:00Z')
+  const freshness = query.get('freshness') === 'live' && Math.abs(Date.now() - day.getTime()) < 32 * 3600 * 1000 ? 'live' : 'standard'
   const leagues = NON_MLB_SPORTS.filter(({ key }) => isSeasonActive(key, day))
   const nflAndEspn = leagues.map(async ({key}) => {
-    const games = key === 'nfl' ? await getStoredNflScoreboard(date) : await getScoreboard(key, date)
+    const games = key === 'nfl' ? await getStoredNflScoreboard(date) : await getScoreboard(key, date, freshness)
     return { id: key, available: true, games: games.flatMap(game => {
       const mapped = espnCard(game, key)
       return mapped ? [mapped] : []

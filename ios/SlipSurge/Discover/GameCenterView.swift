@@ -52,6 +52,9 @@ struct GameCenterView: View {
     @State private var failed = false
     @State private var reacting = Set<String>()
     @State private var timeline = GameTimeline()
+    @State private var providerPlays: LivePlayUpdate?
+    @State private var liveScore: LiveScorePacket?
+    @State private var confirmedPlays = Set<String>()
     @State private var scoringTimeline = GameTimeline()
     @State private var nearPlayStart = true
     @State private var latestSeenPlay: String?
@@ -82,7 +85,12 @@ struct GameCenterView: View {
     private var baseQuery: [URLQueryItem] { [.init(name: "sport", value: game.sport), .init(name: "game", value: game.id), .init(name: "date", value: date)] }
     private var feed: FeedAPI { FeedAPI(account: api.account, userID: api.userID) }
     private var color: Color { treatment(game.home.color) }
-    private var state: String { lastResult?.state ?? game.state }
+    private var shownScore: LiveScorePacket? {
+        guard section == .plays, lastResult?.state != "post" else { return nil }
+        return liveScore
+    }
+    private var state: String { shownScore?.status.state ?? lastResult?.state ?? game.state }
+    private var displayStatus: String? { shownScore?.status.shortDetail ?? lastResult?.status ?? game.status }
     private var live: Bool { state == "in" }
     private var scheduledToStart: Bool {
         state == "pre" && game.startDate.map { $0 <= .now } == true
@@ -93,7 +101,10 @@ struct GameCenterView: View {
     private var newestPlay: String? { timeline.entries.first(where: includesPlay)?.id }
     private var cue: GameTimeline.Cue? {
         guard live, section == .plays else { return nil }
-        return timeline.currentCue(status: lastResult?.status ?? game.status)
+        return timeline.currentCue(status: displayStatus)
+    }
+    private var followsPublicTimeline: Bool {
+        visible && phase == .active && section == .plays && (live || scheduledToStart) && LiveScorePacket.paths[game.sport] != nil
     }
     private var wantsRoster: Bool {
         visible && phase == .active && state != "pre" && (section == .plays || section == .overview)
@@ -144,11 +155,14 @@ struct GameCenterView: View {
             guard phase == .active, visible else { return }
             let requested = section
             await load(requested)
-            let interval = requested == .room || requested == .plays ? 8 : 24
+            let interval = requested == .plays ? (LiveScorePacket.paths[game.sport] == nil ? 4 : 8) : requested == .room ? 8 : 24
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(interval)) } catch { return }
                 if requested == .room || live || scheduledToStart { await load(requested) }
             }
+        }
+        .task(id: followsPublicTimeline) {
+            if followsPublicTimeline { await followPublicPlays() }
         }
         .task(id: wantsRoster) {
             if wantsRoster, snapshots[.box] == nil { await load(.box) }
@@ -290,18 +304,18 @@ struct GameCenterView: View {
     private var scoreboard: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 9) {
-                teamSide(game.away, score: lastResult?.awayScore ?? game.away.score)
+                teamSide(game.away, score: shownScore?.away ?? lastResult?.awayScore ?? game.away.score)
                 Spacer(minLength: 0)
                 status
                 Spacer(minLength: 0)
-                teamSide(game.home, score: lastResult?.homeScore ?? game.home.score, home: true)
+                teamSide(game.home, score: shownScore?.home ?? lastResult?.homeScore ?? game.home.score, home: true)
             }
             VStack(spacing: 5) {
                 status
                 HStack {
-                    teamSide(game.away, score: lastResult?.awayScore ?? game.away.score)
+                    teamSide(game.away, score: shownScore?.away ?? lastResult?.awayScore ?? game.away.score)
                     Spacer()
-                    teamSide(game.home, score: lastResult?.homeScore ?? game.home.score, home: true)
+                    teamSide(game.home, score: shownScore?.home ?? lastResult?.homeScore ?? game.home.score, home: true)
                 }
             }
         }
@@ -322,7 +336,7 @@ struct GameCenterView: View {
         VStack(spacing: 4) {
             ResearchArtwork(urls: LeagueArtwork.logo(game.sport).map { [$0] } ?? [], fallback: "sportscourt", pointSize: 19)
                 .frame(width: 19, height: 19)
-            MatchStatusLabel(label: state == "pre" ? game.label : lastResult?.status ?? game.label, live: live)
+            MatchStatusLabel(label: state == "pre" ? game.label : displayStatus ?? game.label, live: live)
         }
         .fixedSize(horizontal: true, vertical: false)
     }
@@ -432,20 +446,70 @@ struct GameCenterView: View {
         if filtered.isEmpty {
             ContentUnavailableView(entries.isEmpty ? "No play-by-play available" : "No plays match these filters", systemImage: "list.bullet")
         }
-        ForEach(filtered) { playCard($0).id($0.id) }
+        ForEach(GameTimeline.rows(filtered, keeping: requestedPlay)) { row in
+            if row.first.context != nil {
+                if cue?.id != row.id || requestedPlay == row.id { contextMarker(row).id(row.id) }
+            } else {
+                playCard(row.first).id(row.id)
+            }
+        }
     }
 
     private func includesPlay(_ entry: GameTimeline.Entry) -> Bool {
         (selectedPeriod.isEmpty || entry.play.period == selectedPeriod) && (!scoringOnly || entry.play.scoring)
     }
 
+    private func contextMarker(_ row: GameTimeline.Row) -> some View {
+        let entry = row.first
+        let team = [game.away, game.home].first { $0.id == entry.play.teamId }
+        let title = if entry.context == .timeout, let team { "\(team.name) timeout" }
+            else if row.entries.count > 1 { "Lineup change" }
+            else { entry.contextTitle }
+        return HStack(spacing: 7) {
+            if let team, let logo = game.logo(for: team) {
+                ResearchArtwork(urls: [logo], fallback: "shield", pointSize: 17).frame(width: 17, height: 17)
+            } else if let context = entry.context {
+                Image(systemName: context.glyph).font(.caption2).accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.caption.weight(.semibold))
+                if entry.context == .substitution, let detail = row.substitutions ?? entry.detail {
+                    Text(detail).font(.caption2)
+                }
+            }
+            Spacer(minLength: 6)
+            if let clock = entry.play.clock { Text(clock).font(.caption2.monospacedDigit()) }
+        }
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 10).padding(.vertical, 5)
+        .background {
+            if entry.id == revealedPlay { Color.secondary.opacity(0.12).clipShape(.rect(cornerRadius: 8)) }
+        }
+        .accessibilityElement(children: .combine)
+        .contextMenu {
+            if let url = GameLink(sport: game.sport, id: game.id, play: entry.id).url {
+                ShareLink(item: url, subject: Text(title))
+            }
+            Button("Discuss in Game Room", systemImage: "bubble.left") { discuss(entry.play) }
+            if api.userID != nil, confirmedPlays.contains(entry.id) {
+                Menu("React", systemImage: "face.smiling") {
+                    ForEach(["🔥", "❤️", "⚡", "👏", "😂", "👀", "🏆", "👍"], id: \.self) { emoji in
+                        Button(emoji) { Task { await react(emoji, to: entry.play, enabled: entry.play.reactions[emoji]?.mine != true) } }
+                    }
+                }
+            }
+        }
+    }
+
+    private func discuss(_ play: GameCenterData.Play) {
+        draft.play = api.userID == nil ? nil : play
+        section = .room
+    }
+
     private func playCard(_ entry: GameTimeline.Entry) -> some View {
         GamePlayCard(entry: entry, game: game, highlighted: entry.id == revealedPlay, canReact: api.userID != nil,
             react: { emoji, enabled in await react(emoji, to: entry.play, enabled: enabled) },
-            discuss: {
-                draft.play = api.userID == nil ? nil : entry.play
-                section = .room
-            }, showPitches: { pitchPlay = entry.play })
+            discuss: { discuss(entry.play) }, showPitches: { pitchPlay = entry.play })
     }
 
     @ViewBuilder
@@ -567,17 +631,16 @@ struct GameCenterView: View {
         let id = UUID()
         requests[requested] = id
         do {
-            let result = try await api.readPublic(GameCenterData.self, path: path,
-                query: baseQuery + [.init(name: "section", value: requested.query)])
+            var query = baseQuery + [.init(name: "section", value: requested.query)]
+            if requested == .plays, live || scheduledToStart { query.append(.init(name: "freshness", value: "live")) }
+            let result = try await api.readPublic(GameCenterData.self, path: path, query: query)
             guard !Task.isCancelled, requests[requested] == id else { return }
             guard result.id == game.id, result.sport == game.sport else { throw URLError(.cannotParseResponse) }
             snapshots[requested] = result
-            let groups = snapshots[.box]?.groups ?? []
-            if requested == .plays || requested == .box {
-                timeline = GameTimeline(plays: snapshots[.plays]?.plays ?? [], groups: groups, basketball: game.sport == "nba")
-            }
+            if requested == .plays || requested == .box { rebuildTimeline() }
             if requested == .overview || requested == .box {
-                scoringTimeline = GameTimeline(plays: snapshots[.overview]?.plays ?? [], groups: groups, basketball: game.sport == "nba")
+                scoringTimeline = GameTimeline(plays: snapshots[.overview]?.plays ?? [],
+                    groups: snapshots[.box]?.groups ?? [], basketball: game.sport == "nba")
             }
             if requested == section {
                 lastResult = result
@@ -586,6 +649,31 @@ struct GameCenterView: View {
         } catch {
             if !Task.isCancelled, requests[requested] == id, requested == section { self.error = error }
         }
+    }
+
+    private func rebuildTimeline() {
+        let confirmed = snapshots[.plays]?.plays ?? []
+        confirmedPlays = Set(confirmed.map(\.id))
+        let displayed = providerPlays?.merge(with: confirmed) ?? confirmed
+        timeline = GameTimeline(plays: displayed, groups: snapshots[.box]?.groups ?? [], basketball: game.sport == "nba")
+    }
+
+    private func followPublicPlays() async {
+        repeat {
+            if let update = try? await LivePlayUpdate.load(sport: game.sport, id: game.id),
+               !Task.isCancelled, let score = update.score, score.status.state != "pre" {
+                if score != liveScore { liveScore = score }
+                if providerPlays?.latestPlayID != update.latestPlayID {
+                    providerPlays = update
+                    rebuildTimeline()
+                }
+                if score.status.state == "post" {
+                    await load(.plays)
+                    return
+                }
+            }
+            do { try await Task.sleep(for: .seconds(2)) } catch { return }
+        } while !Task.isCancelled
     }
 
     private func send() async {
@@ -618,11 +706,23 @@ struct GameCenterView: View {
         guard api.userID != nil, reacting.insert(key).inserted else { return }
         defer { reacting.remove(key) }
         let requested = section
+        let arriving = requested == .plays && !confirmedPlays.contains(play.id)
+        let action = Action(play: play.id, emoji: emoji, enabled: enabled)
+        let query = baseQuery + [.init(name: "freshness", value: "live")]
         do {
-            let action = Action(play: play.id, emoji: emoji, enabled: enabled)
-            let result = try await api.write(Response.self, path: path, query: baseQuery, body: action)
-            guard result.ok else { throw URLError(.cannotParseResponse) }
-            await load(requested)
-        } catch { failed = true }
+            for attempt in 0...5 {
+                do {
+                    let result = try await api.write(Response.self, path: path, query: query, body: action)
+                    guard result.ok else { throw URLError(.cannotParseResponse) }
+                    await load(requested)
+                    return
+                } catch let error as SlipSurgeHTTP.Status where error.code == 404 && arriving && attempt < 5 {
+                    // The provider can show a play before the account API has indexed it.
+                    try await Task.sleep(for: .seconds(4))
+                }
+            }
+        } catch {
+            if !Task.isCancelled { failed = true }
+        }
     }
 }

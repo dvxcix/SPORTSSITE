@@ -3,6 +3,7 @@ import { createRequire } from 'node:module'
 import test from 'node:test'
 import { build } from 'esbuild'
 import type { MLBGameFeed } from '@slipsurge/core/mlb-api'
+import { getGameSummary, getScoreboard } from '../packages/core/src/espn-api'
 
 const team = (id: number, name: string, abbreviation: string) => ({ id, name, abbreviation })
 const away = team(147, 'New York Yankees', 'NYY'), home = team(111, 'Boston Red Sox', 'BOS')
@@ -106,4 +107,29 @@ test('official MLB data preserves inning, batting, pitch and reaction identities
   assert.deepEqual(data.summary.boxscore?.players?.[0].statistics[0].athletes[0].stats.slice(0, 3), ['2', '—', '1'])
   assert.equal(data.pitches.get('0')?.[0].speed, 95.7)
   assert.equal(data.pitches.get('0')?.[0].x, 0.2)
+})
+
+
+test('mobile live reads shorten upstream revalidation while default readers keep existing caching', async () => {
+  const original = globalThis.fetch
+  const requests: { url: string; revalidate: number | undefined; agent: string | null }[] = []
+  globalThis.fetch = async (input, init) => {
+    const revalidate = init?.next?.revalidate
+    requests.push({ url: String(input), revalidate: typeof revalidate === 'number' ? revalidate : undefined,
+      agent: new Headers(init?.headers).get('user-agent') })
+    return Response.json({ events: [] })
+  }
+  try {
+    await getScoreboard('nba', '2026-11-25')
+    await getScoreboard('nba', '2026-11-25', 'live')
+    await getGameSummary('nba', '401909317')
+    await getGameSummary('nba', '401909317', 'live')
+  } finally {
+    globalThis.fetch = original
+  }
+  assert.deepEqual(requests.map(request => request.revalidate), [30, 2, 20, 2])
+  assert.notEqual(requests[0]?.agent, requests[1]?.agent)
+  assert.notEqual(requests[2]?.agent, requests[3]?.agent)
+  assert.equal(requests[0]?.url, requests[1]?.url)
+  assert.equal(requests[2]?.url, requests[3]?.url)
 })

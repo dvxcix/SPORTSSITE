@@ -41,7 +41,7 @@ struct GameLiveCue: View {
     }
 
     private var title: String {
-        if let name = cue.person?.name { return "\(cue.headline) · \(name)" }
+        if let name = cue.person?.name, cue.glyph == "basketball" { return "\(cue.headline) · \(name)" }
         if let team, cue.glyph == "pause.fill" { return "\(team.name) timeout" }
         return cue.headline
     }

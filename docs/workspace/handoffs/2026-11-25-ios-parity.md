@@ -2646,3 +2646,44 @@ physical-device push are still open.
   build reproduced the exit. The latest build is installed again, and the
   simulator is open on the Giannis free throw. Repeat a normal on-device
   launch before claiming the final physical run.
+
+## iOS live scores and game context · 26 November 2026
+
+- Continued from 4aa104ee on codex/ios-parity-20261125. The signed app
+  ran on Miranda’s iPhone 16 Plus through Xcode Product > Run. With the
+  process running, CoreDevice opened the native Heat–76ers link. The final
+  device build showed the third-quarter play feed and a compact Miami
+  timeout marker. Real stayed on the same matchup when switching apps.
+- The main Feed now shows today’s full slate with live matchups first, then
+  upcoming and completed games. The native slate reads the same public
+  ESPN score source directly for NBA, NHL, and MLS while games are active
+  or close to start, updating each league independently and retaining
+  SlipSurge match IDs and artwork. The existing SlipSurge feed still
+  supplies the slate and other sports. Reads stop outside the active
+  foreground views. The scoreboard provider advertised a seven- to
+  eight-second cache during this comparison.
+- Game Center reads the public NBA/NHL/MLS play summary while live and
+  merges new chronological plays with SlipSurge’s confirmed reactions
+  and play details. A reaction to a newly arrived play animates at the
+  tap and waits briefly if the existing authenticated route has yet to
+  recognize that play. The next event remains limited by the source’s
+  publication speed. The optional faster ESPN caching for the mobile
+  routes is on this branch. Default web reads keep their original cache
+  policy, and production Vercel was left on main.
+- Timeouts, substitutions and period changes use a compact cue or timeline
+  marker. Same-clock changes for one team group, while links to individual
+  substitutions remain addressable. Shots, fouls and free throws retain
+  their detailed rows. The actual third-quarter restart in Real showed
+  Miami’s grouped lineup change. SlipSurge’s simulator showed the
+  in-progress Tyrese Maxey free throws, including “Attempt 2 of 2”; the
+  phone showed the Miami timeout as a small marker instead of a play card.
+- Both apps showed 53–62 at halftime. A five-second sampling run observed
+  the public scoreboard’s third-quarter restart about six seconds before
+  the existing production scores response. A later snapshot showed the
+  public summary at 56–66 while the production game endpoint was still
+  54–63. Device proof is local to this Mac. No production test reaction
+  was sent; the two apps use their own community reactions.
+- Xcode Debug passed on the simulator and Miranda’s iPhone. The focused
+  data checks covered a newer provider packet, a stale packet, grouped
+  substitutions, exact play targets, period breaks, and pending free
+  throws. The native and production suites passed 287/287.

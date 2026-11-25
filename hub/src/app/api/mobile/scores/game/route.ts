@@ -23,7 +23,12 @@ function scope(request: Request) {
   return { sport, id, date, section: query.get('section') ?? 'overview' }
 }
 
-async function source(sport: SportKey, id: string, day: string) {
+function liveRead(request: Request, date: string) {
+  return new URL(request.url).searchParams.get('freshness') === 'live' &&
+    Math.abs(Date.now() - Date.parse(date + 'T12:00:00Z')) < 32 * 3600 * 1000
+}
+
+async function source(sport: SportKey, id: string, day: string, freshness: 'standard' | 'live' = 'standard') {
   if (sport === 'mlb') {
     const mlb = await loadNativeMlbGame(id, day)
     return mlb ? { ...mlb, game: undefined } : null
@@ -31,7 +36,7 @@ async function source(sport: SportKey, id: string, day: string) {
   const nfl = sport === 'nfl' ? await getNflGameCenter(id) : null
   if (nfl) return { game: nfl.game, summary: nfl.summary, quarters: nfl.quarters, updatedAt: nfl.updatedAt, complete: nfl.complete }
   if (!/^\d+$/.test(id)) return null
-  const [summary, games] = await Promise.all([getGameSummary(sport, id), getScoreboard(sport, day)])
+  const [summary, games] = await Promise.all([getGameSummary(sport, id, freshness), getScoreboard(sport, day, freshness)])
   const game = games.find(event => event.id === id)
   if (summary && summary.header?.id !== id) return null
   return game || summary ? { game, summary, quarters: [], updatedAt: null, complete: null } : null
@@ -45,7 +50,8 @@ export async function GET(request: Request) {
     const account = request.headers.has('authorization') ? await requireNativeAccount(request) : null
     if (account?.error) return account.error
     const client = account?.supabase ?? nativeAnonymousClient(), viewer = account?.userId
-    const found = await source(sport, id, date)
+    const freshness = section === 'plays' && liveRead(request, date) ? 'live' : 'standard'
+    const found = await source(sport, id, date, freshness)
     if (!found) return respond({ error: 'Matchup unavailable' }, 404)
     const match = found.summary?.header?.competitions?.[0]
     const board = found.game?.competitions?.[0]
@@ -123,7 +129,8 @@ export async function POST(request: Request) {
     if (raw.length > 5000) return respond({ error: 'Invalid game action' }, 400)
     const action = JSON.parse(raw)
     if (!action || typeof action !== 'object' || Array.isArray(action)) return respond({ error: 'Invalid game action' }, 400)
-    const game = await source(sport, id, date)
+    const freshness = action.kind === 'react' && liveRead(request, date) ? 'live' : 'standard'
+    const game = await source(sport, id, date, freshness)
     if (!game) return respond({ error: 'Game unavailable' }, 404)
     if (action.kind === 'post' && typeof action.id === 'string' && isAccountId(action.id) && typeof action.text === 'string') {
       const content = action.text.trim()
