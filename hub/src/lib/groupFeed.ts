@@ -5,7 +5,7 @@ import { getBlockedEitherWayIds } from './blocks'
 import { attachUserReactions } from './queries'
 import { hydrateVisibleAuthorRecords } from './visiblePickRecords'
 
-export async function groupFeedPage(client:SupabaseClient,groupId:string,options:{picks:boolean;userId?:string;hideMlb:boolean;cursor?:string|null}) {
+export async function groupFeedPage(client:SupabaseClient,groupId:string,options:{picks:boolean;userId?:string;hideMlb:boolean;cursor?:string|null;native?:boolean}) {
  const cursor=readFeedCursor(options.cursor)
  if(cursor.posts==='done')return {posts:[],nextCursor:null,hasMore:false}
  let query=client.from('posts').select(POST_WITH_AUTHOR).eq('group_id',groupId).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(21)
@@ -17,6 +17,6 @@ export async function groupFeedPage(client:SupabaseClient,groupId:string,options
  const nextCursor=hasMore&&last?JSON.stringify({v:1,posts:{at:last.created_at,id:last.id},reposts:'done'}):null
  const hidden=new Set(blocked)
  const visible=raw.filter(post=>!hidden.has(post.author_id)&&(!options.hideMlb||post.sport?.toUpperCase()!=='MLB'))
- const posts=await attachUserReactions((await hydrateVisibleAuthorRecords(client,visible)).posts,options.userId)
+ const posts=await attachUserReactions((await hydrateVisibleAuthorRecords(client,visible)).posts,options.userId,options.native?client:undefined,options.native)
  return {posts,nextCursor,hasMore}
 }

@@ -38,7 +38,7 @@ test('search keeps person, storefront and membership terms searchable while spor
 })
 
 test('directory query visibility retains published stores, active offers and the legacy role requirement',async()=>{
-  const source=await readFile('src/app/creators/page.tsx','utf8')
+  const source=await readFile('src/lib/creatorDirectoryServer.ts','utf8')
   assert.match(source,/\.eq\('status','published'\)/)
   assert.match(source,/\.eq\('creator\.creator_products\.status','active'\)/)
   assert.match(source,/\.in\('account_type', \['creator', 'admin'\]\)/)

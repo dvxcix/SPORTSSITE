@@ -1,14 +1,9 @@
-import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient as createPublicClient } from '@supabase/supabase-js'
-import { authVisibilityUnavailable, getBlockedEitherWayIds } from '@/lib/blocks'
+import { authVisibilityUnavailable } from '@/lib/blocks'
 import { LeaderboardClient } from './LeaderboardClient'
 import { TrendingUp, Trophy } from 'lucide-react'
 import { ProductAction, ProductHero, ProductPageShell } from '@/components/product/ProductPage'
-import { canViewMlb } from '@/lib/mlbViewerAccess'
-import { filterLeaderboardSports } from '@/lib/mlbLeaderboardVisibility'
-import { currentPublicLeaderboard } from '@/lib/leaderboardPrivacy'
+import { loadPublicLeaderboard } from '@/lib/leaderboardServer'
 
 // The page itself is NOT statically cached anymore — every request needs
 // the real signed-in viewer to filter blocked users out of a shared
@@ -20,196 +15,11 @@ import { currentPublicLeaderboard } from '@/lib/leaderboardPrivacy'
 // one genuinely per-viewer step.
 export const revalidate = 0
 
-// Standard Wilson score interval lower bound (95% confidence) — ranks by
-// win rate while accounting for sample size, without letting a bad big
-// sample beat a good small one the way a hard "5+ picks always ranks
-// above fewer" cutoff did (that let a 0-5 record outrank a 1-1 record).
-// A higher win% always scores higher than a lower one; sample size only
-// breaks ties between comparably-performing records.
-function wilsonLowerBound(wins: number, total: number): number {
-  if (total === 0) return 0
-  const z = 1.96
-  const phat = wins / total
-  const z2 = z * z
-  return (phat + z2 / (2 * total) - z * Math.sqrt((phat * (1 - phat) + z2 / (4 * total)) / total)) / (1 + z2 / total)
-}
-
-type LeaderboardUserRow = {
-  id: string
-  username: string
-  display_name: string | null
-  avatar_ring_style?: import('@/lib/avatarStyles').MemberRingStyle | null; avatar_ring_color?: string | null;
-  avatar_url: string | null
-  is_verified: boolean | null
-  account_type: string | null
-  follower_count: number | null
-  pick_record: { wins?: number; losses?: number; pushes?: number } | null
-  is_private: boolean | null
-  hide_win_rate: boolean | null
-}
-
-type LeaderboardPickRow = {
-  id: string
-  author_id: string | null
-  sport: string | null
-  pick_data: { result?: string } | null
-  created_at: string
-}
-
-// The shared, expensive part — every user's picks re-aggregated and
-// re-ranked — cached across all viewers at the same 120s interval this
-// whole page used to revalidate at. Profile aggregates require the service
-// client, but post breakdowns use a sessionless public client so post RLS
-// remains authoritative inside the shared cache.
-async function fetchRankedLeaderboard() {
-  const admin = createAdminClient()
-  const publicClient = createPublicClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-  })
-
-  // Private accounts and accounts that hide their win rate never appear here — this is a public ranking with no
-  // per-viewer follow check (unlike the profile page, which can show a
-  // private account's stats to its own followers), so the only correct
-  // answer for "does the public see this account's record" is no. Filtered
-  // in JS rather than `.eq('is_private', false)` — is_private predates a
-  // default and can be NULL on older rows, which Postgres's `= false` would
-  // wrongly exclude.
-  // Supabase caps a select at the project's API row limit. The previous
-  // query fetched an arbitrary profile batch and then sliced it again, so
-  // valid public records outside that batch could never rank. Read every
-  // page and let visibility, not membership tier or insertion order, decide.
-  const rawUsers: LeaderboardUserRow[] = []
-  const pickStats: LeaderboardPickRow[] = []
-  const pageSize = 1000
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await admin
-      .from('users')
-      .select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count, pick_record, is_private, hide_win_rate')
-      .order('id', { ascending: true })
-      .range(from, from + pageSize - 1)
-    if (error) throw error
-    rawUsers.push(...((data ?? []) as LeaderboardUserRow[]))
-    if (!data || data.length < pageSize) break
-  }
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await publicClient
-      .from('posts')
-      .select('id, author_id, sport, pick_data, created_at')
-      .in('post_type', ['pick', 'parlay'])
-      .eq('visibility', 'public')
-      .eq('is_premium', false)
-      .is('creator_product_id', null)
-      .not('pick_data', 'is', null)
-      .order('created_at', { ascending: true })
-      .order('id', { ascending: true })
-      .range(from, from + pageSize - 1)
-    if (error) throw error
-    pickStats.push(...((data ?? []) as LeaderboardPickRow[]))
-    if (!data || data.length < pageSize) break
-  }
-  const users = rawUsers.filter(u => !u.is_private && !u.hide_win_rate)
-
-  const oneWeekAgo = new Date()
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-
-  type SportStats = { wins: number; losses: number; pushes: number }
-  const statsByUser: Record<string, {
-    wins: number; losses: number; pushes: number
-    bySport: Record<string, SportStats>
-    thisWeek: { wins: number; losses: number }
-    recentResults: ('W' | 'L' | 'P')[]
-  }> = {}
-
-  for (const pick of pickStats) {
-    if (!pick.author_id) continue
-    if (!statsByUser[pick.author_id]) {
-      statsByUser[pick.author_id] = { wins: 0, losses: 0, pushes: 0, bySport: {}, thisWeek: { wins: 0, losses: 0 }, recentResults: [] }
-    }
-    const s = statsByUser[pick.author_id]
-    const result = pick.pick_data?.result
-    const sport = pick.sport || 'other'
-    if (!s.bySport[sport]) s.bySport[sport] = { wins: 0, losses: 0, pushes: 0 }
-
-    if (result === 'win') {
-      s.wins++; s.bySport[sport].wins++
-      if (new Date(pick.created_at) > oneWeekAgo) s.thisWeek.wins++
-      s.recentResults.unshift('W')
-    } else if (result === 'loss') {
-      s.losses++; s.bySport[sport].losses++
-      if (new Date(pick.created_at) > oneWeekAgo) s.thisWeek.losses++
-      s.recentResults.unshift('L')
-    } else if (result === 'push') {
-      s.pushes++; s.bySport[sport].pushes++
-      s.recentResults.unshift('P')
-    }
-  }
-
-  const ranked = users.map(u => {
-    const fromPosts = statsByUser[u.id]
-    const fromRecord = u.pick_record as { wins?: number; losses?: number; pushes?: number } | null
-
-    // users.pick_record is the authoritative, trigger-maintained total
-    // (computed straight from `picks`, correctly excludes picks whose post
-    // got deleted) — preferred over re-deriving totals from `pickStats`
-    // here. `fromPosts?.wins ?? fromRecord?.wins` used to be the order,
-    // but that's backwards AND broken: `0 ?? x` evaluates to 0, not x, so
-    // it never actually fell back once a user had any entry in
-    // statsByUser at all. fromPosts is still what drives the per-sport/
-    // this-week/streak breakdown below, since pick_record doesn't carry
-    // that granularity.
-    const wins = fromRecord?.wins ?? fromPosts?.wins ?? 0
-    const losses = fromRecord?.losses ?? fromPosts?.losses ?? 0
-    const pushes = fromRecord?.pushes ?? fromPosts?.pushes ?? 0
-    const graded = wins + losses
-    const winPct = graded > 0 ? Math.round((wins / graded) * 1000) / 10 : 0
-
-    const recent = (fromPosts?.recentResults ?? []).slice(0, 10)
-    let streak = 0
-    if (recent.length > 0) {
-      const dir = recent[0]
-      for (const r of recent) { if (r === dir) streak++; else break }
-      if (dir === 'L') streak = -streak
-    }
-
-    return {
-      id: u.id as string,
-      username: u.username as string,
-      display_name: u.display_name as string | null,
-      avatar_url: u.avatar_url as string | null,
-      avatar_ring_style: u.avatar_ring_style,
-      avatar_ring_color: u.avatar_ring_color,
-      is_verified: u.is_verified as boolean,
-      account_type: u.account_type as string,
-      follower_count: (u.follower_count as number) ?? 0,
-      wins, losses, pushes,
-      total: wins + losses + pushes,
-      winPct,
-      streak,
-      recentResults: recent,
-      thisWeek: fromPosts?.thisWeek ?? { wins: 0, losses: 0 },
-      bySport: fromPosts?.bySport ?? {},
-    }
-  }).filter(u => u.wins + u.losses > 0).sort((a, b) => wilsonLowerBound(b.wins, b.wins + b.losses) - wilsonLowerBound(a.wins, a.wins + a.losses)
-    || b.follower_count - a.follower_count)
-
-  const allSports = Array.from(new Set(pickStats.map(p => p.sport).filter(Boolean))) as string[]
-
-  return { ranked, allSports }
-}
-
-const getCachedLeaderboard = unstable_cache(fetchRankedLeaderboard, ['leaderboard-public-outcomes-v3'], { revalidate: 120 })
-
 export default async function LeaderboardPage() {
-  const [{ ranked, allSports }, supabase] = await Promise.all([getCachedLeaderboard(), createClient()])
-
+  const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authVisibilityUnavailable(authError)) throw new Error('Leaderboard is temporarily unavailable')
-  const blockedIds = user ? new Set(await getBlockedEitherWayIds(supabase, user.id)) : null
-  // The shared ranking may be up to 120s old. Recheck privacy on every request
-  // before it reaches HTML or client props; never fall back to cached rows.
-  const { users: currentlyPublic } = await currentPublicLeaderboard(createAdminClient(), ranked)
-  const eligibleUsers = blockedIds ? currentlyPublic.filter(u => !blockedIds.has(u.id)) : currentlyPublic
-  const { users, allSports: visibleSports } = filterLeaderboardSports(eligibleUsers, allSports, await canViewMlb(supabase, user?.id))
+  const { users, allSports: visibleSports } = await loadPublicLeaderboard(supabase, user?.id)
 
   return (
     <ProductPageShell narrow>

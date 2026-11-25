@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from './supabase/server'
 import { createAdminClient } from './supabase/admin'
 import { PROFILE_PROJECTION_COLUMNS, PRIVATE_ACCOUNT_COLUMNS, PUBLIC_USER_COLUMNS } from './supabase/userColumns'
@@ -18,17 +19,19 @@ import { AuthTemporarilyUnavailableError } from './supabase/authErrors'
 // with (not just a single ❤️ boolean) — reactions are multi-emoji now, any
 // standard or custom emoji, not just a heart-shaped like button.
 export async function attachUserReactions<T extends { id: string }>(
-  posts: T[], userId: string | null | undefined
+  posts: T[], userId: string | null | undefined, client?: SupabaseClient, strict = false
 ): Promise<(T & { user_reacted: boolean; user_reacted_emojis: string[]; user_reposted: boolean; user_bookmarked: boolean; user_poll_vote: number | null })[]> {
   if (!userId || posts.length === 0) return posts.map(p => ({ ...p, user_reacted: false, user_reacted_emojis: [], user_reposted: false, user_bookmarked: false, user_poll_vote: null }))
-  const supabase = await createClient()
+  const supabase = client ?? await createClient()
   const postIds = posts.map(p => p.id)
-  const [{ data: likes }, { data: reposts }, { data: bookmarks }, { data: pollVotes }] = await Promise.all([
+  const results = await Promise.all([
     supabase.from('reactions').select('target_id, emoji').eq('user_id', userId).eq('target_type', 'post').in('target_id', postIds),
     supabase.from('reposts').select('post_id').eq('user_id', userId).in('post_id', postIds),
     supabase.from('bookmarks').select('post_id').eq('user_id', userId).in('post_id', postIds),
     supabase.from('post_poll_votes').select('post_id, option_index').eq('user_id', userId).in('post_id', postIds),
   ])
+  if (strict && results.some(result => result.error)) throw new Error('Post interaction state unavailable')
+  const [{ data: likes }, { data: reposts }, { data: bookmarks }, { data: pollVotes }] = results
   const emojisByPost = new Map<string, string[]>()
   for (const r of likes ?? []) {
     const arr = emojisByPost.get((r as any).target_id) ?? []
