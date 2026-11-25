@@ -8,20 +8,8 @@ import { getTeamLogoUrl } from '@slipsurge/core/mlbTeamColors'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import type { HrIntelGameResult, HrIntelPlayerResult, HrIntelRealizedOutcome } from '@/lib/hrIntelligence'
 import type { HrIntelligenceSlate } from '@/lib/hrIntelligenceData'
+import { HR_INTEL_MARKET_LABELS, HR_INTEL_PICK_LABELS } from '@/lib/hrIntelligenceLabels'
 import styles from './HrIntelligence.module.css'
-
-const MARKET_LABELS: Record<string, string> = {
-  hr2: '2+ HR', laser105: '105+ HR', laser110: '110+ HR', moonshot: 'Moonshot', pa1: '1st PA HR', hrMl: 'HR / ML',
-  hrr: 'H+R+RBI',
-  rbi1: '1+ RBI', rbi2: '2+ RBI', rbi3: '3+ RBI', tb2: '2+ TB', tb3: '3+ TB', tb4: '4+ TB', tb5: '5+ TB',
-  singles: 'Single', doubles: 'Double', triples: 'Triple', hits1: '1+ Hit', hits2: '2+ Hits', runs1: '1+ Run', runs2: '2+ Runs',
-  sb1: '1+ SB', sb2: '2+ SB',
-}
-
-const PICK_LABELS: Record<string, string> = {
-  home_runs: 'HR', hits: 'Hits', runs: 'Runs', stolen_bases: 'SB', singles: 'Singles', doubles: 'Doubles', triples: 'Triples',
-  rbi: 'RBI', hits_runs_rbi: 'H+R+RBI', bases: 'Bases',
-}
 
 function easternToday() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
@@ -65,8 +53,8 @@ function SignalCard({ player, role, score, kind }: { player: HrIntelPlayerResult
 function PlayerDetail({ player }: { player: HrIntelPlayerResult }) {
   return <div className={styles.playerDetail}>
     <div className={styles.evidenceGrid}>{player.evidence.map(item => <div key={item.key} data-tone={item.tone}><span>{item.label}</span><strong>{item.value}</strong></div>)}</div>
-    <section><h4>Market ladder</h4><div className={styles.marketGrid}>{Object.entries(player.markets).map(([key, value]) => <div key={key}><span>{MARKET_LABELS[key] ?? key}</span><strong>{odds(value.open)} <i>to</i> {odds(value.current)}</strong></div>)}</div></section>
-    <section><h4>Public exposure by market</h4><div className={styles.marketGrid}>{Object.entries(player.picksByMarket).map(([key, value]) => <div key={key}><span>{PICK_LABELS[key] ?? key}</span><strong>{value ?? 'N/A'}</strong></div>)}</div></section>
+    <section><h4>Market ladder</h4><div className={styles.marketGrid}>{Object.entries(player.markets).map(([key, value]) => <div key={key}><span>{HR_INTEL_MARKET_LABELS[key] ?? key}</span><strong>{odds(value.open)} <i>to</i> {odds(value.current)}</strong></div>)}</div></section>
+    <section><h4>Public exposure by market</h4><div className={styles.marketGrid}>{Object.entries(player.picksByMarket).map(([key, value]) => <div key={key}><span>{HR_INTEL_PICK_LABELS[key] ?? key}</span><strong>{value ?? 'N/A'}</strong></div>)}</div></section>
     <section><h4>MM and rank windows</h4><div className={styles.windowGrid}>{(['l1', 'l3', 'l5', 'l10'] as const).map(window => <div key={window}><span>{window.toUpperCase()}</span><strong>MM {player.mm?.[window] ?? 'N/A'}</strong><small>Book {player.bookRank?.[window] ?? 'N/A'} | Paper {player.paperRank?.[window] ?? 'N/A'}</small></div>)}</div></section>
   </div>
 }
