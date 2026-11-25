@@ -7,6 +7,8 @@ import { defaultNflSample, nflSampleReference, parseNflSample } from '@/lib/nflS
 import { nflPregameOpen } from '@/lib/nflPregameResearchData'
 import { nativeNflCheatsheets, nativeNflLadders, nativeNflMismatch } from '@/lib/nativeNflResearch'
 import { nativeNflBoard } from '@/lib/nativeNflBoard'
+import { nativeSidelineComparison } from '@/lib/nativeSidelineComparison'
+import { readNflVerifiedPlayerResults } from '@/lib/nflSidelineFinalsServer'
 import { loadNflMatrices } from '@/lib/nflMatrixData'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 
@@ -35,8 +37,13 @@ export async function GET(request: NextRequest) {
   const tool = params.get('tool'), market = params.get('market') ?? 'anytime_td', book = params.get('book') ?? 'fanduel'
   const window = params.get('window') ?? 'season', sample = params.get('sample')
   const kind = params.get('kind') ?? 'milestone', side = params.get('side') ?? 'over'
+  const playerIds = (params.get('players') ?? '').split(',')
+  const all = params.get('all')
+  const compare = tool === 'compare'
   if (!/^[\w-]{1,64}$/.test(id) || !validDate(exactDate) ||
-    (tool !== 'mm' && tool !== 'cheatsheets' && tool !== 'ladders' && tool !== 'board' && tool !== 'matchup') ||
+    (!compare && tool !== 'mm' && tool !== 'cheatsheets' && tool !== 'ladders' && tool !== 'board' && tool !== 'matchup') ||
+    compare && (playerIds.length > 4 || new Set(playerIds).size !== playerIds.length ||
+      playerIds.some(player => !/^[1-9]\d{0,9}$/.test(player)) || all !== null && all !== '1') ||
     !/^[a-z0-9_]{1,60}$/.test(market) ||
     !/^[a-z0-9_]{1,30}$/.test(book) || !windows.includes(window as SidelineWindow) ||
     (kind !== 'milestone' && kind !== 'over_under') || (side !== 'over' && side !== 'under') || (kind === 'milestone' && side === 'under') ||
@@ -48,6 +55,15 @@ export async function GET(request: NextRequest) {
     const schedule = await getSidelineGames(undefined, id)
     const game = schedule.date === exactDate ? schedule.games.find(item => item.id === id) : undefined
     if (!game) return NextResponse.json({ error: 'Matchup not found' }, { status: 404, headers })
+    if (compare) {
+      const beganOpen = nflPregameOpen(game)
+      const [{ odds }, final] = await Promise.all([
+        getSidelineOddsBundle(game), readNflVerifiedPlayerResults(game).catch(() => null),
+      ])
+      const board = beganOpen && !nflPregameOpen(game) ? (await getSidelineOddsBundle(game)).odds : odds
+      return NextResponse.json({ gameId: game.id, date: game.gameday, market, all: all === '1',
+        ...nativeSidelineComparison(board, playerIds.map(Number), market, all === '1', final, game.season) }, { headers })
+    }
     const reference = sample == null ? defaultNflSample(game) : parseNflSample(sample)
     const matricesPromise = tool === 'mm' || tool === 'ladders' ? loadNflMatrices(account.userId) : null
     const marketView = async () => (await getSidelineOddsBundle(game)).odds
