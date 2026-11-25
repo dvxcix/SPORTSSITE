@@ -7,6 +7,12 @@ struct CourtFirstBasketView: View {
         let requestUptime: TimeInterval
     }
 
+    private struct Play: Identifiable {
+        let game: CourtBoard.Game
+        let selection: TrackedPickAPI.Leg
+        var id: String { selection.id }
+    }
+
     let scope: CourtView.Scope
     let board: CourtBoard
     let reload: Int
@@ -23,6 +29,7 @@ struct CourtFirstBasketView: View {
     @State private var oddsError: (any Error)?
     @State private var historyError: (any Error)?
     @State private var retry = 0
+    @State private var play: Play?
 
     private var identity: String { "\(board.game.id):\(board.oddsMode.rawValue):\(reload):\(retry)" }
     private var teams: [CourtBoard.Team] { [board.game.visitorTeam, board.game.homeTeam] }
@@ -47,6 +54,23 @@ struct CourtFirstBasketView: View {
             history = nil
             historyError = nil
             await loadHistory()
+        }
+        .sheet(item: $play) { selected in
+            NavigationStack {
+                if case .member(let account, let userID) = scope {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(selected.selection.player_name).font(.title2.weight(.bold))
+                        Text(selected.selection.line).font(.headline)
+                        ResearchToolBook(book: selected.selection.book, price: selected.selection.odds)
+                        CourtMarketActions(account: account, userID: userID, game: selected.game, selection: selected.selection)
+                    }
+                    .padding(20).frame(maxWidth: .infinity, alignment: .leading)
+                    .navigationTitle("First Basket")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { play = nil } } }
+                }
+            }
+            .presentationDetents([.medium, .large])
         }
     }
 
@@ -104,6 +128,13 @@ struct CourtFirstBasketView: View {
                                 if let prior = row.movement?.previousOdds {
                                     Text("Previous \(ResearchFormat.price(prior))").font(.caption).foregroundStyle(.secondary)
                                 }
+                                if case .member = scope, board.oddsMode == .pregame, !board.isFrozen,
+                                   let tip = board.tip, tip > .now, let line = Double(row.offer.lineValue), line == 0.5 {
+                                    HStack(spacing: 7) {
+                                        playButton(row, line: line, side: .over)
+                                        playButton(row, line: line, side: .under)
+                                    }
+                                }
                             }
                         }
                     }
@@ -111,6 +142,22 @@ struct CourtFirstBasketView: View {
             }
         } else {
             ResearchToolMessage(title: "First Basket odds couldn’t load", error: oddsError) { retry += 1 }
+        }
+    }
+
+    @ViewBuilder private func playButton(_ row: CourtFirstBasketOdds.Row, line: Double, side: CourtPlayerMarket.Side) -> some View {
+        if row.offer.market.type == "over_under", let price = row.offer.price(side) {
+            Button {
+                let selection = TrackedPickAPI.Leg.court(game: row.game, playerID: row.player.id, name: row.player.name,
+                    team: row.player.team, headshot: row.player.headshot, position: row.player.position,
+                    market: row.offer.propType, label: marketLabel(row.offer.propType), line: line,
+                    side: side == .under ? .under : .over, book: row.offer.vendor, odds: price)
+                play = .init(game: row.game, selection: selection)
+            } label: {
+                Label("\(side == .under ? "No" : "Yes") \(ResearchFormat.price(price))",
+                    systemImage: side == .under ? "minus.circle" : "plus.circle").monospacedDigit()
+            }
+            .buttonStyle(.bordered)
         }
     }
 

@@ -4,6 +4,8 @@ struct ResearchOddsSlate {
     struct Game: Identifiable {
         let id: String
         let title: String
+        var away: ResearchMatchup.Team?
+        var home: ResearchMatchup.Team?
     }
 
     struct Team: Hashable {
@@ -156,7 +158,7 @@ struct ResearchOddsBoard: View {
                 table(rows, columns: target.map { [$0] } ?? milestones)
             }
         }
-        .onChange(of: selectedGame) { _, value in
+        .onChange(of: selectedGame, initial: true) { _, value in
             game = value.flatMap { id in slate.games.contains { $0.id == id } ? id : nil }
             team = nil
             target = nil
@@ -206,15 +208,36 @@ struct ResearchOddsBoard: View {
     private var filters: some View {
         NavigationStack {
             Form {
-                Picker("Game", selection: $game) {
-                    Text("All games").tag(nil as String?)
-                    ForEach(slate.games) { Text($0.title).tag(Optional($0.id)) }
+                Section("Matchup") {
+                    Button {
+                        game = nil
+                    } label: {
+                        HStack {
+                            Label("All games", systemImage: "calendar")
+                            Spacer()
+                            if game == nil { Image(systemName: "checkmark") }
+                        }
+                    }.accessibilityAddTraits(game == nil ? .isSelected : [])
+                    ForEach(slate.games) { matchup in
+                        Button {
+                            game = matchup.id
+                        } label: {
+                            if let away = matchup.away, let home = matchup.home {
+                                ResearchMatchup(away: away, home: home, subtitle: nil, selected: game == matchup.id, fullWidth: true)
+                            } else {
+                                LabeledContent(matchup.title, value: game == matchup.id ? "Selected" : "")
+                            }
+                        }
+                        .buttonStyle(SlipSurgePressStyle())
+                        .accessibilityLabel(matchup.title)
+                        .accessibilityAddTraits(game == matchup.id ? .isSelected : [])
+                    }
                 }
                 .onChange(of: game) { _, _ in team = nil }
-                Picker("Team", selection: $team) {
-                    Text("All teams").tag(nil as String?)
-                    ForEach(teams, id: \.code) { Text($0.name).tag(Optional($0.code)) }
-                }
+                ResearchArtworkPicker(title: "Team", options: [.init(id: "", title: "All teams", icon: "shield")]
+                    + teams.map { item in
+                        .team(id: item.code, title: item.name, logo: slate.players.first { $0.team.code == item.code }?.logo)
+                    }, selection: Binding(get: { team ?? "" }, set: { team = $0.isEmpty ? nil : $0 }))
                 Picker("Compare with", selection: $comparison) {
                     ForEach(OddsComparison.allCases, id: \.self) { Text($0.label(live: live)).tag($0) }
                 }

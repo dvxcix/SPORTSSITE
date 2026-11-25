@@ -134,7 +134,8 @@ struct CourtOddsAPI {
                     secondary: palette.secondary, prices: Array(prices.values), status: player.injuryStatus,
                     totalPicks: player.publicPicks)
             }
-            let matchups = games.map { ResearchOddsSlate.Game(id: String($0.id), title: title($0)) }
+            let matchups = games.map { ResearchOddsSlate.Game(id: String($0.id), title: title($0),
+                away: visual($0.visitorTeam), home: visual($0.homeTeam)) }
             var notices: [String] = []
             if stale == true { notices.append("Last observed prices") }
             if !complete || !failed.isEmpty || !unavailable.isEmpty { notices.append("Some games have unavailable prices.") }
@@ -151,6 +152,11 @@ struct CourtOddsAPI {
 
         private func title(_ game: CourtBoard.Game) -> String {
             "\(game.visitorTeam.abbreviation) at \(game.homeTeam.abbreviation)"
+        }
+
+        private func visual(_ team: CourtBoard.Team) -> ResearchMatchup.Team {
+            let colors = CourtTeamColors.colors(for: team.abbreviation)
+            return .init(name: team.abbreviation, logo: team.logo, color: colors.primary, secondary: colors.secondary)
         }
 
         private func timestamp(_ index: Int) throws -> Date {

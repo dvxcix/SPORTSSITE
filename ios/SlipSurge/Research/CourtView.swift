@@ -94,6 +94,13 @@ struct CourtView: View {
         let observedAt: Date
     }
 
+    private struct Comparison: Identifiable {
+        let id = UUID()
+        let board: CourtBoard
+        let players: [CourtBoard.Player]
+        let observedAt: Date
+    }
+
     let scope: Scope
     private let linkedGame: Int?
     private let linkedDate: String
@@ -118,6 +125,15 @@ struct CourtView: View {
     @State private var target: Double?
     @State private var sort = CourtLinkContext.Sort.average
     @State private var ascending = false
+    @State private var venue = CourtPlayerMarket.Venue.all
+    @State private var teamFilter = ""
+    @State private var position = ""
+    @State private var savedOnly = false
+    @State private var savedResults: (Int, Set<Int>)?
+    @State private var savedError: Int?
+    @State private var savedRevision = 0
+    @State private var comparing: [Int] = []
+    @State private var comparison: Comparison?
     @State private var playerSearch = ""
     @State private var slate = Slate.loading
     @State private var state = LoadState.loading
@@ -209,6 +225,22 @@ struct CourtView: View {
         .task(id: boardRequest) { await loadBoard() }
         .refreshable { revision += 1 }
         .navigationDestination(isPresented: $showLinkedPlayer) { linkedPlayer }
+        .safeAreaInset(edge: .bottom, spacing: 6) {
+            if !comparing.isEmpty, tool == nil, section == .players,
+               case .loaded(let board, let observedAt) = state, board.oddsMode == mode {
+                comparisonBar(board, observedAt: observedAt)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 4)
+            }
+        }
+        .sheet(item: $comparison) { selected in
+            CourtPlayerComparison(board: selected.board, players: selected.players, market: market,
+                venue: venue, observedAt: selected.observedAt)
+        }
+        .onChange(of: boardRequest.gameID) { _, _ in
+            comparing = []
+            teamFilter = ""
+        }
         .sheet(isPresented: $matrices) {
             if case .member(let account, let userID) = scope {
                 NavigationStack {
@@ -274,7 +306,7 @@ struct CourtView: View {
     private var selectors: some View {
         VStack(spacing: 9) {
             ResearchToolRail(title: "Research tools", choices: [nil] + CourtMatchupTool.allCases.map(Optional.some),
-                selection: $tool, label: { $0?.rawValue ?? "The Court" }, glyph: { $0?.glyph ?? "house" })
+                selection: $tool, label: { $0?.rawValue ?? "The Court" }, glyph: { $0?.glyph ?? "basketball" })
             Picker("Research mode", selection: $mode) {
                 Text("Pregame").tag(CourtResearchMode.pregame)
                 Text("Live").tag(CourtResearchMode.live)
@@ -445,6 +477,9 @@ struct CourtView: View {
         .task(id: request) {
             await loadRanks(board, request: request)
         }
+        .task(id: "\(board.game.id):\(savedOnly):\(savedRevision):\(revision)") {
+            if savedOnly { await loadSaved(game: board.game.id) }
+        }
     }
 
     private func loadRanks(_ board: CourtBoard, request: RankRequest) async {
@@ -455,10 +490,64 @@ struct CourtView: View {
     private func playerTeams(_ board: CourtBoard, at observedAt: Date, ranks: [Int: CourtAPI.Rank],
         matches: [Int: [CourtMatrixResults.Match]], filter: String?,
     ) -> some View {
-        ForEach([board.game.visitorTeam, board.game.homeTeam], id: \.id) { team in
-            CourtPlayerBoard(team: team, board: board, observedAt: observedAt, market: market,
-                sportsbook: sportsbook, side: side, search: playerSearch, ranks: ranks, matrixMatches: matches, matrixFilter: filter,
-                scope: scope, contract: contract, target: target, sort: sort, ascending: ascending)
+        Group {
+            if savedOnly, savedResults?.0 != board.game.id {
+                ResearchToolMessage(title: "Watchlist couldn’t load",
+                    error: savedError == board.game.id ? URLError(.resourceUnavailable) : nil) { savedRevision += 1 }
+            } else {
+                let teams = [board.game.visitorTeam, board.game.homeTeam].filter { teamFilter.isEmpty || String($0.id) == teamFilter }
+                ForEach(teams, id: \.id) { team in
+                    CourtPlayerBoard(team: team, board: board, observedAt: observedAt, market: market,
+                        sportsbook: sportsbook, side: side, search: playerSearch, ranks: ranks, matrixMatches: matches, matrixFilter: filter,
+                        scope: scope, contract: contract, target: target, sort: sort, ascending: ascending, venue: venue,
+                        position: position, savedPlayers: savedOnly ? savedResults?.1 : nil, comparing: comparing,
+                        toggleComparison: toggleComparison)
+                }
+            }
+        }
+    }
+
+    private func comparisonBar(_ board: CourtBoard, observedAt: Date) -> some View {
+        let controls = compareControls(board, observedAt: observedAt).padding(.horizontal, 12).padding(.vertical, 5)
+        return Group {
+            if #available(iOS 26, *) {
+                controls.glassEffect(.regular, in: .rect(cornerRadius: 22))
+            } else {
+                controls.background(.regularMaterial, in: .rect(cornerRadius: 22))
+            }
+        }
+    }
+
+    private func compareControls(_ board: CourtBoard, observedAt: Date) -> some View {
+        let players = comparing.compactMap { id in board.players.first { $0.id == id } }
+        return HStack {
+            Label("\(players.count) of 3 selected", systemImage: "rectangle.split.2x1").font(.caption.weight(.medium))
+            Spacer(minLength: 4)
+            Button("Compare players") {
+                comparison = .init(board: board, players: players, observedAt: observedAt)
+            }
+            .buttonStyle(.borderedProminent).disabled(players.count < 2)
+            Button("Clear comparison", systemImage: "xmark.circle") { comparing = [] }
+                .labelStyle(.iconOnly).buttonStyle(.borderless).frame(minWidth: 44, minHeight: 44)
+        }
+    }
+
+    private func toggleComparison(_ id: Int) {
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) {
+            if comparing.contains(id) { comparing.removeAll { $0 == id } }
+            else if comparing.count < 3 { comparing.append(id) }
+        }
+    }
+
+    private func loadSaved(game: Int) async {
+        guard case .member(let account, let userID) = scope else { return }
+        savedError = nil
+        do {
+            let rows = try await ResearchLibraryAPI(account: account, userID: userID).courtSelections(game: game)
+            try Task.checkCancellation()
+            if game == selectedGameID { savedResults = (game, Set(rows.compactMap(\.playerID))) }
+        } catch {
+            if !Task.isCancelled, game == selectedGameID { savedError = game }
         }
     }
 
@@ -494,11 +583,23 @@ struct CourtView: View {
                     }
                 }.frame(minHeight: 44)
                 if section == .players {
-                    Menu("Sort", systemImage: ascending ? "arrow.up" : "arrow.down") {
+                    ResearchArtworkPicker(title: "Team",
+                        options: [.init(id: "", title: "Both teams", icon: "shield")] + [board.game.visitorTeam, board.game.homeTeam].map {
+                            .team(id: String($0.id), title: $0.abbreviation, logo: $0.logo)
+                        }, selection: $teamFilter)
+                    Menu("Player filters", systemImage: "line.3.horizontal.decrease") {
+                        Picker("Position", selection: $position) {
+                            Text("All positions").tag("")
+                            ForEach(["G", "F", "C"], id: \.self) { Text($0).tag($0) }
+                        }
+                        Picker("Venue", selection: $venue) {
+                            ForEach(CourtPlayerMarket.Venue.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        }
                         Picker("Sort by", selection: $sort) {
                             ForEach(CourtLinkContext.Sort.allCases, id: \.self) { Text($0.label).tag($0) }
                         }
                         Toggle("Ascending", isOn: $ascending)
+                        if !isPreview { Toggle("Saved players only", isOn: $savedOnly) }
                     }.frame(minHeight: 44)
                 }
                 }.padding(.vertical, 2)

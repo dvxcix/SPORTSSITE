@@ -23,7 +23,15 @@ export async function GET(request: Request) {
   const { supabase, userId } = account
   const params = new URL(request.url).searchParams
   const workspace = params.get('workspace')
+  const courtGame = params.get('courtGame')
   try {
+    if (courtGame != null) {
+      if (!/^[1-9]\d{0,9}$/.test(courtGame)) return respond({ error: 'Invalid NBA matchup' }, 400)
+      const { data, error } = await supabase.from('watchlist_items').select('id,prop_key,book')
+        .eq('user_id', userId).eq('game_pk', courtGame).eq('status', 'pending').ilike('sport', 'nba')
+        .order('id').limit(500)
+      return error ? unavailable() : respond({ items: data })
+    }
     if (workspace) {
       if (!isAccountId(workspace)) return respond({ error: 'Invalid workspace' }, 400)
       const access = await supabase.from('research_workspaces').select('id,name,user_id').eq('id', workspace).maybeSingle()

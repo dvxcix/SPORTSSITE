@@ -17,6 +17,16 @@ enum CourtPlayerMarket: String, CaseIterable {
         case over = "Over", under = "Under"
     }
 
+    enum Venue: String, CaseIterable {
+        case all = "All venues", home = "Home", away = "Away"
+
+        func accepts(_ log: CourtBoard.PlayerLog) -> Bool {
+            if self == .all { return true }
+            guard let id = log.team?.id else { return false }
+            return id == (self == .home ? log.game.homeTeamId : log.game.visitorTeamId)
+        }
+    }
+
     struct Reference {
         let line: Double
         let vendor: String

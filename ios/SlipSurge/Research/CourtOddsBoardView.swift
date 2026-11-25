@@ -26,6 +26,7 @@ struct CourtOddsBoardView: View {
     let gameID: Int?
     let mode: CourtResearchMode
     let reload: Int
+    let explicitBook: String?
     private let api = CourtOddsAPI()
     @State private var market = "points"
     @State private var book = "fanduel"
@@ -40,6 +41,7 @@ struct CourtOddsBoardView: View {
         self.gameID = gameID
         self.mode = mode
         self.reload = reload
+        explicitBook = initialBook == "all" ? nil : initialBook
         if let initialBook, initialBook != "all" { _book = SwiftUI.State(initialValue: initialBook) }
         if let initialMarket { _market = SwiftUI.State(initialValue: initialMarket) }
     }
@@ -100,7 +102,7 @@ struct CourtOddsBoardView: View {
                 try Task.checkCancellation()
                 guard wanted == request else { return }
                 books = loaded.books
-                if !books.isEmpty, !books.contains(book) {
+                if !books.isEmpty, !books.contains(book), explicitBook == nil {
                     book = books[0]
                     return
                 }

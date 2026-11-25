@@ -35,6 +35,7 @@ struct CourtPlayerView: View {
     var matchupBoard: CourtBoard?
     var linkedPanel: CourtLinkContext.Panel?
     var linkedMetric: String?
+    var initialVenue = CourtPlayerMarket.Venue.all
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
@@ -46,9 +47,11 @@ struct CourtPlayerView: View {
     @State private var line: CourtLinkContext.Quote?
     @State private var selectedPanel: CourtLinkContext.Panel?
     @State private var trackingMetric: String?
+    @State private var chosenVenue: CourtPlayerMarket.Venue?
     @State private var configured = false
 
     private var panel: CourtLinkContext.Panel { selectedPanel ?? linkedPanel ?? .trends }
+    private var venue: CourtPlayerMarket.Venue { chosenVenue ?? initialVenue }
     private var panelOptions: [CourtLinkContext.Panel] {
         CourtLinkContext.Panel.allCases.filter {
             switch $0 {
@@ -249,7 +252,7 @@ struct CourtPlayerView: View {
     @ViewBuilder
     private var trend: some View {
         if let metric = CourtPlayerMarket(rawValue: market) {
-            let history = metric.history(player, game: game, sampleSeason: sampleSeason)
+            let history = metric.history(player, game: game, sampleSeason: sampleSeason).filter(venue.accepts)
             let vendor = sportsbook.isEmpty ? nil : sportsbook
             let contracts = Set(metric.offers(player, gameID: game.id, side: side).filter { vendor == nil || vendor == $0.vendor }
                 .map { CourtLinkContext.Quote(line: $0.line, contract: $0.milestone ? .milestone : .standard) }
@@ -289,6 +292,9 @@ struct CourtPlayerView: View {
                         ForEach(contracts, id: \.self) { Text(lineLabel($0)).tag(Optional($0)) }
                     }
                 }
+                Picker("Venue", selection: Binding(get: { venue }, set: { chosenVenue = $0 })) {
+                    ForEach(CourtPlayerMarket.Venue.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }
                 ResearchSampleBars(labels: ["L3", "L5", "L10", "L20"], rates: samples.map { $0?.percent },
                     counts: samples.map { sample in
                         sample.map { "\($0.wins)/\($0.decisions)" + ($0.pushes > 0 ? " · \($0.pushes)P" : "") }
@@ -298,6 +304,14 @@ struct CourtPlayerView: View {
                 }
                 .pickerStyle(.segmented)
                 ResearchGameChart(games: chartGames, line: reference?.line, metric: metric.label)
+                if let reference, let researchScope, case .member(let account, let userID) = researchScope,
+                   mode == .pregame, !frozen, let tip, tip > .now {
+                    let selection = TrackedPickAPI.Leg.court(game: game, playerID: player.id,
+                        name: "\(player.firstName) \(player.lastName)", team: player.team, headshot: player.headshot,
+                        position: player.position, market: metric.rawValue, label: metric.label, line: reference.line,
+                        side: reference.milestone ? .milestone : side == .under ? .under : .over, book: reference.vendor, odds: reference.odds)
+                    CourtMarketActions(account: account, userID: userID, game: game, selection: selection)
+                }
             }
         } else {
             Text("Choose a market to view recent form.").foregroundStyle(.secondary)

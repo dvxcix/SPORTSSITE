@@ -117,6 +117,23 @@ struct ResearchLibraryAPI {
         try await api.readPublic(ResearchLibraryData.self, path: Self.path)
     }
 
+    struct CourtSelection: Decodable {
+        let id: UUID
+        let propKey: String
+        let book: String?
+
+        var playerID: Int? {
+            let parts = propKey.split(separator: ":")
+            return parts.count == 6 && parts[0] == "nba" ? Int(parts[1]) : nil
+        }
+    }
+
+    func courtSelections(game: Int) async throws -> [CourtSelection] {
+        struct Result: Decodable { let items: [CourtSelection] }
+        return try await api.memberRead(Result.self, path: Self.path,
+            query: [.init(name: "courtGame", value: String(game))], keyDecodingStrategy: .convertFromSnakeCase).items
+    }
+
     func mutate(_ action: Change) async throws {
         struct Confirmation: Decodable { let ok: Bool }
         let response = try await api.write(Confirmation.self, path: Self.path, body: action)

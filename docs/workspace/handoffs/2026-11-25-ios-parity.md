@@ -1726,5 +1726,36 @@ physical-device push are still open.
   comparison at the same exact line. No live refresh jobs were invoked.
 - Signed Xcode Simulator build, Hub TypeScript, 134 baseline source checks,
   and six combined NBA and NFL archive and authorization fixtures passed.
-  Production and signed Simulator walkthroughs of these new NFL routes
-  follow the mobile adapter release.
+  Task `23a4edcf00d984d22b30609a952ac2f9de1b49cf` is pushed. PR #64
+  merged as `48ec595f33fce52c5433fdfa07b52f5949da774c`, preview
+  `dpl_Cv9NthdvjtBgpHM9C5zQ2cVVTUnj` and production
+  `dpl_GxqwKhJjwGJK7qk3Ttp3AUhK98LK` were READY. The signed Simulator
+  resolved `2026_09_TB_CHI` without a date and opened the November 8
+  Usage board with the 2026 regular-season sample and a verified 8:20 p.m.
+  Eastern cutoff. Matchup Lab showed Tampa Bay’s team tendencies and
+  Role Command. A shared historical link opened Colston Loveland’s
+  FanDuel receiving-yards capture at 8:19 p.m. Eastern. All three guest
+  mobile research, schedule and archive queries returned 401. On the
+  NBA player board, the previous-capture control selected 6:56 p.m.
+  Eastern and correctly reported that the exact DraftKings line was
+  absent from that frame.
+
+## NBA player comparison, Watchlist and Odds Board artwork · 25 November 2026
+
+- The Player Board compares up to three players from the same observation.
+  The sheet shows team-colored portraits, recorded averages, minutes and
+  L10 for the selected market and venue. Player rows and trends share
+  home and away sample filters. The signed Simulator selected Cade
+  Cunningham and Jalen Duren and showed their archived averages together.
+- Pregame player trends and First Basket offer controls build the site's
+  exact validated pick legs. Members can manage their Watchlist selection
+  or open an unsent pick draft. The new read path is limited to the
+  current member’s pending NBA selections for the requested game.
+  The existing write path rechecks the sportsbook quote and cutoff.
+- The shared NBA and NFL Odds Board filter sheet shows official matchup
+  marks and team options. Opening a selected game takes effect on the
+  initial display. Explicit NBA sportsbook links retain their selected
+  book when that book has no prices in the observation.
+- Signed SwiftUI compilation, Hub TypeScript, 134 baseline source checks
+  and seven targeted replay and Watchlist checks passed. Live changes
+  to Watchlist or published picks were not necessary for this checkpoint.

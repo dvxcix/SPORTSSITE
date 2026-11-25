@@ -16,6 +16,11 @@ struct CourtPlayerBoard: View {
     var target: Double?
     var sort = CourtLinkContext.Sort.average
     var ascending = false
+    var venue = CourtPlayerMarket.Venue.all
+    var position = ""
+    var savedPlayers: Set<Int>?
+    var comparing: [Int] = []
+    var toggleComparison: ((Int) -> Void)?
 
     @Environment(\.colorScheme) private var scheme
 
@@ -31,6 +36,8 @@ struct CourtPlayerBoard: View {
         let filtered = board.players.filter {
             $0.team.id == team.id && (query.isEmpty || "\($0.firstName) \($0.lastName)".localizedStandardContains(query))
                 && (matrixFilter == nil || matrixMatches[$0.id]?.contains { $0.id == matrixFilter } == true)
+                && (position.isEmpty || $0.position?.contains(position) == true)
+                && (savedPlayers == nil || savedPlayers?.contains($0.id) == true)
         }
         return filtered.compactMap { player -> Entry? in
             let offer = market.reference(player, gameID: board.game.id, vendor: sportsbook, side: side,
@@ -64,7 +71,7 @@ struct CourtPlayerBoard: View {
         case .minutes: player.average?["min"] ?? nil
         case .l5, .l10, .l20:
             if let offer, let window = Int(sort.rawValue.dropFirst()) {
-                market.rate(market.history(player, board: board).prefix(window), against: offer, side: side).percent
+                market.rate(market.history(player, board: board).filter(venue.accepts).prefix(window), against: offer, side: side).percent
             } else { nil }
         case .name: nil
         }
@@ -101,12 +108,27 @@ struct CourtPlayerBoard: View {
                                 initialBook: quote?.vendor ?? sportsbook, initialMarket: market.rawValue, initialSide: side,
                                 researchScope: scope, linkedQuote: quote.map {
                                     .init(line: $0.line, contract: $0.milestone ? .milestone : .standard)
-                                }, matchupBoard: board
+                                }, matchupBoard: board, initialVenue: venue
                             )
                         } label: {
                             playerRow(player, quote: quote)
                         }
                         .buttonStyle(SlipSurgePressStyle())
+                        if let toggleComparison {
+                            let active = comparing.contains(player.id)
+                            Button {
+                                toggleComparison(player.id)
+                            } label: {
+                                Label(active ? "Comparing" : "Compare",
+                                    systemImage: active ? "checkmark.circle.fill" : "rectangle.split.2x1")
+                                    .font(.caption.weight(.semibold))
+                                    .padding(.horizontal, 12).frame(minHeight: 44)
+                                    .contentShape(.rect)
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel("\(active ? "Remove" : "Compare") \(player.firstName) \(player.lastName)")
+                            .disabled(!active && comparing.count >= 3)
+                        }
                         if player.id != players.last?.id { Divider() }
                     }
                 }
@@ -213,7 +235,7 @@ struct CourtPlayerBoard: View {
 
     @ViewBuilder
     private func hitRates(_ player: CourtBoard.Player, quote: CourtPlayerMarket.Reference?) -> some View {
-        let history = market.history(player, board: board)
+        let history = market.history(player, board: board).filter(venue.accepts)
         ForEach([5, 10, 20], id: \.self) { count in
             let result = quote.map { market.rate(history.prefix(count), against: $0, side: side) }
             let percent = result?.percent

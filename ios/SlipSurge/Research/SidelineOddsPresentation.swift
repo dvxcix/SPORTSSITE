@@ -22,8 +22,15 @@ extension SidelineBoard {
 
     var oddsSlate: ResearchOddsSlate {
         let portraits = Dictionary(identities.map { ($0.player, $0.urls) }, uniquingKeysWith: { first, _ in first })
-        let matchups = games.map { ResearchOddsSlate.Game(id: $0.id, title: "\($0.away) at \($0.home)") }
         let visuals = Dictionary(teams.map { ("\($0.game):\($0.abbreviation)", $0) }, uniquingKeysWith: { first, _ in first })
+        let matchups = games.map { game in
+            let team = { (name: String) -> ResearchMatchup.Team in
+                let visual = visuals["\(game.id):\(name)"]
+                return .init(name: name, logo: visual?.logo, color: Color(hex: visual?.primary) ?? Color(rgb: 0x263542),
+                    secondary: Color(hex: visual?.secondary))
+            }
+            return ResearchOddsSlate.Game(id: game.id, title: "\(game.away) at \(game.home)", away: team(game.away), home: team(game.home))
+        }
         let eligible = quotes.filter { !availabilityUnavailable.contains($0.id.player.game) }
         let groups = Dictionary(grouping: eligible) {
             let player = $0.id.player
