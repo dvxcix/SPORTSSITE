@@ -1,17 +1,12 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { adminDecisionActor } from '@/lib/supabase/adminDecisionActor'
 import { writeAdminAudit } from '@/lib/adminAudit'
 import { safeApiError } from '@/lib/safeApiError'
 
 export async function POST(request: Request, context: { params: Promise<{ reportId: string }> }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
-
-  const admin = createAdminClient()
-  const { data: operator } = await admin.from('users').select('account_type').eq('id', user.id).maybeSingle()
-  if (operator?.account_type !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const actor = await adminDecisionActor(request)
+  if (actor.error) return actor.error
+  const { admin, user } = actor
 
   const { reportId } = await context.params
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reportId)) {

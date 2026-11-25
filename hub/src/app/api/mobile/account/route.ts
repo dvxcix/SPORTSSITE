@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { effectiveTier, hasFullAccessOverride, type Tier } from '@slipsurge/core/tiers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
+import { hasApprovedCreatorAccess } from '@/lib/creator'
 
 const headers = { 'Cache-Control': 'private, no-store' }
 
@@ -17,6 +18,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Account details unavailable' }, { status: 503, headers })
   }
   const tier = effectiveTier((data.tier ?? 'free') as Tier, data.discord_advanced_claimed, data.admin_granted_tier as Tier | null)
+  let canOpenStudio = await hasApprovedCreatorAccess(account.supabase, account.userId, data.account_type).catch(() => false)
+  if (!canOpenStudio) {
+    const { data: ownedGroup } = await account.supabase.from('groups').select('id').eq('owner_id', account.userId).limit(1).maybeSingle()
+    canOpenStudio = Boolean(ownedGroup)
+  }
   return NextResponse.json({
     id: data.id,
     username: data.username,
@@ -24,6 +30,7 @@ export async function GET(request: Request) {
     avatar: data.avatar_url,
     verified: data.is_verified,
     role: data.account_type,
+    canOpenStudio,
     accessTier: hasFullAccessOverride(data.account_type, data.beta_access_active) ? 'ultimate' : tier,
     membership: {
       discordClaim: data.discord_advanced_claimed === true,
