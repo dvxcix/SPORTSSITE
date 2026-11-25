@@ -36,6 +36,7 @@ struct InformationNavigation: View {
     let page: InformationPage
     let account: AccountStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @AppStorage("appearance") private var appearance = Appearance.system
     @State private var history: [Destination] = []
 
@@ -66,16 +67,16 @@ struct InformationNavigation: View {
                 }
         }
         .environment(\.openURL, OpenURLAction { url in
-            guard url.host == SlipSurgeHTTP.site else { return .systemAction }
-            let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-            if let document = InformationPage(rawValue: path) { history.append(.page(document)) }
-            else if path == "pricing" { history.append(.pricing) }
-            else if path == "preview/nba" { history.append(.nbaPreview) }
-            else if path == "preview/nfl" { history.append(.nflPreview) }
-            else if path == "settings/connections" { history.append(.connections) }
-            else if path == "settings/membership" { history.append(.membership) }
-            else if path == "settings" || path == "settings/account" { history.append(.account) }
-            else { return .systemAction }
+            switch NativeSiteLink(url) {
+            case .information(let document): history.append(.page(document))
+            case .pricing: history.append(.pricing)
+            case .preview(.nba): history.append(.nbaPreview)
+            case .preview(.nfl): history.append(.nflPreview)
+            case .settings(.connections): history.append(.connections)
+            case .settings(.membership): history.append(.membership)
+            case .account, .settings(.account): history.append(.account)
+            default: openURL(url)
+            }
             return .handled
         })
     }

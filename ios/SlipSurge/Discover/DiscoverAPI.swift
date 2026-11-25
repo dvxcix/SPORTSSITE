@@ -25,6 +25,11 @@ struct DiscoverAPI {
         let invitations: [Community]
     }
 
+    struct LinkedCommunity: Decodable {
+        let group: Communities.Community
+        let member: Bool
+    }
+
     struct Creators: Decodable {
         struct Creator: Decodable, Identifiable {
             struct Store: Decodable {
@@ -105,6 +110,18 @@ struct DiscoverAPI {
 
     func read<Value: Decodable>(_ type: Value.Type, resource: String) async throws -> Value {
         try await readPublic(type, path: "/api/mobile/discover", query: [.init(name: "resource", value: resource)])
+    }
+
+    func linkedCommunity(_ slug: String) async throws -> LinkedCommunity {
+        try await readPublic(LinkedCommunity.self, path: "/api/mobile/discover",
+            query: [.init(name: "resource", value: "communities"), .init(name: "slug", value: slug)])
+    }
+
+    func profileID(_ username: String) async throws -> UUID {
+        struct Identity: Decodable { let id: UUID }
+        struct ProfileResponse: Decodable { let profile: Identity }
+        return try await readPublic(ProfileResponse.self, path: "/api/mobile/profiles",
+            query: [.init(name: "user", value: username)]).profile.id
     }
 
     func readPublic<Value: Decodable>(_ type: Value.Type, path: String, query: [URLQueryItem] = []) async throws -> Value {

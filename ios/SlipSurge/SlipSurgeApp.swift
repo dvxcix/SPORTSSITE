@@ -7,20 +7,20 @@ struct SlipSurgeApp: App {
     @Environment(\.scenePhase) private var phase
     @State private var account = AccountStore()
     @State private var incoming: Incoming?
-    @State private var researchLink: ResearchDeepLink?
+    @State private var incomingURL: URL?
 
     private struct Incoming: Identifiable { let id: UUID }
 
     var body: some Scene {
         WindowGroup {
-            SlipSurgeTabs(account: account, appearance: $appearance, researchLink: $researchLink)
+            SlipSurgeTabs(account: account, appearance: $appearance, incomingURL: $incomingURL)
                 .environmentObject(push)
                 .preferredColorScheme(appearance.scheme)
                 .onOpenURL { url in
-                    if let link = ResearchDeepLink(url) {
-                        researchLink = link
-                    } else {
+                    if url.scheme == EmailAuthAttempt.scheme {
                         Task { await account.openEmail(url) }
+                    } else if ResearchDeepLink(url) != nil || NativeSiteLink(url) != nil {
+                        incomingURL = url
                     }
                 }
                 .task(id: account.memberID) {

@@ -3,10 +3,9 @@ import SwiftUI
 struct SlipSurgeTabs: View {
     let account: AccountStore
     @Binding var appearance: Appearance
-    @Binding var researchLink: ResearchDeepLink?
+    @Binding var incomingURL: URL?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var phase
-    @Environment(\.openURL) private var systemOpenURL
     private enum Destination { case feed, research, discover, account }
     @State private var selected = Destination.feed
     @State private var announcements: SiteAnnouncements?
@@ -15,9 +14,19 @@ struct SlipSurgeTabs: View {
     @State private var dismissedReleases: Set<UUID> = []
     @State private var savingRelease = false
     @State private var releaseProblem: String?
-    @State private var informationPage: InformationPage?
+    @State private var sitePresentation: SitePresentation?
+    @State private var researchLink: ResearchDeepLink?
     @State private var discoverDestination: DiscoverDestination?
     @State private var emojiLibrary = NativeEmojiLibrary()
+
+    private struct SitePresentation: Identifiable {
+        let id = UUID()
+        let target: NativeSiteLink
+    }
+
+    private var appSheet: Binding<SitePresentation?> {
+        Binding(get: { release == nil ? sitePresentation : nil }, set: { if release == nil { sitePresentation = $0 } })
+    }
 
     var body: some View {
         TabView(selection: $selected) {
@@ -51,13 +60,14 @@ struct SlipSurgeTabs: View {
         }
         .tint(Brand.accent(for: scheme))
         .environment(\.nativeEmojiLibrary, emojiLibrary)
+        .environment(\.openURL, OpenURLAction(handler: openLink))
         .task { await emojiLibrary.refresh() }
         .onChange(of: phase) { _, current in if current == .active { Task { await emojiLibrary.refresh() } } }
         .safeAreaInset(edge: .top, spacing: 0) {
             if let banner = announcements?.banner, banner.isActive, !banner.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                dismissedBannerVersion != banner.updatedAt {
                 SiteAnnouncementBanner(banner: banner) { dismissedBannerVersion = banner.updatedAt }
-                    .environment(\.openURL, OpenURLAction(handler: announcementLink))
+                    .environment(\.openURL, OpenURLAction(handler: openLink))
             }
         }
         .sheet(item: $release, onDismiss: presentNextRelease) { current in
@@ -75,9 +85,10 @@ struct SlipSurgeTabs: View {
                 }
             }
             .interactiveDismissDisabled()
-            .environment(\.openURL, OpenURLAction(handler: announcementLink))
+            .environment(\.openURL, OpenURLAction(handler: openLink))
+            .sheet(item: $sitePresentation) { site in siteSheet(site) }
         }
-        .sheet(item: $informationPage) { page in InformationNavigation(page: page, account: account) }
+        .sheet(item: appSheet, onDismiss: presentNextRelease) { site in siteSheet(site) }
         .task { await account.restore() }
         .task(id: account.memberID) {
             let userID = account.memberID
@@ -94,8 +105,10 @@ struct SlipSurgeTabs: View {
         .onChange(of: account.user?.id) { _, signedIn in
             if signedIn != nil, !account.onboardingComplete { selected = .account }
         }
-        .onChange(of: researchLink, initial: true) {
-            if researchLink != nil { selected = .research }
+        .onChange(of: incomingURL, initial: true) {
+            guard let url = incomingURL else { return }
+            incomingURL = nil
+            _ = openLink(url)
         }
         .onChange(of: phase) { _, phase in
             if phase == .active {
@@ -119,7 +132,7 @@ struct SlipSurgeTabs: View {
     }
 
     private func presentNextRelease() {
-        guard release == nil, account.memberID != nil, informationPage == nil else { return }
+        guard release == nil, account.memberID != nil, sitePresentation == nil else { return }
         releaseProblem = nil
         release = remainingReleases.first
     }
@@ -142,74 +155,49 @@ struct SlipSurgeTabs: View {
         }
     }
 
-    private func announcementLink(_ url: URL) -> OpenURLAction.Result {
+    private func openLink(_ url: URL) -> OpenURLAction.Result {
         if let link = ResearchDeepLink(url) {
+            sitePresentation = nil
             researchLink = link
+            selected = .research
             return .handled
         }
-        guard url.scheme == "https", [SlipSurgeHTTP.site, "slipsurge.com"].contains(url.host ?? "") else {
-            return .systemAction
-        }
-        let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        if let page = InformationPage(rawValue: path), release == nil {
-            informationPage = page
-        } else if ["", "feed", "home"].contains(path) {
+        guard let link = NativeSiteLink(url) else { return .systemAction }
+        switch link {
+        case .feed:
+            sitePresentation = nil
             selected = .feed
-        } else if path == "discover" || path == "groups" {
-            discoverDestination = .communities
-            selected = .discover
-        } else if path == "creators" || path == "leaderboard" || path == "scores" || path == "events" {
-            switch path {
-            case "creators": discoverDestination = .creators
-            case "leaderboard": discoverDestination = .leaderboard
-            case "scores": discoverDestination = .scores
-            default: discoverDestination = .events(nil)
-            }
-            selected = .discover
-        } else if path.hasPrefix("events/"), let id = UUID(uuidString: String(path.dropFirst(7))) {
-            discoverDestination = .events(id)
-            selected = .discover
-        } else if path == "forum" {
-            discoverDestination = .discussions
-            selected = .discover
-        } else if path.hasPrefix("forum/thread/"), let id = UUID(uuidString: String(path.dropFirst(13))) {
-            discoverDestination = .discussion(id)
-            selected = .discover
-        } else if path.hasPrefix("forum/"), String(path.dropFirst(6)).range(of: #"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$"#,
-            options: .regularExpression) != nil {
-            discoverDestination = .discussionCategory(String(path.dropFirst(6)))
-            selected = .discover
-        } else if path == "blog" || path == "blog/my" {
-            discoverDestination = .articles(path == "blog/my")
-            selected = .discover
-        } else if path == "blog/create" || path == "blog/create/ai" {
-            discoverDestination = .articleEditor(nil, assistant: path == "blog/create/ai")
-            selected = .discover
-        } else if path.hasPrefix("blog/edit/"), let id = UUID(uuidString: String(path.dropFirst(10))) {
-            discoverDestination = .articleEditor(id, assistant: false)
-            selected = .discover
-        } else if path.hasPrefix("blog/"), String(path.dropFirst(5)).range(of: #"^[a-z0-9-]{1,180}$"#,
-            options: .regularExpression) != nil {
-            discoverDestination = .article(String(path.dropFirst(5)))
-            selected = .discover
-        } else if path == "pages" || path == "pages/create" {
-            let category = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "category" })?.value ?? ""
-            discoverDestination = .pages(category, create: path == "pages/create")
-            selected = .discover
-        } else if path.hasPrefix("pages/") {
-            let pieces = path.split(separator: "/")
-            if pieces.count == 2 || pieces.count == 3 && pieces[2] == "settings",
-               pieces[1].range(of: #"^[a-z0-9-]{1,80}$"#, options: .regularExpression) != nil {
-                discoverDestination = .page(String(pieces[1]), manage: pieces.count == 3)
-                selected = .discover
-            } else { systemOpenURL(url) }
-        } else if ["account", "settings", "auth/login"].contains(path) {
+        case .account:
+            sitePresentation = nil
             selected = .account
-        } else {
-            systemOpenURL(url)
+        case .discover(let destination):
+            sitePresentation = nil
+            discoverDestination = destination
+            selected = .discover
+        default:
+            sitePresentation = SitePresentation(target: link)
         }
         return .handled
     }
+
+    @ViewBuilder private func siteSheet(_ site: SitePresentation) -> some View {
+        switch site.target {
+        case .information(let page):
+            InformationNavigation(page: page, account: account)
+        default:
+            NavigationStack {
+                NativeLinkedSiteView(account: account, target: site.target, appearance: $appearance)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close", systemImage: "xmark") { sitePresentation = nil }.labelStyle(.iconOnly)
+                        }
+                    }
+            }
+            .environment(\.openURL, OpenURLAction(handler: openLink))
+            .environment(\.nativeEmojiLibrary, emojiLibrary)
+        }
+    }
+
 }
 
 private struct ResearchHome: View {

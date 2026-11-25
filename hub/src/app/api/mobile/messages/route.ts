@@ -4,7 +4,7 @@ import { loadMessageInbox } from '@/lib/messageInboxServer'
 import { searchMessageRecipients } from '@/lib/messageRecipients'
 import { loadNativeThread, messageContext, openMessageRoom, updateNativeThread } from '@/lib/nativeMessageThread'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
-import { changeNativeChannel, listNativeChannels, loadNativeChannel, openNativeChannel } from '@/lib/nativeChannels'
+import { changeNativeChannel, listNativeChannels, loadNativeChannel, openNativeChannel, resolveNativeChannel } from '@/lib/nativeChannels'
 import { readChannelHistoryCursor } from '@/lib/channelHistory'
 
 const headers = { 'Cache-Control': 'private, no-store' }
@@ -22,6 +22,15 @@ export async function GET(request: Request) {
       case 'channels': {
         const directory = await listNativeChannels(supabase, userId, query.get('group'))
         return directory.status ? respond({ error: 'Channels unavailable' }, directory.status) : respond(directory)
+      }
+      case 'channel-link': {
+        const slug = query.get('slug'), group = query.get('group')
+        if (!slug || query.getAll('slug').length !== 1 || query.getAll('group').length > 1 ||
+          !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,159}$/.test(slug) || (group !== null && !isAccountId(group))) {
+          return respond({ error: 'Invalid channel link' }, 400)
+        }
+        const linked = await resolveNativeChannel(supabase, userId, slug, group)
+        return linked.id ? respond({ id: linked.id }) : respond({ error: 'Channel unavailable' }, linked.status)
       }
       case 'thread': {
         const cursor = query.get('before')

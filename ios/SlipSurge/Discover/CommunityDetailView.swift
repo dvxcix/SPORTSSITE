@@ -14,7 +14,7 @@ struct CommunityDetailView: View {
         let hasMore: Bool
     }
 
-    private enum Feed: String, CaseIterable { case posts = "Posts", picks = "Picks" }
+    enum Feed: String, CaseIterable { case posts = "Posts", picks = "Picks" }
     private struct Membership: Decodable { let member: Bool }
     private struct InviteResult: Decodable { let status: String? }
 
@@ -24,7 +24,7 @@ struct CommunityDetailView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var page: Page?
-    @State private var feed = Feed.posts
+    @State private var feed: Feed
     @State private var posts: [FeedPost] = []
     @State private var error: (any Error)?
     @State private var feedback: String?
@@ -37,6 +37,13 @@ struct CommunityDetailView: View {
     @State private var memberProfile: String?
     @State private var discordAccess: CommunityDiscordAPI.Membership?
     @State private var pending = Set<UUID>()
+
+    init(api: DiscoverAPI, group: DiscoverAPI.Communities.Community, initialMember: Bool, feed: Feed = .posts) {
+        self.api = api
+        self.group = group
+        self.initialMember = initialMember
+        _feed = State(initialValue: feed)
+    }
 
     private var path: String { "/api/mobile/communities/\(group.id.uuidString.lowercased())" }
     private var feedAPI: FeedAPI { FeedAPI(account: api.account, userID: api.userID) }

@@ -1356,7 +1356,9 @@ physical-device push are still open.
   custom emoji and six standard categories. The signed admin Simulator opened
   the Custom emoji studio and showed the real MLB/NFL team categories and
   image rows. Guest studio requests returned 401. Both Feed entry points
-  returned 200. Badge and user picker walkthroughs are pending.
+  returned 200. Badge Studio loaded all six live badges and their member
+  counts in the signed Simulator. The custom emoji user picker walkthrough
+  remains open.
 
 ## Native admin content and operations · 25 November 2026
 
@@ -1371,6 +1373,34 @@ physical-device push are still open.
   the canonical action, recipient, actor, date and request filters and have
   no native write controls. No content was deleted or mutated for QA.
 - Signed Xcode, Hub TypeScript, 30 focused checks, and 134 production source
-  checks passed. Signed moderation reads will be checked against the released
-  routes. Remaining operations, account-provider consent and physical device
-  delivery and purchase checks stay open.
+  checks passed. An unsigned Release build passed for arm64 iPhones and
+  emitted the existing supported-orientations warning. Task checkpoint
+  `ca7a41e386ac5344e9330a3be97a4128f6bd4c52` is pushed. PR #51 merged as
+  `1f0cd0d4feccc403c9aa02c0108fa92f7ede5477`. Preview
+  `dpl_9iXYjktks4K2KD4WAhqKH3AsSAHb` and production
+  `dpl_2HnDM7QTFHTaze4bjFdrrCnm1isn` were READY. Guest requests to all five
+  admin resources returned 401 and both Feed entry points returned 200.
+  Remaining operations, account-provider consent and physical device delivery
+  and purchase checks stay open.
+
+## Shared native destinations · 25 November 2026
+
+- SlipSurge links in native surfaces now share a validated router for existing
+  public, social, research workspace, community, messaging, account and admin
+  destinations. A member-only link presents the existing native account flow
+  and can continue to its destination once the member session is available.
+  Registration and password recovery reuse the native email flows.
+- Exact community and chat link resolution reuses verified account visibility,
+  community invitations, published paid entries, league rollout and original
+  channel permissions. Linked channels carry scoped room IDs to the existing
+  chat. Web navigation and catalog defaults retain their original entry points.
+- Launch from the Simulator using `slipsurge-app://site/<path>`. The iOS
+  handler also recognizes canonical HTTPS links delivered to the app.
+  Associated Domains and external HTTPS universal-link delivery still
+  require verification with the distribution team and signed app.
+- Signed Debug Simulator, Hub TypeScript, 23 focused tests, 134 source smoke
+  checks and Info.plist validation passed. Signed Simulator opened Connected
+  accounts with real provider rows through the registered site scheme.
+  Check empty or unavailable targets, direct groups and room access through
+  the released routes. Muted and blocked accounts and native research launch
+  preferences are the next settings work.

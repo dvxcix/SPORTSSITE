@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MessagesView: View {
     let api: MessagesAPI
+    var startsComposing = false
     @Environment(\.colorScheme) private var scheme
     @State private var inbox: MessageInbox?
     @State private var error: (any Error)?
@@ -50,6 +51,7 @@ struct MessagesView: View {
             if destination == nil { revision += 1 }
         }
         .task(id: revision) { await load() }
+        .onChange(of: startsComposing, initial: true) { if startsComposing { composing = true } }
         .refreshable { await load() }
         .alert("Request couldn’t be updated", isPresented: $actionError) { Button("OK", role: .cancel) {} }
     }

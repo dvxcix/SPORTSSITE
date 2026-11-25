@@ -141,6 +141,13 @@ struct MessagesAPI {
         return try await read(Catalog.self, query: query).channels
     }
 
+    func linkedChannel(_ slug: String, group: UUID?) async throws -> MessageDestination {
+        struct Match: Decodable { let id: UUID }
+        var query = [URLQueryItem(name: "view", value: "channel-link"), .init(name: "slug", value: slug)]
+        if let group { query.append(.init(name: "group", value: group.uuidString.lowercased())) }
+        return .init(kind: .channel, id: try await read(Match.self, query: query).id)
+    }
+
     func thread(_ destination: MessageDestination, before: String? = nil) async throws -> MessageThread {
         var query = [URLQueryItem(name: "view", value: "thread")] + destination.query
         if let before {
