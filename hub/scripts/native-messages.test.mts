@@ -49,6 +49,8 @@ function query(table: string) {
   let id: string | undefined
   let channelId: string | undefined
   let groupId: string | undefined
+  let slug: string | undefined
+  let globalOnly = false
   let pair: string | undefined
   let scope: string | undefined
   let limit = 0
@@ -58,6 +60,12 @@ function query(table: string) {
       if (column === 'id') id = value
       if (column === 'channel_id') channelId = value
       if (column === 'conversation_id') groupId = value
+      if (column === 'group_id') groupId = value
+      if (column === 'slug') slug = value
+      return chain
+    },
+    is: (column: string, value: unknown) => {
+      if (column === 'group_id' && value === null) globalOnly = true
       return chain
     },
     or: (value: string) => {
@@ -85,7 +93,10 @@ function query(table: string) {
     async maybeSingle() {
       switch (table) {
         case 'users': return { data: { id, username: 'fixture', allow_dms: fixture.allow }, error: null }
-        case 'channels': return { data: id === channel ? { id, name: 'Private history', group_id: group, channel_type: 'private' } : null, error: null }
+        case 'channels': {
+          const matchesSlug = slug === 'private-history' && groupId === group && !globalOnly
+          return { data: id === channel || matchesSlug ? { id: channel, name: 'Private history', group_id: group, channel_type: 'private' } : null, error: null }
+        }
         case 'groups': return { data: id === group ? { sport: 'NBA' } : null, error: null }
         case 'group_conversations': return { data: { name: 'Private' }, error: null }
         case 'message_read_positions': return { data: { last_read_at: instant }, error: null }
@@ -115,6 +126,18 @@ async function request(search: string, action?: unknown, signedIn = true) {
     method, body: action ? JSON.stringify(action) : undefined, headers: signedIn ? { authorization: 'Bearer fixture' } : {},
   }))
 }
+
+test('linked room selection keeps the requested group, tier and permission boundaries', async () => {
+  const route = 'view=channel-link&slug=private-history'
+  assert.equal((await request(`${route}&group=${group}`, undefined, false)).status, 401)
+  assert.equal((await request(route)).status, 404)
+  assert.equal((await request(`${route}&group=${partner}`)).status, 404)
+  assert.equal((await request(`${route}&group=${group}&slug=other`)).status, 400)
+  fixture.channelAllowed = false
+  assert.equal((await request(`${route}&group=${group}`)).status, 404)
+  fixture.channelAllowed = true
+  assert.deepEqual(await (await request(`${route}&group=${group}`)).json(), { id: channel })
+})
 
 test('private inbox and room actions require a member and group membership', async () => {
   assert.equal((await request('', undefined, false)).status, 401)
