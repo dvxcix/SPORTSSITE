@@ -1478,6 +1478,31 @@ physical-device push are still open.
   Court snapshot.
 - Signed Xcode Simulator, unsigned arm64 iPhone Release, Hub TypeScript and
   all 134 source smoke checks passed. The unsigned device build emitted the
-  existing supported-orientations warning. Verify live Explore, private
-  saved searches and NBA team/player reads after deployment. Continue
-  direct score links, MLB score detail and remaining admin operations.
+  existing supported-orientations warning. Checkpoint
+  `bef40d09ba96ba67f01ef770be5f5ede25e57628` is pushed. PR #55 merged as
+  `eb700b2b5da0782fb6a0f3d5e3ffe473f020ad6b`; preview
+  `dpl_DYtZ5bzyV73e6i4bMg8r5edo4xws` and production
+  `dpl_8z5xe8yWLCsqB2g3quqoxZbrX26z` were READY. The signed Simulator opened
+  the real Kansas City roster, filtered to Patrick Mahomes, and loaded the
+  game-log chart, L3/L5/L10 controls and Next Gen Stats destination. Signed-out
+  search, saved searches, Explore, topics and NBA directory reads returned
+  401. Feed returned 200.
+
+## Direct score links and baseball Game Center · 25 November 2026
+
+- Shared score links resolve the exact NFL stored game or ESPN event and
+  retain the original Eastern slate date. Scoreboard links open the requested
+  date and league when present. Provider team colors work with or without a
+  leading hash.
+- The native baseball Game Center adapter uses official MLB game feeds for
+  inning and team totals, at-bat and pitch detail, box score, and existing
+  game room, community picks and reactions. The current MLB hibernation
+  switch still prevents live MLB score access. Fixture tests exercise the
+  MLB data projection and the disabled access branch. No live MLB jobs ran.
+- Live Simulator QA exposed a channel join ambiguity in All and Community
+  Search and a missing member sort column in Community Settings. Search now
+  names the existing channel-to-group FK. Native Community Settings sorts
+  by the production `joined_at` field with a stable member tie-break.
+  Focused tests cover both query contracts.
+- Verify the released exact game link in the signed Simulator and continue
+  Matrix Marketplace, the unified research destination, and admin parity.

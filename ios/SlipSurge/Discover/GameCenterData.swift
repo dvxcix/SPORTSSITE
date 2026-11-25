@@ -21,6 +21,22 @@ struct GameCenterData: Decodable {
     struct Play: Decodable, Identifiable {
         struct Athlete: Decodable, Identifiable { let id: String; let name: String; let headshot: URL? }
         struct Reaction: Decodable { let count: Int; let mine: Bool }
+        struct Pitch: Decodable, Identifiable {
+            let id: Int
+            let number: Int?
+            let kind: String?
+            let call: String
+            let strike: Bool
+            let speed: Double?
+            let spin: Double?
+            let x: Double?
+            let z: Double?
+            let zoneTop: Double?
+            let zoneBottom: Double?
+            let exitVelocity: Double?
+            let launchAngle: Double?
+            let distance: Double?
+        }
         let id: String
         let title: String?
         let text: String
@@ -32,6 +48,7 @@ struct GameCenterData: Decodable {
         let teamId: String?
         let athletes: [Athlete]
         let reactions: [String: Reaction]
+        let pitches: [Pitch]?
     }
 
     struct TeamStats: Decodable, Identifiable {

@@ -45,9 +45,19 @@ struct GameCenterView: View {
     @State private var failed = false
     @State private var selectedPeriod = ""
     @State private var team = ""
+    @State private var pitchPlay: GameCenterData.Play?
 
     private var reload: String { "\(section.query):\(revision)" }
     private var path: String { "/api/mobile/scores/game" }
+    private var periodName: String {
+        switch game.sport {
+        case "mlb": "Inning"
+        case "nfl", "nba": "Quarter"
+        case "soccer": "Half"
+        default: "Period"
+        }
+    }
+    private var allPeriods: String { game.sport == "soccer" ? "All halves" : "All \(periodName.lowercased())s" }
     private var baseQuery: [URLQueryItem] { [.init(name: "sport", value: game.sport), .init(name: "game", value: game.id), .init(name: "date", value: date)] }
     private var feed: FeedAPI { FeedAPI(account: api.account, userID: api.userID) }
     private var color: Color { treatment(game.home.color) }
@@ -91,6 +101,16 @@ struct GameCenterView: View {
         .refreshable { await load(section) }
         .onChange(of: section) { _, _ in error = nil }
         .alert("Game action couldn’t be confirmed", isPresented: $failed) { Button("OK", role: .cancel) {} }
+        .sheet(item: $pitchPlay) { play in
+            NavigationStack {
+                MlbPitchDetailsView(pitches: play.pitches ?? [], title: play.title ?? "Pitch details")
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close", systemImage: "xmark") { pitchPlay = nil }.labelStyle(.iconOnly)
+                        }
+                    }
+            }
+        }
     }
 
     private var scoreboard: some View {
@@ -179,7 +199,7 @@ struct GameCenterView: View {
                     Text(row.team).font(.subheadline.weight(.bold)).frame(minWidth: 38, alignment: .leading)
                     ForEach(Array(row.periods.enumerated()), id: \.offset) { index, score in
                         Text(score.map(String.init) ?? "—").font(.caption.monospacedDigit()).frame(maxWidth: .infinity)
-                            .accessibilityLabel("Period \(index + 1), \(score.map(String.init) ?? "unavailable")")
+                            .accessibilityLabel("\(periodName) \(index + 1), \(score.map(String.init) ?? "unavailable")")
                     }
                     Text(row.total).font(.subheadline.weight(.bold)).monospacedDigit()
                 }
@@ -191,9 +211,9 @@ struct GameCenterView: View {
     private func playList(_ plays: [GameCenterData.Play]) -> some View {
         let periods = orderedUnique(plays.compactMap(\.period))
         if !periods.isEmpty {
-            ResearchToolFilter(title: "Period", selection: selectedPeriod.isEmpty ? "All periods" : selectedPeriod) {
-                Picker("Period", selection: $selectedPeriod) {
-                    Text("All periods").tag("")
+            ResearchToolFilter(title: periodName, selection: selectedPeriod.isEmpty ? allPeriods : selectedPeriod) {
+                Picker(periodName, selection: $selectedPeriod) {
+                    Text(allPeriods).tag("")
                     ForEach(periods, id: \.self) { Text($0).tag($0) }
                 }
             }
@@ -233,6 +253,9 @@ struct GameCenterView: View {
             if !play.reactions.isEmpty {
                 Text(play.reactions.keys.sorted().prefix(8).map { "\($0) \(play.reactions[$0]?.count ?? 0)" }.joined(separator: "  "))
                     .font(.caption).foregroundStyle(.secondary)
+            }
+            if play.pitches?.isEmpty == false {
+                Button("Pitch details", systemImage: "scope") { pitchPlay = play }.buttonStyle(.bordered)
             }
         }
     }

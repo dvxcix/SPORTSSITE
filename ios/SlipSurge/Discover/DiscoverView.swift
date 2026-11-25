@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum DiscoverDestination: Hashable {
-    case communities, creators, leaderboard, scores, events(UUID?)
+    case communities, creators, leaderboard, scores(date: Date?, league: String), events(UUID?)
     case discussions, discussionCategory(String), discussion(UUID)
     case articles(Bool), article(String), articleEditor(UUID?, assistant: Bool)
     case pages(String, create: Bool), page(String, manage: Bool)
@@ -101,7 +101,7 @@ struct DiscoverView: View {
         }
         .navigationDestination(item: $destination) { opening in
             switch opening {
-            case .scores: ScoresView(api: api)
+            case .scores(let date, let league): ScoresView(api: api, date: date ?? .now, league: league)
             case .events(let id):
                 if let id { CommunityEventDetail(api: .init(viewer: api), id: id, refreshList: {}) }
                 else { CommunityEventsView(api: .init(viewer: api)) }

@@ -4,6 +4,7 @@ import { getBlockedEitherWayIds, isAccountId } from '@/lib/blocks'
 import { POST_WITH_AUTHOR, type FeedPost } from '@/lib/feedQuery'
 import { getNflGameCenter } from '@/lib/nflGameCenterServer'
 import { nbaGameReference } from '@/lib/nbaGameReference'
+import { loadNativeMlbGame } from '@/lib/nativeMlbGameCenter'
 import { isGuestVisible, mobilePost, nativeAnonymousClient } from '@/lib/nativeSocial'
 import { attachUserReactions } from '@/lib/queries'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
@@ -11,7 +12,7 @@ import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 export const maxDuration = 45
 const headers = { 'Cache-Control': 'private, no-store' }
 const respond = (body: unknown, status = 200) => NextResponse.json(body, { status, headers })
-const sports = ['nfl', 'nba', 'nhl', 'soccer'] as const
+const sports = ['nfl', 'nba', 'nhl', 'soccer', 'mlb'] as const
 const emojis = new Set(['❤️','🔥','⚡','👏','😂','👀','🏆','👍'])
 
 function scope(request: Request) {
@@ -23,6 +24,10 @@ function scope(request: Request) {
 }
 
 async function source(sport: SportKey, id: string, day: string) {
+  if (sport === 'mlb') {
+    const mlb = await loadNativeMlbGame(id, day)
+    return mlb ? { ...mlb, game: undefined } : null
+  }
   const nfl = sport === 'nfl' ? await getNflGameCenter(id) : null
   if (nfl) return { game: nfl.game, summary: nfl.summary, quarters: nfl.quarters, updatedAt: nfl.updatedAt, complete: nfl.complete }
   if (!/^\d+$/.test(id)) return null
@@ -86,6 +91,7 @@ export async function GET(request: Request) {
           period: play.period?.displayValue ?? null, clock: play.clock?.displayValue ?? null, home: play.homeScore ?? null,
           away: play.awayScore ?? null, scoring: play.scoringPlay === true, teamId: play.team?.id ?? null,
           athletes: (play.athletes ?? []).slice(0, 4).map(player => ({ id: player.athlete.id, name: player.athlete.displayName, headshot: player.athlete.headshot?.href ?? null })),
+          ...('pitches' in found ? { pitches: found.pitches.get(String(play.id)) ?? [] } : {}),
           reactions: Object.fromEntries([...Map.groupBy(byPlay.get(String(play.id)) ?? [], item => item.emoji)].map(([emoji, rows]) =>
             [emoji, { count: rows.length, mine: rows.some(row => row.user_id === viewer) }])) })),
       })

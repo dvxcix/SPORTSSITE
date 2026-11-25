@@ -51,6 +51,12 @@ struct ScoresView: View {
     @State private var result: Scoreboard?
     @State private var revision = 0
 
+    init(api: DiscoverAPI, date: Date = .now, league: String = "") {
+        self.api = api
+        _date = State(initialValue: date)
+        _league = State(initialValue: league)
+    }
+
     private var day: String { SlateDate.key(date) }
     private var requested: String { "\(day):\(revision)" }
     private var scoreboard: Scoreboard? { result?.date == day ? result : nil }

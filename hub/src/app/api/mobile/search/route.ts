@@ -40,7 +40,7 @@ async function communityMatches(actor: SearchActor, contains: string, showMlb: b
       .or(`name.ilike.${contains},description.ilike.${contains}`).order('member_count', { ascending: false }).limit(8),
     pages ? supabase.from('pages').select(`${fields},sport,category,follower_count`).eq('is_published', true)
       .or(`name.ilike.${contains},description.ilike.${contains}`).order('follower_count', { ascending: false }).limit(8) : empty,
-    supabase.from('channels').select('id,slug,name,description,icon,member_count,group_id,group:groups(slug,sport)')
+    supabase.from('channels').select('id,slug,name,description,icon,member_count,group_id,group:groups!channels_group_id_fkey(slug,sport)')
       .or(`name.ilike.${contains},description.ilike.${contains}`).order('member_count', { ascending: false }).limit(8),
     events ? supabase.from('events').select('id,title,description,cover_image,start_date,going_count,sport')
       .or(`title.ilike.${contains},description.ilike.${contains}`).order('start_date').limit(8) : empty,

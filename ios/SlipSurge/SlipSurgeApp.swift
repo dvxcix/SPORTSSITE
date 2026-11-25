@@ -82,8 +82,10 @@ enum Brand {
 
 extension Color {
     init?(hex: String?) {
-        guard let hex, hex.count == 7, hex.hasPrefix("#"),
-              let rgb = UInt32(hex.dropFirst(), radix: 16) else { return nil }
+        guard let hex else { return nil }
+        let digits = hex.hasPrefix("#") ? hex.dropFirst() : hex[...]
+        guard digits.count == 6, digits.allSatisfy({ $0.isASCII && $0.isHexDigit }),
+              let rgb = UInt32(digits, radix: 16) else { return nil }
         self.init(rgb: rgb)
     }
 

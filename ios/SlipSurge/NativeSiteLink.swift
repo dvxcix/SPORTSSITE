@@ -8,6 +8,7 @@ enum NativeSiteLink: Hashable {
     case settings(Settings), creatorStudio, creatorPayouts, communityCreator, researchWorkspace, admin
     case activityReplay, missions, launch
     case search(String), topic(String), explore
+    case scoreGame(String, String)
     case nbaEntity(NbaDirectoryEntityView.Kind, Int, game: Int?, mode: CourtResearchMode)
     case nflEntity(NflDirectoryEntityView.Kind, String)
 
@@ -60,7 +61,12 @@ enum NativeSiteLink: Hashable {
         case ["explore"]: self = .explore
         case ["creators"]: self = .discover(.creators)
         case ["leaderboard"]: self = .discover(.leaderboard)
-        case ["scores"], ["sports"]: self = .discover(.scores)
+        case ["scores"], ["sports"]:
+            let rawDate = Self.queryValue(query, named: "date", pattern: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"#)
+            let date = rawDate.flatMap(SlateDate.fromKey).flatMap { SlateDate.key($0) == rawDate ? $0 : nil }
+            let league = parts.fragment?.split(separator: "-")
+            let filter = league?.count == 2 && league?.first == "scores" ? String(league?[1] ?? "") : ""
+            self = .discover(.scores(date: date, league: Self.scoreLeagues.contains(filter) ? filter : ""))
         case ["events"]: self = .discover(.events(nil))
         case ["forum"]: self = .discover(.discussions)
         case ["blog"]: self = .discover(.articles(false))
@@ -156,6 +162,13 @@ enum NativeSiteLink: Hashable {
                     guard Self.matches(team, #"^[A-Z]{2,3}$"#) else { return nil }
                     self = .nflEntity(.team, team)
                 default:
+                    if segments[0] == "sports", Self.scoreLeagues.contains(segments[1]) {
+                        let sport = segments[1]
+                        guard Self.matches(name, #"^[0-9]{1,14}$"#) ||
+                            sport == "nfl" && Self.matches(name, #"^[0-9]{4}_[0-9]{2}_[A-Z]{2,3}_[A-Z]{2,3}$"#) else { return nil }
+                        self = .scoreGame(sport, name)
+                        return
+                    }
                     guard name == "settings" else { return nil }
                     let slug = segments[1]
                     if segments[0] == "groups", Self.matches(slug, Self.slugPattern) { self = .community(slug, .settings) }
@@ -176,6 +189,7 @@ enum NativeSiteLink: Hashable {
     }
 
     private static let slugPattern = #"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,159}$"#
+    private static let scoreLeagues: Set<String> = ["nba", "nfl", "mlb", "nhl", "soccer"]
 
     private static func entityID(_ value: String) -> Int? {
         guard matches(value, #"^[0-9]{1,10}$"#), let id = Int(value), id > 0 else { return nil }
