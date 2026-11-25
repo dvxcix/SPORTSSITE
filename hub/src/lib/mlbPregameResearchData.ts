@@ -14,7 +14,7 @@ export function mlbPregameResearchOpen(game: MlbResearchGame) {
 }
 const reads = new Map<string, Promise<Stored<unknown> | null>>()
 function params(game: MlbResearchGame, resource: string) {
-  if (!/^(board:v1|pitchlog:\d+|pitcher-window:\d+:([1-9]|10))$/.test(resource)) throw new MlbPregameResearchUnavailable()
+  if (!/^(board:v1|pitchlog:\d+|pitcher-window:\d+:([1-9]|10)|slate-(batter|starter|team):[1-9][0-9]{0,6})$/.test(resource)) throw new MlbPregameResearchUnavailable()
   if (!/^\d+$/.test(String(game.gamePk)) || !Number.isFinite(Date.parse(game.gameDate))) throw new MlbPregameResearchUnavailable()
   return { p_game_pk: String(game.gamePk), p_resource: resource, p_start: new Date(game.gameDate).toISOString() }
 }
