@@ -77,6 +77,8 @@ struct MessageRecipientsView: View {
                 }
                 .listRowBackground(Brand.surface(for: scheme))
             }
+            .scrollDismissesKeyboard(.interactively)
+            .keyboardDone()
             .scrollContentBackground(.hidden)
             .background(Brand.background(for: scheme))
             .navigationTitle(forward == nil ? "New message" : "Forward message")

@@ -26,6 +26,7 @@ struct RoomDirectory: View {
     var revision = 0
     var showsSearch = false
     @Environment(\.colorScheme) private var scheme
+    @FocusState private var filterFocused: Bool
     @State private var rooms: [MessagesAPI.Channel]?
     @State private var filter = ""
     @State private var error: (any Error)?
@@ -47,6 +48,8 @@ struct RoomDirectory: View {
             }
         }
         .foregroundStyle(Brand.text(for: scheme))
+        .scrollDismissesKeyboard(.interactively)
+        .keyboardDone { filterFocused = false }
         .task(id: revision) { await load() }
     }
 
@@ -54,6 +57,9 @@ struct RoomDirectory: View {
         HStack(spacing: 9) {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
             TextField("Find a room", text: $filter).autocorrectionDisabled()
+                .focused($filterFocused)
+                .submitLabel(.search)
+                .onSubmit { filterFocused = false }
         }
         .padding(.horizontal, 12).frame(minHeight: 44)
         .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))

@@ -85,6 +85,8 @@ struct ResearchMatrixEditor: View {
             .scrollContentBackground(.hidden)
             .background(Brand.background(for: scheme))
             .foregroundStyle(Brand.text(for: scheme))
+            .scrollDismissesKeyboard(.interactively)
+            .keyboardDone()
             .navigationTitle(original == nil ? "New \(api.league.title) Matrix" : "Edit \(api.league.title) Matrix")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -12,6 +12,7 @@ struct StoryComposerView: View {
     let shared: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
+    @FocusState private var textFocused: Bool
     @State private var submission = UUID()
     @State private var kind = Kind.text
     @State private var content = ""
@@ -42,6 +43,7 @@ struct StoryComposerView: View {
                 ResearchArtworkPicker(title: "Story sport", options: [.init(id: "", title: "All sports", icon: "sportscourt")]
                     + sports.map { .init(id: $0, title: LeagueArtwork.label($0), url: LeagueArtwork.logo($0), icon: "sportscourt") }, selection: $sport)
                 TextField(kind == .text ? "Story text" : "Caption", text: $content, axis: .vertical)
+                    .focused($textFocused)
                     .lineLimit(2...5).textFieldStyle(.roundedBorder)
                 if kind == .text {
                     colorPicker
@@ -59,6 +61,7 @@ struct StoryComposerView: View {
             .disabled(saving)
         }
         .scrollDismissesKeyboard(.interactively)
+        .keyboardDone { textFocused = false }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .navigationTitle("Add to story")

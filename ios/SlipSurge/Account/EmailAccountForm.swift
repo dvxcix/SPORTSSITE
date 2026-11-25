@@ -88,6 +88,7 @@ struct EmailAccountForm: View {
             .frame(maxWidth: .infinity)
         }
         .scrollDismissesKeyboard(.interactively)
+        .keyboardDone()
         .navigationTitle(flow.rawValue)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

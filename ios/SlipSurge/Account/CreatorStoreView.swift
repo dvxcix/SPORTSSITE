@@ -97,6 +97,7 @@ private struct CreatorStoreEditor: View {
             }.padding(16).disabled(blocked)
         }
         .scrollDismissesKeyboard(.interactively)
+        .keyboardDone()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 if busy { ProgressView() }

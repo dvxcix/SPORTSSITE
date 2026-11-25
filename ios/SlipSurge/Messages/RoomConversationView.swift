@@ -88,6 +88,7 @@ struct RoomConversationView: View {
                 .padding(.horizontal, 13)
             }
             .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.never)
             .onAppear { scroll.scrollTo(room.id, anchor: .center) }
             .onChange(of: room) { _, selection in
                 withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { scroll.scrollTo(selection.id, anchor: .center) }

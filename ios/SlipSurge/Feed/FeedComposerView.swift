@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct FeedComposerView: View {
+    private enum Field: Hashable { case content, pollOption(Int), stake }
     struct Community {
         let id: UUID
         let name: String
@@ -26,6 +27,7 @@ struct FeedComposerView: View {
     let onPost: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var focused: Field?
     @State private var draftID = UUID()
     @State private var content = ""
     @State private var kind = Kind.text
@@ -121,6 +123,7 @@ struct FeedComposerView: View {
                         ForEach(Kind.allCases, id: \.self) { Text($0.label).tag($0) }
                     }
                     TextEditor(text: $content)
+                        .focused($focused, equals: .content)
                         .frame(minHeight: 110)
                         .accessibilityLabel("Post text")
                 } footer: {
@@ -130,6 +133,7 @@ struct FeedComposerView: View {
                     Section("Poll options") {
                         ForEach(choices.indices, id: \.self) { index in
                             TextField("Option \(index + 1)", text: $choices[index])
+                                .focused($focused, equals: .pollOption(index))
                         }
                         if choices.count < 4 {
                             Button("Add option", systemImage: "plus") { choices.append("") }
@@ -154,9 +158,13 @@ struct FeedComposerView: View {
                             }
                         }
                         .onDelete { legs.remove(atOffsets: $0) }
-                        Button(legs.isEmpty ? "Add a pick" : "Add a leg", systemImage: "plus.circle") { pickBuilder = true }
+                        Button(legs.isEmpty ? "Add a pick" : "Add a leg", systemImage: "plus.circle") {
+                            focused = nil
+                            pickBuilder = true
+                        }
                             .disabled(legs.count >= 30)
                         TextField("Stake (optional)", text: $wager).keyboardType(.decimalPad)
+                            .focused($focused, equals: .stake)
                     }
                 }
                 Section {
@@ -195,6 +203,8 @@ struct FeedComposerView: View {
                 if let notice { Text(notice).foregroundStyle(.secondary) }
             }
             .disabled(posting)
+            .scrollDismissesKeyboard(.interactively)
+            .keyboardDone { focused = nil }
             .navigationTitle("Compose")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {

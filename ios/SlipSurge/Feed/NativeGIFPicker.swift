@@ -95,6 +95,8 @@ private struct NativeGIFPicker: View {
                     }
                     .padding(16)
                 }
+                .scrollDismissesKeyboard(.interactively)
+                .keyboardDone()
             }
         }
         .background(Brand.background(for: scheme))

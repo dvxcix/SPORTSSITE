@@ -38,6 +38,8 @@ struct CreatorOfferEditor: View {
                 }
                 if let problem { Label(problem, systemImage: "exclamationmark.circle").foregroundStyle(.red) }
             }
+            .scrollDismissesKeyboard(.interactively)
+            .keyboardDone()
             .navigationTitle("New paid offer")
             .navigationBarTitleDisplayMode(.inline)
             .scrollContentBackground(.hidden)

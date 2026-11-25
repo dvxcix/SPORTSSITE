@@ -6,6 +6,7 @@ struct MessagesView: View {
     var inInbox = false
     var onUnreadChange: (Int) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
+    @FocusState private var queryFocused: Bool
     @State private var inbox: MessageInbox?
     @State private var error: (any Error)?
     @State private var query = ""
@@ -19,7 +20,7 @@ struct MessagesView: View {
     private enum Section: String, CaseIterable { case inbox = "Inbox", requests = "Requests" }
 
     var body: some View {
-        if inInbox { conversationList }
+        if inInbox { conversationList.keyboardDone { queryFocused = false } }
         else { conversationList.searchable(text: $query, prompt: "Search conversations") }
     }
 
@@ -30,6 +31,9 @@ struct MessagesView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
                         TextField("Search conversations", text: $query).autocorrectionDisabled()
+                            .focused($queryFocused)
+                            .submitLabel(.search)
+                            .onSubmit { queryFocused = false }
                     }
                     .listRowBackground(Brand.surface(for: scheme))
                 }

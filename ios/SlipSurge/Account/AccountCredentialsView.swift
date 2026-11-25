@@ -44,6 +44,8 @@ struct AccountCredentialsView: View {
         .scrollContentBackground(.hidden)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
+        .scrollDismissesKeyboard(.interactively)
+        .keyboardDone()
         .navigationTitle("Email and password")
         .navigationBarTitleDisplayMode(.inline)
         .disabled(busy)

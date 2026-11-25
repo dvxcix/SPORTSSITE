@@ -2468,3 +2468,20 @@ physical-device push are still open.
   Photo upload and sending were outside this verification. The asset integrity
   check and 286 native and production checks passed. The phone was left in
   Picks Room.
+
+## Native keyboard dismissal · 25 November 2026
+
+- Added a native Done button above the keyboard in chat, replies, composers,
+  inline search and filters, account and creator forms, and research editors.
+  Done clears input focus and keeps the current draft or value. It does not
+  submit the form. Chat also dismisses the keyboard when dragged down, even
+  in short conversations. Horizontal room and attachment controls retain
+  their own scrolling behavior. Cancel in chat search clears only the search.
+- Verified in the signed-in iPhone 18 Pro simulator that Done and a downward
+  swipe both hide the room keyboard and preserve a draft. Cancel in chat
+  search kept the message draft. Done also preserved the caption and the
+  numeric stake in the Pick composer. No test content was sent.
+- Xcode Debug builds passed for Simulator and the physical iPhone 16 Plus.
+  The signed build installed and launched on the phone, which was left in
+  Picks Room. Physical keyboard gestures were not exercised. The native
+  and production smoke suites passed 286 checks.

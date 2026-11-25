@@ -74,6 +74,8 @@ struct AccountSecurityView: View {
         .scrollContentBackground(.hidden)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
+        .scrollDismissesKeyboard(.interactively)
+        .keyboardDone()
         .navigationTitle("Account security")
         .navigationBarTitleDisplayMode(.inline)
         .disabled(busy)

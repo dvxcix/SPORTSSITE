@@ -25,6 +25,7 @@ struct DiscoverView: View {
     @State private var yours: Bool
     @State private var sport = ""
     @State private var search = ""
+    @FocusState private var searchFocused: Bool
     @State private var thisWeek = false
     @State private var error: (any Error)?
     @State private var revision = 0
@@ -74,6 +75,8 @@ struct DiscoverView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .keyboardDone { searchFocused = false }
         .navigationTitle(opensJoined ? "Community" : "Discover")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -280,6 +283,9 @@ struct DiscoverView: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").accessibilityHidden(true)
                 TextField("Search \(section.rawValue.lowercased())", text: $search).autocorrectionDisabled()
+                    .focused($searchFocused)
+                    .submitLabel(.search)
+                    .onSubmit { searchFocused = false }
             }
             .padding(.horizontal, 12).frame(minHeight: 44)
             .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))

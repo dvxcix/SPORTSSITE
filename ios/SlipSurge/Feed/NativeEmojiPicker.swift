@@ -78,6 +78,7 @@ struct NativeEmojiPicker: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search emoji")
+        .scrollDismissesKeyboard(.interactively)
         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
         .task { await library?.refresh() }
     }

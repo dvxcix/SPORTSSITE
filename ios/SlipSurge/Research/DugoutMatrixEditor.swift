@@ -57,6 +57,8 @@ struct DugoutMatrixEditor: View {
                 }
                 if let failure { Text(failure).foregroundStyle(.red) }
             }
+            .scrollDismissesKeyboard(.interactively)
+            .keyboardDone()
             .navigationTitle(original == nil ? "New MLB Matrix" : "Edit MLB Matrix")
             .navigationBarTitleDisplayMode(.inline)
             .disabled(saving)
@@ -185,6 +187,8 @@ struct DugoutMatrixRuleEditor: View {
             if rule.kind == "rank" { rankControls }
             if rule.kind == "unless", !nested { unlessControls }
         }
+        .scrollDismissesKeyboard(.interactively)
+        .keyboardDone()
         .navigationTitle(pipe ? (rule.kind?.capitalized ?? "Step") : "Factor")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { EditButton() } }
@@ -414,6 +418,8 @@ private struct DugoutMatrixTieEditor: View {
             }
             if tie.category == "odds", ["fhr", "hr"].contains(tie.field_key) { DugoutMatrixRuleEditor.bookPicker($tie.book) }
         }
+        .scrollDismissesKeyboard(.interactively)
+        .keyboardDone()
         .navigationTitle("Tiebreaker")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: tie.category) { _, category in

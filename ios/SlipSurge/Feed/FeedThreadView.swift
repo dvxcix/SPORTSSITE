@@ -28,6 +28,8 @@ struct FeedThreadView: View {
             if api.userID != nil, thread != nil { composer }
         }
         .scrollDismissesKeyboard(.interactively)
+        .scrollBounceBehavior(.always, axes: .vertical)
+        .keyboardDone { composerFocused = false }
         .navigationTitle("Post")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $member) { name in

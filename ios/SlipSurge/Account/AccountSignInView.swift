@@ -38,6 +38,7 @@ struct AccountSignInView: View {
             .frame(maxWidth: .infinity)
         }
         .scrollDismissesKeyboard(.interactively)
+        .keyboardDone { focus = nil }
         .sheet(item: $emailFlow) { flow in
             NavigationStack { EmailAccountForm(account: account, flow: flow, prefill: email) }
         }

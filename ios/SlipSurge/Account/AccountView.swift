@@ -126,6 +126,8 @@ struct AccountView: View {
             .listRowBackground(Brand.surface(for: scheme))
         }
         .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+        .keyboardDone()
     }
 
     @ViewBuilder

@@ -91,6 +91,8 @@ struct AdminDiscordView: View {
         }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
+        .scrollDismissesKeyboard(.interactively)
+        .keyboardDone()
         .navigationTitle("Discord Bot")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

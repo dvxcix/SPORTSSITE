@@ -21,6 +21,7 @@ struct MessageThreadDraft {
 }
 
 struct MessageThreadView: View {
+    private enum Input: Hashable { case message, search }
     let api: MessagesAPI
     let destination: MessageDestination
     var roomDraft: Binding<MessageThreadDraft>? = nil
@@ -28,7 +29,7 @@ struct MessageThreadView: View {
     @Environment(\.scenePhase) private var phase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
-    @FocusState private var focused: Bool
+    @FocusState private var focused: Input?
     @State private var thread: MessageThread?
     @State private var error: (any Error)?
     @State private var localDraft = MessageThreadDraft()
@@ -83,6 +84,7 @@ struct MessageThreadView: View {
         .foregroundStyle(Brand.text(for: scheme))
         .navigationTitle(thread?.title ?? "Messages")
         .navigationBarTitleDisplayMode(.inline)
+        .keyboardDone { focused = nil }
         .sheet(item: $memberPreview) { member in
             ChatMemberPreview(viewer: .init(account: api.account, userID: api.userID), member: member)
         }
@@ -98,7 +100,10 @@ struct MessageThreadView: View {
             if let thread {
                 ToolbarItem(placement: .primaryAction) {
                     Menu("Conversation actions", systemImage: "ellipsis.circle") {
-                        Button(searching ? "Close search" : "Search messages", systemImage: "magnifyingglass") { searching.toggle(); query = "" }
+                        Button(searching ? "Close search" : "Search messages", systemImage: "magnifyingglass") {
+                            if searching { closeSearch() }
+                            else { searching = true }
+                        }
                         if destination.kind == .direct {
                             Button("Pinned messages", systemImage: "pin") { showPins = true }
                         } else if destination.kind == .group {
@@ -124,7 +129,9 @@ struct MessageThreadView: View {
                 await typingPresence.run(account: api.account, userID: api.userID, destination: destination)
             } else { typingPresence.stop() }
         }
-        .onChange(of: focused) { _, isFocused in if !isFocused { typingPresence.didType(hasText: false) } }
+        .onChange(of: focused) { previous, current in
+            if previous == .message, current != .message { typingPresence.didType(hasText: false) }
+        }
         .onDisappear { typingPresence.stop() }
         .navigationDestination(item: $forwardedThread) { room in
             MessageThreadView(api: api, destination: room)
@@ -231,6 +238,7 @@ struct MessageThreadView: View {
             }
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
+            .scrollBounceBehavior(.always, axes: .vertical)
             .onChange(of: visible.last?.id, initial: true) { _, last in
                 if term.isEmpty, atBottom || visible.last?.senderId == api.userID {
                     withAnimation(reduceMotion ? nil : .snappy(duration: 0.23)) { proxy.scrollTo("latest-message", anchor: .bottom) }
@@ -239,12 +247,29 @@ struct MessageThreadView: View {
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 if searching {
-                    TextField("Search messages", text: $query)
-                        .textFieldStyle(.roundedBorder).padding(10).background(.bar)
+                    HStack(spacing: 10) {
+                        TextField("Search messages", text: $query)
+                            .textFieldStyle(.roundedBorder)
+                            .focused($focused, equals: .search)
+                            .submitLabel(.search)
+                            .onSubmit { focused = nil }
+                            .onAppear { focused = .search }
+                        Button("Cancel", action: closeSearch)
+                            .frame(minHeight: 44)
+                            .accessibilityLabel("Cancel message search")
+                    }
+                    .padding(.horizontal, 12)
+                    .background(.bar)
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) { composer(thread) }
         }
+    }
+
+    private func closeSearch() {
+        if focused == .search { focused = nil }
+        searching = false
+        query = ""
     }
 
     private func isNewDay(_ index: Int, in notes: [MessageThread.Note]) -> Bool {
@@ -299,7 +324,7 @@ struct MessageThreadView: View {
                 .contextMenu {
                     if message.isDeleted != true {
                         if thread.canSend {
-                            Button("Reply", systemImage: "arrowshape.turn.up.left") { draftData.editing = nil; draftData.responding = message; focused = true }
+                            Button("Reply", systemImage: "arrowshape.turn.up.left") { draftData.editing = nil; draftData.responding = message; focused = .message }
                         }
                         if destination.kind == .direct {
                             Button(pinned ? "Unpin" : "Pin", systemImage: pinned ? "pin.slash" : "pin") {
@@ -316,7 +341,7 @@ struct MessageThreadView: View {
                             }
                         }
                         if mine && (destination.kind != .channel || thread.canSend) {
-                            Button("Edit", systemImage: "pencil") { draftData.responding = nil; draftData.editing = message; draftData.text = message.content; focused = true }
+                            Button("Edit", systemImage: "pencil") { draftData.responding = nil; draftData.editing = message; draftData.text = message.content; focused = .message }
                         }
                         if mine || thread.canModerate == true {
                             Button("Delete", systemImage: "trash", role: .destructive) { deleting = message }
@@ -450,14 +475,14 @@ struct MessageThreadView: View {
                 .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 21))
                 .overlay {
                     RoundedRectangle(cornerRadius: 21).strokeBorder(
-                        focused ? Brand.accent(for: scheme).opacity(0.62) : .secondary.opacity(0.22))
+                        focused == .message ? Brand.accent(for: scheme).opacity(0.62) : .secondary.opacity(0.22))
                 }
-                .focused($focused)
+                .focused($focused, equals: .message)
                 .accessibilityIdentifier("chat-message-input")
                 .onChange(of: draftData.text) { _, value in
                     draftData.revision += 1
                     if value.utf16.count > 1_000 { draftData.text = String(value.prefix(1_000)) }
-                    if draftData.editing == nil, thread.canSend, focused {
+                    if draftData.editing == nil, thread.canSend, focused == .message {
                         typingPresence.didType(hasText: !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                 }
@@ -491,6 +516,7 @@ struct MessageThreadView: View {
             .buttonStyle(SlipSurgePressStyle())
         }
         .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.never)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Message attachments and emoji")
     }

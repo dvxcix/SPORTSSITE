@@ -136,7 +136,7 @@ struct ResearchArtworkPicker: View {
 
         func body(content: Content) -> some View {
             if enabled {
-                content.searchable(text: $search)
+                content.searchable(text: $search).scrollDismissesKeyboard(.interactively)
             } else {
                 content
             }
