@@ -385,7 +385,7 @@ const getCachedSchedule = (date: string) => {
 // pulled out separately into each game's own `noHr` field.
 const GAME_LEVEL_NAME_NORM = '__game__'
 
-const MARKET_BOOK_TO_OPEN_FIELD: Record<string, string> = {
+export const MARKET_BOOK_TO_OPEN_FIELD: Readonly<Record<string, string>> = {
   'hrr3:fanduel': 'hrr3Fd',
   'fhr:fanduel': 'fhr', 'sa:fanduel': 'saFd', 'hr2:fanduel': 'hr2Fd',
   'singles:fanduel': 'sngFd', 'doubles:fanduel': 'dblFd', 'triples:fanduel': 'triFd',
