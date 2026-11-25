@@ -21,6 +21,7 @@ struct GameMarkets: View {
     let away: ResearchMatchup.Team
     let home: ResearchMatchup.Team
     let offers: [GameMarketBook]
+    var initialBook: String?
     @State private var pickedBook: String?
     @Environment(\.colorScheme) private var scheme
 
@@ -30,7 +31,10 @@ struct GameMarkets: View {
     }
 
     private var selected: GameMarketBook? {
-        ordered.first { $0.vendor == pickedBook } ?? ordered.first { Sportsbook.normalized($0.vendor) == "fanduel" } ?? ordered.first
+        if let book = pickedBook ?? initialBook {
+            return ordered.first { Sportsbook.normalized($0.vendor) == Sportsbook.normalized(book) }
+        }
+        return ordered.first { Sportsbook.normalized($0.vendor) == "fanduel" } ?? ordered.first
     }
 
     var body: some View {
@@ -38,9 +42,9 @@ struct GameMarkets: View {
             HStack {
                 ResearchSectionTitle(title: "Game markets")
                 Spacer()
-                if selected != nil {
+                if !ordered.isEmpty {
                     SportsbookPicker(books: ordered.map(\.vendor), selection: Binding(
-                        get: { selected?.vendor ?? "" }, set: { pickedBook = $0 }))
+                        get: { selected?.vendor ?? pickedBook ?? initialBook ?? "" }, set: { pickedBook = $0 }))
                 }
             }
 

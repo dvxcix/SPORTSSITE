@@ -12,14 +12,61 @@ struct CourtPlayerBoard: View {
     let matrixMatches: [Int: [CourtMatrixResults.Match]]
     let matrixFilter: String?
     let scope: CourtView.Scope
+    var contract: CourtLinkContext.Contract?
+    var target: Double?
+    var sort = CourtLinkContext.Sort.average
+    var ascending = false
 
     @Environment(\.colorScheme) private var scheme
 
-    private var players: [CourtBoard.Player] {
+    private struct Entry: Identifiable {
+        let player: CourtBoard.Player
+        let offer: CourtPlayerMarket.Reference?
+        let score: Double?
+        var id: Int { player.id }
+    }
+
+    private var players: [Entry] {
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        return board.players.filter {
+        let filtered = board.players.filter {
             $0.team.id == team.id && (query.isEmpty || "\($0.firstName) \($0.lastName)".localizedStandardContains(query))
                 && (matrixFilter == nil || matrixMatches[$0.id]?.contains { $0.id == matrixFilter } == true)
+        }
+        return filtered.compactMap { player -> Entry? in
+            let offer = market.reference(player, gameID: board.game.id, vendor: sportsbook, side: side,
+                contract: contract, target: target)
+            guard target == nil || offer != nil else { return nil }
+            return Entry(player: player, offer: offer, score: sortValue(player, offer: offer))
+        }.sorted { first, second in
+            if sort == .name {
+                let a = "\(first.player.lastName) \(first.player.firstName)"
+                let b = "\(second.player.lastName) \(second.player.firstName)"
+                let order = a.localizedStandardCompare(b)
+                if order != .orderedSame { return ascending ? order == .orderedAscending : order == .orderedDescending }
+            } else {
+                switch (first.score, second.score) {
+                case let (a?, b?) where a != b: return ascending ? a < b : a > b
+                case (_?, nil): return true
+                case (nil, _?): return false
+                default: break
+                }
+            }
+            return first.id < second.id
+        }
+    }
+
+    private func sortValue(_ player: CourtBoard.Player, offer: CourtPlayerMarket.Reference?) -> Double? {
+        switch sort {
+        case .mm: ranks[player.id].map { Double($0.mm) }
+        case .average: market.average(player.average)
+        case .line: offer?.line
+        case .odds: offer.map { Double($0.odds) }
+        case .minutes: player.average?["min"] ?? nil
+        case .l5, .l10, .l20:
+            if let offer, let window = Int(sort.rawValue.dropFirst()) {
+                market.rate(market.history(player, board: board).prefix(window), against: offer, side: side).percent
+            } else { nil }
+        case .name: nil
         }
     }
 
@@ -30,6 +77,7 @@ struct CourtPlayerBoard: View {
     }
 
     var body: some View {
+        let players = players
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 8) {
                 ResearchArtwork(urls: team.logo.map { [$0] } ?? [], fallback: "shield")
@@ -43,14 +91,17 @@ struct CourtPlayerBoard: View {
                     .font(.subheadline).foregroundStyle(.secondary)
             } else {
                 LazyVStack(spacing: 0) {
-                    ForEach(players) { player in
-                        let quote = market.reference(player, gameID: board.game.id, vendor: sportsbook, side: side)
+                    ForEach(players) { row in
+                        let player = row.player
+                        let quote = row.offer
                         NavigationLink {
                             CourtPlayerView(
                                 player: player, game: board.game, mode: board.oddsMode,
                                 frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason,
                                 initialBook: quote?.vendor ?? sportsbook, initialMarket: market.rawValue, initialSide: side,
-                                researchScope: scope
+                                researchScope: scope, linkedQuote: quote.map {
+                                    .init(line: $0.line, contract: $0.milestone ? .milestone : .standard)
+                                }, matchupBoard: board
                             )
                         } label: {
                             playerRow(player, quote: quote)

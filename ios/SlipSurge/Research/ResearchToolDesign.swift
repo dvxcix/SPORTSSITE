@@ -39,6 +39,7 @@ struct ResearchToolRail<Choice: Hashable>: View {
                 .padding(4)
             }
             .scrollIndicators(.hidden)
+            .onAppear { proxy.scrollTo(selection, anchor: .center) }
             .onChange(of: selection) { _, value in
                 withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { proxy.scrollTo(value, anchor: .center) }
             }
@@ -202,14 +203,15 @@ struct ResearchToolPortrait: View {
 struct ResearchToolBook: View {
     let book: String
     let price: Int?
+    var showPrice = true
 
     var body: some View {
         HStack(spacing: 5) {
-            if let asset = Sportsbook.artwork(book) {
+            if let asset = Sportsbook.artwork(Sportsbook.normalized(book)) {
                 Image(asset).resizable().scaledToFit().frame(width: 17, height: 17).accessibilityHidden(true)
             }
             Text(Sportsbook.name(book)).font(.caption.weight(.medium)).foregroundStyle(.secondary)
-            Text(ResearchFormat.price(price)).font(.caption.weight(.bold)).monospacedDigit()
+            if showPrice { Text(ResearchFormat.price(price)).font(.caption.weight(.bold)).monospacedDigit() }
         }
         .accessibilityElement(children: .combine)
     }

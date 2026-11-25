@@ -15,7 +15,7 @@ struct SlipSurgeTabs: View {
     @State private var savingRelease = false
     @State private var releaseProblem: String?
     @State private var sitePresentation: SitePresentation?
-    @State private var researchLink: ResearchDeepLink?
+    @State private var researchPath: [ResearchPresentation] = []
     @State private var discoverDestination: DiscoverDestination?
     @State private var feedSelection: NativeFeedSelection?
     @State private var emojiLibrary = NativeEmojiLibrary()
@@ -25,6 +25,11 @@ struct SlipSurgeTabs: View {
     private struct SitePresentation: Identifiable {
         let id = UUID()
         let target: NativeSiteLink
+    }
+
+    private struct ResearchPresentation: Hashable {
+        let id = UUID()
+        let link: ResearchDeepLink
     }
 
     private var appSheet: Binding<SitePresentation?> {
@@ -43,8 +48,13 @@ struct SlipSurgeTabs: View {
             .tabItem { Label("Feed", systemImage: "bubble.left.and.bubble.right") }
             .tag(Destination.feed)
 
-            NavigationStack {
-                ResearchHome(account: account, researchLink: $researchLink)
+            NavigationStack(path: $researchPath) {
+                ResearchHome(account: account)
+                    .navigationDestination(for: ResearchPresentation.self) { route in
+                        let book = researchPreferences.read(for: account.memberID)?.preferences.primaryBook
+                        LinkedResearchView(account: account, link: route.link, preferredBook: book)
+                            .id(route.id)
+                    }
             }
             .id(account.memberID)
             .tabItem { Label("Research", systemImage: "chart.bar.xaxis") }
@@ -181,7 +191,7 @@ struct SlipSurgeTabs: View {
         if let link = ResearchDeepLink(url) {
             choseDestination = true
             sitePresentation = nil
-            researchLink = link
+            researchPath = [ResearchPresentation(link: link)]
             selected = .research
             return .handled
         }
@@ -234,7 +244,6 @@ struct SlipSurgeTabs: View {
 
 private struct ResearchHome: View {
     let account: AccountStore
-    @Binding var researchLink: ResearchDeepLink?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.memberResearchPreferences) private var preferences
     @State private var dugoutAvailable = false
@@ -309,9 +318,6 @@ private struct ResearchHome: View {
         .navigationTitle("Research")
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
-        .navigationDestination(item: $researchLink) { link in
-            LinkedResearchView(account: account, link: link, preferredBook: book).id(link)
-        }
         .task(id: account.memberID) {
             guard let userID = account.memberID else { dugoutAvailable = false; return }
             let allowed = (try? await DugoutAPI(account: account, userID: userID).available()) == true

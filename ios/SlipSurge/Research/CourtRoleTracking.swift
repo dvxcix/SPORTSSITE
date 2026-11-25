@@ -236,16 +236,21 @@ struct CourtTrackingView: View {
     let scope: CourtView.Scope
     let board: CourtBoard
     let revision: Int
+    var linkedPlayerID: Int?
+    var linkedMetric: String?
+    var onMetricChange: ((String) -> Void)?
     @Environment(\.colorScheme) private var scheme
     @State private var data: DataSet?
     @State private var error: (any Error)?
     @State private var retry = 0
     @State private var group = ""
-    @State private var metric = "usage_percentage"
+    @State private var chosenMetric: String?
     @State private var venue = Venue.all
     @State private var window = 10
     @State private var ascending = false
     @State private var player: PlayerRow?
+
+    private var metric: String { chosenMetric ?? linkedMetric ?? "usage_percentage" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -260,8 +265,13 @@ struct CourtTrackingView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     let rows = makeRows(data, field: field)
-                    LazyVStack(spacing: 8) { ForEach(rows) { row($0, field: field) } }
-                    .sheet(item: $player) { row in detail(row, field: field) }
+                    if let linkedPlayerID, let selected = rows.first(where: { $0.id == linkedPlayerID }) {
+                        trackingSummary(selected, field: field)
+                        trackingGames(selected, field: field)
+                    } else {
+                        LazyVStack(spacing: 8) { ForEach(rows) { row($0, field: field) } }
+                            .sheet(item: $player) { row in detail(row, field: field) }
+                    }
                 } else {
                     ContentUnavailableView("No tracking observations for this matchup", systemImage: "waveform.path")
                 }
@@ -271,6 +281,9 @@ struct CourtTrackingView: View {
         }
         .task(id: "\(board.game.id):\(board.oddsMode.rawValue):\(board.observationID ?? ""):\(revision):\(retry)") {
             await load()
+        }
+        .onChange(of: chosenMetric) { _, value in
+            if let value { onMetricChange?(value) }
         }
     }
 
@@ -282,7 +295,7 @@ struct CourtTrackingView: View {
                 HStack(spacing: 6) {
                     ResearchArtworkPicker(title: "Metric", options: visible.sorted { $0.label < $1.label }.map {
                         .init(id: $0.key, title: $0.label, icon: "chart.bar")
-                    }, selection: Binding(get: { field.key }, set: { metric = $0 }))
+                    }, selection: Binding(get: { field.key }, set: { chosenMetric = $0 }))
                     ResearchToolFilter(title: "Category", selection: group.isEmpty ? "All metrics" : group) {
                         Picker("Metric category", selection: $group) {
                             Text("All metrics").tag("")
@@ -303,14 +316,14 @@ struct CourtTrackingView: View {
         }
         .onChange(of: group) {
             if !fields.contains(where: { $0.key == metric && (group.isEmpty || $0.group == group) }) {
-                metric = fields.first { $0.group == group }?.key ?? field.key
+                chosenMetric = fields.first { $0.group == group }?.key ?? field.key
             }
         }
     }
 
     private func makeRows(_ data: DataSet, field: DataSet.Field) -> [PlayerRow] {
         let rows = Dictionary(grouping: data.rows, by: \.playerId)
-        return board.players.map { player in
+        return board.players.filter { linkedPlayerID == nil || $0.id == linkedPlayerID }.map { player in
             let records = Dictionary((rows[player.id] ?? []).map { ($0.gameId, $0) }, uniquingKeysWith: { first, _ in first })
             let logs = CourtPlayerMarket.points.history(player, board: board).filter(venue.accepts)
             let observations = logs.prefix(20).map { log in
@@ -355,39 +368,14 @@ struct CourtTrackingView: View {
     }
 
     private func detail(_ row: PlayerRow, field: DataSet.Field) -> some View {
-        let sample = row.samples[window]
-        let observations = sample?.observations ?? []
-        return NavigationStack {
+        NavigationStack {
             List {
                 Section {
                     CourtPlayerIdentity(player: row.player)
-                    ResearchToolValues(items: [
-                        .init(label: "L\(window) average", text: format(sample?.average, field: field)),
-                        .init(label: "Known games", text: "\(sample?.known ?? 0)/\(observations.count)"),
-                        .init(label: "L5 change", text: format(row.change, field: field, change: true),
-                            tone: Brand.signal(row.change.map { field.lowerIsBetter ? -$0 : $0 }, for: scheme)),
-                    ])
-                    if sample?.known ?? 0 > 0 {
-                        Chart(Array(observations.reversed().enumerated()), id: \.element.id) { index, item in
-                            if let value = item.value {
-                                BarMark(x: .value("Game", index + 1), y: .value(field.label, field.percentage ? value * 100 : value))
-                                    .foregroundStyle(Brand.accent(for: scheme))
-                                    .accessibilityLabel(String(item.log.game.date.prefix(10)))
-                                    .accessibilityValue(format(value, field: field))
-                            }
-                        }
-                        .chartXScale(domain: 0...max(2, observations.count + 1))
-                        .frame(height: 120)
-                    }
+                    trackingSummary(row, field: field)
                 }
                 Section("Recorded games") {
-                    ForEach(observations) { observation in
-                        HStack {
-                            Text(String(observation.log.game.date.prefix(10)))
-                            Spacer()
-                            Text(format(observation.value, field: field)).fontWeight(.semibold).monospacedDigit()
-                        }
-                    }
+                    trackingGames(row, field: field)
                 }
             }
             .navigationTitle(field.label)
@@ -395,6 +383,39 @@ struct CourtTrackingView: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { player = nil } } }
         }
         .presentationDragIndicator(.visible)
+    }
+
+    @ViewBuilder private func trackingSummary(_ row: PlayerRow, field: DataSet.Field) -> some View {
+        let sample = row.samples[window]
+        let observations = sample?.observations ?? []
+        ResearchToolValues(items: [
+            .init(label: "L\(window) average", text: format(sample?.average, field: field)),
+            .init(label: "Known games", text: "\(sample?.known ?? 0)/\(observations.count)"),
+            .init(label: "L5 change", text: format(row.change, field: field, change: true),
+                tone: Brand.signal(row.change.map { field.lowerIsBetter ? -$0 : $0 }, for: scheme)),
+        ])
+        if sample?.known ?? 0 > 0 {
+            Chart(Array(observations.reversed().enumerated()), id: \.element.id) { index, item in
+                if let value = item.value {
+                    BarMark(x: .value("Game", index + 1), y: .value(field.label, field.percentage ? value * 100 : value))
+                        .foregroundStyle(Brand.accent(for: scheme))
+                        .accessibilityLabel(String(item.log.game.date.prefix(10)))
+                        .accessibilityValue(format(value, field: field))
+                }
+            }
+            .chartXScale(domain: 0...max(2, observations.count + 1))
+            .frame(height: 120)
+        }
+    }
+
+    private func trackingGames(_ row: PlayerRow, field: DataSet.Field) -> some View {
+        ForEach(row.samples[window]?.observations ?? []) { observation in
+            HStack {
+                Text(String(observation.log.game.date.prefix(10)))
+                Spacer()
+                Text(format(observation.value, field: field)).fontWeight(.semibold).monospacedDigit()
+            }
+        }
     }
 
     private func format(_ value: Double?, field: DataSet.Field, change: Bool = false) -> String {

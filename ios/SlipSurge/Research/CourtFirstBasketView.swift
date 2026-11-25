@@ -11,6 +11,7 @@ struct CourtFirstBasketView: View {
     let board: CourtBoard
     let reload: Int
     var explicitBook: String?
+    var linkedBooks: [String]?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.memberResearchPreferences) private var preferences
@@ -57,7 +58,9 @@ struct CourtFirstBasketView: View {
                 let markets = Set(rows.map(\.offer.propType)).sorted()
                 let books = Set(rows.map(\.offer.vendor)).sorted()
                 let preferred = preferredBooks(in: books)
-                let selection = book ?? explicitBook ?? (preferred.isEmpty ? "all" : "preferred")
+                let initialSelection = linkedBooks?.isEmpty == false && explicitBook == "all"
+                    ? "preferred" : explicitBook ?? (preferred.isEmpty ? "all" : "preferred")
+                let selection = book ?? initialSelection
                 let visible = rows.filter { row in
                     let vendor = row.offer.vendor
                     let matchesBook = selection == "all" || selection == "preferred" && preferred.contains(vendor) ||
@@ -112,6 +115,11 @@ struct CourtFirstBasketView: View {
     }
 
     private func preferredBooks(in books: [String]) -> [String] {
+        if let linkedBooks {
+            return books.filter { book in
+                linkedBooks.contains { $0 == book || Sportsbook.normalized($0) == Sportsbook.normalized(book) }
+            }
+        }
         guard case .member(_, let userID) = scope,
               let wanted = preferences?.read(for: userID)?.preferences.books else { return [] }
         return books.filter { wanted.contains(Sportsbook.normalized($0)) }

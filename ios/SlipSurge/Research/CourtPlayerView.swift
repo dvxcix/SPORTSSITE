@@ -31,6 +31,10 @@ struct CourtPlayerView: View {
     var initialMarket: String?
     var initialSide = CourtPlayerMarket.Side.over
     var researchScope: CourtView.Scope?
+    var linkedQuote: CourtLinkContext.Quote?
+    var matchupBoard: CourtBoard?
+    var linkedPanel: CourtLinkContext.Panel?
+    var linkedMetric: String?
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
@@ -39,7 +43,21 @@ struct CourtPlayerView: View {
     @State private var expired = false
     @State private var side = CourtPlayerMarket.Side.over
     @State private var window = 10
-    @State private var line: String?
+    @State private var line: CourtLinkContext.Quote?
+    @State private var selectedPanel: CourtLinkContext.Panel?
+    @State private var trackingMetric: String?
+    @State private var configured = false
+
+    private var panel: CourtLinkContext.Panel { selectedPanel ?? linkedPanel ?? .trends }
+    private var panelOptions: [CourtLinkContext.Panel] {
+        CourtLinkContext.Panel.allCases.filter {
+            switch $0 {
+            case .tracking: researchScope != nil && matchupBoard != nil
+            case .court, .movement: researchScope != nil
+            default: true
+            }
+        }
+    }
 
     private var expiry: Date? {
         if mode == .live { return game.isFinal ? nil : observedAt.addingTimeInterval(30) }
@@ -53,7 +71,8 @@ struct CourtPlayerView: View {
     private var books: [String] { Set(offers.map(\.vendor)).sorted() }
     private var markets: [String] {
         let listed = Set(offers.filter { $0.vendor == sportsbook }.map(\.propType))
-        return listed.isEmpty ? ["points", "rebounds", "assists"] : listed.sorted()
+        let fallback = initialMarket.map { [$0, "points", "rebounds", "assists"] } ?? ["points", "rebounds", "assists"]
+        return listed.isEmpty ? Set(fallback).sorted() : listed.sorted()
     }
 
     var body: some View {
@@ -61,43 +80,17 @@ struct CourtPlayerView: View {
             playerHeader
                 .listRowInsets(.init(top: 4, leading: 0, bottom: 4, trailing: 0))
                 .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             if expired || (expiry.map { $0 <= .now } ?? false) {
                 Text(mode == .live ? "Return to The Court for a fresh live observation." : "Return to The Court to load the saved pregame snapshot.")
                     .listRowBackground(Brand.surface(for: scheme))
             } else {
-                Section("Recent form") {
-                    trend
-                    if let researchScope {
-                        NavigationLink {
-                            CourtShotView(api: .init(scope: researchScope), player: player, game: game, mode: mode)
-                        } label: { Label("Shot map", systemImage: "scope") }
-                    }
-                }
-                .listRowBackground(Brand.surface(for: scheme))
-                if let average = player.average {
-                    Section("Recorded averages") {
-                        stat("Points", average["pts"] ?? nil)
-                        stat("Rebounds", average["reb"] ?? nil)
-                        stat("Assists", average["ast"] ?? nil)
-                    }
-                    .listRowBackground(Brand.surface(for: scheme))
-                }
-                Section(mode == .live ? (game.isFinal ? "Saved live odds" : "Live odds") : "Pregame odds") {
-                    if books.isEmpty {
-                        Text("No recorded offers for this player.")
-                    } else {
-                        ResearchArtworkPicker(title: "Sportsbook", options: books.map(ResearchArtworkPicker.Option.sportsbook), selection: $sportsbook)
-                        Picker("Market", selection: $market) {
-                            ForEach(markets, id: \.self) {
-                                Text(CourtPlayerMarket(rawValue: $0)?.label ?? $0.replacingOccurrences(of: "_", with: " ").capitalized).tag($0)
-                            }
-                        }
-                        ForEach(offers.filter { $0.vendor == sportsbook && $0.propType == market }) { offer in
-                            offerRow(offer)
-                        }
-                    }
-                }
-                .listRowBackground(Brand.surface(for: scheme))
+                ResearchToolRail(title: "Player research", choices: panelOptions,
+                    selection: Binding(get: { panel }, set: { selectedPanel = $0 }), label: \.label, glyph: \.icon)
+                    .listRowInsets(.init(top: 2, leading: 0, bottom: 2, trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                playerPanel
             }
         }
         .navigationTitle("\(player.firstName) \(player.lastName)")
@@ -106,18 +99,24 @@ struct CourtPlayerView: View {
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))
-        .onAppear {
-            if sportsbook.isEmpty {
-                let fallback = books.contains("fanduel") ? "fanduel" : (books.first ?? "")
-                sportsbook = initialBook.flatMap { books.contains($0) ? $0 : nil } ?? fallback
-                if let initialMarket { market = initialMarket }
-                side = initialSide
-                selectMarket()
+        .toolbar {
+            if let url = shareURL {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShareLink(item: url).accessibilityLabel("Share player research")
+                }
             }
         }
-        .onChange(of: sportsbook) { _, _ in selectMarket() }
-        .onChange(of: market) { _, _ in line = nil }
-        .onChange(of: side) { _, _ in line = nil }
+        .onAppear {
+            if !configured {
+                let fallback = books.contains("fanduel") ? "fanduel" : (books.first ?? "")
+                sportsbook = initialBook.flatMap { $0 == "all" ? nil : $0 } ?? fallback
+                market = initialMarket ?? ""
+                side = initialSide
+                if initialMarket == nil { selectMarket() }
+                line = linkedQuote
+                configured = true
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { expired = expiry.map { $0 <= .now } ?? false }
         }
@@ -131,6 +130,102 @@ struct CourtPlayerView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder private var playerPanel: some View {
+        switch panel {
+        case .trends:
+            Section("Recent form") {
+                marketSelection
+                trend
+            }.listRowBackground(Brand.surface(for: scheme))
+            if let average = player.average {
+                Section("Recorded averages") {
+                    stat("Points", average["pts"] ?? nil)
+                    stat("Rebounds", average["reb"] ?? nil)
+                    stat("Assists", average["ast"] ?? nil)
+                }.listRowBackground(Brand.surface(for: scheme))
+            }
+        case .ladder, .markets:
+            Section(panel == .ladder ? "Recorded lines" : mode == .live ? "Live markets" : "Pregame markets") {
+                marketSelection
+                let selected = offers.filter { $0.vendor == sportsbook && $0.propType == market }
+                    .sorted { (Double($0.lineValue) ?? 0, $0.id) < (Double($1.lineValue) ?? 0, $1.id) }
+                if selected.isEmpty { Text("No recorded offers for this selection.").foregroundStyle(.secondary) }
+                ForEach(selected) { offer in offerRow(offer) }
+            }.listRowBackground(Brand.surface(for: scheme))
+            if panel == .ladder {
+                Section("Recent form") { trend }.listRowBackground(Brand.surface(for: scheme))
+            }
+        case .movement:
+            if let researchScope, let metric = CourtPlayerMarket(rawValue: market) {
+                CourtMovementView(scope: researchScope, game: game, mode: mode, players: [player],
+                    initialMarket: metric, initialSide: side, initialBook: sportsbook,
+                    initialContract: line?.contract, initialTarget: line?.line, playerID: player.id)
+                    .listRowBackground(Brand.surface(for: scheme))
+            }
+        case .tracking:
+            if let matchupBoard, let researchScope {
+                CourtTrackingView(scope: researchScope, board: matchupBoard, revision: 0,
+                    linkedPlayerID: player.id, linkedMetric: trackingMetric ?? linkedMetric) { trackingMetric = $0 }
+                    .listRowBackground(Brand.surface(for: scheme))
+            }
+        case .court:
+            if let researchScope {
+                CourtShotView(api: .init(scope: researchScope), player: player, game: game, mode: mode, embedded: true)
+                    .listRowBackground(Brand.surface(for: scheme))
+            }
+        }
+    }
+
+    private var shareURL: URL? {
+        guard let researchScope, case .member = researchScope, !market.isEmpty else { return nil }
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = SlipSurgeHTTP.site
+        components.path = "/the-paint"
+        var query: [URLQueryItem] = [.init(name: "date", value: game.date), .init(name: "game", value: String(game.id)),
+            .init(name: "mode", value: mode.rawValue), .init(name: "view", value: "research"),
+            .init(name: "player", value: String(player.id)), .init(name: "panel", value: panel.rawValue),
+            .init(name: "market", value: market), .init(name: "side", value: side.rawValue.lowercased()),
+            .init(name: "book", value: sportsbook.isEmpty ? "all" : sportsbook)]
+        if let line {
+            query += [.init(name: "line", value: String(line.line)), .init(name: "type", value: line.contract.rawValue)]
+        }
+        if panel == .tracking, let metric = trackingMetric ?? linkedMetric {
+            query.append(.init(name: "metric", value: metric))
+        }
+        components.queryItems = query
+        return components.url
+    }
+
+    private var marketSelection: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: 8) { marketControls }
+            VStack(alignment: .leading, spacing: 4) { marketControls }
+        }
+    }
+
+    @ViewBuilder private var marketControls: some View {
+        if !books.isEmpty || !sportsbook.isEmpty {
+            let choices = Set(books + (sportsbook.isEmpty ? [] : [sportsbook])).sorted()
+            ResearchArtworkPicker(title: "Sportsbook", options: choices.map(ResearchArtworkPicker.Option.sportsbook),
+                selection: Binding(get: { sportsbook }, set: { sportsbook = $0; line = nil; selectMarket() }))
+        }
+        ResearchToolFilter(title: "Market", selection: marketName(market)) { marketPicker }
+    }
+
+    private var marketPicker: some View {
+        let choices = Set(markets + (market.isEmpty ? [] : [market])).sorted()
+        return Picker("Market", selection: Binding(get: { market }, set: { market = $0; line = nil })) {
+            ForEach(choices, id: \.self) {
+                Text(marketName($0)).tag($0)
+            }
+        }
+    }
+
+    private func marketName(_ key: String) -> String {
+        CourtPlayerMarket(rawValue: key)?.label ?? key.replacingOccurrences(of: "_", with: " ").capitalized
     }
 
     private var playerHeader: some View {
@@ -155,16 +250,12 @@ struct CourtPlayerView: View {
     private var trend: some View {
         if let metric = CourtPlayerMarket(rawValue: market) {
             let history = metric.history(player, game: game, sampleSeason: sampleSeason)
-            let prices = offers.filter { $0.vendor == sportsbook && $0.propType == market }.compactMap { offer in
-                let isMilestone = offer.market.type == "milestone"
-                let price = isMilestone ? (side == .over ? offer.market.odds : nil)
-                    : side == .over ? offer.market.overOdds : offer.market.underOdds
-                guard let value = Double(offer.lineValue), let price else { return nil as CourtPlayerMarket.Reference? }
-                return .init(line: value, vendor: offer.vendor, odds: price, milestone: isMilestone)
-            }
-            let contracts = prices.sorted { $0.line == $1.line ? $0.odds > $1.odds : $0.line < $1.line }
-            let reference = line.flatMap { key in contracts.first { metric.target($0, side: side) == key } }
-                ?? metric.reference(player, gameID: game.id, vendor: sportsbook.isEmpty ? nil : sportsbook, side: side)
+            let vendor = sportsbook.isEmpty ? nil : sportsbook
+            let contracts = Set(metric.offers(player, gameID: game.id, side: side).filter { vendor == nil || vendor == $0.vendor }
+                .map { CourtLinkContext.Quote(line: $0.line, contract: $0.milestone ? .milestone : .standard) }
+                + (line.map { [$0] } ?? [])).sorted { ($0.line, $0.contract.rawValue) < ($1.line, $1.contract.rawValue) }
+            let reference = metric.reference(player, gameID: game.id, vendor: vendor, side: side,
+                contract: line?.contract, target: line?.line)
             let samples = [3, 5, 10, 20].map { length in reference.map { metric.rate(history.prefix(length), against: $0, side: side) } }
             let chartGames: [ResearchGameChart.Game] = history.prefix(window).reversed().compactMap { log in
                 guard let value = metric.statistic(log) else { return nil }
@@ -184,13 +275,18 @@ struct CourtPlayerView: View {
                         Text(metric.label).font(.headline)
                     }
                 }
-                ResearchToolRail(title: "Side", choices: CourtPlayerMarket.Side.allCases, selection: $side, label: \.rawValue) {
+                if let line, reference == nil {
+                    Label("Recorded price for \(lineLabel(line)) is unavailable.", systemImage: "clock.badge.questionmark")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                ResearchToolRail(title: "Side", choices: CourtPlayerMarket.Side.allCases,
+                    selection: Binding(get: { side }, set: { side = $0; line = nil }), label: \.rawValue) {
                     $0 == .over ? "arrow.up" : "arrow.down"
                 }
                 if !contracts.isEmpty {
                     Picker("Line", selection: $line) {
                         Text("Reference line").tag(nil as String?)
-                        ForEach(Set(contracts.map { metric.target($0, side: side) }).sorted(), id: \.self) { Text($0).tag(Optional($0)) }
+                        ForEach(contracts, id: \.self) { Text(lineLabel($0)).tag(Optional($0)) }
                     }
                 }
                 ResearchSampleBars(labels: ["L3", "L5", "L10", "L20"], rates: samples.map { $0?.percent },
@@ -212,6 +308,11 @@ struct CourtPlayerView: View {
         if !markets.contains(market) {
             market = markets.contains("points") ? "points" : (markets.first ?? "")
         }
+    }
+
+    private func lineLabel(_ quote: CourtLinkContext.Quote) -> String {
+        quote.contract == .milestone ? "\(quote.line.formatted())+" :
+            "\(side == .over ? "O" : "U") \(quote.line.formatted())"
     }
 
     private func stat(_ label: String, _ value: Double?) -> some View {

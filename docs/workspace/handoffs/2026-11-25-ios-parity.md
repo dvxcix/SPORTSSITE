@@ -1646,6 +1646,8 @@ physical-device push are still open.
   the existing snake_case offer, storefront and group fields. The native
   reader now applies that strategy for this endpoint. No live groups,
   promotions, access holds or creator payments were changed for QA.
+  The rebuilt signed form loaded the live owner setup with logo and cover
+  choices, sport, audience and public visibility. Create was left untouched.
 
 ## Story GIFs, exact creation links and Pipeline Health · 25 November 2026
 
@@ -1666,5 +1668,33 @@ physical-device push are still open.
   No collector, queue retry, refresh or other live operation was run for QA.
 - Hub TypeScript, all 134 production source checks, and 13 focused
   story-media, pipeline, discussion, event and link checks passed. Signed
-  Simulator builds succeeded. Physical signing and notification delivery
+  Simulator builds succeeded. Task `12337467897ea7e54af15b889a7c3d79823ffe03`
+  is pushed. PR #62 merged as `aa3d7c7454a8c551e6236f43681f47e4348ddfc5`,
+  preview `dpl_CuR9kPwgnYKVPzRme6VTGVsGfdEq` and production
+  `dpl_9oW1BkeFL4JLSvg1XHLwrn4UhD4P` were READY. The signed Simulator
+  showed Operational Queues and Browserbase Usage. Guest Pipeline Health
+  returned 401, public Feed 200. Physical signing and notification delivery
   still require a provisioned Apple team and test device.
+
+## NBA exact research links, sportsbook comparison and Market Story · 25 November 2026
+
+- The Court ingests the website’s shared date, game, Pregame/Live mode,
+  market, side, book, compare books, line, contract, target, sort and
+  player panel. Its navigation uses a replaceable research path so incoming
+  links can select a different board while a detail is open.
+- Compare Sportsbooks and Prop Ladders use the recorded player and exact
+  price contracts, team colors, headshots, book artwork, MM and live
+  member book preferences. The independent Odds Board remains accessible.
+  Player research links can open Trends, Ladder, Market Story, Tracking,
+  Shot Map and Markets. The Share control produces eligible exact site links.
+- Market Story reuses the existing phase-filtered NBA history and calculation
+  routines. The mobile projection includes visible captures, observed prices,
+  exact contract baselines, line movement, direction and minimum-move filters,
+  plus recorded player charts. Later openings stay outside earlier replay
+  captures, and prices at different thresholds cannot form a price change.
+- Signed Xcode Simulator, Hub TypeScript, all 134 production source checks
+  and three focused archived-market tests passed. The signed Simulator
+  opened the November 24 Detroit–Orlando snapshot and Wendell Carter Jr.’s
+  exact DraftKings under 7.5 rebounds at +110, with Orlando artwork, L3,
+  L5, L10 and L20 samples and observed red/green game bars. Release and
+  signed device verification of the new Market Story adapter are pending.

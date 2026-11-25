@@ -40,6 +40,7 @@ struct CourtShotView: View {
     let player: CourtBoard.Player
     let game: CourtBoard.Game
     let mode: CourtResearchMode
+    var embedded = false
     @Environment(\.colorScheme) private var scheme
     @State private var played = ""
     @State private var period = 0
@@ -62,27 +63,19 @@ struct CourtShotView: View {
         let candidates = completed
         let current = candidates.first(where: { String($0.id) == played }) ?? candidates.first
         let request = Request(played: current?.id ?? 0, revision: retry)
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 13) {
-                CourtPlayerIdentity(player: player)
-                if current != nil {
-                    filters(candidates, current: request.played, data: sample.flatMap { $0.0 == request ? $0.1 : nil })
-                    if let sample, sample.0 == request {
-                        chart(sample.1)
-                    } else {
-                        ResearchToolMessage(title: mode == .pregame ? "Pregame shot sample unavailable" : "Shot locations couldn’t load",
-                            error: failure.flatMap { $0.0 == request ? $0.1 : nil }) { retry += 1 }
-                    }
-                } else {
-                    ContentUnavailableView("No completed games with shot data", systemImage: "scope")
+        Group {
+            if embedded {
+                shotContent(candidates, request: request)
+            } else {
+                ScrollView {
+                    shotContent(candidates, request: request).padding(16)
                 }
+                .navigationTitle("Shot map")
+                .navigationBarTitleDisplayMode(.inline)
             }
-            .padding(16)
         }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
-        .navigationTitle("Shot map")
-        .navigationBarTitleDisplayMode(.inline)
         .task(id: request) {
             if request.played > 0 { await load(request) }
         }
@@ -91,6 +84,25 @@ struct CourtShotView: View {
         .onChange(of: result) { selected = nil }
         .onChange(of: points) { selected = nil }
         .sensoryFeedback(.selection, trigger: selected)
+    }
+
+    private func shotContent(_ candidates: [CourtBoard.PlayerLog.LoggedGame], request: Request) -> some View {
+        VStack(alignment: .leading, spacing: 13) {
+            if !embedded {
+                CourtPlayerIdentity(player: player)
+            }
+            if request.played > 0 {
+                filters(candidates, current: request.played, data: sample.flatMap { $0.0 == request ? $0.1 : nil })
+                if let sample, sample.0 == request {
+                    chart(sample.1)
+                } else {
+                    ResearchToolMessage(title: mode == .pregame ? "Pregame shot sample unavailable" : "Shot locations couldn’t load",
+                        error: failure.flatMap { $0.0 == request ? $0.1 : nil }) { retry += 1 }
+                }
+            } else {
+                ContentUnavailableView("No completed games with shot data", systemImage: "scope")
+            }
+        }
     }
 
     private func filters(_ games: [CourtBoard.PlayerLog.LoggedGame], current: Int, data: CourtShotSample?) -> some View {

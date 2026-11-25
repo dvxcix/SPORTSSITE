@@ -31,6 +31,8 @@ struct ResearchDeepLink: Hashable {
     let heat: Bool
     let courtEntry: CourtView.Entry?
     let courtMode: CourtResearchMode?
+    let courtContext: CourtLinkContext
+    let courtMarket: String?
     let sidelineEntry: SidelineView.Entry?
     let book: String?
     let workspaceGame: String?
@@ -58,7 +60,7 @@ struct ResearchDeepLink: Hashable {
             tool = matched
         }
         let items = components.queryItems ?? []
-        guard items.count <= 6 else { return nil }
+        guard items.count <= (tool == .court ? 18 : 6) else { return nil }
         var values: [String: String] = [:]
         for item in items {
             guard let value = item.value, value.utf8.count <= 720, values[item.name] == nil else { return nil }
@@ -72,7 +74,10 @@ struct ResearchDeepLink: Hashable {
         case .pitcher: allowed = ["date", "pitcherId"]
         case .weather, .dugout, .oddsMovement, .slateBreakdown: allowed = ["date", "game"]
         case .workspace: allowed = ["date", "game", "view", "detail"]
-        case .court, .sideline: allowed = ["date", "game", "view", "mode", "book"]
+        case .court:
+            allowed = ["date", "game", "view", "mode", "book", "market", "side", "sort", "order",
+                       "player", "panel", "line", "type", "metric", "books", "contract", "target"]
+        case .sideline: allowed = ["date", "game", "view", "mode", "book"]
         case .synergy: allowed = ["game", "sort"]
         case .publicPicks, .costs, .recap: allowed = ["date"]
         }
@@ -85,8 +90,8 @@ struct ResearchDeepLink: Hashable {
         let nflGameID = tool == .sideline ? rawGame : nil
         let synergyGame = tool == .synergy ? rawGame : nil
         let workspaceGame = tool == .workspace && gameID == nil ? rawGame : nil
-        let synergyRank = values["sort"].flatMap(DugoutSynergy.Ranking.init(rawValue:))
-        if values["sort"] != nil, synergyRank == nil { return nil }
+        let synergyRank = tool == .synergy ? values["sort"].flatMap(DugoutSynergy.Ranking.init(rawValue:)) : nil
+        if tool == .synergy, values["sort"] != nil, synergyRank == nil { return nil }
         if let nflGameID {
             guard nflGameID.range(of: #"^[0-9]{4}_[0-9]{2}_[A-Z]{2,3}_[A-Z]{2,3}$"#, options: .regularExpression) != nil else { return nil }
         } else if let synergyGame {
@@ -112,6 +117,11 @@ struct ResearchDeepLink: Hashable {
         let rawMode = values["mode"]
         let courtEntry = tool == .court ? rawView.flatMap(CourtView.Entry.init(rawValue:)) : nil
         let courtMode = tool == .court ? rawMode.flatMap(CourtResearchMode.init(rawValue:)) : nil
+        let courtContext: CourtLinkContext
+        if tool == .court {
+            guard let context = CourtLinkContext(values) else { return nil }
+            courtContext = context
+        } else { courtContext = .init() }
         let sidelineEntry = tool == .sideline ? (rawMode ?? rawView).flatMap(SidelineView.Entry.init(rawValue:)) : nil
         switch tool {
         case .court:
@@ -124,7 +134,8 @@ struct ResearchDeepLink: Hashable {
         }
         let book = values["book"]
         if let book, book != "all" {
-            guard book.range(of: #"^[a-z0-9_]{1,30}$"#, options: .regularExpression) != nil, Sportsbook.isKnown(book) else { return nil }
+            guard book.range(of: #"^[a-z0-9_]{1,40}$"#, options: .regularExpression) != nil,
+                  tool == .court || Sportsbook.isKnown(book) else { return nil }
         }
 
         self.tool = tool
@@ -140,6 +151,8 @@ struct ResearchDeepLink: Hashable {
         heat = rawView == "heat"
         self.courtEntry = courtEntry
         self.courtMode = courtMode
+        self.courtContext = courtContext
+        courtMarket = tool == .court ? values["market"] : nil
         self.sidelineEntry = sidelineEntry
         self.book = book
         self.workspaceGame = workspaceGame
@@ -180,8 +193,10 @@ struct LinkedResearchView: View {
             if let userID = account.memberID {
                 CourtView(scope: .member(account, userID), date: date, linkedGame: link.gameID,
                     entry: link.courtEntry ?? .research, startingMode: link.courtMode ?? .pregame,
-                    book: link.book ?? preferredBook, comparisonBook: link.book)
-            } else if link.date != nil || link.gameID != nil || link.courtEntry != nil || link.courtMode == .live {
+                    book: link.book ?? preferredBook, comparisonBook: link.book, link: link.courtContext,
+                    oddsMarket: link.courtMarket)
+            } else if link.date != nil || link.gameID != nil || link.courtEntry != nil || link.courtMode == .live
+                || link.courtContext.player != nil || link.courtMarket != nil {
                 ContentUnavailableView("Sign in to open this matchup", systemImage: "lock")
             } else { CourtView(scope: .preview) }
         default:

@@ -78,15 +78,23 @@ enum CourtPlayerMarket: String, CaseIterable {
         return sum(fields.map { values[$0] ?? nil })
     }
 
-    func reference(_ player: CourtBoard.Player, gameID: Int, vendor: String?, side: Side) -> Reference? {
-        let offers = player.props.compactMap { prop -> Reference? in
+    func offers(_ player: CourtBoard.Player, gameID: Int, side: Side) -> [Reference] {
+        player.props.compactMap { prop -> Reference? in
             guard prop.gameId == gameID, prop.playerId == player.id, prop.propType == rawValue,
-                  let line = Double(prop.lineValue), line.isFinite else { return nil }
+                  let line = Double(prop.lineValue), (0...1000).contains(line) else { return nil }
             let milestone = prop.market.type == "milestone"
+            guard milestone || prop.market.type == "over_under" else { return nil }
             let price = milestone ? (side == .over ? prop.market.odds : nil) :
                 (side == .over ? prop.market.overOdds : prop.market.underOdds)
-            guard let price else { return nil }
+            guard let price, abs(Double(price)) >= 100 else { return nil }
             return Reference(line: line, vendor: prop.vendor, odds: price, milestone: milestone)
+        }
+    }
+
+    func reference(_ player: CourtBoard.Player, gameID: Int, vendor: String?, side: Side,
+        contract: CourtLinkContext.Contract? = nil, target: Double? = nil) -> Reference? {
+        let offers = offers(player, gameID: gameID, side: side).filter {
+            (contract == nil || $0.milestone == (contract == .milestone)) && (target == nil || $0.line == target)
         }
         let matching = offers.filter { vendor == nil || $0.vendor == vendor }
         if isBinary {
