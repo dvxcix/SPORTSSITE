@@ -6,9 +6,10 @@ type ArchiveEntry = { name?: string } & Record<string, unknown>
 type Capture = { captured_at: string; prop_map: Record<string, ArchiveEntry> }
 type Quote = { playerId: number; market: string; book: string; line: number | null; points: { time: string; odds: number }[] }
 
-const markets = new Set(['fhr', 'sa', 'hr2', 'hr3', 'hits', 'hits2', 'hits3', 'singles', 'singles2', 'doubles', 'triples',
-  'rbi', 'rbi2', 'rbi3', 'runs', 'runs2', 'hrr', 'hrr3', 'tb', 'tb3', 'tb4', 'tb5', 'stolen_bases', 'stolen_bases2',
-  'strikeouts', 'strikeouts2', 'strikeouts3'])
+const markets = new Set(['fhr', 'sa', 'hr2', 'hr3', 'laser105', 'laser110', 'moonshot', 'pa1', 'hrMl',
+  'hits', 'hits2', 'hits3', 'singles', 'singles2', 'singles3', 'doubles', 'doubles2', 'doubles3', 'triples', 'triples2', 'triples3',
+  'rbi', 'rbi2', 'rbi3', 'runs', 'runs2', 'runs3', 'hrr', 'hrr3', 'tb', 'tb3', 'tb4', 'tb5',
+  'stolen_bases', 'stolen_bases2', 'stolen_bases3', 'strikeouts', 'strikeouts2', 'strikeouts3'])
 const books = new Set(['fanduel', 'draftkings', 'caesars', 'fanatics', 'betmgm', 'betrivers'])
 
 export function nativeMlbOddsHistory(players: Player[], snapshots: Capture[], firstPitchAt: string | null) {

@@ -38,3 +38,10 @@ test('native MLB history keeps different thresholds independent and drops confli
   assert.deepEqual(series.map(({ line, points }) => [line, points.map(point => point.odds)]), [[0.5, [120, 145]], [2.5, [220, 250]]])
   assert.deepEqual(nativeMlbOddsHistory([...roster, { id: 14, name: 'Player A' }], history, null), [])
 })
+
+test('workspace receipts retain recorded specialty home run markets', () => {
+  const history = [{ captured_at: at(3), prop_map: { player: { name: 'Player A', laser105: { fanduel: 650 }, hrMl: { fanduel: 800 } } } },
+    { captured_at: at(45), prop_map: { player: { name: 'Player A', laser105: { fanduel: 700 } } } }]
+  const series = nativeMlbOddsHistory([{ id: 12, name: 'Player A' }], history, at(45))
+  assert.deepEqual(series.map(({ market, points }) => [market, points.map(point => point.odds)]), [['laser105', [650]], ['hrMl', [800]]])
+})
