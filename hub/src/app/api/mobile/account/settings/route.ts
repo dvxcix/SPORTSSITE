@@ -57,7 +57,7 @@ export async function PATCH(request: Request) {
   }
   const fields: Record<string, string | boolean | string[] | Record<string, unknown> | null> = {}
   let observedLinks: Record<string, unknown> | undefined
-  const observedAppearance: Record<string, string> = {}
+  const observedProfileFields: Record<string, string | null> = {}
   if (body.kind === 'privacy') {
     for (const [key, column] of [['isPrivate', 'is_private'], ['allowMessages', 'allow_dms'], ['hideWinRate', 'hide_win_rate']]) {
       if (typeof body[key] !== 'boolean') return respond({ error: 'Invalid privacy setting' }, 400)
@@ -66,7 +66,17 @@ export async function PATCH(request: Request) {
   } else if (body.kind === 'profile') {
     for (const [key, column, limit] of [['displayName', 'display_name', 60], ['bio', 'bio', 280],
       ['location', 'location', 100], ['website', 'website', 2048]] as const) {
-      const value = body[key]
+      const input = body[key]
+      if (input === undefined) continue
+      const edit = typeof input === 'object' && input !== null && !Array.isArray(input)
+        ? input as { before?: unknown; value?: unknown } : null
+      if (edit) {
+        if ((typeof edit.before !== 'string' && edit.before !== null) || (edit.before?.length ?? 0) > limit) {
+          return respond({ error: 'Reload your profile before saving' }, 400)
+        }
+        observedProfileFields[column] = edit.before
+      }
+      const value = edit ? edit.value : input
       if (typeof value !== 'string' || value.length > limit) return respond({ error: 'Check your profile details' }, 400)
       fields[column] = value.trim()
     }
@@ -107,7 +117,7 @@ export async function PATCH(request: Request) {
         return respond({ error: 'Choose a valid avatar style and color' }, 400)
       }
       fields[column] = update.value
-      observedAppearance[column] = update.before
+      observedProfileFields[column] = update.before
     }
     if (body.sportsbooks !== undefined) {
       const update = body.sportsbooks as { before?: unknown; value?: unknown } | null
@@ -117,7 +127,7 @@ export async function PATCH(request: Request) {
         return respond({ error: 'Choose supported sportsbooks' }, 400)
       }
       fields.sportsbooks = value
-      observedAppearance.sportsbooks = textArrayLiteral(before)
+      observedProfileFields.sportsbooks = textArrayLiteral(before)
     }
     if (body.socialLinks !== undefined) {
       const changes = body.socialLinks
@@ -151,13 +161,16 @@ export async function PATCH(request: Request) {
   } else {
     return respond({ error: 'Invalid settings type' }, 400)
   }
+  if (Object.keys(fields).length === 0) return respond({ ok: true })
   let update = account.supabase.from('users').update(fields).eq('id', account.userId)
   if (observedLinks) update = update.eq('social_links', JSON.stringify(observedLinks))
-  for (const [column, before] of Object.entries(observedAppearance)) update = update.eq(column, before)
+  for (const [column, before] of Object.entries(observedProfileFields)) {
+    update = before === null ? update.is(column, null) : update.eq(column, before)
+  }
   const { data, error } = await update.select('id').maybeSingle()
   if (error?.code === '23505' && fields.username) return respond({ error: 'That username is taken' }, 409)
   if (!error && !data && observedLinks) return respond({ error: 'Social links changed while saving. Reload your profile.' }, 409)
-  if (!error && !data && Object.keys(observedAppearance).length) return respond({ error: 'Profile appearance changed on another device. Reload your profile.' }, 409)
+  if (!error && !data && Object.keys(observedProfileFields).length) return respond({ error: 'Profile changed on another device. Reload your profile.' }, 409)
   if (error || !data?.id) return respond({ error: 'Settings could not be saved' }, 503)
   return respond({ ok: true })
 }
