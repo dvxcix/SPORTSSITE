@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   try {
     const blocked = await getBlockedEitherWayIds(supabase, userId)
     let query = supabase.from('notifications')
-      .select('id,type,message,body,link,read,created_at,actor_id,target_id,target_type,actor:users!notifications_actor_id_fkey(username,display_name,avatar_url)')
+      .select('id,type,message,body,link,read,created_at,actor_id,target_id,target_type,actor:users!notifications_actor_id_fkey(username,display_name,avatar_url,avatar_ring_style,avatar_ring_color)')
       .eq('user_id', userId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(50)
     if (id) query = query.eq('id', id)
     if (blocked.length) query = query.or(`actor_id.is.null,actor_id.not.in.(${blocked.join(',')})`)

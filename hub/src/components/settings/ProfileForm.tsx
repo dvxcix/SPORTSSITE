@@ -17,6 +17,7 @@ import { normalizeFavoritePlayers } from '@/lib/sportFavorites'
 import { MemberAvatar, type MemberRingStyle } from '@/components/social/MemberAvatar'
 import { AvatarStylePicker } from './AvatarStylePicker'
 import { avatarDecoration, avatarStyleName, isAvatarStyle } from '@/lib/avatarStyles'
+import { PROFILE_SPORTSBOOKS } from '@/lib/profileSportsbooks'
 import { useAuth } from '@/context/AuthContext'
 
 const SPORTS = ['MLB', 'NFL', 'NBA', 'NHL', 'Soccer', 'MMA', 'Golf', 'Tennis', 'Boxing', 'College Football', 'College Basketball']
@@ -26,19 +27,6 @@ function isSafeHttpUrl(value: string) {
   try { return ['http:', 'https:'].includes(new URL(value.trim()).protocol) } catch { return false }
 }
 
-// Matches BookLogo's own hardcoded BOOKS keys (not exported from there) —
-// these are the only books this app can reliably show a real logo for
-// (locally-hosted assets, not hotlinked favicons), so the picker is capped
-// to this same set rather than letting someone type in an arbitrary book
-// name that would just render as a gray initials fallback everywhere.
-const SPORTSBOOKS = [
-  { key: 'fanduel', label: 'FanDuel' },
-  { key: 'draftkings', label: 'DraftKings' },
-  { key: 'betmgm', label: 'BetMGM' },
-  { key: 'caesars', label: 'Caesars' },
-  { key: 'betrivers', label: 'BetRivers' },
-  { key: 'pinnacle', label: 'Pinnacle' },
-]
 
 type SocialPlatform = { id: string; key: string; name: string; icon_url: string; url_template: string | null }
 
@@ -263,7 +251,7 @@ export function ProfileForm({ profile }: { profile: any }) {
       <div>
         <label className="block text-xs font-bold text-[var(--text-2)] mb-2">Sportsbooks You Use</label>
         <div className="flex flex-wrap gap-2">
-          {SPORTSBOOKS.map(b => (
+          {PROFILE_SPORTSBOOKS.map(b => (
             <button key={b.key} type="button" aria-pressed={form.sportsbooks.includes(b.key)} onClick={() => toggleSportsbook(b.key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.sportsbooks.includes(b.key) ? 'border-[var(--green)] bg-[color-mix(in_srgb,var(--green)_10%,transparent)] text-[var(--green)]' : 'border-[var(--border-2)] text-[var(--text-3)] hover:border-[var(--border-2)]'}`}>
               <BookLogo vendor={b.key} size={14} />

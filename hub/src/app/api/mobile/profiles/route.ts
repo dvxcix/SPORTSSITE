@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     if (account?.error) return account.error
     const client = account?.supabase ?? nativeAnonymousClient(), viewer = account?.userId
     const { data: person, error: personError } = await client.from('users')
-      .select('id,username,display_name,bio,avatar_url,banner_url,is_verified,is_private,allow_dms,follower_count,following_count,location,website,created_at,hide_win_rate,social_links')
+      .select('id,username,display_name,bio,avatar_url,banner_url,avatar_ring_style,avatar_ring_color,sportsbooks,is_verified,is_private,allow_dms,follower_count,following_count,location,website,created_at,hide_win_rate,social_links')
       .eq(isAccountId(target) ? 'id' : 'username', target).maybeSingle()
     if (personError) throw Error('Profile unavailable')
     if (!person || viewer && viewer !== person.id && await isBlockedEitherWay(client, viewer, person.id)) return respond({ error: 'Profile unavailable' }, 404)
@@ -57,7 +57,8 @@ export async function GET(request: Request) {
     })
     const records = canView && (own || !person.hide_win_rate) ? await fetchVisiblePickRecords(client, [person.id]) : null
     const profile = { id: person.id, username: person.username, displayName: person.display_name, bio: person.bio,
-      avatarUrl: person.avatar_url, bannerUrl: person.banner_url, verified: person.is_verified, isPrivate: person.is_private,
+      avatarUrl: person.avatar_url, bannerUrl: person.banner_url, avatarRingStyle: person.avatar_ring_style, avatarRingColor: person.avatar_ring_color,
+      sportsbooks: person.sportsbooks, verified: person.is_verified, isPrivate: person.is_private,
       allowMessages: person.allow_dms, followerCount: person.follower_count, followingCount: person.following_count,
       location: person.location, website: person.website, createdAt: person.created_at, following, own, canView,
       teams, sports, players: settings?.favorite_players ?? [], verifiedSocials: publicVerifiedIdentities(settings?.verified_identities),

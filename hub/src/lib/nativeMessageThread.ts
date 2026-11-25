@@ -8,7 +8,8 @@ import { isNativeSocialGif, isOwnedNativeMedia } from '@/lib/nativeMedia'
 import { nativeChatReaction } from '@/lib/nativeChatReaction'
 
 type Context = { kind: 'direct' | 'group'; id: string }
-type Partner = { id: string; username: string; display_name: string | null; avatar_url: string | null; allow_dms: boolean }
+type Partner = { id: string; username: string; display_name: string | null; avatar_url: string | null;
+  avatar_ring_style: string; avatar_ring_color: string; allow_dms: boolean }
 type Member = { user_id: string; role: string; muted: boolean }
 type Room = { context: Context; title: string; partner: Partner | null; members: Member[] }
 type RecordValues = Record<string, unknown>
@@ -21,7 +22,7 @@ export function messageContext(query: URLSearchParams): Context | null {
 export async function openMessageRoom(client: SupabaseClient, userId: string, context: Context): Promise<Room | null> {
   if (context.kind === 'direct') {
     if (context.id === userId || await isBlockedEitherWay(client, userId, context.id)) return null
-    const { data: partner, error } = await client.from('users').select('id,username,display_name,avatar_url,allow_dms').eq('id', context.id).maybeSingle()
+    const { data: partner, error } = await client.from('users').select('id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color,allow_dms').eq('id', context.id).maybeSingle()
     if (error) throw Error('Conversation unavailable')
     return partner ? { context, title: partner.display_name || partner.username, partner, members: [] } : null
   }
@@ -55,7 +56,7 @@ export async function loadNativeThread(client: SupabaseClient, userId: string, r
   ])
   if (pins.error || reactions.error) throw Error('Conversation unavailable')
   const members = direct ? [] : await client.from('group_conversation_members')
-    .select('id:user_id,role,muted,user:users!group_conversation_members_user_id_fkey(id,username,display_name,avatar_url)')
+    .select('id:user_id,role,muted,user:users!group_conversation_members_user_id_fkey(id,username,display_name,avatar_url,avatar_ring_style,avatar_ring_color)')
     .eq('conversation_id', scope).order('joined_at').then(result => {
       if (result.error) throw Error('Participants unavailable')
       return result.data ?? []
