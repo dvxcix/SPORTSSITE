@@ -100,6 +100,12 @@ struct FeedThreadView: View {
                         else { notice = "Shorten the comment before adding a GIF." }
                     }
                     .disabled(pending)
+                    NativeEmojiButton(compact: true) { value in
+                        let next = comment.isEmpty ? value : comment + " " + value
+                        if next.utf16.count <= 1_000 { comment = next }
+                        else { notice = "Shorten the comment before adding emoji." }
+                    }
+                    .disabled(pending)
                 }
                 TextField("Write a comment", text: $comment, axis: .vertical)
                     .focused($composerFocused)

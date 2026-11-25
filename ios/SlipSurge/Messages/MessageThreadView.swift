@@ -38,10 +38,12 @@ struct MessageThreadView: View {
     @State private var historyEpoch = 0
     @State private var typingPresence = MessageTypingPresence()
     @State private var forwarding: MessageThread.Note?
+    @State private var selectingReaction: ReactionTarget?
     @State private var forwardAttempts: [UUID: UUID] = [:]
     @State private var forwardedThread: MessageDestination?
 
     private struct UnsentDraft: Identifiable { let id = UUID(); var text: String }
+    private struct ReactionTarget: Identifiable { let id: UUID; let mine: Set<String> }
 
     private struct HistoryPage {
         let cursor: String
@@ -69,6 +71,14 @@ struct MessageThreadView: View {
         .foregroundStyle(Brand.text(for: scheme))
         .navigationTitle(thread?.title ?? "Messages")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $selectingReaction) { target in
+            NavigationStack {
+                NativeEmojiPicker(title: "React") { symbol in
+                    react(symbol, on: target.id.uuidString.lowercased(), enabled: !target.mine.contains(symbol))
+                }
+            }
+            .presentationDetents([.medium, .large])
+        }
         .toolbar {
             if let thread {
                 ToolbarItem(placement: .primaryAction) {
@@ -282,6 +292,9 @@ struct MessageThreadView: View {
                             ForEach(["❤️", "🔥", "⚡", "👏", "😂", "👀"], id: \.self) { symbol in
                                 Button(symbol) { react(symbol, on: messageID, enabled: !reactions.contains { $0.emoji == symbol && $0.mine }) }
                             }
+                            Button("More reactions", systemImage: "ellipsis") {
+                                selectingReaction = .init(id: message.id, mine: Set(reactions.filter(\.mine).map(\.emoji)))
+                            }
                         }
                         if mine && (destination.kind != .channel || thread.canSend) {
                             Button("Edit", systemImage: "pencil") { responding = nil; editing = message; draft = message.content; focused = true }
@@ -296,9 +309,15 @@ struct MessageThreadView: View {
                         ForEach(counts.keys.sorted().prefix(8), id: \.self) { symbol in
                             let items = counts[symbol] ?? []
                             let selected = items.contains(where: \.mine)
-                            Button("\(symbol) \(items.count)") { react(symbol, on: messageID, enabled: !selected) }
+                            Button { react(symbol, on: messageID, enabled: !selected) } label: {
+                                HStack(spacing: 3) {
+                                    NativeReactionArtwork(symbol: symbol, size: 15)
+                                    Text(items.count.formatted()).monospacedDigit()
+                                }
+                            }
                                 .font(.caption2.weight(.semibold)).buttonStyle(.bordered).buttonBorderShape(.capsule)
                                 .tint(selected ? Brand.accent(for: scheme) : .secondary)
+                                .accessibilityLabel("\(symbol) reaction, \(items.count)")
                                 .accessibilityAddTraits(selected ? .isSelected : [])
                         }
                     }
@@ -377,6 +396,11 @@ struct MessageThreadView: View {
                         NativeGIFPickerButton(account: api.account, userID: api.userID, uploadKind: .messages, compact: true) { picture = $0 }
                             .disabled(composing || uploading)
                     }
+                    NativeEmojiButton(compact: true) { value in
+                        let next = draft.isEmpty ? value : draft + " " + value
+                        if next.utf16.count <= 1_000 { draft = next }
+                    }
+                    .disabled(composing)
                     TextField("Message", text: $draft, axis: .vertical)
                         .lineLimit(1...5).padding(.horizontal, 12).padding(.vertical, 9)
                         .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 17))

@@ -17,6 +17,7 @@ struct SlipSurgeTabs: View {
     @State private var releaseProblem: String?
     @State private var informationPage: InformationPage?
     @State private var discoverDestination: DiscoverDestination?
+    @State private var emojiLibrary = NativeEmojiLibrary()
 
     var body: some View {
         TabView(selection: $selected) {
@@ -49,6 +50,9 @@ struct SlipSurgeTabs: View {
             .tag(Destination.account)
         }
         .tint(Brand.accent(for: scheme))
+        .environment(\.nativeEmojiLibrary, emojiLibrary)
+        .task { await emojiLibrary.refresh() }
+        .onChange(of: phase) { _, current in if current == .active { Task { await emojiLibrary.refresh() } } }
         .safeAreaInset(edge: .top, spacing: 0) {
             if let banner = announcements?.banner, banner.isActive, !banner.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                dismissedBannerVersion != banner.updatedAt {

@@ -1326,4 +1326,29 @@ physical-device push are still open.
   on a Page and delete reviewed Pages or Articles. Each action calls the
   existing native admin gate. No production changes were made for QA.
 - Signed Xcode, Hub TypeScript, 21 focused tests and 134 production source
-  checks passed. Live read checks follow the narrow Hub release.
+  checks passed. Task checkpoint `4dbf328a9211671810278c7e3a5ddf16622260cc`
+  is pushed. PR #49 merged as `f1638d425a22720ea7bcee16f343350ee2a9a2fa`,
+  with preview `dpl_F667oyurk82D9stw8bLGsNx4fbM3` and production
+  `dpl_FC8Ps4KhFCJnCWAzhbRzj4FtA38x` READY. The signed Simulator opened the
+  live empty Pages directory and displayed the category picker and Create
+  page. Guest and invalid-bearer protected routes returned 401. Both the live
+  desktop Feed and native guest Feed returned 200.
+
+## Native custom emoji and Badge studio · 25 November 2026
+
+- The native emoji catalog shares the same standard shortcodes and live
+  custom artwork as the website. Feed, comments, Discussions and chats have
+  a native searchable emoji picker. Supported shortcodes render in social
+  text, reaction counts and chat reaction buttons. Native chat supports all
+  registered shortcode lengths and can remove a reaction after its custom
+  image was retired.
+- Admins can create, edit or delete custom emoji and manage categories.
+  Badge studio supports existing icons and card artwork, creation, editing,
+  deletion and member assignments, including a one-time confirmed selection
+  of up to 1,000 eligible members. Artwork uses the existing admin-only
+  upload kinds. Edits check the original record and assignments record the
+  verified awarding admin. No live studio mutations were used for QA.
+- Signed Xcode, TypeScript and 25 focused regressions passed. The source smoke
+  suite was 134/134. The authoritative database currently has 71 custom emoji
+  and six badges. The narrow Hub release and signed studio walkthroughs are
+  still to verify.

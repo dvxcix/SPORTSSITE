@@ -271,11 +271,7 @@ struct ForumComposer: View {
             Section {
                 TextEditor(text: $content).frame(minHeight: 135).accessibilityLabel(thread == nil ? "Discussion post" : "Reply")
                 HStack {
-                    Menu("Add emoji", systemImage: "face.smiling") {
-                        ForEach(["🔥", "👍", "💡", "👀", "😂", "⚡", "🏆", "❤️"], id: \.self) { emoji in
-                            Button(emoji) { append(emoji) }
-                        }
-                    }
+                    NativeEmojiButton(compact: true) { append($0) }
                     if let userID = api.viewer.userID {
                         NativeGIFPickerButton(account: api.viewer.account, userID: userID, uploadKind: .posts, compact: true) {
                             append($0.absoluteString)

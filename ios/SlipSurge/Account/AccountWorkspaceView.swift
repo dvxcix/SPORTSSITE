@@ -273,12 +273,18 @@ struct AccountWorkspaceView: View {
                     NavigationLink {
                         AdminPublicationsView(viewer: .init(account: account, userID: userID), kind: .pages)
                     } label: { Label("Manage pages", systemImage: "rectangle.grid.2x2") }
+                    NavigationLink { AdminEmojiStudio(viewer: .init(account: account, userID: userID)) } label: {
+                        Label("Custom emoji", systemImage: "face.smiling")
+                    }
                 }
             } else if adminTab == .members {
                 NavigationLink {
                     AdminMembersView(api: .init(account: account, userID: userID))
                 } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Manage members", systemImage: "person.2") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink { AdminBadgeStudio(viewer: .init(account: account, userID: userID)) } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Badge studio", systemImage: "rosette") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
             } else if adminTab == .settings {
                 NavigationLink {

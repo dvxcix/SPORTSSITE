@@ -202,7 +202,7 @@ struct NativeSocialBody: View {
             ForEach(Array(pieces.enumerated()), id: \.offset) { _, piece in
                 switch piece {
                 case .text(let text):
-                    Text(linkify(text))
+                    NativeInlineEmojiText(source: text, linkify: linkify)
                 case .gif(let url):
                     NativeGIFPlayback(url: url, maxHeight: 190, maxWidth: maxGIFWidth)
                         .clipShape(.rect(cornerRadius: 9))

@@ -13,7 +13,6 @@ struct FeedPostCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var revealed = false
     @State private var showingEmoji = false
-    @State private var customEmoji = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -47,29 +46,7 @@ struct FeedPostCard: View {
         .buttonStyle(.borderless)
         .sheet(isPresented: $showingEmoji) {
             NavigationStack {
-                VStack(alignment: .leading, spacing: 16) {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 48), spacing: 10)]) {
-                        ForEach(["❤️", "🔥", "⚡", "👀", "👏", "😂", "💯", "🏆", "👍", "👎", "🙌", "🤝"], id: \.self) { symbol in
-                            Button { react(symbol) } label: {
-                                Text(symbol).font(.title2).frame(width: 46, height: 46)
-                                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 11))
-                            }
-                            .accessibilityLabel("React \(symbol)")
-                        }
-                    }
-                    HStack {
-                        TextField("Emoji or custom shortcode", text: $customEmoji).textFieldStyle(.roundedBorder)
-                        Button("Add") { react(customEmoji) }.disabled(customEmoji.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || customEmoji.utf16.count > 32)
-                    }
-                    Spacer()
-                }
-                .padding(16)
-                .background(Brand.background(for: scheme))
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Close", systemImage: "xmark") { showingEmoji = false }.labelStyle(.iconOnly) }
-                }
-                .navigationTitle("React")
-                .navigationBarTitleDisplayMode(.inline)
+                NativeEmojiPicker(title: "React", select: react)
             }
             .presentationDetents([.medium, .large])
         }
@@ -115,6 +92,27 @@ struct FeedPostCard: View {
             if Self.allowedMedia(url) {
                 FeedMedia(url: url)
             }
+        }
+        if let summary = post.reactionSummary, !summary.isEmpty {
+            ScrollView(.horizontal) {
+                HStack(spacing: 6) {
+                    ForEach(summary.keys.sorted { first, second in
+                        (summary[first] ?? 0) == (summary[second] ?? 0) ? first < second : (summary[first] ?? 0) > (summary[second] ?? 0)
+                    }, id: \.self) { symbol in
+                        Button { react(symbol) } label: {
+                            HStack(spacing: 5) {
+                                NativeReactionArtwork(symbol: symbol)
+                                Text((summary[symbol] ?? 0).formatted()).monospacedDigit()
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(operation == nil)
+                        .accessibilityLabel("\(symbol) reaction, \(summary[symbol] ?? 0)")
+                    }
+                }
+                .font(.caption)
+            }
+            .scrollIndicators(.hidden)
         }
         interactions
     }
@@ -222,7 +220,6 @@ struct FeedPostCard: View {
         let value = symbol.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty, value.utf16.count <= 32 else { return }
         operation?(.init(kind: "react", enabled: !(post.reacted?.contains(value) ?? false), emoji: value))
-        customEmoji = ""
         showingEmoji = false
     }
 

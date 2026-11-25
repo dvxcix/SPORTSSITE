@@ -165,6 +165,11 @@ struct FeedComposerView: View {
                     }, url: $image, uploading: $uploading)
                     NativeGIFPickerButton(account: account, userID: userID, uploadKind: .posts) { image = $0 }
                         .disabled(uploading || posting)
+                    NativeEmojiButton {
+                        let next = content.isEmpty ? $0 : content + " " + $0
+                        if next.utf16.count <= 500 { content = next }
+                        else { notice = "Shorten the post before adding emoji." }
+                    }
                     if let image {
                         if NativeGIFSource.canPlay(image) {
                             NativeGIFPlayback(url: image, maxHeight: 170)
