@@ -15,6 +15,12 @@ skills. Do not substitute a generic mock app or duplicate the research system.
 The owner is on a Mac and reports downloading/opening Xcode. This conversation
 still executes in Linux Cloud and cannot inspect or control that Mac's Xcode.
 
+The owner also has Codex open on Windows and wants one continuous project with
+Windows as the web/Android hub and Mac for iOS. Follow [the device workflow](../DEVICES.md).
+Keep decisions/checkpoints available through GitHub; do not promise automatic
+conversation or unsaved-file mirroring. This workflow is saved on the iOS branch;
+other task sessions can fetch/read it without replacing their own checkout.
+
 ## Concrete audit
 
 Read [the iOS baseline](../../ios/README.md) and its complete page/handler source

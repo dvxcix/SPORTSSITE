@@ -19,6 +19,21 @@ not update each other's unsaved files live. Use the same Cloud chat for exact
 in-progress continuity, or publish a branch checkpoint before switching hosts.
 Cloning the repository does not migrate the old local conversation transcript.
 
+## Windows and Mac working together
+
+Follow [the device workflow](DEVICES.md). Windows remains the web/Android
+workstation; the Mac supplies Xcode and iOS Simulator. Both use this repository
+and the same product context. Codex should handle safe fetches, named-file
+checkpoints and pushed task handoffs at meaningful milestones, not only at the
+end of a long task. Read a related task's remote handoff before depending on its
+changes; do not switch the Windows checkout to an iOS branch merely to read it.
+
+Opening the same Cloud chat on both computers shows the same Cloud workspace.
+A local Mac chat operates a different filesystem. No background chat/file
+mirroring is configured, and these instructions do not create a 24/7 sync service.
+Keep ongoing decisions and tested results in the task handoff so another session
+can recover them from GitHub rather than needing the full conversation.
+
 ## Start a session
 
 1. Read `AGENTS.md`, `CONTEXT.md`, the relevant checklist entries and the task's

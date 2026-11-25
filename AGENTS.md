@@ -12,7 +12,8 @@ Read hub/AGENTS.md for framework guidance.
 ## Shared workspace continuity
 
 Before starting work on any computer or in Codex Cloud, read
-docs/workspace/CONTEXT.md and docs/workspace/README.md. The current page ledger is
+docs/workspace/CONTEXT.md, docs/workspace/README.md and docs/workspace/DEVICES.md.
+The current page ledger is
 hub/docs/design/page-by-page-checklist.txt; retain its dated evidence and limits.
 Use the repository root as the saved Codex project folder on every host.
 Start from refreshed main in a separate codex/ branch or worktree. Never overwrite
@@ -29,6 +30,12 @@ Cloud work uses the credential-free private UI review by default; collectors,
 payments, production writes and secrets require the current task's authorization.
 Individual Cloud chats and local clones have separate files; Git push/fetch/pull
 or an explicit host handoff provides continuity, not live folder mirroring.
+Windows is the web/Android workstation; the Mac is the iOS/Xcode workstation.
+At meaningful checkpoints as well as handoff/task finish, update and push the
+task's reviewed source and handoff. Before related work, fetch/read the other
+task's latest handoff without replacing the current checkout. Agents should own
+these routine Git steps; do not require the owner to manually shuttle context.
+Never claim another device has received work without evidence from that device.
 
 Vercel: hub / prj_ItG1pVUbVbwWHtdoqBgL5qQVqHlK.
 Team: parlaypartys-projects / team_S2ipF2Ok3Pd45nLq8hmCjYs0.
