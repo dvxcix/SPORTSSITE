@@ -25,7 +25,15 @@ const sources: Record<string, string> = {
     return globalThis.matrixNativeFixture.tier ? {userId: 'member'} : {error: Response.json({}, {status: 403})}
   }`,
   '@/lib/mlbViewerAccess': 'export async function canViewMlb() { return globalThis.matrixNativeFixture.mlb }',
-  '@/lib/blocks': `export function isAccountId(value) { return value === '${id}' }`,
+  '@/lib/blocks': `export function isAccountId(value) { return value === '${id}' }
+    export async function isBlockedEitherWay() { return globalThis.matrixNativeFixture.blocked }`,
+  '@/lib/supabase/admin': `export function createAdminClient() { return { from(table) { return {
+    select() { return this }, eq() { return this }, maybeSingle() {
+      const fixture = globalThis.matrixNativeFixture;
+      if (table !== 'matrix_marketplace_listings' && table !== 'users') throw Error('wrong table');
+      return { data: table === 'matrix_marketplace_listings' ? fixture.listing : { id: 'author', username: 'fixture-author' } };
+    }
+  } } } }`,
   '@/app/api/matrices/route': handler('GET', 'list') + handler('POST', 'create'),
   '@/app/api/matrices/[id]/route': handler('PATCH', 'edit') + handler('DELETE', 'delete'),
   '@/app/api/matrices/import/route': handler('POST', 'import-code'),
@@ -46,8 +54,8 @@ const { GET, POST } = moduleFixture.exports
 const endpoint = 'https://slipsurge.invalid/api/mobile/mlb-matrices'
 
 test('native MLB Matrix routes require the verified member, MLB visibility, Ultimate, and the saved version', async () => {
-  const fixture: { tier: boolean; mlb: boolean; current: { updated_at: string } | null; calls: unknown[] } = {
-    tier: true, mlb: true, current: { updated_at: version }, calls: [],
+  const fixture: { tier: boolean; mlb: boolean; current: { updated_at: string } | null; blocked: boolean; listing: unknown; calls: unknown[] } = {
+    tier: true, mlb: true, current: { updated_at: version }, blocked: false, listing: null, calls: [],
   }
   Object.assign(globalThis, { matrixNativeFixture: fixture })
   const read = (op: string, signed = true) => GET(new Request(`${endpoint}?op=${op}`, { headers: signed ? { authorization: 'Bearer figure' } : {} }))
@@ -76,6 +84,13 @@ test('native MLB Matrix routes require the verified member, MLB visibility, Ulti
   assert.deepEqual(fixture.calls.at(-1), { method: 'import-listing', id, body: {} })
   fixture.current = null
   assert.equal((await write('delete', {})).status, 404)
+  fixture.listing = { id, author_id: 'author', snapshot: { version: 1, name: 'Fixture', color: '#123456', element_code: 'ABC',
+    matrix_type: 'classic', factors: [{ field_key: 'hr' }], pipeline_steps: [] } }
+  const exact = await read(`listing&id=${id}`)
+  assert.equal(exact.status, 200)
+  assert.equal((await exact.json()).listing.author.username, 'fixture-author')
+  fixture.blocked = true
+  assert.equal((await read(`listing&id=${id}`)).status, 404)
 })
 
 test('iOS Matrix picker carries all canonical website field identities', () => {

@@ -115,11 +115,13 @@ struct ResearchToolValues: View {
     }
 
     let items: [Value]
+    var preferredColumns = 3
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var size
 
     var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 7), count: size.isAccessibilitySize ? 1 : min(items.count, 3)),
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 7),
+            count: size.isAccessibilitySize ? 1 : min(items.count, preferredColumns)),
             alignment: .leading, spacing: 7) {
             ForEach(items) { item in
                 VStack(alignment: .leading, spacing: 4) {

@@ -129,6 +129,10 @@ struct MemberProfileView: View {
     @State private var page: Page?
     @State private var error: (any Error)?
     @State private var tab = ProfileTab.all
+    @State private var loadedKey: String?
+    @State private var failedKey: String?
+    @State private var requestNumber = 0
+    @State private var pagingError: (any Error)?
     @State private var posts: [FeedPost] = []
     @State private var cursor: String?
     @State private var retry = 0
@@ -153,7 +157,10 @@ struct MemberProfileView: View {
                     favorites(profile)
                     if profile.canView, let page {
                         ResearchToolRail(title: "Profile activity", choices: ProfileTab.allCases, selection: $tab, label: \.rawValue, glyph: \.glyph)
-                        profileActivity(page)
+                        if loadedKey == fetchKey { profileActivity(page) }
+                        if loadedKey != fetchKey || failedKey == fetchKey {
+                            ResearchToolMessage(title: "\(tab.rawValue) couldn’t load", error: failedKey == fetchKey ? error : nil) { retry += 1 }
+                        }
                     } else {
                         ContentUnavailableView("Private account", systemImage: "lock", description: Text("Follow to see this member’s posts and picks."))
                     }
@@ -216,6 +223,7 @@ struct MemberProfileView: View {
     private func header(_ profile: Page.Profile) -> some View {
         let colors = profile.teams.first?.colors?.compactMap { Color(hex: $0) } ?? []
         let primary = colors.first ?? Brand.accent(for: scheme), secondary = colors.dropFirst().first ?? Brand.surface(for: scheme)
+        let stats = profileStats(profile)
         return VStack(alignment: .leading, spacing: 10) {
             ZStack(alignment: .bottomLeading) {
                 LinearGradient(colors: [primary, secondary], startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -246,7 +254,7 @@ struct MemberProfileView: View {
                 Label("Joined \(joined.formatted(.dateTime.month(.wide).year()))", systemImage: "calendar")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            ResearchToolValues(items: profileStats(profile))
+            ResearchToolValues(items: stats, preferredColumns: stats.count == 6 ? 3 : 2)
             if let viewer = api.userID {
                 HStack {
                     if profile.own {
@@ -343,8 +351,8 @@ struct MemberProfileView: View {
                 NavigationLink {
                     CreatorDetailView(api: api, username: profile.username)
                 } label: {
-                    Label("View storefront", systemImage: "arrow.right").frame(minHeight: 36)
-                }.buttonStyle(.borderedProminent)
+                    Label("View storefront", systemImage: "arrow.right")
+                }.buttonStyle(SlipSurgePrimaryButtonStyle())
                 if profile.own, let userID = api.userID {
                     NavigationLink {
                         AccountWorkspaceView(account: api.account, userID: userID, workspace: .studio)
@@ -466,8 +474,12 @@ struct MemberProfileView: View {
             }
             if posts.isEmpty { ContentUnavailableView("No \(tab == .all ? "posts" : tab.rawValue.lowercased())", systemImage: tab.glyph) }
             if let cursor {
-                Button(paging ? "Loading…" : "Load more") { Task { await load(cursor: cursor) } }
-                    .disabled(paging)
+                if pagingError != nil {
+                    ResearchToolMessage(title: "More activity couldn’t load", error: pagingError) { Task { await load(cursor: cursor) } }
+                } else {
+                    Button(paging ? "Loading…" : "Load more") { Task { await load(cursor: cursor) } }
+                        .disabled(paging)
+                }
             }
         }
     }
@@ -485,24 +497,41 @@ struct MemberProfileView: View {
     private func load(cursor: String? = nil) async {
         let key = fetchKey
         if cursor != nil {
-            guard !paging else { return }
-            paging = true
+            guard !paging, loadedKey == key else { return }
         }
-        defer { if key == fetchKey { paging = false } }
+        paging = cursor != nil
+        pagingError = nil
+        failedKey = nil
+        if cursor == nil { error = nil }
+        requestNumber += 1
+        let sequence = requestNumber
+        defer { if sequence == requestNumber { paging = false } }
         do {
             var query = [URLQueryItem(name: "user", value: target), .init(name: "tab", value: tab.rawValue.lowercased())]
             if let cursor { query.append(.init(name: "cursor", value: cursor)) }
             let result = try await api.readPublic(Page.self, path: "/api/mobile/profiles", query: query)
-            guard !Task.isCancelled, key == fetchKey else { return }
+            guard !Task.isCancelled, key == fetchKey, sequence == requestNumber else { return }
             if let id = UUID(uuidString: target), result.profile.id != id { throw URLError(.cannotParseResponse) }
-            let prior = cursor == nil ? [] : posts
+            let replacePage = cursor == nil || !result.profile.canView
+            let prior = replacePage ? [] : posts
             var ids = Set(prior.map(\.id))
-            if cursor == nil { page = result }
+            if replacePage { page = result }
             posts = prior + result.posts.filter { ids.insert($0.id).inserted }
             self.cursor = result.hasMore && cursor != result.nextCursor ? result.nextCursor : nil
+            loadedKey = key
             error = nil
         } catch {
-            if !Task.isCancelled, key == fetchKey { self.error = error; if cursor == nil { page = nil } }
+            guard !Task.isCancelled, key == fetchKey, sequence == requestNumber else { return }
+            let status = (error as? SlipSurgeHTTP.Status)?.code
+            if status == 401 || status == 403 || status == 404 {
+                page = nil
+                loadedKey = nil
+            } else if cursor != nil {
+                pagingError = error
+                return
+            }
+            failedKey = key
+            self.error = error
         }
     }
 

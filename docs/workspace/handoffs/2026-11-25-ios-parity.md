@@ -2233,7 +2233,37 @@ physical-device push are still open.
   read access to the private storage bucket. Signed Debug, Hub TypeScript
   and 141 checks passed. Fixtures cover non-admin access, running and expired
   jobs, and the download lifetime.
-- The primary queue had no current jobs during read-only inspection. The
-  off-season export history can be verified against production after release.
-  Live export download and the original preview, capture and retry paths
-  remain open. This checkpoint queues or replays no export.
+- Task `ff6fc14bfbff6bc71f87be2130f317bd5bc51748` is pushed. PR #83 preview
+  `dpl_3eTWhkeW6aRMYXxTg5JfJw3vjoQY` and production
+  `dpl_5DQ3MkTow5NYUdo64v86TX4wGGc9` reported READY. Main is
+  `544c1f3636d992c50a3985448db60ebd5c00dbe9` at this checkpoint.
+- The signed Simulator opened the production screen, showed the off-season
+  pause, and matched the primary queue's empty state. The guest endpoint
+  returned 401. Live export download and the original preview, capture and
+  retry paths remain open. This checkpoint queues or replays no export.
+
+## Compact profile and full native regression suite · 25 November 2026
+
+- Profile tabs keep the header and use a loading or retry state for the
+  selected activity. Late responses cannot replace a new tab's content. A
+  paging conflict that revokes profile access removes its visible activity.
+  The compact four-stat grid uses two columns, with a separate native layout
+  for six stats. The storefront action uses the SlipSurge lime.
+- Built and installed signed Simulator Debug on iPhone 17e and iPhone 18 Pro.
+  Live ParlayParty Replies showed its empty state and no prior posts, the
+  compact profile showed four stats in two rows, and the signed account's
+  Story composer showed live GIPHY Trending and its attribution using the
+  supplied Mac key. The key remains only in the ignored local settings and
+  build products. No Story or post was submitted.
+- `node --import tsx --test scripts/native-*.test.mts scripts/production-smoke.test.mjs`
+  passed 286/286. Hub TypeScript passed. The restored Matrix fixture stubs
+  the already shipped private listing reader and verifies blocked-author
+  behavior. The runtime Matrix route did not change.
+- Xcode 27.2 build `27B52` recognizes the SlipSurge scheme. The project was
+  opened on this Mac. The window control surface returned `cgWindowNotFound`
+  during the last verification. `devicectl` listed two simulators and zero
+  physical devices. The signing keychain had zero valid identities. Device
+  signing, live APNs, fresh Discord/X/Whop consent, real checkout and
+  StoreKit remain unverified. Market DNA player analogs, the legacy Contact
+  Recap data and the desktop MLB importer paths still require resolution of
+  the separate legacy data dependency before complete native parity.
