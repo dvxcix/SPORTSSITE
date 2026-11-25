@@ -4,9 +4,8 @@ import { CreatorDiscordError, creatorDiscordIdentity, creatorDiscordRequest } fr
 import { discordGuildChoices, DISCORD_ID } from './creatorDiscordPolicy'
 
 /** Provider tokens are used only during the consenting user's current session, never stored or logged. */
-export async function discordAccountToken(client: SupabaseClient, discordId: string) {
- const { data: { session } } = await client.auth.getSession()
- const token = session?.provider_token
+export async function discordAccountToken(client: SupabaseClient, discordId: string, nativeToken?: string) {
+ const token = nativeToken ?? (await client.auth.getSession()).data.session?.provider_token
  if (!token) throw new CreatorDiscordError('Reconnect Discord to continue. Your linked account is preserved.', 409, 'discord_reconnect')
  const response = await fetch('https://discord.com/api/v10/users/@me', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store', signal: AbortSignal.timeout(12000) })
  if (response.status === 401) throw new CreatorDiscordError('Your Discord authorization expired. Reconnect Discord to continue.', 409, 'discord_reconnect')
@@ -16,9 +15,9 @@ export async function discordAccountToken(client: SupabaseClient, discordId: str
  return token
 }
 
-export async function creatorDiscordGuildChoices(client: SupabaseClient, admin: SupabaseClient, userId: string) {
+export async function creatorDiscordGuildChoices(client: SupabaseClient, admin: SupabaseClient, userId: string, nativeToken?: string) {
  const discordId = await creatorDiscordIdentity(admin, userId)
- const token = await discordAccountToken(client, discordId!)
+ const token = await discordAccountToken(client, discordId!, nativeToken)
  const guilds: Parameters<typeof discordGuildChoices>[0] = []
  let after = ''
  for (let page = 0; page < 10; page++) {
@@ -35,12 +34,12 @@ export async function creatorDiscordGuildChoices(client: SupabaseClient, admin: 
  throw new CreatorDiscordError('Discord returned too many servers. Try again from your community settings.', 503)
 }
 
-export async function joinCreatorDiscordGuild(client: SupabaseClient, guildId: string, discordId: string) {
+export async function joinCreatorDiscordGuild(client: SupabaseClient, guildId: string, discordId: string, nativeToken?: string) {
  if (!DISCORD_ID.test(guildId) || !DISCORD_ID.test(discordId)) throw new CreatorDiscordError('Discord access could not be verified.', 400)
  try { await creatorDiscordRequest(`/guilds/${guildId}/members/${discordId}`); return } catch (error) {
   if (!(error instanceof CreatorDiscordError) || error.code !== 'discord_not_found') throw error
  }
- const token = await discordAccountToken(client, discordId)
+ const token = await discordAccountToken(client, discordId, nativeToken)
  const authorization=await fetch('https://discord.com/api/v10/oauth2/@me',{headers:{Authorization:`Bearer ${token}`},cache:'no-store',signal:AbortSignal.timeout(12000)})
  if(authorization.status===401)throw new CreatorDiscordError('Reconnect Discord to join this server.',409,'discord_reconnect')
  if(!authorization.ok)throw new CreatorDiscordError('Discord authorization could not be checked. Try again.',503)
@@ -51,4 +50,10 @@ export async function joinCreatorDiscordGuild(client: SupabaseClient, guildId: s
  const response = await creatorDiscordRequest(`/guilds/${guildId}/members/${discordId}`, 'PUT', { access_token: token })
  const member = response.status === 204 ? null : await response.json() as { pending?: boolean }
  if (member?.pending) throw new CreatorDiscordError('Accept this server’s rules in Discord, then check your access again.', 409, 'discord_screening')
+}
+
+export function nativeDiscordToken(value: unknown): string | undefined {
+ if(value==null)return undefined
+ if(typeof value!=='string'||!/^[A-Za-z0-9._~-]{24,2048}$/.test(value))throw new CreatorDiscordError('Discord authorization is invalid. Try connecting again.',400,'discord_reconnect')
+ return value
 }

@@ -10,8 +10,8 @@ type Channel={id:string;name:string;type:number;guild_id?:string}
 const headers={'Cache-Control':'private, no-store'}
 export async function POST(request:Request,context:{params:Promise<{groupId:string}>}){
  try{
-  requireDiscordSameOrigin(request)
-  const {groupId}=await context.params,{admin,user,group}=await creatorDiscordOwner(groupId)
+  if(!request.headers.has('authorization'))requireDiscordSameOrigin(request)
+  const {groupId}=await context.params,{admin,user,group}=await creatorDiscordOwner(groupId,request)
   const rate=await consumeServerRateLimit(user.id,'creator_discord_actions',20,3600)
   if(!rate.available||!rate.allowed)throw new CreatorDiscordError('Please wait before trying again.',rate.available?429:503)
   const body=await request.json().catch(()=>null)
