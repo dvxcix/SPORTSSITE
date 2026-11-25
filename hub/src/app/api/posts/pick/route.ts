@@ -20,6 +20,7 @@ import { supportsMlbPick } from '@/lib/pickGrading'
 import { supportsNflPick } from '@/lib/nflPickGrading'
 import { mlbCaptureOpen } from '@/lib/mlbCaptureWindow'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { nativeCommunityPublishing } from '@/lib/nativeCommunityPublishing'
 
 export const revalidate = 0
 
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
   const content: string = typeof body?.content === 'string' ? body.content : ''
   const wager: number | null = typeof body?.wager === 'number' && body.wager > 0 ? body.wager : null
   const imageUrl: string | null = typeof body?.imageUrl === 'string' && body.imageUrl ? body.imageUrl : null
-  const visibility: string = body?.visibility === 'private' ? 'private' : body?.visibility === 'followers' ? 'followers' : 'public'
+  let visibility: string = body?.visibility === 'private' ? 'private' : body?.visibility === 'followers' ? 'followers' : 'public'
   const isSpoiler = body?.isSpoiler === true
   const groupId: string | null = typeof body?.groupId === 'string' ? body.groupId : null
   const pageId: string | null = typeof body?.pageId === 'string' ? body.pageId : null
@@ -69,6 +70,11 @@ export async function POST(req: Request) {
   if (sport === 'NBA') { const gate = await requirePaintAccess(); if (gate.error) return gate.error }
   if (visibility === 'private' && sport !== 'NBA') return NextResponse.json({ error: 'Only-me picks are currently available in The Court.' }, { status: 403 })
   if (visibility === 'private' && (groupId || pageId)) return NextResponse.json({ error: 'Only-me picks belong in your personal picks.' }, { status: 400 })
+  if (native && groupId) {
+    const access = await nativeCommunityPublishing(supabase, user.id, groupId)
+    if (access.error) return NextResponse.json({ error: access.error }, { status: access.status })
+    if (!access.public) visibility = 'public' // The database binds paid and private group access to the destination.
+  }
 
   if (pageId) {
     const { data: ownedPage } = await supabase.from('pages').select('id').eq('id', pageId).eq('owner_id', user.id).maybeSingle()
@@ -255,7 +261,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Your pick was not posted. Please try again.' }, { status: 503 })
   }
   // A notification error must not turn a committed post into a retry/duplicate.
-  if (visibility !== 'private' && (!draftId || saved?.created === true)) {
+  if (visibility !== 'private' && (!native || !groupId) && (!draftId || saved?.created === true)) {
     try {
       await notifyMentions(admin, user.id, content, `/posts/${post.id}`, post.id, 'a post')
       await notifyFollowers(admin, {

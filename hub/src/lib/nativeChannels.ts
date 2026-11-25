@@ -35,8 +35,13 @@ export async function listNativeChannels(client: SupabaseClient, userId: string,
   const { data, error } = await query.limit(80)
   if (error) throw Error('Channels unavailable')
   if (!groupId) return { channels: data }
-  const channels = await Promise.all(data.map(async channel => (await permissions(client, channel.id)).view ? channel : null))
-  return { channels: channels.filter(item => item !== null) }
+  const [channels, favorites] = await Promise.all([
+    Promise.all(data.map(async channel => (await permissions(client, channel.id)).view ? channel : null)),
+    client.from('group_channel_preferences').select('channel_id').eq('group_id', groupId).eq('user_id', userId),
+  ])
+  const preferred = new Set((favorites.data ?? []).map(row => row.channel_id))
+  return { channels: channels.filter(item => item !== null).map(channel => ({ ...channel, preferred: preferred.has(channel.id) }))
+    .sort((first, second) => Number(second.preferred) - Number(first.preferred)) }
 }
 
 export async function openNativeChannel(client: SupabaseClient, userId: string, id: string) {
