@@ -158,6 +158,7 @@ struct AdminPipelineHealthView: View {
                         .foregroundStyle(.secondary)
                 }.font(.caption)
             }
+            NavigationLink("Browser automation details") { AdminBrowserAutomationView(api: api) }
         }.font(.subheadline)
     }
 

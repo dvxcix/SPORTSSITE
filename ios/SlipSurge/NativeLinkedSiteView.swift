@@ -99,6 +99,8 @@ struct NativeLinkedSiteView: View {
         case .adminMarketplace: AdminMatrixMarketplaceView(api: viewer)
         case .adminCreatorBusiness: AdminCreatorBusinessView(api: .init(viewer: viewer))
         case .adminPipelineHealth: AdminPipelineHealthView(api: viewer)
+        case .adminBrowserAutomation: AdminBrowserAutomationView(api: viewer)
+        case .adminSocialPlatforms: AdminSocialPlatformsView(api: viewer)
         case .adminDiscord: AdminDiscordView(api: .init(viewer: viewer))
         case .adminDiscordComposer: AdminDiscordComposer(api: .init(viewer: viewer))
         default: EmptyView()

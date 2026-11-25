@@ -1837,4 +1837,35 @@ physical-device push are still open.
   own supplied build setting. No live posts were made during GIF QA.
 - Hub TypeScript, 134 baseline source tests and five targeted checks for
   NFL samples, exact captures, contract sides and inactive prices passed.
-  Production comparison and signed interaction checks follow deployment.
+  Task `575b61dd841bb266e51f403ecc0321be2f10ac1a` is pushed. PR #68 merged
+  as `2e230d31e3089292899a03a3a1b89f41e189fd3c`. Preview
+  `dpl_7YB52qYWvBk52DxHB1VCsAitAyV4` and production
+  `dpl_6qHPa3tbQ6gtYPu6njNmyXaKBvSN` were READY. The signed Simulator showed
+  D’Andre Swift and Colston Loveland together for the November 8 matchup,
+  with player portraits and the recorded opens from DraftKings, FanDuel and
+  other suppliers. It also opened the VOLT Sparks popover. Guest comparison
+  returned 401 and public Feed returned 200.
+
+## Native social platform settings and Browserbase operations · 25 November 2026
+
+- Edit Profile includes the browser’s configurable public social handles
+  with real platform icons and keeps the separate OAuth account controls.
+  Public profile badges use the configured order, retain badge-only
+  platforms and prefer an authorized provider’s verified handle. Member
+  edits preserve unrelated and retired handles and detect concurrent saves.
+- Admin Social Platforms reads the same `social_platforms` table and uses
+  the site's image uploader and administrator permissions. It adds and edits
+  platform names, profile URL templates and artwork, and confirms deletion.
+  Writes use known row values and preserve existing members’ stored handles.
+- Native Browser automation is available from Admin and Pipeline Health.
+  It includes the same project estimate, spending thresholds, UTC transfer
+  chart, attribution, plan limits, extractor sessions and recent redacted
+  session details. The endpoint reads the existing cached project summary.
+- Feed now uses a lazy SwiftUI scroll container for precise current-iOS
+  position restoration. The previous signed build reselected the saved
+  Picks filter, but the list left it at the top. Before/after live position
+  checks belong to this checkpoint.
+- Signed Simulator compilation, Hub TypeScript, all 134 production source
+  checks and four focused public-link and resume checks passed. Production
+  signed reads for the two admin screens and public profile changes follow
+  the narrow API deployment. No production admin writes or sessions ran.

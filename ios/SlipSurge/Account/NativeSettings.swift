@@ -2,6 +2,15 @@ import SwiftUI
 
 private struct SettingsPayload: Decodable {
     struct Profile: Decodable {
+        struct Platform: Decodable, Identifiable {
+            let id: UUID
+            let key: String
+            let name: String
+            let iconURL: URL?
+
+            private enum CodingKeys: String, CodingKey { case id, key, name; case iconURL = "icon_url" }
+        }
+
         let username: String
         let displayName: String?
         let bio: String?
@@ -9,6 +18,8 @@ private struct SettingsPayload: Decodable {
         let website: String?
         let avatarUrl: URL?
         let bannerUrl: URL?
+        let socialPlatforms: [Platform]?
+        let socialLinks: [String: String]?
     }
 
     struct Privacy: Decodable {
@@ -47,6 +58,8 @@ struct NativeSettings: View {
     }
 
     private struct ProfileEdit: Encodable {
+        struct LinkChange: Encodable { let before: String; let handle: String }
+
         let kind = "profile"
         var username = ""
         var displayName = ""
@@ -58,8 +71,10 @@ struct NativeSettings: View {
         var bannerUrl: URL?
         var changedAvatar = false
         var changedBanner = false
+        var links: [String: String] = [:]
+        var socialChanges: [String: LinkChange] = [:]
 
-        private enum CodingKeys: String, CodingKey { case kind, username, displayName, bio, location, website, avatarUrl, bannerUrl }
+        private enum CodingKeys: String, CodingKey { case kind, username, displayName, bio, location, website, avatarUrl, bannerUrl, socialLinks }
 
         func encode(to encoder: any Encoder) throws {
             var values = encoder.container(keyedBy: CodingKeys.self)
@@ -71,6 +86,7 @@ struct NativeSettings: View {
             try values.encode(website, forKey: .website)
             if changedAvatar { try values.encode(avatarUrl, forKey: .avatarUrl) }
             if changedBanner { try values.encode(bannerUrl, forKey: .bannerUrl) }
+            if !socialChanges.isEmpty { try values.encode(socialChanges, forKey: .socialLinks) }
         }
     }
 
@@ -190,6 +206,29 @@ struct NativeSettings: View {
             TextField("Website", text: $profile.website).keyboardType(.URL).textContentType(.URL)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
         }.listRowBackground(Brand.surface(for: scheme))
+        if let platforms = source?.profile.socialPlatforms, !platforms.isEmpty {
+            SwiftUI.Section("Public social links") {
+                ForEach(platforms) { platform in
+                    LabeledContent {
+                        TextField(platform.name + " handle", text: Binding(get: { profile.links[platform.key, default: ""] }, set: {
+                            profile.links[platform.key] = String($0.prefix(100))
+                        }))
+                        .multilineTextAlignment(.trailing).textInputAutocapitalization(.never).autocorrectionDisabled()
+                    } label: {
+                        Label {
+                            Text(platform.name)
+                        } icon: {
+                            ResearchArtwork(urls: platform.iconURL.map { [$0] } ?? [], fallback: "at")
+                                .frame(width: 23, height: 23).accessibilityHidden(true)
+                        }
+                    }
+                }
+            }.listRowBackground(Brand.surface(for: scheme))
+        }
+        NavigationLink {
+            AccountConnectionsView(api: .init(account: account, userID: userID))
+        } label: { Label("Connected accounts", systemImage: "person.badge.shield.checkmark") }
+            .listRowBackground(Brand.surface(for: scheme))
     }
 
     private var profileArtwork: some View {
@@ -267,7 +306,8 @@ struct NativeSettings: View {
             guard !Task.isCancelled else { return }
             source = value
             profile = .init(username: value.profile.username, displayName: value.profile.displayName ?? "", bio: value.profile.bio ?? "",
-                location: value.profile.location ?? "", website: value.profile.website ?? "", avatarUrl: value.profile.avatarUrl, bannerUrl: value.profile.bannerUrl)
+                location: value.profile.location ?? "", website: value.profile.website ?? "", avatarUrl: value.profile.avatarUrl,
+                bannerUrl: value.profile.bannerUrl, links: value.profile.socialLinks ?? [:])
             privacy = .init(isPrivate: value.privacy.isPrivate ?? false, allowMessages: value.privacy.allowMessages ?? true,
                 hideWinRate: value.privacy.hideWinRate ?? false)
             delivery = value.notifications.delivery.defaults
@@ -289,6 +329,11 @@ struct NativeSettings: View {
             case .profile:
                 var edit = profile
                 if edit.username == source?.profile.username { edit.username = "" }
+                for platform in source?.profile.socialPlatforms ?? [] {
+                    let before = source?.profile.socialLinks?[platform.key] ?? ""
+                    let handle = edit.links[platform.key, default: ""].trimmingCharacters(in: .whitespacesAndNewlines)
+                    if before != handle { edit.socialChanges[platform.key] = .init(before: before, handle: handle) }
+                }
                 try await patch(Self.path, body: edit)
                 await load()
             case .privacy: try await patch(Self.path, body: privacy)
@@ -299,11 +344,17 @@ struct NativeSettings: View {
             }
             feedback = "Saved"
         } catch let error as SlipSurgeHTTP.Status where error.code == 409 {
-            feedback = section == .profile ? "That username is already taken." : "Preferences changed on another device. Refresh to load the saved values."
+            if section == .profile, let body = try? JSONDecoder().decode(SettingsError.self, from: error.data) {
+                feedback = body.error
+            } else {
+                feedback = "Preferences changed on another device. Refresh to load the saved values."
+            }
         } catch {
             feedback = "Changes couldn’t be confirmed. Your edits are still here."
         }
     }
+
+    private struct SettingsError: Decodable { let error: String }
 
     private func patch<Body: Encodable>(_ path: String, body: Body) async throws {
         var request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: path)

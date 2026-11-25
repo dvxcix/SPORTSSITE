@@ -49,7 +49,7 @@ struct FeedView: View {
     }
 
     var body: some View {
-        feedScroll(list)
+        feedScroll(timeline)
         .navigationTitle("Feed")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $member) { name in
@@ -111,9 +111,9 @@ struct FeedView: View {
         .refreshable { await firstPage() }
     }
 
-    private var list: some View {
-        List {
-            Section {
+    private var timeline: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     StoriesRail(api: .init(account: api.account, userID: api.userID), sports: availableSports, revision: revision) { member = $0 }
                     ResearchToolRail(title: "Feed", choices: FeedFilter.allCases.filter { $0 != .following || api.userID != nil },
@@ -139,28 +139,25 @@ struct FeedView: View {
                             }))
                     }
                 }
-                .listRowInsets(.init(top: 4, leading: 0, bottom: 4, trailing: 0))
-                .listRowBackground(Color.clear)
-            }
+                .padding(.vertical, 4)
 
-            switch load {
-            case .loading:
-                ProgressView("Loading feed")
-                    .listRowBackground(Brand.surface(for: scheme))
-            case .unavailable:
-                ContentUnavailableView {
-                    Label("Feed unavailable", systemImage: "bubble.left")
-                } actions: {
-                    Button("Retry") { revision += 1 }
+                switch load {
+                case .loading:
+                    ProgressView("Loading feed").frame(maxWidth: .infinity).padding(.vertical, 24)
+                case .unavailable:
+                    ContentUnavailableView {
+                        Label("Feed unavailable", systemImage: "bubble.left")
+                    } actions: {
+                        Button("Retry") { revision += 1 }
+                    }
+                case .ready:
+                    feedRows
                 }
-                .listRowBackground(Brand.surface(for: scheme))
-            case .ready:
-                feedRows
             }
+            .scrollTargetLayout()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
-        .scrollContentBackground(.hidden)
-        .listSectionSpacing(12)
-        .contentMargins(.top, 8, for: .scrollContent)
     }
 
     @ViewBuilder private func feedScroll(_ content: some View) -> some View {
@@ -190,28 +187,29 @@ struct FeedView: View {
     private var feedRows: some View {
         if posts.isEmpty {
             Text(filter == .following ? "No posts from accounts you follow." : "No posts for this selection.")
-                .listRowBackground(Brand.surface(for: scheme))
+                .font(.subheadline).foregroundStyle(.secondary).padding(14)
         }
         ForEach(posts) { post in
-            Section {
-                FeedPostCard(post: postUpdates[post.postID] ?? post, operation: api.userID == nil ? nil : { action in
-                    Task { await apply(action, to: post.postID) }
-                }, discussion: { discussion = postUpdates[post.postID] ?? post },
-                showAuthor: post.author.map { author in { member = author.username } }, actionsAPI: api,
-                postChanged: { removed in
-                    if removed { posts.removeAll { $0.postID == post.postID } }
-                    Task { await firstPage() }
-                })
-                .disabled(pending.contains(post.postID))
-            }
-            .listRowBackground(Brand.surface(for: scheme))
+            FeedPostCard(post: postUpdates[post.postID] ?? post, operation: api.userID == nil ? nil : { action in
+                Task { await apply(action, to: post.postID) }
+            }, discussion: { discussion = postUpdates[post.postID] ?? post },
+            showAuthor: post.author.map { author in { member = author.username } }, actionsAPI: api,
+            postChanged: { removed in
+                if removed { posts.removeAll { $0.postID == post.postID } }
+                Task { await firstPage() }
+            })
+            .padding(.horizontal, 13).padding(.vertical, 7)
+            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 19))
+            .disabled(pending.contains(post.postID))
         }
         if let cursor {
             Button(paginationError ? "Retry loading more" : "Load more") {
                 Task { await nextPage(cursor) }
             }
             .disabled(isLoadingMore)
-            .listRowBackground(Brand.surface(for: scheme))
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+            .frame(maxWidth: .infinity)
         }
     }
 

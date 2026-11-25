@@ -49,6 +49,7 @@ enum NativeMediaUpload {
         case avatars, banners, posts, messages, stories, changelog, emojis, badges
         case badgeCards = "badge-cards"
         case discordEmbeds = "discord-embeds"
+        case socialPlatforms = "social-platforms"
     }
 
     static func prepare(_ data: Data) throws -> Photo {

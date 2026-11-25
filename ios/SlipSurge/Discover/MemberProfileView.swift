@@ -49,6 +49,15 @@ struct MemberProfileView: View {
                 let profileUrl: URL
             }
 
+            struct PublicLink: Decodable, Identifiable {
+                let id: UUID
+                let name: String
+                let handle: String
+                let iconUrl: URL?
+                let href: URL?
+                let verified: Bool
+            }
+
             let id: UUID
             let username: String
             let displayName: String?
@@ -72,6 +81,7 @@ struct MemberProfileView: View {
             let badges: [Badge]
             let record: DiscoverAPI.Records.Record?
             let verifiedSocials: [String: Social]
+            let socialLinks: [PublicLink]?
 
             var name: String { displayName ?? username }
         }
@@ -234,13 +244,23 @@ struct MemberProfileView: View {
                     }
                 }
             }
-            ForEach(profile.verifiedSocials.keys.sorted(), id: \.self) { provider in
-                if let identity = profile.verifiedSocials[provider] {
-                    Link(destination: identity.profileUrl) {
-                        HStack(spacing: 7) {
-                            Image("sign-in-\(provider)").resizable().scaledToFit().frame(width: 18, height: 18)
-                            Text(identity.handle).font(.caption)
-                            Image(systemName: "checkmark.seal.fill").font(.caption2).accessibilityLabel("Verified")
+            if let links = profile.socialLinks {
+                ForEach(links) { link in
+                    if let destination = link.href {
+                        Link(destination: destination) { socialBadge(link) }
+                    } else {
+                        socialBadge(link)
+                    }
+                }
+            } else {
+                ForEach(profile.verifiedSocials.keys.sorted(), id: \.self) { provider in
+                    if let identity = profile.verifiedSocials[provider] {
+                        Link(destination: identity.profileUrl) {
+                            HStack(spacing: 7) {
+                                Image("sign-in-\(provider)").resizable().scaledToFit().frame(width: 18, height: 18)
+                                Text(identity.handle).font(.caption)
+                                Image(systemName: "checkmark.seal.fill").font(.caption2).accessibilityLabel("Verified")
+                            }
                         }
                     }
                 }
@@ -249,6 +269,21 @@ struct MemberProfileView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 18))
+    }
+
+    private func socialBadge(_ link: Page.Profile.PublicLink) -> some View {
+        HStack(spacing: 7) {
+            ResearchArtwork(urls: link.iconUrl.map { [$0] } ?? [], fallback: "at")
+                .frame(width: 20, height: 20).accessibilityHidden(true)
+            Text(link.handle).font(.subheadline.weight(.medium))
+            if link.verified {
+                Image(systemName: "checkmark.seal.fill").font(.caption2)
+                    .foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Verified")
+            }
+        }.padding(.horizontal, 9).frame(minHeight: 44)
+            .background(Brand.background(for: scheme), in: .capsule)
+            .accessibilityElement(children: .combine)
+            .accessibilityHint(link.name)
     }
 
     @ViewBuilder

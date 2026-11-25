@@ -373,9 +373,15 @@ struct AccountWorkspaceView: View {
                 NavigationLink { AdminOperationsView(viewer: .init(account: account, userID: userID), mode: .notifications) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Notification history", systemImage: "bell") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink { AdminSocialPlatformsView(api: .init(account: account, userID: userID)) } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Social platforms", systemImage: "at") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
             } else {
                 NavigationLink { AdminPipelineHealthView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Pipeline health", systemImage: "waveform.path") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink { AdminBrowserAutomationView(api: .init(account: account, userID: userID)) } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Browser automation", systemImage: "cloud") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminDiscordView(api: .init(viewer: .init(account: account, userID: userID))) } label: {
                     ResearchToolCard(color: Color(rgb: 0x5865F2)) {
