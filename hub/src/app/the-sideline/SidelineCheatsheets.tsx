@@ -9,35 +9,22 @@ import { BookLogo } from '@/components/BookLogo'
 import { americanImpliedProbability } from '@/lib/nflMarketMath'
 import { normalizeNflPlayerName } from '@/lib/nflPlayerName'
 import { nflPrimaryMarket } from '@/lib/nflPrimaryMarket'
+import { PROP_FIELDS, hitSummary, projectedValue, modelProbability, type HitSummary } from '@/lib/nflCheatsheetMetrics'
 import type { NflMarketOffer, NflOddsPlayer, SidelineOddsBoard } from '@/lib/nflOddsTypes'
-import type { SidelineLens, SidelinePlayer, SidelinePlayerGameLine, Team } from './SidelineClient'
+import type { SidelineLens, SidelinePlayer, Team } from './SidelineClient'
 import { PlayerIdentity } from './SidelineResearchClient'
 import { ResearchSectionNav } from '@/components/research/ResearchSectionNav'
 import { MarketMovement, PickCount, PicksMark } from '@/components/research/ResearchMetrics'
 import styles from './sidelineCheatsheets.module.css'
 
 type View = 'edge' | 'hits' | 'explosives' | 'gaps' | 'defense'
-type LogField = Exclude<keyof SidelinePlayerGameLine, 'gameId'>
 type SortDirection = 'asc' | 'desc'
-type HitSummary = { hits: number; total: number; rate: number } | null
 
-const PROP_FIELDS: Record<string, LogField> = {
-  receptions: 'receptions', receiving_yards: 'receivingYards', rushing_attempts: 'carries', rushing_yards: 'rushingYards',
-  passing_attempts: 'passAttempts', completions: 'completions', passing_yards: 'passingYards', passing_tds: 'passingTouchdowns',
-  passing_completions: 'completions',
-  anytime_td: 'scorerTouchdowns', first_td: 'firstTouchdowns',
-}
 const PROP_LABELS: Record<string, string> = {
   anytime_td: 'Anytime TD', first_td: 'First TD', passing_tds: 'Passing TDs', receptions: 'Receptions',
   receiving_yards: 'Receiving Yards', rushing_attempts: 'Rush Attempts', rushing_yards: 'Rushing Yards',
   passing_attempts: 'Pass Attempts', completions: 'Completions', passing_yards: 'Passing Yards',
   passing_completions: 'Completions',
-}
-const PROJECTION_KEYS: Record<string, string> = {
-  receiving_yards: 'receiving-yards', rushing_yards: 'rushing-yards', rushing_attempts: 'rush-attempts',
-  passing_yards: 'passing-yards', passing_attempts: 'pass-attempts', receptions: 'receptions',
-  completions: 'completions', passing_tds: 'touchdown', anytime_td: 'touchdown', first_td: 'touchdown',
-  passing_completions: 'completions',
 }
 const VIEW_META = [
   ['edge', 'Market Edge', Gauge], ['hits', 'Exact-Line Hits', Target], ['explosives', 'Explosive Plays', Sparkles],
@@ -49,8 +36,6 @@ const price = (value: number | null) => value == null ? '—' : value > 0 ? `+${
 const bookName = (value: string) => ({ fanduel: 'FanDuel', draftkings: 'DraftKings', betmgm: 'BetMGM', caesars: 'Caesars', betrivers: 'BetRivers', fanatics: 'Fanatics', polymarket: 'Polymarket', kalshi: 'Kalshi' }[value] ?? titleCase(value))
 const currentPrice = (offer: NflMarketOffer | undefined) => offer?.current.over ?? offer?.current.odds ?? null
 const openingPrice = (offer: NflMarketOffer | undefined) => offer?.opening?.over ?? offer?.opening?.odds ?? null
-const average = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null
-const clamp = (value: number, minimum: number, maximum: number) => Math.min(maximum, Math.max(minimum, value))
 const titleCase = (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, character => character.toUpperCase()).replace(/\bTd(s)?\b/g, 'TD$1').replace(/\bQb\b/g, 'QB').replace(/\bWr\b/g, 'WR').replace(/\bRb\b/g, 'RB').replace(/\bTe\b/g, 'TE')
 
 function matchingOffer(player: NflOddsPlayer, prop: string, vendor: string) {
@@ -60,48 +45,6 @@ function matchingOffer(player: NflOddsPlayer, prop: string, vendor: string) {
 function pickCount(player: NflOddsPlayer, prop: string, line: number | null) {
   const rows = (player.publicPicks ?? []).filter(row => row.propType === prop && (line == null || row.line == null || row.line === line))
   return rows.length ? Math.max(...rows.map(row => row.picks)) : null
-}
-
-function isHit(value: number, line: number, milestone: boolean) {
-  return milestone ? value >= line : value > line
-}
-
-function hitSummary(log: SidelinePlayerGameLine[], field: LogField, line: number, count: number | null, milestone: boolean): HitSummary {
-  const sample = (count == null ? log : log.slice(0, count)).filter(row => row[field] != null && Number.isFinite(row[field]))
-  if (!sample.length) return null
-  const hits = sample.filter(row => isHit(Number(row[field]), line, milestone)).length
-  return { hits, total: sample.length, rate: hits / sample.length * 100 }
-}
-
-function projectedValue(stats: SidelinePlayer, prop: string) {
-  const field = PROP_FIELDS[prop]
-  const projection = stats.projections.find(item => item.key === PROJECTION_KEYS[prop])
-  if (!field || !stats.gameLog.length) return null
-  const milestone = prop.includes('td')
-  const season = milestone
-    ? stats.gameLog.filter(row => Number(row[field]) >= 1).length / stats.gameLog.length * 100
-    : average(stats.gameLog.map(row => Number(row[field])))
-  const recent3 = milestone
-    ? stats.gameLog.slice(0, 3).filter(row => Number(row[field]) >= 1).length / Math.min(3, stats.gameLog.length) * 100
-    : average(stats.gameLog.slice(0, 3).map(row => Number(row[field])))
-  const recent5 = milestone
-    ? stats.gameLog.slice(0, 5).filter(row => Number(row[field]) >= 1).length / Math.min(5, stats.gameLog.length) * 100
-    : average(stats.gameLog.slice(0, 5).map(row => Number(row[field])))
-  if (season == null || recent3 == null || recent5 == null) return null
-  const adjustment = clamp(((projection?.matchup ?? 0) + (projection?.pace ?? 0)) / 100, -.25, .25)
-  return Math.max(0, (season * .5 + recent3 * .3 + recent5 * .2) * (1 + adjustment))
-}
-
-function modelProbability(stats: SidelinePlayer, prop: string, line: number, milestone: boolean) {
-  const field = PROP_FIELDS[prop]
-  if (!field || !stats.gameLog.length) return null
-  const season = hitSummary(stats.gameLog, field, line, null, milestone)?.rate
-  const l3 = hitSummary(stats.gameLog, field, line, 3, milestone)?.rate
-  const l5 = hitSummary(stats.gameLog, field, line, 5, milestone)?.rate
-  if (season == null || l3 == null || l5 == null) return null
-  const projection = stats.projections.find(item => item.key === PROJECTION_KEYS[prop])
-  const adjustment = clamp(((projection?.matchup ?? 0) + (projection?.pace ?? 0)) * .2, -5, 5)
-  return clamp(season * .5 + l3 * .3 + l5 * .2 + adjustment, 0, 100)
 }
 
 function tone(value: number | null) {
