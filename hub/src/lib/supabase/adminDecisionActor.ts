@@ -11,5 +11,5 @@ export async function adminDecisionActor(request: Request) {
   const headers = { 'Cache-Control': 'private, no-store' }
   if (error) return { error: NextResponse.json({ error: 'Admin access could not be checked' }, { status: 503, headers }) }
   if (data?.account_type !== 'admin') return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403, headers }) }
-  return { admin, user: account.user, native: account.native }
+  return { admin, supabase: account.supabase, user: account.user, native: account.native }
 }
