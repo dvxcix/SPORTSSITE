@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DugoutView: View {
-    private enum Tool: Hashable { case weather, spray, pitcher, publicPicks, batterCost, oddsMovement, synergy, matrices }
+    private enum Tool: Hashable { case weather, spray, pitcher, publicPicks, batterCost, oddsMovement, synergy, matrices, slateBreakdown }
     private enum Board: String, CaseIterable {
         case lineup = "Lineups", mismatch = "MM", odds = "Odds Board", matrices = "Matrix Matches"
 
@@ -77,6 +77,7 @@ struct DugoutView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Dugout tools", systemImage: mode == .live ? "dot.radiowaves.left.and.right" : "square.grid.2x2") {
                     Button("Pitcher Report", systemImage: "gauge") { tool = .pitcher }
+                    Button("Slate Breakdown", systemImage: "chart.bar.xaxis") { tool = .slateBreakdown }
                     Button("The Public", systemImage: "person.2") { tool = .publicPicks }
                     Button("Batter Cost", systemImage: "chart.line.uptrend.xyaxis") { tool = .batterCost }
                     Button("Weather Lab", systemImage: "cloud.sun") { tool = .weather }
@@ -98,6 +99,8 @@ struct DugoutView: View {
             case .weather: DugoutWeatherView(api: tools, date: date)
             case .spray: DugoutSprayView(api: tools, date: date)
             case .pitcher: DugoutPitcherReport(api: api, date: date)
+            case .slateBreakdown:
+                DugoutSlateBreakdown(api: .init(account: api.account, userID: api.userID), date: date, selectedGame: selectedGameID)
             case .publicPicks: DugoutMarketSlateView(api: api, date: date, mode: .publicPicks)
             case .batterCost: DugoutMarketSlateView(api: api, date: date, mode: .cost)
             case .oddsMovement: DugoutOddsTerminal(api: api, date: date, selectedGame: selectedGameID)

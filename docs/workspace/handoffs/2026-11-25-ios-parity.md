@@ -1110,6 +1110,29 @@ physical-device push are still open.
   Use `slipsurge-research://research/mlb-player?id=663611` for a direct link.
   The app also recognizes the existing same-site `/players/<id>` route.
 - Signed Xcode Debug, Hub TypeScript and focused MLB profile and admin
-  authorization checks passed. The narrow Hub preview and signed Simulator
-  walkthrough of the new profile, matchup and spray views are next. Slate
-  Breakdown needs its own matchup-specific archive checks and interface.
+  authorization checks passed. Task checkpoint
+  `60ff8a5807dbe90ba0fcf4f054f31f2cff09e585` is pushed. PR #42 merged as
+  `efccdc22f2876c1f01b4e517bf539fbd4ccf826c`. Preview
+  `dpl_GP5P2a8SQ4PPJdLMBxo3Jf17xG2Q` and production
+  `dpl_45YGJBXeZPbRdjo8pGaSXqxh8hmK` reported READY. Invalid profile and spray
+  requests returned 401 and guest Feed returned 200.
+
+## Native MLB Slate Breakdown · 25 November 2026
+
+- Added a dated, game-selectable Slate Breakdown. The screen shows both
+  booked starters and the saved opposing lineup. Use team-styled portraits
+  to switch sides, a Season/L10/L5/L3 starter sample, pinnable pitch usage,
+  sortable plate results, actual strike zones and player profile links.
+- Existing Slate Breakdown tier rules remain in force. Free users see the
+  featured matchup, pitch data needs Basic, and the full slate and staff
+  filter need Advanced. Live requires the explicit selector, today’s date,
+  and an active MLB season.
+- Pregame uses the original matchup’s `board:v1` roster plus archived pitch
+  and staff observations. Added individually reviewed migration
+  `20261125061300_add_mlb_slate_breakdown_archive_resources.sql` for those
+  exact sample types using the existing clock, locking, and grants. Test
+  PostgreSQL accepted the migration, preserved prior complete observations,
+  rejected writes after the earliest first-pitch cutoff, and retained
+  service-only access. Production inspection confirmed the original guards
+  and privileges. Migration and narrow release are next. Older games may
+  have saved rosters with no corresponding pitch or staff observation.

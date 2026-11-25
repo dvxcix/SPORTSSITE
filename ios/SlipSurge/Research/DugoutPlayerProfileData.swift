@@ -3,7 +3,7 @@ import SwiftUI
 
 typealias DugoutPlayerStats = [String: DugoutPlayerStat]
 
-enum DugoutPlayerStat: Decodable {
+enum DugoutPlayerStat: Decodable, Sendable {
     case number(Double)
     case text(String)
     case flag(Bool)
@@ -179,7 +179,7 @@ struct DugoutPlayerPitchLog: Decodable {
         let lineupConfirmed: Bool
     }
 
-    struct Row: Decodable {
+    struct Row: Decodable, Sendable {
         let gamePk: DugoutPlayerStat
         let gameDate: String
         let opponentId: Int

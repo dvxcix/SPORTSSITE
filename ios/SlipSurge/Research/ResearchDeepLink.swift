@@ -11,6 +11,7 @@ struct ResearchDeepLink: Hashable {
         case oddsMovement = "odds-terminal"
         case synergy
         case mlbPlayer = "mlb-player"
+        case slateBreakdown = "slate-breakdown"
         case sideline = "the-sideline"
         case court = "the-paint"
     }
@@ -57,7 +58,7 @@ struct ResearchDeepLink: Hashable {
         case .mlbPlayer: allowed = profilePathID == nil ? ["id"] : []
         case .spray: allowed = ["date", "game", "players", "result", "view"]
         case .pitcher: allowed = ["date", "pitcherId"]
-        case .weather, .dugout, .court, .oddsMovement: allowed = ["date", "game"]
+        case .weather, .dugout, .court, .oddsMovement, .slateBreakdown: allowed = ["date", "game"]
         case .sideline: allowed = ["date", "game"]
         case .synergy: allowed = ["game", "sort"]
         case .publicPicks, .costs: allowed = ["date"]
@@ -163,6 +164,8 @@ struct LinkedResearchView: View {
         case .synergy: DugoutSynergy(api: api, game: link.synergyGame ?? "", ranking: link.synergyRank ?? .best)
         case .mlbPlayer:
             if let id = link.playerID { DugoutPlayerProfileView(api: .init(account: account, userID: userID), playerID: id) }
+        case .slateBreakdown:
+            DugoutSlateBreakdown(api: .init(account: account, userID: userID), date: date, selectedGame: link.gameID)
         case .sideline, .court: EmptyView()
         }
     }
