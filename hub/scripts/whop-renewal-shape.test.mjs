@@ -40,6 +40,14 @@ function route(options = {}) {
       auth: { getUser: async () => ({ data: { user }, error: options.userError }), mfa: { getAuthenticatorAssuranceLevel: async () => ({ data: { currentLevel: options.aal ?? 'aal2' }, error: options.mfaError }) } },
       from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { account_type: accountType }, error: options.profileError }) }) }) }),
     }) },
+    '@/lib/supabase/adminDecisionActor': { adminDecisionActor: async request => {
+      if (request.headers.get('authorization') !== 'Bearer fixture' || !user) return { error: Response.json({}, { status: 401 }) }
+      if (accountType !== 'admin') return { error: Response.json({}, { status: 403 }) }
+      return { user, supabase: { auth: { mfa: { getAuthenticatorAssuranceLevel: async token => {
+        assert.equal(token, 'fixture')
+        return { data: { currentLevel: options.aal ?? 'aal2' }, error: options.mfaError }
+      } } } } }
+    } },
     '@/lib/supabase/admin': { createAdminClient: () => ({ from: table => ({ select: () => ({ eq: (key, value) => ({ maybeSingle: async () => { queries.push({ table, key, value }); return { data: targetRecord, error: options.targetError } } }) }) }) }) },
     '@/lib/serverRateLimit': { consumeServerRateLimit: async (...args) => { rates.push(args); return options.rate ?? { allowed: true, available: true } } },
     '@/lib/whopMembershipAccess': access,
@@ -69,6 +77,19 @@ test('only an authenticated AAL2 admin on the same origin may inspect', async ()
     const { post, calls } = route(options)
     assert.equal((await post(undefined, headers)).status, expected)
     assert.equal(calls.length, 0)
+  }
+})
+
+test('native billing verification also enforces a verified administrator with AAL2', async () => {
+  for (const [options, token, expected] of [
+    [{}, 'expired', 401], [{ accountType: 'member' }, 'fixture', 403],
+    [{ aal: 'aal1' }, 'fixture', 403], [{ mfaError: true }, 'fixture', 403], [{}, 'fixture', 200],
+  ]) {
+    const { post, calls } = route(options)
+    const result = await post(undefined, { authorization: 'Bearer ' + token })
+    assert.equal(result.status, expected)
+    assert.equal(calls.length, expected === 200 ? 2 : 0)
+    assert.ok(Object.values(await result.json()).every(value => typeof value === 'boolean'))
   }
 })
 

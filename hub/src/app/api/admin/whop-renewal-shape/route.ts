@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { adminDecisionActor } from '@/lib/supabase/adminDecisionActor'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { whopMembershipGrantsAccess, whopMembershipPeriodEnd } from '@/lib/whopMembershipAccess'
 import { resolveRepricedUltimatePlan } from '@/lib/whopRepricedUltimate'
@@ -27,14 +28,27 @@ function no(status: number) { return NextResponse.json({ ok: false }, { status, 
 // membership. Never return account IDs, provider IDs, payloads or errors.
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) return no(401)
-    const { data: profile, error: profileError } = await supabase.from('users').select('account_type').eq('id', user.id).maybeSingle()
-    if (profileError || profile?.account_type !== 'admin') return no(403)
-    const { data: assurance, error: assuranceError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-    if (assuranceError || assurance?.currentLevel !== 'aal2') return no(403)
-    if (request.headers.get('origin') !== new URL(request.url).origin || request.headers.get('sec-fetch-site') !== 'same-origin') return no(403)
+    const authorization = request.headers.get('authorization')
+    let actorId: string
+    if (authorization !== null) {
+      const actor = await adminDecisionActor(request)
+      if (actor.error) return no(actor.error.status)
+      const token = authorization.match(/^Bearer\s+(\S+)$/i)?.[1]
+      if (!token) return no(401)
+      const { data: assurance, error } = await actor.supabase.auth.mfa.getAuthenticatorAssuranceLevel(token)
+      if (error || assurance?.currentLevel !== 'aal2') return no(403)
+      actorId = actor.user.id
+    } else {
+      const supabase = await createClient()
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) return no(401)
+      const { data: profile, error: profileError } = await supabase.from('users').select('account_type').eq('id', user.id).maybeSingle()
+      if (profileError || profile?.account_type !== 'admin') return no(403)
+      const { data: assurance, error: assuranceError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      if (assuranceError || assurance?.currentLevel !== 'aal2') return no(403)
+      if (request.headers.get('origin') !== new URL(request.url).origin || request.headers.get('sec-fetch-site') !== 'same-origin') return no(403)
+      actorId = user.id
+    }
     const raw = await request.text()
     if (raw.length > 256) return no(400)
     let body: unknown
@@ -43,7 +57,7 @@ export async function POST(request: Request) {
     const expectedPlanId = object(body)?.expectedPlanId
     if (typeof targetId !== 'string' || !UUID.test(targetId)
       || typeof expectedPlanId !== 'string' || !expectedPlanId.startsWith('plan_') || !PROVIDER_ID.test(expectedPlanId)) return no(400)
-    const rate = await consumeServerRateLimit(user.id, 'whop_renewal_shape', 4, 600)
+    const rate = await consumeServerRateLimit(actorId, 'whop_renewal_shape', 4, 600)
     if (!rate.available) return no(503)
     if (!rate.allowed) return no(429)
     const key = process.env.WHOP_API_KEY
