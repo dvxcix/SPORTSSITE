@@ -80,6 +80,27 @@ private struct ResearchHome: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 2)
+                } else if let id = account.memberID {
+                    NavigationLink {
+                        ResearchLibraryView(api: ResearchLibraryAPI(account: account, userID: id))
+                    } label: {
+                        ResearchToolCard(color: Brand.accent(for: scheme)) {
+                            Label("Workspace", systemImage: "square.grid.2x2").font(.title3.weight(.semibold))
+                        } content: {
+                            Text("Watchlist, comparisons, notes and shared research").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
+                    .buttonStyle(SlipSurgePressStyle())
+                    NavigationLink {
+                        MyPicksView(api: DiscoverAPI(account: account, userID: id))
+                    } label: {
+                        ResearchToolCard(color: Brand.accent(for: scheme)) {
+                            Label("My Picks", systemImage: "list.clipboard").font(.title3.weight(.semibold))
+                        } content: {
+                            Text("Active picks, parlays and results").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
+                    .buttonStyle(SlipSurgePressStyle())
                 }
             }
             .padding()

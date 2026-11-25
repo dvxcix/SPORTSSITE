@@ -487,5 +487,30 @@ physical-device push are still open.
   stored NFL feeds, canonical NBA pick crosswalk, and room storage. It retains
   the MLB offseason pause. Team and player art comes from those data sources.
   The native reactions and room writes require existing member permissions.
-  SwiftUI, TypeScript and the focused checks were run locally. Publishing and
-  testing this checkpoint against live read data is the next step.
+  Task checkpoint `b26a294a856a972419e247ac686db973676aea78` is pushed. PR #17
+  merged to main as `8f4904a56c9c097ab94a08eeee268a3e6faa8350`. Vercel preview
+  `dpl_9LWVjYQVFvD4rF2pQ7TBHmAskB7U` and production
+  `dpl_5quAzFjfJK7ENAzkR1tHDyTFigxb` reported READY.
+- Six production guest profile sections returned 200. The archived NBA game
+  returned 220 plays and two team stat groups. The archived NFL game returned
+  173 plays, six stat groups, and two period rows. Both games returned 200 for
+  picks and game room reads. Invalid bearer profile reads and unauthenticated
+  writes returned 401. No member or room content was changed for QA.
+
+## Native Research Workspace and My Picks · 25 November 2026
+
+- SwiftUI adds Watchlist, four-slot comparison, notes, collaboration, and
+  archived evidence through Research. The pick builder saves exact offers to
+  Watchlist. My Picks reuses the owner-scoped web query for active and settled
+  picks. Team palettes and league, book, and player assets appear on saved
+  cards. Existing web/Android entries keep their prior behavior.
+- Native workspace reads can display authorized evidence, collaboration, and
+  the signed-in member's own library. The current shared board stores bare
+  item IDs without per-item sharing provenance. Existing foreign IDs survive
+  editing, and the native endpoint does not resolve them into private items.
+  Concurrent web and native saves can still race inside the existing RPC.
+  Direct Matrix creation and editing still need native screens.
+- Signed Xcode Debug, Hub TypeScript, and 199 focused checks passed. The signed
+  build was installed and launched on the Mac's iPhone 17e simulator. The
+  Workspace and My Picks backend is pending its separate branch preview and
+  production read checks. No live member data was changed as part of QA.

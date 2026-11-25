@@ -19,6 +19,10 @@ struct PickBuilderView: View {
     @State private var marketID = ""
     @State private var side = TrackedPickAPI.Offer.Side.over
     @State private var book = ""
+    @State private var watchlistID = UUID()
+    @State private var lastSaved: String?
+    @State private var saving = false
+    @State private var notice: String?
 
     private struct Request: Hashable { let sport: String; let date: Date?; let revision: Int }
     private var sport: String { existing.first?.sport ?? selectedSport ?? (preferredSport == "NBA" ? "NBA" : "NFL") }
@@ -59,6 +63,7 @@ struct PickBuilderView: View {
                     } else {
                         ResearchToolMessage(title: "Pick markets couldn’t load", error: error) { revision += 1 }
                     }
+                    if let notice { Text(notice).font(.footnote).foregroundStyle(.secondary) }
                 }
                 .padding(16)
             }
@@ -84,6 +89,7 @@ struct PickBuilderView: View {
                 book = offers.first?.vendor ?? ""
             }
             .onChange(of: side) { _, _ in book = offers.first?.vendor ?? "" }
+            .onChange(of: activeLeg?.id) { _, _ in watchlistID = UUID(); notice = nil }
         }
     }
 
@@ -126,11 +132,17 @@ struct PickBuilderView: View {
                 }, selection: $book)
             }
             if let activeLeg {
-                Button("Add \(activeLeg.player_name) pick", systemImage: "plus.circle.fill") {
-                    onAdd(activeLeg)
-                    dismiss()
+                VStack(alignment: .leading, spacing: 9) {
+                    Button("Add \(activeLeg.player_name) pick", systemImage: "plus.circle.fill") {
+                        onAdd(activeLeg)
+                        dismiss()
+                    }
+                    .buttonStyle(.borderedProminent).controlSize(.large)
+                    Button(lastSaved == activeLeg.id ? "Saved to Watchlist" : "Save to Watchlist", systemImage: lastSaved == activeLeg.id ? "star.fill" : "star") {
+                        Task { await watch(activeLeg) }
+                    }
+                    .buttonStyle(.bordered).disabled(saving || lastSaved == activeLeg.id)
                 }
-                .buttonStyle(.borderedProminent).controlSize(.large)
             }
         }
     }
@@ -154,5 +166,20 @@ struct PickBuilderView: View {
         } catch {
             if !Task.isCancelled, request == selection { self.error = error }
         }
+    }
+
+    private func watch(_ leg: TrackedPickAPI.Leg) async {
+        guard !saving else { return }
+        saving = true
+        defer { saving = false }
+        let id = watchlistID
+        do {
+            let library = ResearchLibraryAPI(account: api.account, userID: api.userID)
+            try await library.mutate(.init(kind: "watchlist-save", id: id.uuidString.lowercased(), market: leg))
+            lastSaved = leg.id
+        } catch let response as SlipSurgeHTTP.Status where (400...429).contains(response.code) {
+            struct Failure: Decodable { let error: String? }
+            notice = (try? JSONDecoder().decode(Failure.self, from: response.data))?.error ?? "The market couldn’t be saved."
+        } catch { notice = "The market couldn’t be confirmed. Retry to keep from saving it twice." }
     }
 }

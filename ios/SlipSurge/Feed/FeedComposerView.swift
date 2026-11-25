@@ -4,6 +4,7 @@ struct FeedComposerView: View {
     let account: AccountStore
     let userID: UUID
     let allowMLB: Bool
+    var startWithPick = false
     let onPost: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -150,6 +151,7 @@ struct FeedComposerView: View {
             .disabled(posting)
             .navigationTitle("Compose")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear { if startWithPick && !attempted && legs.isEmpty { kind = .pick } }
             .onChange(of: personalAllowed) { _, allowed in if !allowed, audience == .personal { audience = .everyone } }
             .onChange(of: kind) { _, _ in notice = nil }
             .sheet(isPresented: $pickBuilder) {
