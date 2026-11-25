@@ -2174,5 +2174,24 @@ physical-device push are still open.
   fixture received 503 and no rank data. The active-path fixture verified the
   original response and the added team and player artwork separately.
 - Signed Simulator Debug, Hub TypeScript and 144 checks passed. The native
-  off-season status is ready for production verification after release. No
-  live analysis was run.
+  signed-in Simulator opened the production view and displayed the
+  off-season pause. The public endpoint returned 401. No live analysis ran.
+- Task `112390b5ad532e504ceb47050c8d0664c6e95fac` is pushed. PR #81 preview
+  `dpl_4qMYwKSHnxnogVUvGrYVRpRnmdb2` and production
+  `dpl_2E8KatsWWub1MFt8QbtizyKgs45J` reported READY. Main is
+  `a980f5513d0da72ca953e89fedb8cf1a1b8607dd` at this checkpoint.
+
+## Native profile statistics and creator links · 25 November 2026
+
+- Native profiles show the original post and repost counts, joining month,
+  saved sports, and the visible pick record and win rate. A paged activity
+  request keeps the first page's details in view and skips the extra counts.
+- Creator profiles use the website's account and approval rules, list six
+  active offers and six published owned communities, and open the native
+  storefront, offer and community screens. Creator Studio remains on the
+  owner's profile. Replies show linked context and suppress spoiler excerpts.
+  Community rows retain visible member roles and the existing MLB gate.
+- Signed Simulator Debug, Hub TypeScript and 148 checks passed. The fixture
+  covers guest/member reply visibility, private records, scoped counts and
+  offers, and spoiler and block behavior. Production profile rendering and
+  storefront navigation follow the narrow Hub release.

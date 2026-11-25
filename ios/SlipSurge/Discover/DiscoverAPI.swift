@@ -18,6 +18,7 @@ struct DiscoverAPI {
             let creatorProductId: UUID?
             let productType: String?
             let billingPeriodDays: Int?
+            var memberRole: String?
         }
 
         let groups: [Community]

@@ -58,6 +58,19 @@ struct MemberProfileView: View {
                 let verified: Bool
             }
 
+            struct Creator: Decodable {
+                struct Offer: Decodable, Identifiable {
+                    let id: UUID
+                    let title: String
+                    let description: String?
+                    let price: Double?
+                    let currency: String?
+                }
+
+                let offers: [Offer]
+                let communities: [DiscoverAPI.Communities.Community]
+            }
+
             let id: UUID
             let username: String
             let displayName: String?
@@ -72,6 +85,8 @@ struct MemberProfileView: View {
             let allowMessages: Bool?
             let followerCount: Int?
             let followingCount: Int?
+            let postCount: Int?
+            let repostCount: Int?
             let location: String?
             let website: URL?
             let createdAt: String?
@@ -85,6 +100,7 @@ struct MemberProfileView: View {
             let record: DiscoverAPI.Records.Record?
             let verifiedSocials: [String: Social]
             let socialLinks: [PublicLink]?
+            let creator: Creator?
 
             var name: String { displayName ?? username }
         }
@@ -94,6 +110,8 @@ struct MemberProfileView: View {
             let text: String
             let createdAt: String
             let postId: UUID
+            let parentAuthor: String?
+            let parentExcerpt: String?
         }
 
         let profile: Profile
@@ -131,6 +149,7 @@ struct MemberProfileView: View {
                 if let profile = page?.profile {
                     header(profile)
                     if let notice { Text(notice).font(.footnote).foregroundStyle(.secondary) }
+                    if let creator = profile.creator { creatorPanel(profile, creator) }
                     favorites(profile)
                     if profile.canView, let page {
                         ResearchToolRail(title: "Profile activity", choices: ProfileTab.allCases, selection: $tab, label: \.rawValue, glyph: \.glyph)
@@ -213,6 +232,9 @@ struct MemberProfileView: View {
             HStack(spacing: 6) {
                 Text(profile.name).font(.title2.weight(.bold))
                 if profile.verified == true { Image(systemName: "checkmark.seal.fill").accessibilityLabel("Verified member") }
+                if profile.creator != nil {
+                    Image(systemName: "storefront.fill").foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Creator")
+                }
             }
             Text("@\(profile.username)").font(.subheadline).foregroundStyle(.secondary)
             if let bio = profile.bio, !bio.isEmpty { Text(verbatim: bio).font(.subheadline) }
@@ -220,11 +242,11 @@ struct MemberProfileView: View {
             if let website = profile.website, website.scheme == "https", website.user == nil, website.password == nil, let host = website.host {
                 Link(destination: website) { Label(host, systemImage: "link").font(.caption) }
             }
-            HStack(spacing: 8) {
-                if let count = profile.followerCount { Text("\(count.formatted()) followers").font(.caption) }
-                if let count = profile.followingCount { Text("\(count.formatted()) following").font(.caption) }
-                if let record = profile.record { Label(record.line, systemImage: "trophy").font(.caption.weight(.semibold)) }
+            if let createdAt = profile.createdAt, let joined = SidelineBoard.timestamp(createdAt) {
+                Label("Joined \(joined.formatted(.dateTime.month(.wide).year()))", systemImage: "calendar")
+                    .font(.caption).foregroundStyle(.secondary)
             }
+            ResearchToolValues(items: profileStats(profile))
             if let viewer = api.userID {
                 HStack {
                     if profile.own {
@@ -279,10 +301,87 @@ struct MemberProfileView: View {
                     }
                 }.accessibilityElement(children: .contain).accessibilityLabel("Sportsbooks")
             }
+            if !profile.sports.isEmpty {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 6) {
+                        ForEach(profile.sports, id: \.self) { sport in
+                            HStack(spacing: 4) {
+                                ResearchArtwork(urls: LeagueArtwork.logo(sport).map { [$0] } ?? [], fallback: "sportscourt")
+                                    .frame(width: 17, height: 17).accessibilityHidden(true)
+                                Text(LeagueArtwork.label(sport)).font(.caption.weight(.semibold))
+                            }
+                            .padding(.horizontal, 8).padding(.vertical, 5)
+                            .background(Brand.background(for: scheme), in: .capsule)
+                        }
+                    }
+                }.scrollIndicators(.hidden).accessibilityLabel("Favorite sports")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 18))
+    }
+
+    private func profileStats(_ profile: Page.Profile) -> [ResearchToolValues.Value] {
+        var values: [ResearchToolValues.Value] = []
+        if let count = profile.postCount { values.append(.init(label: "Posts", text: count.formatted())) }
+        if let count = profile.repostCount { values.append(.init(label: "Reposts", text: count.formatted())) }
+        values.append(.init(label: "Following", text: (profile.followingCount ?? 0).formatted()))
+        values.append(.init(label: "Followers", text: (profile.followerCount ?? 0).formatted()))
+        if let record = profile.record, let rate = record.rate {
+            values.append(.init(label: "Pick Record", text: "\(record.wins)–\(record.losses)", tone: Brand.accent(for: scheme)))
+            values.append(.init(label: "Win Rate", text: rate.formatted(.percent.precision(.fractionLength(0)))))
+        }
+        return values
+    }
+
+    private func creatorPanel(_ profile: Page.Profile, _ creator: Page.Profile.Creator) -> some View {
+        ResearchToolCard(color: Brand.accent(for: scheme)) {
+            Label("Join \(profile.name)", systemImage: "storefront").font(.headline)
+        } content: {
+            VStack(alignment: .leading, spacing: 10) {
+                NavigationLink {
+                    CreatorDetailView(api: api, username: profile.username)
+                } label: {
+                    Label("View storefront", systemImage: "arrow.right").frame(minHeight: 36)
+                }.buttonStyle(.borderedProminent)
+                if profile.own, let userID = api.userID {
+                    NavigationLink {
+                        AccountWorkspaceView(account: api.account, userID: userID, workspace: .studio)
+                    } label: {
+                        Label("Creator Studio", systemImage: "sparkles").frame(minHeight: 36)
+                    }.buttonStyle(.bordered)
+                }
+                ForEach(creator.offers) { offer in
+                    NavigationLink {
+                        LinkedCreatorOfferView(api: .init(client: api), id: offer.id)
+                    } label: {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "ticket").foregroundStyle(Brand.accent(for: scheme)).accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(offer.title).font(.subheadline.weight(.semibold))
+                                Text(offer.description ?? "Premium creator access on SlipSurge.")
+                                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                            if let price = offer.price {
+                                Text(price.formatted(.currency(code: (offer.currency ?? "USD").uppercased())))
+                                    .font(.subheadline.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                            }
+                        }
+                        .padding(10).frame(minHeight: 44)
+                        .background(Brand.background(for: scheme), in: .rect(cornerRadius: 10))
+                    }.buttonStyle(SlipSurgePressStyle())
+                }
+                ForEach(creator.communities) { group in
+                    communityLink(group, subtitle: group.accessType == "paid" ? "Member access" : "Open community",
+                        initialMember: profile.own)
+                }
+                if creator.offers.isEmpty && creator.communities.isEmpty {
+                    Text("This creator is setting up their first community and membership.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 
     private func socialBadge(_ link: Page.Profile.PublicLink) -> some View {
@@ -335,22 +434,29 @@ struct MemberProfileView: View {
             ForEach(page.replies) { reply in
                 Button { selectedPost = reply.postId } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) {
-                        Text(verbatim: reply.text).font(.subheadline)
+                        Label("Replied to \(reply.parentAuthor ?? "a post")", systemImage: "bubble.left.and.bubble.right")
+                            .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     } content: {
-                        if let date = SidelineBoard.timestamp(reply.createdAt) { Text(date, style: .relative).font(.caption).foregroundStyle(.secondary) }
+                        VStack(alignment: .leading, spacing: 8) {
+                            NativeInlineEmojiText(source: reply.text, linkify: { AttributedString($0) }).font(.subheadline)
+                            if let excerpt = reply.parentExcerpt, !excerpt.isEmpty {
+                                NativeInlineEmojiText(source: excerpt, linkify: { AttributedString($0) })
+                                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                    .padding(8).frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Brand.background(for: scheme), in: .rect(cornerRadius: 7))
+                            }
+                            if let date = SidelineBoard.timestamp(reply.createdAt) {
+                                Text(date, style: .relative).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
                     }
                 }.buttonStyle(SlipSurgePressStyle())
             }
             if page.replies.isEmpty { ContentUnavailableView("No replies", systemImage: "bubble") }
         } else if tab == .communities {
             ForEach(page.communities) { group in
-                NavigationLink {
-                    CommunityDetailView(api: api, group: group, initialMember: page.profile.own)
-                } label: {
-                    DiscoverIdentityCard(title: group.name, subtitle: group.sport.map(LeagueArtwork.label) ?? "Community",
-                        detail: group.description, avatar: group.avatarUrl, banner: group.bannerUrl, symbol: "person.2",
-                        count: group.memberCount.map { "\($0.formatted()) members" })
-                }.buttonStyle(SlipSurgePressStyle())
+                communityLink(group, subtitle: group.memberRole?.capitalized ?? group.sport.map(LeagueArtwork.label) ?? "Community",
+                    initialMember: page.profile.own)
             }
             if page.communities.isEmpty { ContentUnavailableView("No visible communities", systemImage: "person.2") }
         } else {
@@ -364,6 +470,16 @@ struct MemberProfileView: View {
                     .disabled(paging)
             }
         }
+    }
+
+    private func communityLink(_ group: DiscoverAPI.Communities.Community, subtitle: String, initialMember: Bool) -> some View {
+        NavigationLink {
+            CommunityDetailView(api: api, group: group, initialMember: initialMember)
+        } label: {
+            DiscoverIdentityCard(title: group.name, subtitle: subtitle,
+                detail: group.description, avatar: group.avatarUrl, banner: group.bannerUrl, symbol: "person.2",
+                count: group.memberCount.map { "\($0.formatted()) members" })
+        }.buttonStyle(SlipSurgePressStyle())
     }
 
     private func load(cursor: String? = nil) async {
@@ -381,7 +497,7 @@ struct MemberProfileView: View {
             if let id = UUID(uuidString: target), result.profile.id != id { throw URLError(.cannotParseResponse) }
             let prior = cursor == nil ? [] : posts
             var ids = Set(prior.map(\.id))
-            page = result
+            if cursor == nil { page = result }
             posts = prior + result.posts.filter { ids.insert($0.id).inserted }
             self.cursor = result.hasMore && cursor != result.nextCursor ? result.nextCursor : nil
             error = nil
