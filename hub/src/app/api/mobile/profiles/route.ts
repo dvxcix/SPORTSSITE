@@ -5,6 +5,7 @@ import { InvalidFeedCursorError } from '@/lib/feedPagination'
 import { getFavoriteCatalog } from '@/lib/favoriteCatalog'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { isGuestVisible, mobilePost, nativeAnonymousClient } from '@/lib/nativeSocial'
+import { nativePublicSocialLinks, socialPlatformColumns } from '@/lib/nativeSocialPlatforms'
 import { notify } from '@/lib/notify'
 import { publicVerifiedIdentities } from '@/lib/publicVerifiedIdentities'
 import { isReportReason } from '@/lib/reportReasons'
@@ -33,16 +34,17 @@ export async function GET(request: Request) {
     if (account?.error) return account.error
     const client = account?.supabase ?? nativeAnonymousClient(), viewer = account?.userId
     const { data: person, error: personError } = await client.from('users')
-      .select('id,username,display_name,bio,avatar_url,banner_url,is_verified,is_private,allow_dms,follower_count,following_count,location,website,created_at,hide_win_rate')
+      .select('id,username,display_name,bio,avatar_url,banner_url,is_verified,is_private,allow_dms,follower_count,following_count,location,website,created_at,hide_win_rate,social_links')
       .eq(isAccountId(target) ? 'id' : 'username', target).maybeSingle()
     if (personError) throw Error('Profile unavailable')
     if (!person || viewer && viewer !== person.id && await isBlockedEitherWay(client, viewer, person.id)) return respond({ error: 'Profile unavailable' }, 404)
     const own = person.id === viewer
-    const [relationship, favorites, allowMlb, badges] = await Promise.all([
+    const [relationship, favorites, allowMlb, badges, platforms] = await Promise.all([
       viewer && !own ? client.from('follows').select('follower_id').eq('follower_id', viewer).eq('following_id', person.id).maybeSingle() : { data: null, error: null },
       createAdminClient().from('users').select(PROFILE_PROJECTION_COLUMNS).eq('id', person.id).maybeSingle(),
       canViewMlb(client, viewer),
       client.from('user_badges').select('badge:badges(id,name,description,icon_url,card_image_url)').eq('user_id', person.id).limit(24),
+      client.from('social_platforms').select(socialPlatformColumns).order('sort_order').order('name').order('id'),
     ])
     if (relationship.error || favorites.error || badges.error) throw Error('Profile unavailable')
     const following = Boolean(relationship.data), canView = own || !person.is_private || following
@@ -59,6 +61,7 @@ export async function GET(request: Request) {
       allowMessages: person.allow_dms, followerCount: person.follower_count, followingCount: person.following_count,
       location: person.location, website: person.website, createdAt: person.created_at, following, own, canView,
       teams, sports, players: settings?.favorite_players ?? [], verifiedSocials: publicVerifiedIdentities(settings?.verified_identities),
+      socialLinks: platforms.error ? null : nativePublicSocialLinks(platforms.data ?? [], person.social_links, settings?.verified_identities),
       badges: (badges.data ?? []).flatMap(item => item.badge ?? []), record: records?.records.get(person.id.toLowerCase()) ?? null,
     }
     if (!canView) return respond({ profile, posts: [], replies: [], communities: [], hasMore: false, nextCursor: null })
