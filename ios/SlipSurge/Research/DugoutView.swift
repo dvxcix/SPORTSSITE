@@ -115,7 +115,8 @@ struct DugoutView: View {
         .sheet(item: $playerSelection) { selection in
             NavigationStack {
                 DugoutPlayerView(player: selection.player, game: selection.game, window: window,
-                    watchTarget: mode == .pregame ? api.watchTarget(date: date, game: selection.game.id, player: selection.player.id) : nil)
+                    watchTarget: mode == .pregame ? api.watchTarget(date: date, game: selection.game.id, player: selection.player.id) : nil,
+                    profileAPI: .init(account: api.account, userID: api.userID))
             }
                 .presentationDragIndicator(.visible)
         }

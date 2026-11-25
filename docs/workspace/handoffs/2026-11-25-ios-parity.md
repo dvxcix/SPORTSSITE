@@ -1067,6 +1067,11 @@ physical-device push are still open.
   access and scroll checks passed. The tests cover same-timestamp boundaries
   and revoked memberships. Cross-device typing and real forwarding remain
   pending, and no real message or forwarding action was sent during testing.
+- Task checkpoint `5c07375311f7a5d8c496d72be50019580f30229f` is pushed. PR #40
+  merged as `b44ed3952c1db09658f594b48e162552a5c159cb`. Preview
+  `dpl_CnpodBb6VJEV9sLcaA881ZCzbaG8` and production
+  `dpl_BsUNdSAeBJBuab7jVXbiqE6o1JP5` reported READY. Invalid direct and group
+  requests returned 401 and guest Feed returned 200.
 
 ## Native admin member support and feature rollouts · 25 November 2026
 
@@ -1082,5 +1087,29 @@ physical-device push are still open.
   save checks the version the administrator reviewed, and conflicts keep the
   current saved configuration. Confirmation is shown before requesting changes.
 - Xcode Debug, Hub TypeScript and 18 focused admin, feature configuration and
-  member access checks passed. Production release and native read walkthroughs
-  follow. No role, membership, email, ban, deletion or rollout was changed in QA.
+  member access checks passed. No role, membership, email, ban, deletion or
+  rollout was changed in QA.
+- Task checkpoint `6c3ea856499917659bc6723bae8fb99609bc560d` is pushed. PR #41
+  merged as `74a576f80819c1e4d3c83d207ac990002826b46e`. Preview
+  `dpl_G8ECWNXfFEiru5EdDF58KbHjt54P` and production
+  `dpl_6DohJQCyA7yZDVKFdtBtvrnSAH4r` reported READY. Invalid member and rollout
+  reads returned 401 and the signed-out Feed returned 200. The Cloud handoff
+  chat received the task and deployment checkpoint.
+
+## Native MLB player pages · 25 November 2026
+
+- Dugout batter and pitcher records open distinct native profiles using the
+  website’s existing Basic gate and exact MLB IDs. Historical matchup cards
+  keep the original freeze. Player profiles use the site’s player history,
+  team artwork, season and career records, last-six-days comparison and
+  qualified league pools for graded Quality of Contact.
+- The SwiftUI profiles include sortable Statcast and pitch arsenal splits,
+  batting stance, Swing/Take, recent home runs with opponent navigation, a
+  branded opponent chooser, pitch filter controls, strike-zone and comparison
+  grids, and selectable spray/heat markers over recorded ballpark outlines.
+  Use `slipsurge-research://research/mlb-player?id=663611` for a direct link.
+  The app also recognizes the existing same-site `/players/<id>` route.
+- Signed Xcode Debug, Hub TypeScript and focused MLB profile and admin
+  authorization checks passed. The narrow Hub preview and signed Simulator
+  walkthrough of the new profile, matchup and spray views are next. Slate
+  Breakdown needs its own matchup-specific archive checks and interface.

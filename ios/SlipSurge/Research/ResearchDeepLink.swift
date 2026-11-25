@@ -10,6 +10,7 @@ struct ResearchDeepLink: Hashable {
         case costs = "batter-cost"
         case oddsMovement = "odds-terminal"
         case synergy
+        case mlbPlayer = "mlb-player"
         case sideline = "the-sideline"
         case court = "the-paint"
     }
@@ -21,6 +22,7 @@ struct ResearchDeepLink: Hashable {
     let synergyGame: String?
     let synergyRank: DugoutSynergy.Ranking?
     let pitcherID: Int?
+    let playerID: Int?
     let players: Set<Int>?
     let result: DugoutSpraySlate.Result
     let heat: Bool
@@ -30,8 +32,18 @@ struct ResearchDeepLink: Hashable {
               components.user == nil, components.password == nil, components.port == nil, components.fragment == nil else { return nil }
         let isWebsite = components.scheme == "https" && [SlipSurgeHTTP.site, "slipsurge.com"].contains(components.host ?? "")
         let isNative = components.scheme == "slipsurge-research" && components.host == "research"
-        guard isWebsite || isNative, let tool = Tool(rawValue: String(components.percentEncodedPath.dropFirst())),
-              components.percentEncodedPath == "/" + tool.rawValue else { return nil }
+        guard isWebsite || isNative else { return nil }
+        let encodedPath = components.percentEncodedPath
+        let profilePrefix = "/players/"
+        let profilePathID = isWebsite && encodedPath.hasPrefix(profilePrefix) ? String(encodedPath.dropFirst(profilePrefix.count)) : nil
+        let tool: Tool
+        if profilePathID != nil {
+            tool = .mlbPlayer
+        } else {
+            guard let matched = Tool(rawValue: String(encodedPath.dropFirst())), encodedPath == "/" + matched.rawValue,
+                  matched != .mlbPlayer || isNative else { return nil }
+            tool = matched
+        }
         let items = components.queryItems ?? []
         guard items.count <= 6 else { return nil }
         var values: [String: String] = [:]
@@ -42,6 +54,7 @@ struct ResearchDeepLink: Hashable {
 
         let allowed: Set<String>
         switch tool {
+        case .mlbPlayer: allowed = profilePathID == nil ? ["id"] : []
         case .spray: allowed = ["date", "game", "players", "result", "view"]
         case .pitcher: allowed = ["date", "pitcherId"]
         case .weather, .dugout, .court, .oddsMovement: allowed = ["date", "game"]
@@ -66,6 +79,10 @@ struct ResearchDeepLink: Hashable {
         } else if rawGame != nil, gameID == nil { return nil }
         let pitcherID = values["pitcherId"].flatMap(Self.positiveID)
         if values["pitcherId"] != nil, pitcherID == nil { return nil }
+        let playerID = (profilePathID ?? values["id"]).flatMap(Self.positiveID)
+        if tool == .mlbPlayer {
+            guard let playerID, playerID < 10_000_000 else { return nil }
+        }
         var players: Set<Int>?
         if let filter = values["players"] {
             let ids = filter.split(separator: ",", omittingEmptySubsequences: false).map(String.init)
@@ -83,6 +100,7 @@ struct ResearchDeepLink: Hashable {
         self.synergyGame = synergyGame
         self.synergyRank = synergyRank
         self.pitcherID = pitcherID
+        self.playerID = playerID
         self.players = players
         self.result = result
         heat = values["view"] == "heat"
@@ -143,6 +161,8 @@ struct LinkedResearchView: View {
         case .costs: DugoutMarketSlateView(api: api, date: date, mode: .cost)
         case .oddsMovement: DugoutOddsTerminal(api: api, date: date, selectedGame: link.gameID)
         case .synergy: DugoutSynergy(api: api, game: link.synergyGame ?? "", ranking: link.synergyRank ?? .best)
+        case .mlbPlayer:
+            if let id = link.playerID { DugoutPlayerProfileView(api: .init(account: account, userID: userID), playerID: id) }
         case .sideline, .court: EmptyView()
         }
     }

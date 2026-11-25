@@ -6,6 +6,7 @@ struct DugoutPlayerView: View {
     let game: DugoutBoard.Game
     @State var window: DugoutWindow
     var watchTarget: DugoutWatchTarget?
+    var profileAPI: DugoutPlayerProfileAPI?
     var showsDone = true
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
@@ -18,10 +19,14 @@ struct DugoutPlayerView: View {
                     ResearchToolPortrait(name: player.name, subtitle: "\(team.name) · \(player.position) · Bats \(player.bats)",
                         portraits: [player.headshot], teamLogo: team.logo, primary: team.color, secondary: team.secondaryColor)
                 } content: {
+                    if let profile = profileAPI ?? watchTarget?.profileAPI {
+                        DugoutPlayerProfileLink(api: profile, id: player.id, role: .batter)
+                    }
                     if let pitcher = game.opponentPitcher(for: player) {
                         let opponent = team.code == game.home.code ? game.away : game.home
                         NavigationLink {
-                            DugoutPitcherView(pitcher: pitcher, team: opponent, watchTarget: watchTarget?.forPlayer(pitcher.id))
+                            DugoutPitcherView(pitcher: pitcher, team: opponent, watchTarget: watchTarget?.forPlayer(pitcher.id),
+                                profileAPI: profileAPI)
                         } label: {
                             HStack {
                                 ResearchArtwork(urls: [pitcher.headshot], fallback: "person.fill")
@@ -131,6 +136,7 @@ struct DugoutPitcherView: View {
     let pitcher: DugoutBoard.Pitcher
     let team: DugoutBoard.Team
     var watchTarget: DugoutWatchTarget?
+    var profileAPI: DugoutPlayerProfileAPI?
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -139,7 +145,11 @@ struct DugoutPitcherView: View {
                 ResearchToolCard(color: team.color) {
                     ResearchToolPortrait(name: pitcher.name, subtitle: "\(team.name) · \(pitcher.hand)HP",
                         portraits: [pitcher.headshot], teamLogo: team.logo, primary: team.color, secondary: team.secondaryColor)
-                } content: {}
+                } content: {
+                    if let profile = profileAPI ?? watchTarget?.profileAPI {
+                        DugoutPlayerProfileLink(api: profile, id: pitcher.id, role: .pitcher)
+                    }
+                }
                 if pitcher.markets.isEmpty {
                     ContentUnavailableView("No pitcher prices posted", systemImage: "chart.line.uptrend.xyaxis")
                 } else {
@@ -151,6 +161,27 @@ struct DugoutPitcherView: View {
         .background(Brand.background(for: scheme))
         .navigationTitle(pitcher.name)
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct DugoutPlayerProfileLink: View {
+    let api: DugoutPlayerProfileAPI
+    let id: Int
+    let role: DugoutProfile.Role
+
+    var body: some View {
+        NavigationLink {
+            DugoutPlayerProfileView(api: api, playerID: id, preferredRole: role)
+        } label: {
+            HStack {
+                Label("Player profile", systemImage: "person.crop.rectangle")
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+            }
+            .font(.subheadline.weight(.semibold))
+            .frame(minHeight: 44)
+        }
+        .buttonStyle(SlipSurgePressStyle())
     }
 }
 
@@ -265,6 +296,8 @@ struct DugoutWatchTarget {
     let game: Int
     let player: Int
 
+    var profileAPI: DugoutPlayerProfileAPI { .init(account: api.account, userID: api.userID) }
+
     func forPlayer(_ id: Int) -> Self { .init(api: api, date: date, game: game, player: id) }
 }
 
@@ -314,7 +347,7 @@ private struct DugoutWatchQuoteButton: View {
     }
 }
 
-private func dugoutTone(_ value: Double, scheme: ColorScheme) -> Color? {
+func dugoutTone(_ value: Double, scheme: ColorScheme) -> Color? {
     if value > 0 { return Color(rgb: scheme == .dark ? 0x7EF2AA : 0x14613D) }
     if value < 0 { return Color(rgb: scheme == .dark ? 0xFF999D : 0xAD2438) }
     return nil
