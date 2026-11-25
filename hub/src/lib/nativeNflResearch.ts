@@ -2,8 +2,9 @@ import type { SidelineGame, SidelineLens, SidelineWindow } from '@/app/the-sidel
 import type { SidelineLens as CheatsheetLens } from '@/app/the-sideline/SidelineClient'
 import { nflAvailability, nflHasCurrentMarket, nflMarketExclusion, nflMarketPlayerKey } from './nflAvailability'
 import { contextualNflScore, nflScoreContext } from './nflContextScore'
-import { americanImpliedProbability } from './nflMarketMath'
+import { americanImpliedProbability, impliedProbabilityRatio } from './nflMarketMath'
 import { nflMatchupTeam } from './nflMatchupBoard'
+import { contractPicks, estimateLadderPicks, ladderOffers, ladderPrice, observedPropPicks, type LadderSide } from './nflLadders'
 import { normalizeNflPlayerName } from './nflPlayerName'
 import { addNflMmRanks } from './nflMmRanks'
 import type { NflMatrix } from './nflMatrix'
@@ -11,7 +12,8 @@ import { nflMatrixMatches } from './nflMatrixMatches'
 import { nflPrimaryMarket } from './nflPrimaryMarket'
 import { nflUnverifiedScoreInputs } from './nflScoreIntegrity'
 import { PROP_FIELDS, hitSummary, modelProbability, projectedValue } from './nflCheatsheetMetrics'
-import type { NflOddsPlayer, SidelineOddsBoard } from './nflOddsTypes'
+import type { NflMarketOffer, NflOddsPlayer, SidelineOddsBoard } from './nflOddsTypes'
+import { nflWatchlistSelection, watchlistPickPayload } from './nflWatchlist'
 
 const key = (name: string, team: string) => `${nflMatchupTeam(team)}:${normalizeNflPlayerName(name)}`
 const identity = (player: NflOddsPlayer) => ({
@@ -63,6 +65,43 @@ export function nativeNflMismatch(game: SidelineGame, lens: SidelineLens, window
     }
   })
   return { rows }
+}
+
+export function nativeNflLadders(game: SidelineGame, board: SidelineOddsBoard, ranks: ReturnType<typeof nativeNflMismatch>['rows'],
+  prop: string, book: string, kind: NflMarketOffer['type'], side: LadderSide,
+) {
+  const ranking = new Map(ranks.map(row => [row.player.id, row]))
+  const markets = [...new Set(board.players.flatMap(player => player.markets.map(market => market.propType)))].sort()
+  const books = [...new Set(board.players.flatMap(player => player.markets.flatMap(market => market.offers.map(offer => offer.vendor))))].sort()
+  const rows = board.players.flatMap(player => {
+    const ranked = ranking.get(player.id)
+    const status = nflAvailability({ availability: player.availability, rosterStatus: player.rosterStatus }, game.gameday)
+    const estimated = side === 'over' ? estimateLadderPicks(player, prop, book) : new Map<string, number>()
+    const anytime = nflPrimaryMarket(player, 'anytime_td', book)?.offers.find(offer => offer.vendor === book && !offer.isOpeningOnly)
+    const seen = new Set<number>()
+    const contracts = ladderOffers(player, prop, book, side).flatMap(({ market, offer, line }) => {
+      if (offer.type !== kind || line == null || seen.has(line)) return []
+      seen.add(line)
+      const price = ladderPrice(offer, side)
+      const current = offer.isOpeningOnly || !status.eligible || board.availabilityStale ? null : price
+      const opening = offer.isOpeningOnly ? price ?? ladderPrice(offer, side, true) : ladderPrice(offer, side, true)
+      const probability = americanImpliedProbability(current), openingProbability = americanImpliedProbability(opening)
+      const exact = contractPicks(player, prop, line, side, kind)
+      const estimate = exact == null ? estimated.get(market.key) ?? null : null
+      const pick = current == null ? null : watchlistPickPayload(nflWatchlistSelection(player, market, offer, side, game))
+      return [{ line, current, opening, openingOnly: offer.isOpeningOnly === true, openingLine: offer.openingLine ?? null,
+        movement: probability != null && openingProbability != null && offer.line === offer.openingLine ?
+          Math.round((probability - openingProbability) * 10000) / 100 : null,
+        ratio: impliedProbabilityRatio(anytime ? ladderPrice(anytime, 'over') : null, current),
+        picks: exact ?? estimate, estimated: estimate != null,
+        leg: pick && { ...pick, line: pick.line ?? String(line), headshot_url: pick.headshot_url ?? null },
+      }]
+    })
+    return contracts.length ? [{ player: identity(player), status: status.label, eligible: status.eligible,
+      score: status.eligible ? ranked?.score ?? null : null, mm: ranked?.mm ?? null,
+      matrices: ranked?.matrices ?? [], picks: observedPropPicks(player, prop), contracts }] : []
+  })
+  return { rows, books, markets, kind, side }
 }
 
 export function nativeNflCheatsheets(lens: CheatsheetLens, board: SidelineOddsBoard, prop: string, book: string) {
