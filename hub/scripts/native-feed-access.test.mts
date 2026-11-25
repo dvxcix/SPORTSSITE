@@ -60,6 +60,8 @@ test('only the exact native guest reads reach their public handlers', () => {
   assert.equal(isNativePublicRead('/api/mobile/discover', 'GET'), true)
   assert.equal(isNativePublicRead('/api/mobile/scores', 'GET'), true)
   assert.equal(isNativePublicRead('/api/mobile/scores/game', 'GET'), true)
+  assert.equal(isNativePublicRead('/api/mobile/scores/resolve', 'GET'), true)
+  assert.equal(isNativePublicRead('/api/mobile/creator-storefront', 'GET'), true)
   assert.equal(isNativePublicRead('/api/mobile/scores/game/room', 'GET'), false)
   assert.equal(isNativePublicRead('/api/mobile/scores/game', 'POST'), false)
   assert.equal(isNativePublicRead('/api/mobile/profiles', 'GET'), true)
@@ -72,13 +74,14 @@ test('only the exact native guest reads reach their public handlers', () => {
   const post = '/api/mobile/posts/00000000-0000-4000-8000-000000000301'
   assert.equal(isNativePublicRead(post, 'GET'), true)
   for (const path of ['/api/mobile/feed', '/api/mobile/discover', '/api/mobile/scores',
-    '/api/mobile/announcements', '/api/mobile/events', '/api/mobile/forum', '/api/mobile/emojis', post]) {
+    '/api/mobile/announcements', '/api/mobile/events', '/api/mobile/forum', '/api/mobile/emojis',
+    '/api/mobile/scores/resolve', '/api/mobile/creator-storefront', post]) {
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) assert.equal(isNativePublicRead(path, method), false)
   }
   for (const path of ['/api/mobile/posts', post + '/edit', '/api/mobile/posts/undefined', '/api/mobile/account',
     '/api/mobile/communities/00000000-0000-4000-8000-000000000301', '/api/mobile/notifications', '/api/mobile/court/tools',
     '/api/mobile/admin/announcements', '/api/mobile/admin/events', '/api/mobile/admin/forum', '/api/mobile/events/private',
-    '/api/mobile/admin/emojis', '/api/mobile/admin/badges']) {
+    '/api/mobile/admin/emojis', '/api/mobile/admin/badges', '/api/mobile/creator-storefront/admin', '/api/mobile/scores/resolve/private']) {
     assert.equal(isNativePublicRead(path, 'GET'), false)
   }
 })

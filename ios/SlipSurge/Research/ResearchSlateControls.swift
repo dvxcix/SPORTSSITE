@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ResearchSlateControls: View {
     @Binding var date: Date
+    var latest: Date? = nil
     @State private var calendarOpen = false
     @Environment(\.colorScheme) private var scheme
 
@@ -31,8 +32,11 @@ struct ResearchSlateControls: View {
         .tint(Brand.accent(for: scheme))
         .sheet(isPresented: $calendarOpen) {
             NavigationStack {
-                DatePicker("Slate date", selection: $date, displayedComponents: .date)
-                    .datePickerStyle(.graphical)
+                Group {
+                    if let latest { DatePicker("Slate date", selection: $date, in: ...latest, displayedComponents: .date) }
+                    else { DatePicker("Slate date", selection: $date, displayedComponents: .date) }
+                }
+                .datePickerStyle(.graphical)
                     .environment(\.timeZone, SlateDate.zone)
                     .padding()
                     .navigationTitle("Choose a date")
@@ -67,6 +71,7 @@ struct ResearchSlateControls: View {
                 .frame(minWidth: 30, minHeight: 32)
         }
         .accessibilityLabel(direction < 0 ? "Previous day" : "Next day")
+        .disabled(direction > 0 && latest.map { SlateDate.key(date) >= SlateDate.key($0) } == true)
     }
 }
 

@@ -13,6 +13,26 @@ enum DugoutWindow: String, CaseIterable {
 }
 
 struct DugoutBoard: Decodable {
+    struct HomeRun: Decodable, Identifiable {
+        let gameId: Int
+        let playerId: Int?
+        let playerName: String
+        let pitcherName: String?
+        let atBat: Int
+        let inning: Int?
+        let half: String?
+        let description: String
+        let exitVelocity: Double?
+        let launchAngle: Double?
+        let distance: Double?
+        let time: String?
+        let runs: Int?
+        let firstHomeRun: Bool
+        let grandSlam: Bool
+
+        var id: String { "\(gameId):\(atBat)" }
+    }
+
     struct Team: Decodable {
         let code: String
         let name: String
@@ -167,6 +187,7 @@ struct DugoutBoard: Decodable {
     let games: [Game]
     let publicAccess: Bool?
     let batterCostAccess: Bool?
+    let homeRuns: [HomeRun]?
 }
 
 struct DugoutAPI {
@@ -185,10 +206,12 @@ struct DugoutAPI {
         return try JSONDecoder().decode(Access.self, from: data).allowed
     }
 
-    func board(date: String, mode: DugoutMode) async throws -> DugoutBoard {
-        let data = try await SlipSurgeHTTP.memberData(Self.path, query: [
+    func board(date: String, mode: DugoutMode, recap: Bool = false) async throws -> DugoutBoard {
+        var query: [URLQueryItem] = [
             .init(name: "date", value: date), .init(name: "mode", value: mode.rawValue),
-        ], account: account, userID: userID)
+        ]
+        if recap { query.append(.init(name: "view", value: "recap")) }
+        let data = try await SlipSurgeHTTP.memberData(Self.path, query: query, account: account, userID: userID)
         let board = try JSONDecoder().decode(DugoutBoard.self, from: data)
         guard board.date == date, board.mode == mode else { throw URLError(.cannotParseResponse) }
         return board

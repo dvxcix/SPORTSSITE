@@ -52,6 +52,7 @@ struct NativeLinkedSiteView: View {
         case .explore: NativeExploreView(api: viewer)
         case .nbaEntity(let kind, let id, let game, let mode): NbaDirectoryEntityView(api: viewer, kind: kind, id: id, game: game, mode: mode)
         case .nflEntity(let kind, let id): NflDirectoryEntityView(api: viewer, kind: kind, id: id)
+        case .mlbTeam(let id): DugoutTeamView(api: .init(account: account, userID: userID), id: id)
         case .bookmarks: FeedBookmarksView(api: .init(account: account, userID: userID))
         case .picks: MyPicksView(api: viewer)
         case .messages, .newMessage: MessagesView(api: messages, startsComposing: target == .newMessage)
@@ -72,6 +73,7 @@ struct NativeLinkedSiteView: View {
         case .researchWorkspace: ResearchLibraryView(api: .init(account: account, userID: userID))
         case .marketplace(let target): NativeMarketplaceView(api: viewer, userID: userID, target: target)
         case .admin: AccountWorkspaceView(account: account, userID: userID, workspace: .admin)
+        case .adminMarketplace: AdminMatrixMarketplaceView(api: viewer)
         default: EmptyView()
         }
     }

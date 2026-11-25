@@ -1560,7 +1560,9 @@ physical-device push are still open.
   `dpl_9q1qVoxFuzYPjFkeAmCpQ6xm8xr6` were READY. Guest returned 401. The
   signed Simulator opened the exact October 28 slate and confirmed
   matchup `849799`. No qualifying mechanics were saved for that game,
-  and the workspace explained the missing sample.
+  and the workspace explained the missing sample. The October 27 matchup
+  `849803` loaded the live archived HR Contact Shape and showed the Plane
+  and Trajectory leaders in the signed Simulator.
 
 ## Native creator storefront, offer and access links · 25 November 2026
 
@@ -1575,5 +1577,32 @@ physical-device push are still open.
   eligible member community or the existing billing management flow.
 - Signed Xcode Simulator build, Hub TypeScript, two storefront endpoint
   fixtures and all 134 production source checks passed. No live purchase,
-  restore, follow, billing or membership change was performed. Deploy
-  and verify with the existing public storefront and a published offer.
+  restore, follow, billing or membership change was performed. Task
+  checkpoint `d39fb3aff6ed31daf68e4439c84b249d720bc96d` is pushed. PR #59
+  merged as `bcd312a5221af0496a9924fe520ba2c4fdf08a29`; preview
+  `dpl_BLat52vdChEred6MV1uRRRkDK4ub` and production
+  `dpl_DfcjUbb6SQ3KaRBUkNBp1mApcKcN` were READY. The signed Simulator opened
+  the existing creator’s branded storefront and showed the active published
+  membership for its owner. A follow-up adds the exact guest GET to the
+  middleware allowlist so signed-out users can open the storefront and offer.
+
+## Native MLB team rosters, Daily Recap and Matrix moderation · 25 November 2026
+
+- MLB team links open official active rosters by position, with club
+  colors, team marks, real player headshots, search and player profiles.
+  The Basic requirement and current MLB hibernation visibility apply.
+- Ultimate Daily Recap uses the original official home-run results,
+  filters to the selected Eastern slate, and keeps game and player
+  identifiers separate through doubleheaders. It includes distance, exit
+  velocity, launch angle, rolling form, sortable hitters, opening/latest
+  prices, and a scrubber based on captured pregame market observations.
+- Admin Matrix Marketplace uses the original remove/restore actions, the
+  live publication version as a concurrency check, existing audit events,
+  and an explicit confirmation. QA used fixtures for moderation updates.
+- Added exact guest GET routing for creator storefronts, offers and public
+  score resolution. Paid access, creator operations and all write methods
+  retain their own member or admin authorization.
+- Signed Xcode Simulator build, Hub TypeScript, existing production source
+  smoke checks and focused gate, archive and moderation checks passed.
+  Verify released team, recap and admin reads, and signed-out creator and
+  game links. No active listing was changed for QA.

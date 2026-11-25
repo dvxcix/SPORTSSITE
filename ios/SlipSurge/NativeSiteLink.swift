@@ -14,6 +14,8 @@ enum NativeSiteLink: Hashable {
     case creatorAccess(UUID, CreatorAccessCompletionView.Outcome?)
     case nbaEntity(NbaDirectoryEntityView.Kind, Int, game: Int?, mode: CourtResearchMode)
     case nflEntity(NflDirectoryEntityView.Kind, String)
+    case mlbTeam(Int)
+    case adminMarketplace
 
     enum CommunitySection: Hashable {
         case posts, picks, settings, channels(String?)
@@ -114,6 +116,7 @@ enum NativeSiteLink: Hashable {
         case ["marketplace", "sell"]: self = .marketplace(.init(league: .mlb, publication: .chooser))
         case ["launch"]: self = .launch
         case ["admin"]: self = .admin
+        case ["admin", "marketplace"]: self = .adminMarketplace
         default:
             if segments.count == 2 {
                 let name = segments[1]
@@ -195,6 +198,9 @@ enum NativeSiteLink: Hashable {
                     let team = name.uppercased()
                     guard Self.matches(team, #"^[A-Z]{2,3}$"#) else { return nil }
                     self = .nflEntity(.team, team)
+                case ["mlb", "teams"]:
+                    guard let id = Self.entityID(name), id <= 999_999 else { return nil }
+                    self = .mlbTeam(id)
                 default:
                     if segments[0] == "sports", Self.scoreLeagues.contains(segments[1]) {
                         let sport = segments[1]
@@ -217,7 +223,7 @@ enum NativeSiteLink: Hashable {
         switch self {
         case .notifications, .activityReplay, .missions, .search, .topic, .explore, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
             .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .communityCreator, .researchWorkspace, .admin,
-            .marketplace, .nbaEntity, .nflEntity, .creatorAccess,
+            .marketplace, .nbaEntity, .nflEntity, .mlbTeam, .creatorAccess, .adminMarketplace,
             .community(_, .settings), .community(_, .channels): true
         default: false
         }

@@ -285,6 +285,9 @@ struct AccountWorkspaceView: View {
                     NavigationLink { AdminOperationsView(viewer: .init(account: account, userID: userID), mode: .groups) } label: {
                         Label("Manage communities", systemImage: "person.3")
                     }
+                    NavigationLink { AdminMatrixMarketplaceView(api: .init(account: account, userID: userID)) } label: {
+                        Label("Matrix Marketplace", systemImage: "square.grid.3x3")
+                    }
                 }
             } else if adminTab == .members {
                 NavigationLink {

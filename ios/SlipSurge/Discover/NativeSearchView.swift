@@ -192,6 +192,10 @@ struct NativeSearchView: View {
                         Button("Pitcher Report", systemImage: "chart.xyaxis.line") { remember(request.query); openURL(url) }
                             .buttonStyle(.bordered)
                     }
+                    if let gamePath = hit.gamePath, let url = link(gamePath) {
+                        Button("Game Center", systemImage: "baseball.diamond") { remember(request.query); openURL(url) }
+                            .buttonStyle(.bordered)
+                    }
                 }
                 .padding(11).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
             }

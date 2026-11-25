@@ -80,6 +80,7 @@ struct NativeSearchAPI {
         let logo: URL?
         let team: String?
         var pitcherPath: String? = nil
+        var gamePath: String? = nil
         var id: String { "\(league.rawValue):\(path):\(name)" }
     }
 
@@ -162,18 +163,24 @@ struct NativeSearchAPI {
         }
         guard let matches = try? await viewer.readPublic(Matches.self, path: "/api/search/sports", query: query) else { return [] }
         return matches.teams.map {
-            .init(path: $0.gamePk.map { "/sports/mlb/\($0)" } ?? "/sports", league: .mlb, name: $0.name,
-                detail: $0.abbr, headshot: nil, logo: mlbLogo($0.id), team: $0.abbr)
+            .init(path: "/mlb/teams/\($0.id)", league: .mlb, name: $0.name, detail: $0.abbr, headshot: nil,
+                logo: mlbLogo($0.id, abbreviation: $0.abbr), team: $0.abbr, gamePath: $0.gamePk.map { "/sports/mlb/\($0)" })
         } + matches.players.map { player in
             let image = URL(string: "https://img.mlbstatic.com/mlb-photos/image/upload/w_213,d_people:generic:headshot:67:current.png,q_auto:best,f_auto/v1/people/\(player.mlbId)/headshot/67/current")
             let pitcher = player.isProbableStarter ? matches.date.map { "/pitcher-report?date=\($0)&pitcherId=\(player.mlbId)" } : nil
             return .init(path: "/players/\(player.mlbId)", league: .mlb, name: player.name,
                 detail: [player.position, player.teamName].compactMap { $0 }.joined(separator: " · "),
-                headshot: image, logo: player.teamId.flatMap(mlbLogo), team: nil, pitcherPath: pitcher)
+                headshot: image, logo: player.teamId.flatMap { mlbLogo($0) }, team: nil, pitcherPath: pitcher)
         }
     }
 
-    private func mlbLogo(_ id: Int) -> URL? { URL(string: "https://www.mlbstatic.com/team-logos/\(id).svg") }
+    private func mlbLogo(_ id: Int, abbreviation: String? = nil) -> URL? {
+        if let abbreviation, abbreviation.range(of: #"^[A-Za-z]{2,3}$"#, options: .regularExpression) != nil {
+            let code = abbreviation.uppercased() == "AZ" ? "ari" : abbreviation.lowercased()
+            return URL(string: "https://a.espncdn.com/i/teamlogos/mlb/500/\(code).png")
+        }
+        return URL(string: "https://www.mlbstatic.com/team-logos/\(id).svg")
+    }
 
     private func change(_ method: String, id: UUID? = nil, body: Data? = nil) async throws {
         guard let userID = viewer.userID else { throw URLError(.userAuthenticationRequired) }

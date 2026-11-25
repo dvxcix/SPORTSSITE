@@ -13,6 +13,7 @@ struct ResearchDeepLink: Hashable {
         case mlbPlayer = "mlb-player"
         case slateBreakdown = "slate-breakdown"
         case workspace = "research"
+        case recap = "daily-recap"
         case sideline = "the-sideline"
         case court = "the-paint"
     }
@@ -71,7 +72,7 @@ struct ResearchDeepLink: Hashable {
         case .workspace: allowed = ["date", "game", "view", "detail"]
         case .court, .sideline: allowed = ["date", "game", "view", "mode", "book"]
         case .synergy: allowed = ["game", "sort"]
-        case .publicPicks, .costs: allowed = ["date"]
+        case .publicPicks, .costs, .recap: allowed = ["date"]
         }
         guard Set(values.keys).isSubset(of: allowed) else { return nil }
         let rawDate = values["date"]
@@ -210,6 +211,8 @@ struct LinkedResearchView: View {
         case .workspace:
             DugoutWorkspaceView(api: api, initialGameID: link.gameID, initialGameKey: link.workspaceGame,
                 initialPanel: link.workspacePanel, initialPlayer: link.workspacePlayer, date: date)
+        case .recap:
+            DugoutDailyRecap(api: api, date: min(date, .now))
         case .sideline, .court: EmptyView()
         }
     }
