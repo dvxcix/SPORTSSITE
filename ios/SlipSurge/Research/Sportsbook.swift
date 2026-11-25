@@ -28,17 +28,6 @@ struct SportsbookPicker: View {
     @Binding var selection: String
 
     var body: some View {
-        HStack(spacing: 8) {
-            if let asset = Sportsbook.artwork(selection) {
-                Image(asset)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-                    .accessibilityHidden(true)
-            }
-            Picker("Sportsbook", selection: $selection) {
-                ForEach(books, id: \.self) { Text(Sportsbook.name($0)).tag($0) }
-            }
-        }
+        ResearchArtworkPicker(title: "Sportsbook", options: books.map(ResearchArtworkPicker.Option.sportsbook), selection: $selection)
     }
 }

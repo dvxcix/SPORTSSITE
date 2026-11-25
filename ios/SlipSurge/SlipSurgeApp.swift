@@ -10,6 +10,7 @@ struct SlipSurgeApp: App {
         WindowGroup {
             SlipSurgeTabs(account: account, appearance: $appearance)
             .preferredColorScheme(appearance.scheme)
+            .onOpenURL { url in Task { await account.openEmail(url) } }
         }
     }
 }

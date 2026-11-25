@@ -23,7 +23,10 @@ export function usesVisitorBrowseFrame(pathname:string) {
   return isPublicBrowsePath(pathname) || publicInfoPages.has(pathname)
 }
 
-/** A bounded visitor projection. The handler independently authenticates every bearer request. */
-export function isNativeFeedRequest(pathname: string, method: string) {
-  return pathname === '/api/mobile/feed' && method === 'GET'
+const nativePublicReaders = new Set(['/api/mobile/feed', '/api/mobile/discover', '/api/mobile/scores'])
+const nativePublicPost = /^\/api\/mobile\/posts\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
+
+/** Exact guest reads use only public projections. Handlers verify any bearer independently. */
+export function isNativePublicRead(pathname: string, method: string) {
+  return method === 'GET' && (nativePublicReaders.has(pathname) || nativePublicPost.test(pathname))
 }

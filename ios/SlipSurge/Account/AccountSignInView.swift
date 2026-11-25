@@ -12,6 +12,7 @@ struct AccountSignInView: View {
     @State private var password = ""
     @State private var opening: SignInProvider?
     @State private var appeared = false
+    @State private var emailFlow: EmailAccountForm.Flow?
     @FocusState private var focus: Field?
 
     private enum Field { case email, password }
@@ -38,6 +39,9 @@ struct AccountSignInView: View {
             .frame(maxWidth: .infinity)
         }
         .scrollDismissesKeyboard(.interactively)
+        .sheet(item: $emailFlow) { flow in
+            NavigationStack { EmailAccountForm(account: account, flow: flow, prefill: email) }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Appearance", systemImage: "circle.lefthalf.filled") {
@@ -213,12 +217,12 @@ struct AccountSignInView: View {
     }
 
     private var recovery: some View {
-        SiteLink("Forgot password?", path: "/auth/forgot-password")
+        Button("Forgot password?") { emailFlow = .recovery }
             .font(.footnote.weight(.medium)).frame(minHeight: 44)
     }
 
     private var registration: some View {
-        SiteLink("Create account", path: "/auth/register")
+        Button("Create account") { emailFlow = .registration }
             .font(.footnote.weight(.semibold)).frame(minHeight: 44)
     }
 

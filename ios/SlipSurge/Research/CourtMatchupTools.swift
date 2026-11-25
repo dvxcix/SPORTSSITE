@@ -6,6 +6,11 @@ enum CourtMatchupTool: String, CaseIterable {
     case firstBasket = "First Basket"
     case cheatsheets = "Cheatsheets"
     case slateEdge = "Slate Edge"
+    case score = "SlipSurge Score"
+    case defense = "Defense vs. Position"
+    case lineups = "Starting Lineups"
+    case publicActivity = "The Public"
+    case crossMarket = "Cross-market"
 
     var glyph: String {
         switch self {
@@ -14,6 +19,11 @@ enum CourtMatchupTool: String, CaseIterable {
         case .firstBasket: "basketball"
         case .cheatsheets: "tablecells"
         case .slateEdge: "chart.bar.xaxis"
+        case .score: "bolt"
+        case .defense: "shield"
+        case .lineups: "person.3"
+        case .publicActivity: "person.2"
+        case .crossMarket: "arrow.left.arrow.right"
         }
     }
 }

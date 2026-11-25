@@ -9,6 +9,7 @@ final class AccountStore {
     private var session: AccountSession?
     private var rotatedSession: AccountSession?
     private var pendingVerification: AccountSession?
+    private var recoverySession: AccountSession?
     @ObservationIgnored private var renewal: Task<AccountSession, Error>?
     private(set) var isBusy = false
     private var isSigningOut = false
@@ -21,9 +22,147 @@ final class AccountStore {
     var user: AccountSession.User? { session?.user }
     var memberID: UUID? { onboardingComplete && !isSigningOut ? user?.id : nil }
     var needsVerification: Bool { pendingVerification != nil }
+    var needsNewPassword: Bool { recoverySession != nil }
+    var recoveryNeedsAuthenticator: Bool {
+        recoverySession.map { $0.user.hasVerifiedFactor && !$0.isMFAAuthenticated } ?? false
+    }
+
+    func beginEmail(_ registration: AccountAPI.Registration) async -> Bool {
+        guard !isBusy, isConfigured, session == nil, pendingVerification == nil, recoverySession == nil else { return false }
+        isBusy = true
+        notice = nil
+        defer { isBusy = false }
+        do {
+            let attempt = try EmailAuthAttempt(.registration)
+            try AccountKeychain.storeEmailAttempt(attempt)
+            if let active = try await api.register(registration, attempt: attempt) {
+                try AccountKeychain.clearEmailAttempt()
+                try await accept(active)
+            }
+            return true
+        } catch {
+            notice = message(for: error, fallback: "Account setup couldn’t start. Check your details and try again.")
+            return false
+        }
+    }
+
+    func beginRecovery(email: String) async -> Bool {
+        guard !isBusy, isConfigured, session == nil, pendingVerification == nil, recoverySession == nil else { return false }
+        isBusy = true
+        notice = nil
+        defer { isBusy = false }
+        do {
+            let attempt = try EmailAuthAttempt(.recovery)
+            try AccountKeychain.storeEmailAttempt(attempt)
+            try await api.recover(email: email, attempt: attempt)
+            return true
+        } catch {
+            notice = message(for: error, fallback: "A reset link couldn’t be requested. Try again.")
+            return false
+        }
+    }
+
+    func openEmail(_ url: URL) async {
+        guard url.scheme == EmailAuthAttempt.scheme, !isBusy, session == nil, pendingVerification == nil,
+              recoverySession == nil else { return }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            guard let attempt = try AccountKeychain.emailAttempt() else {
+                notice = "Open the link on the device that requested it."
+                return
+            }
+            guard let code = try attempt.code(from: url) else { return }
+            let updated = try await api.redeem(code, attempt: attempt)
+            try AccountKeychain.clearEmailAttempt()
+            switch attempt.purpose {
+            case .registration:
+                try await accept(updated)
+            case .recovery:
+                let verified = try await api.validatedUser(updated)
+                recoverySession = AccountSession(accessToken: updated.accessToken, refreshToken: updated.refreshToken,
+                    expiresAt: updated.expiresAt, user: verified)
+                notice = nil
+            }
+        } catch {
+            notice = "This link couldn’t be verified. Request a fresh link on this device."
+        }
+    }
+
+    func finishRecovery(password: String, code: String) async -> Bool {
+        guard !isBusy, let original = recoverySession else { return false }
+        isBusy = true
+        notice = nil
+        defer { isBusy = false }
+        do {
+            guard !original.needsRefresh else {
+                cancelRecovery()
+                notice = "The recovery session expired. Request a fresh link."
+                return false
+            }
+            let session: AccountSession
+            if original.user.hasVerifiedFactor && !original.isMFAAuthenticated {
+                guard let factor = original.user.verifiedTOTP, code.count == 6 else {
+                    notice = "Enter your six-digit authenticator code."
+                    return false
+                }
+                session = try await api.verifyTOTP(code, factorID: factor, session: original)
+                recoverySession = session
+            } else {
+                session = original
+            }
+            try await api.updatePassword(password, session: session)
+            recoverySession = nil
+            try await accept(session)
+            return true
+        } catch {
+            notice = "The password update couldn’t be confirmed. Check your details and try again."
+            return false
+        }
+    }
+
+    func cancelRecovery() {
+        guard let recoverySession else { return }
+        self.recoverySession = nil
+        Task { try? await api.signOut(recoverySession) }
+    }
+
+    func onboardingData() async throws -> NativeOnboarding.Initial {
+        let data = try await setupRequest()
+        return try JSONDecoder().decode(NativeOnboarding.Initial.self, from: data)
+    }
+
+    func finishOnboarding(_ draft: NativeOnboarding.Draft) async throws {
+        guard !isBusy else { throw URLError(.resourceUnavailable) }
+        isBusy = true
+        defer { isBusy = false }
+        let data = try await setupRequest(body: JSONEncoder().encode(draft))
+        struct Confirmation: Decodable { let ok: Bool }
+        guard try JSONDecoder().decode(Confirmation.self, from: data).ok, let session else {
+            throw URLError(.cannotParseResponse)
+        }
+        try await accept(session)
+        guard onboardingComplete else { throw URLError(.cannotParseResponse) }
+    }
+
+    private func setupRequest(body: Data? = nil) async throws -> Data {
+        guard let session, pendingVerification == nil else { throw URLError(.userAuthenticationRequired) }
+        let current = session.needsRefresh ? try await refreshSavedSession(session) : session
+        self.session = current
+        var request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: "/api/mobile/account/onboarding")
+        request.setValue("Bearer \(current.accessToken)", forHTTPHeaderField: "Authorization")
+        if let body {
+            request.httpMethod = "POST"
+            request.httpBody = body
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+        let data = try await SlipSurgeHTTP.send(request)
+        guard self.session?.user.id == current.user.id, !isSigningOut else { throw URLError(.userAuthenticationRequired) }
+        return data
+    }
 
     func restore() async {
-        guard !restored, isConfigured, !isBusy else { return }
+        guard !restored, isConfigured, !isBusy, recoverySession == nil else { return }
         isBusy = true
         defer { isBusy = false }
         do {

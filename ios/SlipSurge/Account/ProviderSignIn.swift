@@ -63,7 +63,7 @@ struct ProviderSignIn {
         return handoff
     }
 
-    private static func randomValue() throws -> String {
+    static func randomValue() throws -> String {
         var bytes = Data(count: 32)
         let status = bytes.withUnsafeMutableBytes { buffer in
             guard let base = buffer.baseAddress else { return errSecAllocate }
@@ -73,7 +73,7 @@ struct ProviderSignIn {
         return base64URL(bytes)
     }
 
-    private static func base64URL(_ bytes: Data) -> String {
+    static func base64URL(_ bytes: Data) -> String {
         bytes.base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")

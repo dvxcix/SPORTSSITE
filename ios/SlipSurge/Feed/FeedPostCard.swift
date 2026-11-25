@@ -3,7 +3,14 @@ import SwiftUI
 
 struct FeedPostCard: View {
     let post: FeedPost
+    var operation: ((FeedAPI.Mutation) -> Void)?
+    var showDiscussionButton = true
+    var discussion: (() -> Void)?
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var revealed = false
+    @State private var showingEmoji = false
+    @State private var customEmoji = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -13,13 +20,44 @@ struct FeedPostCard: View {
             }
             author
             if post.spoiler && !revealed {
-                Button("Reveal spoiler", systemImage: "eye.slash") { revealed = true }
+                Button("Reveal spoiler", systemImage: "eye.slash") {
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.24)) { revealed = true }
+                }
             } else {
                 postBody
+                    .transition(.opacity)
             }
         }
         .padding(.vertical, 6)
         .buttonStyle(.borderless)
+        .sheet(isPresented: $showingEmoji) {
+            NavigationStack {
+                VStack(alignment: .leading, spacing: 16) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 48), spacing: 10)]) {
+                        ForEach(["❤️", "🔥", "⚡", "👀", "👏", "😂", "💯", "🏆", "👍", "👎", "🙌", "🤝"], id: \.self) { symbol in
+                            Button { react(symbol) } label: {
+                                Text(symbol).font(.title2).frame(width: 46, height: 46)
+                                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 11))
+                            }
+                            .accessibilityLabel("React \(symbol)")
+                        }
+                    }
+                    HStack {
+                        TextField("Emoji or custom shortcode", text: $customEmoji).textFieldStyle(.roundedBorder)
+                        Button("Add") { react(customEmoji) }.disabled(customEmoji.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || customEmoji.utf16.count > 32)
+                    }
+                    Spacer()
+                }
+                .padding(16)
+                .background(Brand.background(for: scheme))
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Close", systemImage: "xmark") { showingEmoji = false }.labelStyle(.iconOnly) }
+                }
+                .navigationTitle("React")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+            .presentationDetents([.medium, .large])
+        }
     }
 
     private var author: some View {
@@ -62,27 +100,121 @@ struct FeedPostCard: View {
             }
         }
         if let poll = post.poll {
-            Label("Poll", systemImage: "chart.bar")
-            ForEach(Array(poll.options.enumerated()), id: \.offset) { _, choice in
-                Text(verbatim: choice)
-            }
+            pollView(poll)
         }
         ForEach(Array(post.media.enumerated()), id: \.offset) { _, url in
             if Self.allowedMedia(url) {
                 FeedMedia(url: url)
             }
         }
-        HStack(spacing: 16) {
-            count("Reactions", icon: "heart", value: post.reactions)
-            count("Comments", icon: "bubble", value: post.comments)
-            count("Reposts", icon: "arrow.2.squarepath", value: post.reposts)
+        interactions
+    }
+
+    private var interactions: some View {
+        HStack(spacing: 4) {
+            if let operation {
+                actionButton("React", icon: post.reacted?.contains("❤️") == true ? "heart.fill" : "heart",
+                    value: post.reactions, active: post.reacted?.contains("❤️") == true) {
+                    operation(.init(kind: "react", enabled: post.reacted?.contains("❤️") != true, emoji: "❤️"))
+                }
+                .contextMenu {
+                    Button("More reactions", systemImage: "face.smiling") { showingEmoji = true }
+                    ForEach(["🔥", "⚡", "👀", "👏"], id: \.self) { symbol in
+                        Button("React \(symbol)") { react(symbol) }
+                    }
+                }
+                .accessibilityAction(named: "More reactions") { showingEmoji = true }
+            } else {
+                count("Reactions", icon: "heart", value: post.reactions)
+            }
+            if showDiscussionButton, let discussion {
+                actionButton("Comments", icon: "bubble", value: post.comments, action: discussion)
+            } else {
+                count("Comments", icon: "bubble", value: post.comments)
+            }
+            if let operation, post.visibility != "private" {
+                actionButton("Repost", icon: "arrow.2.squarepath", value: post.reposts, active: post.reposted == true) {
+                    operation(.init(kind: "repost", enabled: post.reposted != true))
+                }
+            } else {
+                count("Reposts", icon: "arrow.2.squarepath", value: post.reposts)
+            }
+            Spacer(minLength: 0)
+            if let operation {
+                actionButton(post.bookmarked == true ? "Remove bookmark" : "Bookmark",
+                    icon: post.bookmarked == true ? "bookmark.fill" : "bookmark", active: post.bookmarked == true) {
+                    operation(.init(kind: "bookmark", enabled: post.bookmarked != true))
+                }
+            }
+            if post.shareable, let url = URL(string: "https://\(SlipSurgeHTTP.site)/posts/\(post.postID.uuidString.lowercased())") {
+                ShareLink(item: url) {
+                    Image(systemName: "square.and.arrow.up").frame(minWidth: 39, minHeight: 44)
+                }.accessibilityLabel("Share post")
+            }
         }
-        .font(.caption).foregroundStyle(.secondary)
-        SiteLink("View post on the web", path: "/posts/\(post.postID.uuidString.lowercased())")
-        if post.shareable,
-           let url = URL(string: "https://\(SlipSurgeHTTP.site)/posts/\(post.postID.uuidString.lowercased())") {
-            ShareLink(item: url) { Label("Share post", systemImage: "square.and.arrow.up") }
+        .font(.subheadline.weight(.medium))
+        .foregroundStyle(.secondary)
+    }
+
+    private func actionButton(_ label: String, icon: String, value: Int? = nil, active: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                if let value, value > 0 { Text(value.formatted()).monospacedDigit() }
+            }
+            .foregroundStyle(active ? Brand.accent(for: scheme) : .secondary)
+            .frame(minWidth: 39, minHeight: 44)
+            .contentShape(.rect)
         }
+        .buttonStyle(SlipSurgePressStyle())
+        .accessibilityLabel(value.map { "\(label), \($0)" } ?? label)
+        .accessibilityAddTraits(active ? .isSelected : [])
+        .sensoryFeedback(.selection, trigger: active)
+    }
+
+    private func pollView(_ poll: FeedPost.Poll) -> some View {
+        let end = SidelineBoard.timestamp(poll.endsAt)
+        let closed = end.map { $0 <= .now } ?? true
+        let voted = post.pollVote != nil
+        let total = poll.votes?.reduce(0, +) ?? 0
+        return VStack(alignment: .leading, spacing: 7) {
+            ForEach(Array(poll.options.enumerated()), id: \.offset) { index, option in
+                let percent = total > 0 ? Double(poll.votes.flatMap { $0.indices.contains(index) ? $0[index] : nil } ?? 0) / Double(total) : 0
+                Button {
+                    operation?(.init(kind: "vote", option: index))
+                } label: {
+                    HStack {
+                        Text(verbatim: option)
+                        Spacer()
+                        if voted || closed {
+                            Text(percent.formatted(.percent.precision(.fractionLength(0)))).font(.caption.weight(.bold))
+                        }
+                        if post.pollVote == index {
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(Brand.accent(for: scheme))
+                        }
+                    }
+                    .padding(10)
+                    .frame(minHeight: 44)
+                    .background(.quaternary, in: .rect(cornerRadius: 9))
+                    .contentShape(.rect)
+                }
+                .buttonStyle(SlipSurgePressStyle())
+                .disabled(closed || voted || operation == nil)
+            }
+            if closed {
+                Text("Poll ended").font(.caption).foregroundStyle(.secondary)
+            } else if let end {
+                Text("Ends \(end.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func react(_ symbol: String) {
+        let value = symbol.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty, value.utf16.count <= 32 else { return }
+        operation?(.init(kind: "react", enabled: !(post.reacted?.contains(value) ?? false), emoji: value))
+        customEmoji = ""
+        showingEmoji = false
     }
 
     private func pickRow(label: String?, line: String?, price: String?, result: String?) -> some View {
@@ -102,7 +234,7 @@ struct FeedPostCard: View {
             .accessibilityLabel("\(value) \(label.lowercased())")
     }
 
-    private static func allowedMedia(_ url: URL) -> Bool {
+    static func allowedMedia(_ url: URL) -> Bool {
         guard url.scheme == "https", url.user == nil, url.password == nil, let host = url.host else { return false }
         return host == SlipSurgeHTTP.site || host == "hkldweedwnxartkfhror.supabase.co" ||
             host == "media.tenor.com" || host == "a.espncdn.com" ||

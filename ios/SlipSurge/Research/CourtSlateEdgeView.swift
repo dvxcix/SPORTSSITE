@@ -71,12 +71,9 @@ struct CourtSlateEdgeView: View {
                         options: [.init(id: "all", title: "All books", icon: "books.vertical")] + [
                             "fanduel", "draftkings", "betmgm", "caesars", "betrivers", "fanatics", "pinnacle", "betparx", "ballybet",
                         ].map(ResearchArtworkPicker.Option.sportsbook), selection: $book)
-                    ResearchToolFilter(title: "Game", selection: games.first { $0.id == selectedGame }.map(matchup) ?? "All games") {
-                        Picker("Game", selection: $selectedGame) {
-                            Text("All games").tag(nil as Int?)
-                            ForEach(games) { Text(matchup($0)).tag(Optional($0.id)) }
-                        }
-                    }
+                    ResearchArtworkPicker(title: "Game", options: [.init(id: "", title: "All games", icon: "basketball")] + games.map {
+                        .init(id: String($0.id), title: matchup($0), url: $0.visitorTeam.logo, secondaryLogo: $0.homeTeam.logo, icon: "shield")
+                    }, selection: Binding(get: { selectedGame.map(String.init) ?? "" }, set: { selectedGame = Int($0) }))
                     ResearchToolFilter(title: "Sort", selection: sort.rawValue) {
                         Picker("Sort", selection: $sort) {
                             ForEach(Sort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -145,8 +142,9 @@ struct CourtSlateEdgeView: View {
             }
             ResearchToolValues(items: [
                 .init(label: "SlipSurge Score", text: ResearchFormat.decimal(row.score), tone: Brand.accent(for: scheme)),
-                .init(label: "MM", text: ResearchFormat.signed(row.mm)),
-                .init(label: "L10 hit rate", text: "\(row.hit.label) · \(row.hit.sample)"),
+                .init(label: "MM", text: ResearchFormat.signed(row.mm), tone: Brand.signal(row.mm.map(Double.init), for: scheme)),
+                .init(label: "L10 hit rate", text: "\(row.hit.label) · \(row.hit.sample)",
+                    tone: Brand.signal(row.hit.rate.map { $0 - 50 }, for: scheme)),
                 .init(label: "L10 average", text: ResearchFormat.decimal(market.isBinary ? row.average.map { $0 * 100 } : row.average, suffix: rateSuffix)),
                 .init(label: "Form gap", text: market.isBinary ? ResearchFormat.points(row.gap) : ResearchFormat.signedDecimal(row.gap)),
                 .init(label: "Estimate", text: ResearchFormat.decimal(market.isBinary ? row.estimate.map { $0 * 100 } : row.estimate, suffix: rateSuffix))

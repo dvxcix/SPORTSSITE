@@ -6,7 +6,7 @@ import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { isMlbOnlyPath, isMlbPullPath } from '@/lib/mlbOffseasonAccess'
 import { isPublicPreviewPath, isPublicPreviewDataPath } from '@/lib/publicResearchPreview'
 import { ownOnboardingComplete } from './ownOnboarding'
-import { isPublicBrowseRequest, isPublicFeatureRequest, isNativeFeedRequest } from '@/lib/publicBrowsePolicy'
+import { isPublicBrowseRequest, isPublicFeatureRequest, isNativePublicRead } from '@/lib/publicBrowsePolicy'
 
 const AUTH_REFRESH_RETRY_COOKIE = 'ss-auth-refresh-retry'
 
@@ -36,7 +36,7 @@ export async function updateSession(request: NextRequest) {
   if (isPublicPreviewPath(request.nextUrl.pathname)) return NextResponse.next({ request })
   if (isPublicPreviewDataPath(request.nextUrl.pathname, request.method)) return NextResponse.next({ request })
   if (isPublicFeatureRequest(request.nextUrl.pathname, request.method)) return NextResponse.next({ request })
-  if (isNativeFeedRequest(request.nextUrl.pathname, request.method)) return NextResponse.next({ request })
+  if (isNativePublicRead(request.nextUrl.pathname, request.method)) return NextResponse.next({ request })
   const isAuthRoute = request.nextUrl.pathname === '/auth' || request.nextUrl.pathname.startsWith('/auth/')
   // Login and token-exchange handlers authenticate themselves. A stale cookie
   // must not trigger a second proxy refresh or delete a newer browser session.

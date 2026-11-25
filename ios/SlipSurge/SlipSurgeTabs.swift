@@ -5,34 +5,45 @@ struct SlipSurgeTabs: View {
     @Binding var appearance: Appearance
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var phase
+    private enum Destination { case feed, research, discover, account }
+    @State private var selected = Destination.feed
 
     var body: some View {
-        TabView {
+        TabView(selection: $selected) {
             NavigationStack {
-                HomeView()
+                FeedView(api: FeedAPI(account: account, userID: account.memberID))
             }
-            .tabItem { Label("Home", systemImage: "house") }
+            .id(account.memberID)
+            .tabItem { Label("Feed", systemImage: "bubble.left.and.bubble.right") }
+            .tag(Destination.feed)
 
             NavigationStack {
                 ResearchHome(account: account)
             }
             .id(account.memberID)
             .tabItem { Label("Research", systemImage: "chart.bar.xaxis") }
+            .tag(Destination.research)
 
             NavigationStack {
-                FeedView(api: FeedAPI(account: account, userID: account.memberID))
+                DiscoverView(api: DiscoverAPI(account: account, userID: account.memberID))
             }
             .id(account.memberID)
-            .tabItem { Label("Feed", systemImage: "bubble.left.and.bubble.right") }
+            .tabItem { Label("Discover", systemImage: "magnifyingglass") }
+            .tag(Destination.discover)
 
             NavigationStack {
                 AccountView(account: account, appearance: $appearance)
             }
             .id(account.user?.id)
             .tabItem { Label("Account", systemImage: "person.crop.circle") }
+            .tag(Destination.account)
         }
         .tint(Brand.accent(for: scheme))
         .task { await account.restore() }
+        .onChange(of: account.needsNewPassword) { _, ready in if ready { selected = .account } }
+        .onChange(of: account.user?.id) { _, signedIn in
+            if signedIn != nil, !account.onboardingComplete { selected = .account }
+        }
         .onChange(of: phase) { _, phase in
             if phase == .active { Task { await account.restore() } }
         }
@@ -81,7 +92,7 @@ private struct ResearchHome: View {
     private func destination(_ title: String, league: String, logo: String) -> some View {
         HStack(spacing: 15) {
             ResearchArtwork(
-                urls: URL(string: "https://a.espncdn.com/i/teamlogos/leagues/500/\(logo).png").map { [$0] } ?? [],
+                urls: LeagueArtwork.logo(logo).map { [$0] } ?? [],
                 fallback: logo == "nfl" ? "football" : "basketball"
             )
             .frame(width: 39, height: 39)

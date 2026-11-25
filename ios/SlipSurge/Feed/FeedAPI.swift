@@ -30,6 +30,7 @@ struct FeedPost: Decodable, Identifiable {
     struct Poll: Decodable {
         let options: [String]
         let endsAt: String
+        let votes: [Int]?
     }
 
     struct ID: Hashable {
@@ -40,6 +41,13 @@ struct FeedPost: Decodable, Identifiable {
 
     let postID: UUID
     let author: Author?
+    let authorId: UUID?
+    let visibility: String?
+    let reactionSummary: [String: Int]?
+    let reacted: [String]?
+    let reposted: Bool?
+    let bookmarked: Bool?
+    let pollVote: Int?
     let repostedBy: String?
     let repostedAt: String?
     let createdAt: String
@@ -59,6 +67,7 @@ struct FeedPost: Decodable, Identifiable {
         case postID = "id"
         case author, repostedAt, repostedBy, createdAt, content, kind, sport
         case media, spoiler, shareable, reactions, comments, reposts, pick, poll
+        case authorId, visibility, reactionSummary, reacted, reposted, bookmarked, pollVote
     }
 
     var id: ID { ID(post: postID, repostedAt: repostedAt, reposter: repostedBy) }
@@ -93,5 +102,66 @@ struct FeedAPI {
             throw URLError(.cannotParseResponse)
         }
         return page
+    }
+}
+
+struct FeedThread: Decodable {
+    struct Comment: Decodable, Identifiable {
+        struct Author: Decodable {
+            let username: String
+            let displayName: String?
+            let avatarUrl: URL?
+        }
+
+        let id: UUID
+        let text: String
+        let authorId: UUID
+        let parentId: UUID?
+        let createdAt: String
+        let editedAt: String?
+        let reactionCount: Int?
+        let liked: Bool
+        let author: Author?
+    }
+
+    let post: FeedPost
+    let comments: [Comment]
+}
+
+extension FeedAPI {
+    struct Mutation: Encodable {
+        let kind: String
+        var enabled: Bool?
+        var emoji: String?
+        var option: Int?
+        var id: String?
+        var text: String?
+        var parent: String?
+    }
+
+    func thread(_ id: UUID) async throws -> FeedThread {
+        let path = "/api/mobile/posts/\(id.uuidString.lowercased())"
+        let thread: FeedThread
+        if let userID {
+            let data = try await SlipSurgeHTTP.memberData(path, account: account, userID: userID)
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            thread = try decoder.decode(FeedThread.self, from: data)
+        } else {
+            let request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: path, timeout: 35)
+            let data = try await SlipSurgeHTTP.send(request)
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            thread = try decoder.decode(FeedThread.self, from: data)
+        }
+        guard thread.post.postID == id, thread.comments.count <= 1000 else { throw URLError(.cannotParseResponse) }
+        return thread
+    }
+
+    func mutate(_ id: UUID, action: Mutation) async throws {
+        struct Confirmation: Decodable { let ok: Bool }
+        let result = try await DiscoverAPI(account: account, userID: userID).write(Confirmation.self,
+            path: "/api/mobile/posts/\(id.uuidString.lowercased())", body: action)
+        guard result.ok else { throw URLError(.cannotParseResponse) }
     }
 }

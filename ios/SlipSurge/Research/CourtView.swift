@@ -132,28 +132,30 @@ struct CourtView: View {
             } else if list.isEmpty {
                 ContentUnavailableView("No games on this date", systemImage: "calendar")
             } else {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 9) {
-                        ForEach(list) { game in
-                            Button {
-                                if game.id != selectedGame?.id {
-                                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.21)) {
-                                        selectedGameID = game.id
-                                        mode = .pregame
+                if tool != .slateEdge {
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 9) {
+                            ForEach(list) { game in
+                                Button {
+                                    if game.id != selectedGame?.id {
+                                        withAnimation(reduceMotion ? nil : .snappy(duration: 0.21)) {
+                                            selectedGameID = game.id
+                                            mode = .pregame
+                                        }
                                     }
+                                } label: {
+                                    matchup(game, subtitle: gameTime(game), selected: game.id == selectedGame?.id)
                                 }
-                            } label: {
-                                matchup(game, subtitle: gameTime(game), selected: game.id == selectedGame?.id)
+                                .buttonStyle(SlipSurgePressStyle())
+                                .accessibilityAddTraits(game.id == selectedGame?.id ? .isSelected : [])
+                                .accessibilityLabel("\(game.visitorTeam.fullName) at \(game.homeTeam.fullName)")
                             }
-                            .buttonStyle(SlipSurgePressStyle())
-                            .accessibilityAddTraits(game.id == selectedGame?.id ? .isSelected : [])
-                            .accessibilityLabel("\(game.visitorTeam.fullName) at \(game.homeTeam.fullName)")
                         }
+                        .padding(.vertical, 2)
                     }
-                    .padding(.vertical, 2)
+                    .scrollIndicators(.hidden)
+                    .sensoryFeedback(.selection, trigger: selectedGameID)
                 }
-                .scrollIndicators(.hidden)
-                .sensoryFeedback(.selection, trigger: selectedGameID)
                 boardContent()
             }
         }
@@ -230,6 +232,18 @@ struct CourtView: View {
         } else if tool == .cheatsheets {
             CourtCheatsheetsView(scope: scope, board: board, reload: revision)
                 .id("\(board.game.id):\(mode.rawValue)")
+        } else if tool == .lineups {
+            CourtLineupView(scope: scope, board: board, observedAt: observedAt, revision: revision)
+                .id("\(board.game.id):\(mode.rawValue)")
+        } else if tool == .publicActivity {
+            CourtPublicView(scope: scope, board: board, observedAt: observedAt, revision: revision)
+                .id("\(board.game.id):\(mode.rawValue)")
+        } else if tool == .score || tool == .defense {
+            CourtIntelligenceView(scope: scope, board: board, defense: tool == .defense, revision: revision)
+                .id("\(board.game.id):\(mode.rawValue):\(tool?.rawValue ?? "")")
+        } else if tool == .crossMarket {
+            CourtCrossMarketView(scope: scope, board: board, revision: revision)
+                .id("\(board.game.id):\(mode.rawValue)")
         } else if board.hasUsableResearch {
             if !board.issues.isEmpty {
                 Text("Some research is unavailable for this matchup.").font(.caption).foregroundStyle(.secondary)
@@ -238,7 +252,7 @@ struct CourtView: View {
                 switch tool {
                 case .matchup: CourtMatchupLab(board: board, observedAt: observedAt)
                 case .availability: CourtAvailability(board: board, observedAt: observedAt)
-                case .firstBasket, .cheatsheets, .slateEdge: EmptyView()
+                case .firstBasket, .cheatsheets, .slateEdge, .score, .defense, .lineups, .publicActivity, .crossMarket: EmptyView()
                 }
             } else {
                 switch section {
@@ -288,12 +302,9 @@ struct CourtView: View {
                     }
                 }
                 Spacer(minLength: 0)
-                menu(sportsbook.map(Sportsbook.name) ?? "All books", icon: nil, accessibility: "Sportsbook, \(sportsbook.map(Sportsbook.name) ?? "all books")") {
-                    Picker("Sportsbook", selection: $sportsbook) {
-                        Text("All books").tag(nil as String?)
-                        ForEach(vendors, id: \.self) { Text(Sportsbook.name($0)).tag(Optional($0)) }
-                    }
-                }
+                ResearchArtworkPicker(title: "Sportsbook",
+                    options: [.init(id: "", title: "All books", icon: "books.vertical")] + vendors.map(ResearchArtworkPicker.Option.sportsbook),
+                    selection: Binding(get: { sportsbook ?? "" }, set: { sportsbook = $0.isEmpty ? nil : $0 }))
                 menu(side.rawValue, icon: nil, accessibility: "Side, \(side.rawValue)") {
                     Picker("Side", selection: $side) {
                         ForEach(CourtPlayerMarket.Side.allCases, id: \.self) { Text($0.rawValue).tag($0) }

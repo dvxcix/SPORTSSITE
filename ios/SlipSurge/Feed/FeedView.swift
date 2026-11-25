@@ -4,6 +4,7 @@ struct FeedView: View {
     let api: FeedAPI
 
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var filter = FeedFilter.latest
     @State private var sport = ""
     @State private var posts: [FeedPost] = []
@@ -15,6 +16,10 @@ struct FeedView: View {
     @State private var generation = 0
     @State private var availableSports = ["NBA", "NFL"]
     @State private var composing = false
+    @State private var discussion: FeedPost?
+    @State private var pending = Set<UUID>()
+    @State private var postUpdates: [UUID: FeedPost] = [:]
+    @State private var actionError = false
 
     private enum State {
         case loading, ready, unavailable
@@ -31,17 +36,25 @@ struct FeedView: View {
     var body: some View {
         List {
             Section {
-                Picker("Feed", selection: $filter) {
-                    ForEach(FeedFilter.allCases.filter { $0 != .following || api.userID != nil }, id: \.self) { value in
-                        Text(value.rawValue.capitalized).tag(value)
+                VStack(alignment: .leading, spacing: 8) {
+                    ResearchToolRail(title: "Feed", choices: FeedFilter.allCases.filter { $0 != .following || api.userID != nil },
+                        selection: $filter, label: { $0.rawValue.capitalized }) {
+                        switch $0 {
+                        case .latest: "clock"
+                        case .top: "flame"
+                        case .picks: "bolt"
+                        case .following: "person.2"
+                        }
+                    }
+                    if !availableSports.isEmpty {
+                        ResearchArtworkPicker(title: "Sport", options: [.init(id: "", title: "All sports", icon: "sportscourt")]
+                            + availableSports.map { .init(id: $0, title: LeagueArtwork.label($0), url: LeagueArtwork.logo($0), icon: "sportscourt") },
+                            selection: $sport)
                     }
                 }
-                Picker("Sport", selection: $sport) {
-                    Text("All sports").tag("")
-                    ForEach(availableSports, id: \.self) { Text($0).tag($0) }
-                }
+                .listRowInsets(.init(top: 4, leading: 0, bottom: 4, trailing: 0))
+                .listRowBackground(Color.clear)
             }
-            .listRowBackground(Brand.surface(for: scheme))
 
             switch load {
             case .loading:
@@ -52,7 +65,6 @@ struct FeedView: View {
                     Label("Feed unavailable", systemImage: "bubble.left")
                 } actions: {
                     Button("Retry") { revision += 1 }
-                    SiteLink("Open web feed", path: "/feed")
                 }
                 .listRowBackground(Brand.surface(for: scheme))
             case .ready:
@@ -60,13 +72,34 @@ struct FeedView: View {
             }
         }
         .navigationTitle("Feed")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 6) {
+                    Image("brand").resizable().scaledToFit().frame(width: 25, height: 25)
+                        .clipShape(.rect(cornerRadius: 6)).accessibilityHidden(true)
+                    Text("SlipSurge").font(.headline.weight(.heavy)).accessibilityAddTraits(.isHeader)
+                }
+            }
             if api.userID != nil, load == .ready {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Compose", systemImage: "square.and.pencil") { composing = true }
                 }
             }
         }
+        .sheet(item: $discussion) { post in
+            NavigationStack {
+                FeedThreadView(api: api, id: post.postID, original: post)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close", systemImage: "xmark") { discussion = nil }.labelStyle(.iconOnly)
+                        }
+                    }
+            }
+        }
+        .alert("Change couldn’t be confirmed", isPresented: $actionError) {
+            Button("OK", role: .cancel) {}
+        } message: { Text("The feed will show the last confirmed post state.") }
         .sheet(isPresented: $composing) {
             if let userID = api.userID {
                 FeedComposerView(account: api.account, userID: userID, allowMLB: availableSports.contains("MLB")) {
@@ -92,7 +125,10 @@ struct FeedView: View {
         }
         ForEach(posts) { post in
             Section {
-                FeedPostCard(post: post)
+                FeedPostCard(post: postUpdates[post.postID] ?? post, operation: api.userID == nil ? nil : { action in
+                    Task { await apply(action, to: post.postID) }
+                }, discussion: { discussion = postUpdates[post.postID] ?? post })
+                .disabled(pending.contains(post.postID))
             }
             .listRowBackground(Brand.surface(for: scheme))
         }
@@ -112,6 +148,7 @@ struct FeedView: View {
         load = .loading
         cursor = nil
         posts = []
+        postUpdates = [:]
         isLoadingMore = false
         paginationError = false
         do {
@@ -125,11 +162,28 @@ struct FeedView: View {
                 return
             }
             var seen = Set<FeedPost.ID>()
-            posts = page.posts.filter { seen.insert($0.id).inserted }
-            cursor = page.hasMore ? page.nextCursor : nil
-            load = .ready
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.24)) {
+                posts = page.posts.filter { seen.insert($0.id).inserted }
+                cursor = page.hasMore ? page.nextCursor : nil
+                load = .ready
+            }
         } catch {
             if !Task.isCancelled, requested == selection, current == generation { load = .unavailable }
+        }
+    }
+
+    private func apply(_ action: FeedAPI.Mutation, to id: UUID) async {
+        guard pending.insert(id).inserted else { return }
+        defer { pending.remove(id) }
+        do {
+            try await api.mutate(id, action: action)
+        } catch {
+            actionError = true
+        }
+        if let latest = try? await api.thread(id) {
+            withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) { postUpdates[id] = latest.post }
+        } else {
+            await firstPage()
         }
     }
 
@@ -146,8 +200,10 @@ struct FeedView: View {
             )
             guard !Task.isCancelled, requested == selection, current == generation, cursor == expectedCursor else { return }
             var seen = Set(posts.map(\.id))
-            posts += page.posts.filter { seen.insert($0.id).inserted }
-            cursor = page.hasMore ? page.nextCursor : nil
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.23)) {
+                posts += page.posts.filter { seen.insert($0.id).inserted }
+                cursor = page.hasMore ? page.nextCursor : nil
+            }
         } catch {
             if !Task.isCancelled, requested == selection, current == generation, cursor == expectedCursor { paginationError = true }
         }

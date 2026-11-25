@@ -37,7 +37,6 @@ struct MemberAccountView: View {
                     Label("Account details unavailable", systemImage: "person.crop.circle.badge.exclamationmark")
                 } actions: {
                     Button("Retry") { revision += 1 }
-                    SiteLink("Open settings on the web", path: "/settings")
                 }
                 .listRowBackground(Brand.surface(for: scheme))
             } else {
@@ -72,8 +71,20 @@ struct MemberAccountView: View {
                     Text("@\(details.username)").font(.subheadline).foregroundStyle(.secondary)
                 }
             }
-            if details.username.range(of: "^[A-Za-z0-9._-]{1,80}$", options: .regularExpression) != nil {
-                SiteLink("View profile on the web", path: "/profile/\(details.username)")
+            NavigationLink {
+                NativeSettings(account: account, userID: userID, section: .profile)
+            } label: {
+                Label("Edit profile", systemImage: "person.crop.circle")
+            }
+            NavigationLink {
+                NativeSettings(account: account, userID: userID, section: .privacy)
+            } label: {
+                Label("Privacy", systemImage: "lock")
+            }
+            NavigationLink {
+                NativeSettings(account: account, userID: userID, section: .alerts)
+            } label: {
+                Label("Alert preferences", systemImage: "bell.badge")
             }
         }
         .listRowBackground(Brand.surface(for: scheme))
@@ -91,13 +102,28 @@ struct MemberAccountView: View {
                     value: expiry.formatted(date: .abbreviated, time: .omitted)
                 )
             }
+            NavigationLink {
+                MembershipBillingView(account: account, userID: userID) { await load() }
+            } label: {
+                Label("Manage membership", systemImage: "creditcard")
+            }
         }
         .listRowBackground(Brand.surface(for: scheme))
 
         if details.role == "creator" || details.role == "admin" {
-            Section("Workspaces on the web") {
-                SiteLink("Creator Studio", path: "/creators/studio")
-                if details.role == "admin" { SiteLink("Admin", path: "/admin") }
+            Section("Workspaces") {
+                NavigationLink {
+                    AccountWorkspaceView(account: account, userID: userID, workspace: .studio)
+                } label: {
+                    Label("Creator Studio", systemImage: "person.crop.square")
+                }
+                if details.role == "admin" {
+                    NavigationLink {
+                        AccountWorkspaceView(account: account, userID: userID, workspace: .admin)
+                    } label: {
+                        Label("Admin", systemImage: "checkmark.shield")
+                    }
+                }
             }
             .listRowBackground(Brand.surface(for: scheme))
         }

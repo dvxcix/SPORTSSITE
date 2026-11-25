@@ -97,14 +97,14 @@ struct AccountAPI {
         _ = try await SlipSurgeHTTP.send(request)
     }
 
-    private func token(grant: String, payload: [String: String]) async throws -> AccountSession {
+    func token(grant: String, payload: [String: String]) async throws -> AccountSession {
         var request = try authRequest("/auth/v1/token", query: [.init(name: "grant_type", value: grant)])
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(payload)
         return try JSONDecoder().decode(AccountSession.self, from: await SlipSurgeHTTP.send(request))
     }
 
-    private func authRequest(_ path: String, query: [URLQueryItem]) throws -> URLRequest {
+    func authRequest(_ path: String, query: [URLQueryItem]) throws -> URLRequest {
         guard let publishableKey else { throw Failure.unconfigured }
         var request = try SlipSurgeHTTP.request(host: projectHost, path: path, query: query, timeout: 20)
         request.httpMethod = "POST"

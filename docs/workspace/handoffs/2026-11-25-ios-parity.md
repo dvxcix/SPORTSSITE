@@ -356,3 +356,40 @@ physical-device push are still open.
   native destinations, remaining Court and Sideline tools, account lifecycle,
   community and creator operations, administration, payments, and physical
   push verification.
+
+## Native Feed, Discover, account, and deeper Court checkpoint · 25 November 2026
+
+- PR #10 merged as `5d49efd5df2d9ed9c1c36debe4cb419c9c9ce387`. Production
+  `dpl_2NeXbkcYX8itKrcA1GefoJQ6MvmV` reported READY. A signed-in iPhone 18 Pro
+  simulator exercised real NBA Cheatsheets and Slate Edge. The existing
+  account loaded Franz Wagner's 70% form, +3.9 form gap and Slate Edge score
+  of 76 from saved production observations. The new NFL tools still need an
+  equivalent authenticated interaction pass.
+- Native Feed is the initial tab. It has a composer, a post and threaded
+  comments view, reactions, polls, reposts and bookmarks. Discover has native
+  scores, community membership and invitations, creator discovery and follows,
+  and member records. The old Home shortcut list was removed. The canonical
+  web queries and views still back both apps. PR #11 deployed the social
+  endpoints from `64fa7eeae67a6314d3bf9ff51b0f137d3fc51f29`, production
+  `dpl_5XeLm8HCBtVkGgCCGvKCmDNU6hYV`. PR #12 routed the narrowly scoped guest
+  reads from `3eb6af9c109a9cf804954e5afca2fb5b5f8e024c`, production
+  `dpl_54zKfjuM8BBKfGTT3Rg6J9T97mq1`. On production, guest Feed returned 12
+  posts, a public post returned three comments, the Nov. 25 scores included
+  nine NBA games, and all three Discover resources loaded. A malformed member
+  token and an unauthorized post write both received 401. Desktop sign-in,
+  Feed, Groups, Creators, Sports, Leaderboard, Pricing and both preview routes
+  returned 200. The signed-out build displayed real Feed cards on iPhone 17e.
+- Task-branch source adds native email registration and reset forms with PKCE,
+  account onboarding and preferences, role-gated Creator Studio and Admin
+  overviews, Whop membership and checkout access for the U.S. storefront,
+  and Court Intelligence, Starting Lineups, The Public and Cross-market.
+  Signed Debug built under Xcode 27.2 and iOS 27.2. Hub TypeScript and 192
+  focused auth, visibility, board, frontend contract and billing checks passed.
+  The account, billing, role and extended Court endpoints in this checkpoint
+  have not deployed. No purchases, cancellations, emails, messages, other
+  member mutations, database changes or historical replays were performed.
+- Remaining device checks include owner-completed Discord, X and Whop OAuth,
+  live native email redirect allowlisting, role permissions, and physical
+  push delivery. Direct and group messages, deeper play-by-play, the full
+  publishing and creator/admin workflows, App Store purchases, and remaining
+  research and account controls still need implementation and verification.

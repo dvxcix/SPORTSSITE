@@ -12,37 +12,43 @@ struct ResearchToolRail<Choice: Hashable>: View {
     @Namespace private var transition
 
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-                ForEach(choices, id: \.self) { choice in
-                    Button {
-                        withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { selection = choice }
-                    } label: {
-                        Label(label(choice), systemImage: glyph(choice))
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 13)
-                            .frame(minHeight: 44)
-                            .foregroundStyle(selection == choice ? Brand.accent(for: scheme) : Brand.text(for: scheme))
-                            .background {
-                                if selection == choice {
-                                    RoundedRectangle(cornerRadius: 13)
-                                        .fill(Brand.accent(for: scheme).opacity(0.15))
-                                        .overlay {
-                                            RoundedRectangle(cornerRadius: 13)
-                                                .strokeBorder(Brand.accent(for: scheme).opacity(0.35))
-                                        }
-                                        .matchedGeometryEffect(id: "selection", in: transition, isSource: true)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    ForEach(choices, id: \.self) { choice in
+                        Button {
+                            withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { selection = choice }
+                        } label: {
+                            Label(label(choice), systemImage: glyph(choice))
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 13)
+                                .frame(minHeight: 44)
+                                .foregroundStyle(selection == choice ? Brand.accent(for: scheme) : Brand.text(for: scheme))
+                                .background {
+                                    if selection == choice {
+                                        RoundedRectangle(cornerRadius: 13)
+                                            .fill(Brand.accent(for: scheme).opacity(0.15))
+                                            .overlay {
+                                                RoundedRectangle(cornerRadius: 13)
+                                                    .strokeBorder(Brand.accent(for: scheme).opacity(0.35))
+                                            }
+                                            .matchedGeometryEffect(id: "selection", in: transition, isSource: true)
+                                    }
                                 }
-                            }
-                            .contentShape(.rect(cornerRadius: 13))
+                                .contentShape(.rect(cornerRadius: 13))
+                        }
+                        .buttonStyle(SlipSurgePressStyle())
+                        .id(choice)
+                        .accessibilityAddTraits(selection == choice ? .isSelected : [])
                     }
-                    .buttonStyle(SlipSurgePressStyle())
-                    .accessibilityAddTraits(selection == choice ? .isSelected : [])
                 }
+                .padding(4)
             }
-            .padding(4)
+            .scrollIndicators(.hidden)
+            .onChange(of: selection) { _, value in
+                withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { proxy.scrollTo(value, anchor: .center) }
+            }
         }
-        .scrollIndicators(.hidden)
         .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 17))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)

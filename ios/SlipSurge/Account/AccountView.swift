@@ -8,7 +8,9 @@ struct AccountView: View {
 
     var body: some View {
         Group {
-            if account.needsVerification || account.user != nil {
+            if account.needsNewPassword {
+                EmailAccountForm(account: account, flow: .password)
+            } else if account.needsVerification || account.user != nil {
                 signedInForm
             } else {
                 AccountSignInView(account: account, appearance: $appearance)
@@ -43,7 +45,11 @@ struct AccountView: View {
                         }
                     }
                     if !account.onboardingComplete {
-                        SiteLink("Finish account setup on the web", path: "/onboarding")
+                        NavigationLink {
+                            NativeOnboarding(account: account)
+                        } label: {
+                            Label("Finish account setup", systemImage: "person.crop.circle.badge.checkmark")
+                        }
                         Button("Check account setup") { Task { await account.recheckOnboarding() } }
                             .disabled(account.isBusy)
                     }

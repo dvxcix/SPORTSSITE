@@ -27,6 +27,7 @@ function route({ user = { id: 'member-123' }, allowed = true, available = true, 
   const calls = []
   const profileQueries = []
   const imports = {
+    '@/lib/supabase/nativeAccount': { requireNativeAccount: async () => { throw new Error('Not a native request') } },
     'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
     '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user } }) } }) },
     '@/lib/supabase/admin': { createAdminClient: () => ({ from: table => ({ select: fields => ({ eq: (key, value) => ({ single: async () => {

@@ -1,3 +1,4 @@
+import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkoutApiKeyEnvFor } from '@slipsurge/core/tiers'
@@ -18,9 +19,10 @@ export const revalidate = 0
 // once Whop actually ends the membership. This only sets the optimistic
 // tier_cancel_at_period_end flag so the UI can reflect "cancellation
 // scheduled" immediately instead of waiting on that webhook.
-export async function POST() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+export async function POST(request: Request) {
+  const native = request.headers.has('authorization') ? await requireNativeAccount(request) : null
+  if (native?.error) return native.error
+  const user = native ? { id: native.userId } : (await (await createClient()).auth.getUser()).data.user
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
 
   const admin = createAdminClient()

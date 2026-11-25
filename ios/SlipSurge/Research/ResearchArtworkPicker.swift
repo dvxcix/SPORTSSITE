@@ -6,6 +6,7 @@ struct ResearchArtworkPicker: View {
         let title: String
         var asset: String?
         var url: URL?
+        var secondaryLogo: URL?
         var icon = "circle.grid.2x2"
 
         static func sportsbook(_ key: String) -> Self {
@@ -89,7 +90,13 @@ struct ResearchArtworkPicker: View {
 
     @ViewBuilder
     private func artwork(_ option: Option, size: CGFloat) -> some View {
-        if let asset = option.asset {
+        if let secondary = option.secondaryLogo {
+            HStack(spacing: -3) {
+                ResearchArtwork(urls: option.url.map { [$0] } ?? [], fallback: option.icon)
+                ResearchArtwork(urls: [secondary], fallback: option.icon)
+            }
+            .frame(width: size * 1.55, height: size)
+        } else if let asset = option.asset {
             Image(asset).resizable().scaledToFit().frame(width: size, height: size).accessibilityHidden(true)
         } else {
             ResearchArtwork(urls: option.url.map { [$0] } ?? [], fallback: option.icon)

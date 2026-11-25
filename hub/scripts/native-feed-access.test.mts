@@ -2,10 +2,12 @@ import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import test from 'node:test'
 import { build } from 'esbuild'
-import { isNativeFeedRequest } from '../src/lib/publicBrowsePolicy'
+import { isNativePublicRead } from '../src/lib/publicBrowsePolicy'
 
 const require = createRequire(import.meta.url)
 const stubs: Record<string, string> = {
+  'server-only': '',
+  '@/lib/queries': 'export async function attachUserReactions(posts, userId, client, strict) { if (client.role !== "member" || !strict) throw Error("viewer state was not scoped"); return posts }',
   '@supabase/supabase-js': 'export function createClient() { return { role: "anon" } }',
   '@/lib/blocks': 'export async function getBlockedEitherWayIds() { return ["blocked-author"] }',
   '@/lib/feedQuery': `
@@ -50,11 +52,22 @@ const route = { exports: {} as typeof import('../src/app/api/mobile/feed/route')
 new Function('require', 'module', 'exports', bundle.outputFiles[0].text)(require, route, route.exports)
 const read = (query: string, headers?: HeadersInit) => route.exports.GET(new Request('https://slipsurge.invalid/api/mobile/feed?' + query, { headers }))
 
-test('only the exact read-only native feed URL is guest-routable', () => {
-  assert.equal(isNativeFeedRequest('/api/mobile/feed', 'GET'), true)
-  assert.equal(isNativeFeedRequest('/api/mobile/feed', 'POST'), false)
-  assert.equal(isNativeFeedRequest('/api/mobile/feed/anything', 'GET'), false)
-  assert.equal(isNativeFeedRequest('/api/feed', 'GET'), false)
+test('only the exact native guest reads reach their public handlers', () => {
+  assert.equal(isNativePublicRead('/api/mobile/feed', 'GET'), true)
+  assert.equal(isNativePublicRead('/api/mobile/feed', 'POST'), false)
+  assert.equal(isNativePublicRead('/api/mobile/feed/anything', 'GET'), false)
+  assert.equal(isNativePublicRead('/api/feed', 'GET'), false)
+  assert.equal(isNativePublicRead('/api/mobile/discover', 'GET'), true)
+  assert.equal(isNativePublicRead('/api/mobile/scores', 'GET'), true)
+  const post = '/api/mobile/posts/00000000-0000-4000-8000-000000000301'
+  assert.equal(isNativePublicRead(post, 'GET'), true)
+  for (const path of ['/api/mobile/feed', '/api/mobile/discover', '/api/mobile/scores', post]) {
+    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) assert.equal(isNativePublicRead(path, method), false)
+  }
+  for (const path of ['/api/mobile/posts', post + '/edit', '/api/mobile/posts/undefined', '/api/mobile/account',
+    '/api/mobile/communities/00000000-0000-4000-8000-000000000301', '/api/mobile/notifications', '/api/mobile/court/tools']) {
+    assert.equal(isNativePublicRead(path, 'GET'), false)
+  }
 })
 
 test('guest feed uses anonymous visibility, redacts the projection and cannot paginate or follow', async () => {
