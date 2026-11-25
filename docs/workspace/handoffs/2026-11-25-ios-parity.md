@@ -2385,6 +2385,14 @@ physical-device push are still open.
   are separate from this run.
 - Device Hub manages this phone and reports that its live screen sharing
   requires iOS 27. CoreDevice successfully captured stills over USB at
-  1290 × 2796. SlipSurge, X, Discord and Real are all installed. X reached
-  its sign-in flow on the phone. The signed-in feature review is pending.
-  Use USB stills while the owner navigates Feed, reactions, profiles and Inbox.
+  1290 × 2796. SlipSurge, X, Discord and Real are all installed. Use USB
+  stills while the owner navigates the comparison screens.
+- Captured X’s signed-in For You timeline, a post detail with its selected
+  heart and reply composer, and a public profile on the physical phone.
+  The timeline uses one horizontal scope row with sports lists, slim
+  separators, and a compact action row. The profile keeps the cover,
+  overlapping portrait, primary actions and follower information together
+  above its activity strip. For SlipSurge, judge Feed density with a real
+  sportsbook card in view and keep the member’s animated portrait in You.
+  The remaining checks are X Chat, Discord, Real and signed-in SlipSurge
+  Feed, reactions, profile and Inbox on the same phone.
