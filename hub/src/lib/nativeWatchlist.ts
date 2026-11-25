@@ -4,13 +4,15 @@ import { findNflPickOffer } from '@/lib/nflPickOffer'
 import { nflWatchlistPrice, nflWatchlistSelection } from '@/lib/nflWatchlist'
 import { validatePaintPickLegs, type PaintPickLeg } from '@/lib/nbaPickValidation'
 import { requirePaintAccess } from '@/lib/paintAccess'
+import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { findNativeMlbPick, nativeMlbPickSlate } from '@/lib/nativeMlbPickMarkets'
 
-type Input = PaintPickLeg & { sport: 'NFL' | 'NBA'; headshot_url?: string | null }
+type Input = PaintPickLeg & { sport: 'NFL' | 'NBA' | 'MLB'; headshot_url?: string | null; mlb_id?: number | null }
 
 function savedInput(raw: unknown): Input | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
   const item = raw as Input
-  if ((item.sport !== 'NFL' && item.sport !== 'NBA') || typeof item.player_name !== 'string' || item.player_name.length > 100 ||
+  if ((item.sport !== 'NFL' && item.sport !== 'NBA' && item.sport !== 'MLB') || typeof item.player_name !== 'string' || item.player_name.length > 100 ||
     typeof item.player_id !== 'string' || !/^[A-Za-z0-9:.-]{1,50}$/.test(item.player_id) || typeof item.game_pk !== 'string' ||
     !/^[a-zA-Z0-9_]{1,45}$/.test(item.game_pk) || typeof item.game_date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(item.game_date) ||
     typeof item.prop_key !== 'string' || !/^[a-z0-9_]{1,60}$/.test(item.prop_key) || typeof item.book !== 'string' ||
@@ -31,6 +33,19 @@ function safeHeadshot(value: unknown) {
 export async function nativeSavedMarket(raw: unknown) {
   const item = savedInput(raw)
   if (!item || item.odds == null || !item.book || !item.game_pk || !item.game_date) return { error: 'Check your market selection', status: 400 } as const
+  if (item.sport === 'MLB') {
+    if (MLB_HIBERNATING) return { error: 'MLB picks are paused for the off-season', status: 409 } as const
+    if (!Number.isFinite(Date.parse(item.game_date)) || new Date(item.game_date).toISOString().slice(0, 10) !== item.game_date) {
+      return { error: 'Choose a valid MLB slate date', status: 400 } as const
+    }
+    const verified = findNativeMlbPick(await nativeMlbPickSlate(item.game_date), item)
+    if (!verified) return { error: 'That MLB price or line changed. Refresh the market and try again.', status: 409 } as const
+    const { player, market, offer } = verified
+    return { value: { sport: 'mlb', game_pk: item.game_pk, game_date: item.game_date, mlb_id: player.mlb_id,
+      player_name: player.name, team: player.team, position: player.position, headshot_url: player.headshot_url,
+      prop_key: market.prop_type, prop_label: market.label, line: market.line == null ? market.label : `Over ${market.line} ${market.label}`,
+      book: offer.vendor, odds: offer.odds, odds_by_book: { [offer.vendor]: offer.odds } } } as const
+  }
   if (item.sport === 'NBA') {
     const gate = await requirePaintAccess()
     if (gate.error) return { response: gate.error } as const

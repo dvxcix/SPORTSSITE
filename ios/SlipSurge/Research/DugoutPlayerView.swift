@@ -5,6 +5,7 @@ struct DugoutPlayerView: View {
     let player: DugoutBoard.Batter
     let game: DugoutBoard.Game
     @State var window: DugoutWindow
+    var watchTarget: DugoutWatchTarget?
     var showsDone = true
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
@@ -20,7 +21,7 @@ struct DugoutPlayerView: View {
                     if let pitcher = game.opponentPitcher(for: player) {
                         let opponent = team.code == game.home.code ? game.away : game.home
                         NavigationLink {
-                            DugoutPitcherView(pitcher: pitcher, team: opponent)
+                            DugoutPitcherView(pitcher: pitcher, team: opponent, watchTarget: watchTarget?.forPlayer(pitcher.id))
                         } label: {
                             HStack {
                                 ResearchArtwork(urls: [pitcher.headshot], fallback: "person.fill")
@@ -52,7 +53,7 @@ struct DugoutPlayerView: View {
                 }
                 if !player.markets.isEmpty {
                     ResearchSectionTitle(title: "Sportsbook odds")
-                    ForEach(player.markets) { DugoutMarketCard(market: $0, color: team.color) }
+                    ForEach(player.markets) { DugoutMarketCard(market: $0, color: team.color, watchTarget: watchTarget) }
                 }
             }
             .padding(16)
@@ -129,6 +130,7 @@ struct DugoutPlayerView: View {
 struct DugoutPitcherView: View {
     let pitcher: DugoutBoard.Pitcher
     let team: DugoutBoard.Team
+    var watchTarget: DugoutWatchTarget?
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -141,7 +143,7 @@ struct DugoutPitcherView: View {
                 if pitcher.markets.isEmpty {
                     ContentUnavailableView("No pitcher prices posted", systemImage: "chart.line.uptrend.xyaxis")
                 } else {
-                    ForEach(pitcher.markets) { DugoutMarketCard(market: $0, color: team.color) }
+                    ForEach(pitcher.markets) { DugoutMarketCard(market: $0, color: team.color, watchTarget: watchTarget) }
                 }
             }
             .padding(16)
@@ -236,12 +238,78 @@ struct DugoutQuoteRow: View {
 private struct DugoutMarketCard: View {
     let market: DugoutBoard.Market
     let color: Color
+    let watchTarget: DugoutWatchTarget?
 
     var body: some View {
         ResearchToolCard(color: color) {
             Text(market.label).font(.headline)
         } content: {
-            ForEach(market.quotes) { DugoutQuoteRow(quote: $0) }
+            ForEach(market.quotes) { quote in
+                HStack(spacing: 4) {
+                    DugoutQuoteRow(quote: quote)
+                    if let watchTarget, let price = quote.price ?? quote.opening {
+                        DugoutWatchQuoteButton(api: watchTarget.api, quote: .init(date: watchTarget.date,
+                            gameId: watchTarget.game, playerId: watchTarget.player, market: market.key, book: quote.book, price: price),
+                            label: market.label)
+                            .id(price)
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct DugoutWatchTarget {
+    let api: ResearchLibraryAPI
+    let date: String
+    let game: Int
+    let player: Int
+
+    func forPlayer(_ id: Int) -> Self { .init(api: api, date: date, game: game, player: id) }
+}
+
+private struct DugoutWatchQuoteButton: View {
+    let api: ResearchLibraryAPI
+    let quote: ResearchLibraryAPI.MLBQuote
+    let label: String
+    @State private var requestID = UUID()
+    @State private var saving = false
+    @State private var saved = false
+    @State private var failure: String?
+
+    var body: some View {
+        Button {
+            Task { await save() }
+        } label: {
+            Group {
+                if saving { ProgressView() }
+                else { Image(systemName: saved ? "star.fill" : "star") }
+            }
+            .frame(minWidth: 44, minHeight: 44)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(saved ? .orange : .secondary)
+        .disabled(saving || saved)
+        .accessibilityLabel(saved ? "Saved to Watchlist" : "Save \(label) from \(Sportsbook.name(Sportsbook.normalized(quote.book))) to Watchlist")
+        .sensoryFeedback(.success, trigger: saved)
+        .alert("Watchlist quote", isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(failure ?? "")
+        }
+    }
+
+    private func save() async {
+        guard !saving, !saved else { return }
+        saving = true
+        defer { saving = false }
+        do {
+            try await api.mutate(.init(kind: "watchlist-save", id: requestID.uuidString.lowercased(), mlbQuote: quote))
+            saved = true
+        } catch let response as SlipSurgeHTTP.Status where response.code == 409 {
+            failure = "The quote changed. Refresh the board and try again."
+        } catch {
+            failure = "The quote couldn’t be saved. Try again."
         }
     }
 }

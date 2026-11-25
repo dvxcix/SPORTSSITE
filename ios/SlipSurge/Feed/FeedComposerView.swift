@@ -191,7 +191,7 @@ struct FeedComposerView: View {
             .onChange(of: personalAllowed) { _, allowed in if !allowed, audience == .personal { audience = .everyone } }
             .onChange(of: kind) { _, _ in notice = nil }
             .sheet(isPresented: $pickBuilder) {
-                PickBuilderView(api: TrackedPickAPI(account: account, userID: userID), existing: legs, preferredSport: sport) { legs.append($0) }
+                PickBuilderView(api: TrackedPickAPI(account: account, userID: userID), existing: legs, preferredSport: sport, allowMLB: allowMLB) { legs.append($0) }
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

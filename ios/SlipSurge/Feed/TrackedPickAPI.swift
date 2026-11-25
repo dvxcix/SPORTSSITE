@@ -5,6 +5,7 @@ struct TrackedPickAPI {
         let date: String
         let sport: String
         let games: [Game]
+        let paused: Bool?
     }
 
     struct Game: Decodable, Identifiable {

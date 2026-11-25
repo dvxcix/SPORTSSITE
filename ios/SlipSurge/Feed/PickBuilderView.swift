@@ -4,6 +4,7 @@ struct PickBuilderView: View {
     let api: TrackedPickAPI
     let existing: [TrackedPickAPI.Leg]
     let preferredSport: String
+    var allowMLB = false
     let onAdd: (TrackedPickAPI.Leg) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -25,7 +26,8 @@ struct PickBuilderView: View {
     @State private var notice: String?
 
     private struct Request: Hashable { let sport: String; let date: Date?; let revision: Int }
-    private var sport: String { existing.first?.sport ?? selectedSport ?? (preferredSport == "NBA" ? "NBA" : "NFL") }
+    private var leagues: [String] { allowMLB ? ["NFL", "NBA", "MLB"] : ["NFL", "NBA"] }
+    private var sport: String { existing.first?.sport ?? selectedSport ?? (leagues.contains(preferredSport) ? preferredSport : "NFL") }
     private var request: Request { .init(sport: sport, date: date, revision: revision) }
     private var game: TrackedPickAPI.Game? { slate?.games.first { $0.id == gameID } }
     private var player: TrackedPickAPI.Player? { game?.players.first { $0.id == playerID } }
@@ -49,17 +51,21 @@ struct PickBuilderView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
-                        ResearchArtworkPicker(title: "League", options: ["NFL", "NBA"].map {
+                        ResearchArtworkPicker(title: "League", options: leagues.map {
                             .init(id: $0, title: $0, url: LeagueArtwork.logo($0), icon: "sportscourt")
                         }, selection: Binding(get: { sport }, set: { selectedSport = $0 }))
                             .disabled(!existing.isEmpty)
                         Button(dateLabel, systemImage: "calendar") { showDate = true }
                             .buttonStyle(.bordered).controlSize(.large)
                     }
-                    if let slate {
+                    if slate?.paused == true {
+                        ContentUnavailableView("MLB picks are paused", systemImage: "baseball",
+                            description: Text("Tracked MLB picks reopen when the site resumes baseball posting."))
+                    } else if let slate {
                         slateContents(slate)
                     } else if let response = error as? SlipSurgeHTTP.Status, response.code == 403 {
-                        ContentUnavailableView("Membership required", systemImage: "lock", description: Text("The Court is available with Ultimate access."))
+                        ContentUnavailableView("Access required", systemImage: "lock", description: Text(sport == "NBA"
+                            ? "The Court is available with Ultimate access." : "This league is unavailable for this account."))
                     } else {
                         ResearchToolMessage(title: "Pick markets couldn’t load", error: error) { revision += 1 }
                     }

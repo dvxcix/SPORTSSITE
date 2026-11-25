@@ -118,8 +118,11 @@ struct DugoutMarketSlateView: View {
         .refreshable { await load(key) }
         .onChange(of: key) { game = ""; failure = nil }
         .sheet(item: $selection) { row in
-            NavigationStack { DugoutPlayerView(player: row.batter, game: row.game, window: .l5) }
-                .presentationDragIndicator(.visible)
+            NavigationStack {
+                DugoutPlayerView(player: row.batter, game: row.game, window: .l5,
+                    watchTarget: api.watchTarget(date: date, game: row.game.id, player: row.batter.id))
+            }
+            .presentationDragIndicator(.visible)
         }
     }
 

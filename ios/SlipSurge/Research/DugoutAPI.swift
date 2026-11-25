@@ -174,6 +174,10 @@ struct DugoutAPI {
     let userID: UUID
     private static let path = "/api/mobile/dugout"
 
+    func watchTarget(date: Date, game: Int, player: Int) -> DugoutWatchTarget {
+        .init(api: .init(account: account, userID: userID), date: SlateDate.key(date), game: game, player: player)
+    }
+
     func available() async throws -> Bool {
         struct Access: Decodable { let allowed: Bool }
         let data = try await SlipSurgeHTTP.memberData(Self.path, query: [.init(name: "view", value: "access")],

@@ -77,6 +77,15 @@ struct ResearchLibraryData: Decodable {
 }
 
 struct ResearchLibraryAPI {
+    struct MLBQuote: Encodable {
+        let date: String
+        let gameId: Int
+        let playerId: Int
+        let market: String
+        let book: String
+        let price: Int
+    }
+
     struct Change: Encodable {
         let kind: String
         var id: String?
@@ -95,6 +104,7 @@ struct ResearchLibraryAPI {
         var message: String?
         var role: String?
         var market: TrackedPickAPI.Leg?
+        var mlbQuote: MLBQuote?
     }
 
     private static let path = "/api/mobile/research-library"

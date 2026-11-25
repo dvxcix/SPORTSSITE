@@ -970,3 +970,22 @@ physical-device push are still open.
 - Remaining after this checkpoint include the MLB pick builder and Watchlist,
   MLB Matrix editing, Odds Movement Terminal, Synergy, native message history
   and typing, and full role and provider walkthroughs.
+
+## Native MLB tracked picks and Watchlist · 25 November 2026
+
+- The native branded pick selector now follows the account’s MLB visibility.
+  During the existing offseason pause it shows the posting pause before
+  loading prices. When the site resumes MLB posting, the selector uses the
+  browser composer’s schedule and odds sources, exact books and MLB player
+  and game IDs. The native posting path rechecks each quote and first pitch.
+  It omits prices whose recorded threshold cannot be graded accurately.
+- The signed-in Dugout player and pitcher views save the exact displayed
+  pregame quote to the existing personal Watchlist. The server rechecks the
+  selected game, athlete, property, book, and captured price. A saved opening
+  quote is supported when the board has only the opener. The Watchlist displays
+  the MLB player and team art with both club colors.
+- Signed Xcode Debug, Hub TypeScript, and 60 focused market, archive, settlement,
+  NBA privacy, posting and Watchlist checks passed. The production pause and
+  opening and removing a disposable saved market remain the runtime checks.
+- MLB posting remains paused at the source. The native archive view preserves the
+  existing seasonal visibility, and no change to baseball jobs is part of this release.

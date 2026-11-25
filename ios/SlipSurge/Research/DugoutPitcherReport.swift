@@ -151,7 +151,8 @@ struct DugoutPitcherReport: View {
                 Spacer()
                 if !starter.pitcher.markets.isEmpty {
                     NavigationLink {
-                        DugoutPitcherView(pitcher: starter.pitcher, team: starter.team)
+                        DugoutPitcherView(pitcher: starter.pitcher, team: starter.team,
+                            watchTarget: api.watchTarget(date: date, game: starter.game.id, player: starter.pitcher.id))
                     } label: { Label("Odds", systemImage: "chart.bar").font(.caption.weight(.semibold)) }
                 }
             }
@@ -269,7 +270,8 @@ struct DugoutPitcherReport: View {
                     if let read { metrics(read) }
                     else { Text("No tracked pitches in this sample").font(.caption).foregroundStyle(.secondary) }
                     NavigationLink {
-                        DugoutPlayerView(player: batter, game: starter.game, window: .l5, showsDone: false)
+                        DugoutPlayerView(player: batter, game: starter.game, window: .l5,
+                            watchTarget: api.watchTarget(date: date, game: starter.game.id, player: batter.id), showsDone: false)
                     } label: { Label("Player research", systemImage: "chart.bar.xaxis").font(.subheadline) }
                 } label: {
                     HStack {
