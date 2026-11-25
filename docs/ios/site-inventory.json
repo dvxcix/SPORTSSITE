@@ -1,0 +1,2958 @@
+{
+  "baselineCommit": "99d15a53d4a8da23dadb8c1c0e4bfcb93a9d74e8",
+  "generatedOn": "2026-11-25",
+  "scope": "Next app page and route source files only; excludes query-driven tools, panels, server actions, direct database/RPC contracts and permissions. This is not an API or native parity certification.",
+  "counts": {
+    "pages": 162,
+    "handlers": 259
+  },
+  "entries": [
+    {
+      "routePattern": "/about",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/about/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/activity",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/activity/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/ads",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/ads/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/audit",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/audit/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/badges",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/badges/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/browserbase",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/browserbase/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/changelog",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/changelog/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/contact-recap",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/contact-recap/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/content/blogs",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/content/blogs/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/content/posts",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/content/posts/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/content/reports",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/content/reports/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/content/stories",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/content/stories/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/creators",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/creators/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/design-system",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/design-system/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/discord/compose",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/discord/compose/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/discord",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/discord/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/emojis",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/emojis/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/events",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/events/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/fanduel-import",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/fanduel-import/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/forum",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/forum/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/groups",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/groups/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/hr-intelligence",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/hr-intelligence/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/jobs",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/jobs/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/live",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/live/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/market-dna",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/market-dna/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/marketplace",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/marketplace/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/matrix-backtest",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/matrix-backtest/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/mgm-import",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/mgm-import/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/mlb-archive",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/mlb-archive/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/monetization",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/monetization/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/nfl-access",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/nfl-access/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/notifications",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/notifications/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/pages",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/pages/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/pikkit-import",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/pikkit-import/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/pipeline-health",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/pipeline-health/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/product-audit",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/product-audit/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/reports",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/reports/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/settings/ai",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/settings/ai/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/settings/custom-code",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/settings/custom-code/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/settings/email",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/settings/email/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/settings/features",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/settings/features/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/settings/general",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/settings/general/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/settings/payments",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/settings/payments/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/settings/social-login",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/settings/social-login/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/site-banner",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/site-banner/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/social-platforms",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/social-platforms/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/users/banned",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/users/banned/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/users/deletions",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/users/deletions/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/users/online",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/users/online/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/users",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/users/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/users/verify",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/users/verify/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/admin/whop-renewal-shape",
+      "kind": "page",
+      "surface": "privileged",
+      "source": "hub/src/app/admin/whop-renewal-shape/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/allstar2026",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/allstar2026/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/account/bootstrap",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/account/bootstrap/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/account/data-export/[requestId]/download",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/account/data-export/[requestId]/download/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/account/data-export",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/account/data-export/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/account/deletion",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/account/deletion/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/account/favorites/players",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/account/favorites/players/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/account/favorites",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/account/favorites/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/account/me",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/account/me/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/account/nba-access",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/account/nba-access/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/account/nfl-access",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/account/nfl-access/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/account/onboarding",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/account/onboarding/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/account/preferences",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/account/preferences/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/account/verified-identities",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/account/verified-identities/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/account-deletions/[requestId]",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/account-deletions/[requestId]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/browserbase-sessions",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/browserbase-sessions/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/contact-recap-export",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/contact-recap-export/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/contact-recap-jobs/[id]",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/contact-recap-jobs/[id]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/contact-recap-jobs",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/contact-recap-jobs/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/contact-recap",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/contact-recap/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/creator-commerce",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/creator-commerce/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/creator-fees",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/creator-fees/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/creators/[applicationId]/decision",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/creators/[applicationId]/decision/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/creators/manage",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/creators/manage/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/creators/promotions",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/creators/promotions/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/discord/channels",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/discord/channels/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/discord/compose",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/discord/compose/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/discord/config",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/discord/config/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/discord/contact-alerts",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/discord/contact-alerts/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/discord/creator-health",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/discord/creator-health/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/discord/env-check",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/discord/env-check/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/discord/register-commands",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/discord/register-commands/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/discord/slate-command",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/discord/slate-command/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/discord/sync-all-roles",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/discord/sync-all-roles/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/dugout-matchup-edge-backfill",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/dugout-matchup-edge-backfill/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/dugout-name-check",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/dugout-name-check/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/dugout-pitchlog-stat-backfill",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/dugout-pitchlog-stat-backfill/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/dugout-season-avg-backfill",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/dugout-season-avg-backfill/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/dugout-statcast-backfill",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/dugout-statcast-backfill/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/email/preview",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/email/preview/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/email/test",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/email/test/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/fanduel-import",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/fanduel-import/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/feature-rollouts",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/feature-rollouts/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/hr-intelligence",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/hr-intelligence/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/market-dna",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/market-dna/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/matrix-backtest",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/matrix-backtest/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/mgm-import",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/mgm-import/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/nba-price-audit",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/nba-price-audit/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/nfl-access",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/nfl-access/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/nfl-pikkit-import",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/nfl-pikkit-import/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/pikkit-context-check",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/pikkit-context-check/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/pikkit-context",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/pikkit-context/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/pikkit-import",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/pikkit-import/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/pipeline-retry",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/pipeline-retry/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/platform-settings",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/platform-settings/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/reports/[reportId]",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/reports/[reportId]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/users/ban",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/users/ban/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/users/manage",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/users/manage/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/users/support",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/users/support/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/whop-addon-reconcile",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/whop-addon-reconcile/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/whop-reconcile",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/whop-reconcile/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/whop-renewal-shape",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/whop-renewal-shape/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/admin/whop/terminate-membership",
+      "kind": "handler",
+      "surface": "privileged",
+      "source": "hub/src/app/api/admin/whop/terminate-membership/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/ai/blog",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/ai/blog/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/allstar/data",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/allstar/data/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/allstar/live",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/allstar/live/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/blogs/[id]/like",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/blogs/[id]/like/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/composer/games",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/composer/games/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/composer/nba-games",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/composer/nba-games/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/composer/nfl-games",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/composer/nfl-games/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/funnel",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/funnel/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/members",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/members/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/payout-portal",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/payout-portal/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/payout-token",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/payout-token/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/products/[productId]/access",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/products/[productId]/access/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/products/[productId]/checkout",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/products/[productId]/checkout/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/products/[productId]/manage",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/products/[productId]/manage/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/products/[productId]/restore",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/products/[productId]/restore/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/products",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/products/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/scheduled-posts",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/scheduled-posts/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/status",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/status/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/storefront/community",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/storefront/community/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/storefront",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/storefront/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/wallet",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/wallet/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/wallet/session",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/wallet/session/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/creator/whop-onboard",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/creator/whop-onboard/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/archive-stale-watchlist",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/archive-stale-watchlist/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/bdl-odds",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/bdl-odds/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/creator-discord",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/creator-discord/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/dispatch-scrapes",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/dispatch-scrapes/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/dugout-matchup-edge-precompute",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/dugout-matchup-edge-precompute/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/dugout-pitchlog-stat-precompute",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/dugout-pitchlog-stat-precompute/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/dugout-season-avg-precompute",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/dugout-season-avg-precompute/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/dugout-statcast-precompute",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/dugout-statcast-precompute/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/grade-live-picks",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/grade-live-picks/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/hr-alerts",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/hr-alerts/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/lineup-confirmed",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/lineup-confirmed/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/market-dna-maintenance",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/market-dna-maintenance/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/mlb-sync-bio",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/mlb-sync-bio/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/mlb-sync-career-stats",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/mlb-sync-career-stats/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/mlb-sync-season-stats",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/mlb-sync-season-stats/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nba-book-first-capture",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nba-book-first-capture/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nba-market-capture",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nba-market-capture/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nba-model-validate",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nba-model-validate/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nba-research-snapshot",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nba-research-snapshot/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nba-research-sync",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nba-research-sync/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/near-hr-alerts",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/near-hr-alerts/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nfl-bdl-odds",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nfl-bdl-odds/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nfl-compute-dvp",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nfl-compute-dvp/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nfl-sync-advanced",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nfl-sync-advanced/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nfl-sync-game-events",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nfl-sync-game-events/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nfl-sync-ngs",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nfl-sync-ngs/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nfl-sync-pbp",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nfl-sync-pbp/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nfl-sync-player-stats",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nfl-sync-player-stats/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nfl-sync-players",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nfl-sync-players/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nfl-sync-schedule",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nfl-sync-schedule/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/nfl-sync-teams",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/nfl-sync-teams/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/pitch-log-freshness-check",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/pitch-log-freshness-check/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/poll-fanduel-nfl",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/poll-fanduel-nfl/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/poll-pikkit-nba-picks",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/poll-pikkit-nba-picks/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/poll-pikkit-nfl-picks",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/poll-pikkit-nfl-picks/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/poll-pikkit-picks",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/poll-pikkit-picks/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/process-contact-alerts",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/process-contact-alerts/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/process-contact-recap-exports",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/process-contact-recap-exports/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/prune-notifications",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/prune-notifications/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/publish-scheduled-posts",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/publish-scheduled-posts/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/replay-operational-retries",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/replay-operational-retries/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/research-mechanics-precompute",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/research-mechanics-precompute/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/savant-sync-affinity",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/savant-sync-affinity/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/savant-sync-bat-tracking",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/savant-sync-bat-tracking/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/savant-sync-batted-ball",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/savant-sync-batted-ball/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/savant-sync-batting-stance",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/savant-sync-batting-stance/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/savant-sync-hr-details",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/savant-sync-hr-details/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/savant-sync-pitch-arsenal-details",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/savant-sync-pitch-arsenal-details/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/savant-sync-pitch-arsenal-stats",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/savant-sync-pitch-arsenal-stats/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/savant-sync-pitch-log",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/savant-sync-pitch-log/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/savant-sync-swing-path",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/savant-sync-swing-path/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/savant-sync-swing-take",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/savant-sync-swing-take/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/savant-sync-swing-timing",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/savant-sync-swing-timing/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/savant-sync-tier-a",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/savant-sync-tier-a/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/scrape-fanduel-nfl",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/scrape-fanduel-nfl/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/scrape-fanduel",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/scrape-fanduel/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/scrape-mgm",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/scrape-mgm/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/scrape-pikkit-nfl",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/scrape-pikkit-nfl/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/scrape-pikkit",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/scrape-pikkit/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/settle-picks",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/settle-picks/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/slate-drop",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/slate-drop/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/statcast-integrity-check",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/statcast-integrity-check/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/whop-addon-reconcile",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/whop-addon-reconcile/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/cron/whop-reconcile",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/cron/whop-reconcile/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/desktop/download/[target]/[arch]/[version]",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/desktop/download/[target]/[arch]/[version]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/desktop/update/[target]/[arch]/[currentVersion]",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/desktop/update/[target]/[arch]/[currentVersion]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/discord/claim-role",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/discord/claim-role/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/discord/interactions",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/discord/interactions/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/dugout/affinity",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/dugout/affinity/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/dugout/data",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/dugout/data/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/dugout/team-bullpen",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/dugout/team-bullpen/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/email/send-notification",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/email/send-notification/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/features",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/features/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/feed",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/feed/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/gifs",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/gifs/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/groups/[groupId]/discord/actions",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/groups/[groupId]/discord/actions/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/groups/[groupId]/discord/claim",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/groups/[groupId]/discord/claim/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/groups/[groupId]/discord",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/groups/[groupId]/discord/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/groups/[groupId]/posts",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/groups/[groupId]/posts/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/groups/invitations/respond",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/groups/invitations/respond/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/health",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/health/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/internal/contact-alert",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/internal/contact-alert/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/matrices/[id]",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/matrices/[id]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/matrices/import",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/matrices/import/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/matrices",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/matrices/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/matrix-marketplace/[id]/import",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/matrix-marketplace/[id]/import/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/matrix-marketplace/[id]",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/matrix-marketplace/[id]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/matrix-marketplace",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/matrix-marketplace/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/messages/recipients",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/messages/recipients/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/mlb/game-feed",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/mlb/game-feed/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/mlb/games",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/mlb/games/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nba-matrices/[id]",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nba-matrices/[id]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nba-matrices/evaluate",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nba-matrices/evaluate/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nba-matrices/import",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nba-matrices/import/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nba-matrices",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nba-matrices/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nba-matrix-marketplace/[id]/import",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nba-matrix-marketplace/[id]/import/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nba-matrix-marketplace",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nba-matrix-marketplace/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nfl-matrices/[id]",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nfl-matrices/[id]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nfl-matrices/import",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nfl-matrices/import/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nfl-matrices",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nfl-matrices/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nfl-matrix-marketplace/[id]/import",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nfl-matrix-marketplace/[id]/import/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nfl-matrix-marketplace",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nfl-matrix-marketplace/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nfl/players/[id]",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nfl/players/[id]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/nfl/teams/[abbr]",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/nfl/teams/[abbr]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/odds-terminal",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/odds-terminal/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/odds/mlb",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/odds/mlb/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/onboarding/notify-welcome",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/onboarding/notify-welcome/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/pitcher-report/live-window",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/pitcher-report/live-window/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/play-reactions",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/play-reactions/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/players/[id]/bat-tracking-splits",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/players/[id]/bat-tracking-splits/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/players/[id]/pitch-log",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/players/[id]/pitch-log/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/players/[id]",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/players/[id]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/players/[id]/today",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/players/[id]/today/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/posts/pick",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/posts/pick/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/posts/poll-vote",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/posts/poll-vote/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/posts/reaction-notification",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/posts/reaction-notification/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/profile-posts",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/profile-posts/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/push/send",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/push/send/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/push/subscribe",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/push/subscribe/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/push/unsubscribe",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/push/unsubscribe/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/research/mechanics",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/research/mechanics/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/search/nba",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/search/nba/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/search/nfl",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/search/nfl/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/search/sports",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/search/sports/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/settings/notify-password-changed",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/settings/notify-password-changed/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/share-image/[postId]",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/share-image/[postId]/route.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/share-image/watchlist",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/share-image/watchlist/route.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/slate/games",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/slate/games/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/slate/team-pitchers",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/slate/team-pitchers/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/sports/nfl/[gameId]",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/sports/nfl/[gameId]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/spray-charts",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/spray-charts/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/synergy/today",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/synergy/today/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/telemetry/product",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/telemetry/product/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/the-sideline/history/[gameId]",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/the-sideline/history/[gameId]/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/the-sideline/odds-board",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/the-sideline/odds-board/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/the-sideline/slate-edge",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/the-sideline/slate-edge/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/upload",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/upload/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/weather-lab/park-hr",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/weather-lab/park-hr/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/weather-lab",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/weather-lab/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/webhooks/resend",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/webhooks/resend/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/webhooks/whop-addon",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/webhooks/whop-addon/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/webhooks/whop-creator",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/webhooks/whop-creator/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/webhooks/whop",
+      "kind": "handler",
+      "surface": "server-operation",
+      "source": "hub/src/app/api/webhooks/whop/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/whop/cancel-membership",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/whop/cancel-membership/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/whop/checkout-session",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/whop/checkout-session/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/api/whop/unlink",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/api/whop/unlink/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/auth/callback",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/auth/callback/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/auth/desktop/complete",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/auth/desktop/complete/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/auth/desktop/start",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/auth/desktop/start/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/auth/forgot-password",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/auth/forgot-password/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/auth/login",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/auth/login/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/auth/register",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/auth/register/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/auth/reset-password",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/auth/reset-password/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/auth/whop/callback",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/auth/whop/callback/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/auth/whop/complete",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/auth/whop/complete/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/auth/whop/login",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/auth/whop/login/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/batter-cost",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/batter-cost/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/blog/[slug]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/blog/[slug]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/blog/create/ai",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/blog/create/ai/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/blog/create",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/blog/create/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/blog/edit/[id]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/blog/edit/[id]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/blog/my",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/blog/my/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/blog",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/blog/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/bookmarks",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/bookmarks/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/channels/[slug]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/channels/[slug]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/channels",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/channels/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/community",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/community/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/creators/[username]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/creators/[username]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/creators/access/complete",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/creators/access/complete/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/creators/apply",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/creators/apply/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/creators/offers/[productId]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/creators/offers/[productId]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/creators",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/creators/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/creators/payouts",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/creators/payouts/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/creators/studio",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/creators/studio/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/daily-recap",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/daily-recap/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/design-review/decorations",
+      "kind": "page",
+      "surface": "private-fixture-review",
+      "source": "hub/src/app/design-review/decorations/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/design-review/full-audit",
+      "kind": "page",
+      "surface": "private-fixture-review",
+      "source": "hub/src/app/design-review/full-audit/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/design-review/identity",
+      "kind": "page",
+      "surface": "private-fixture-review",
+      "source": "hub/src/app/design-review/identity/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/design-review",
+      "kind": "page",
+      "surface": "private-fixture-review",
+      "source": "hub/src/app/design-review/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/design-review/visual-audit",
+      "kind": "page",
+      "surface": "private-fixture-review",
+      "source": "hub/src/app/design-review/visual-audit/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/dugout",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/dugout/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/events/[id]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/events/[id]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/events/create",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/events/create/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/events",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/events/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/explore",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/explore/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/faq",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/faq/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/feed",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/feed/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/forum/[category]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/forum/[category]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/forum/new",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/forum/new/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/forum",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/forum/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/forum/thread/[id]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/forum/thread/[id]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/groups/[slug]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/groups/[slug]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/groups/[slug]/settings",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/groups/[slug]/settings/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/groups/create",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/groups/create/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/groups",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/groups/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/hashtag/[tag]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/hashtag/[tag]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/launch",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/launch/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/leaderboard",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/leaderboard/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/marketplace/[id]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/marketplace/[id]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/marketplace",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/marketplace/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/marketplace/sell",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/marketplace/sell/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/messages/[username]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/messages/[username]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/messages/group/[id]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/messages/group/[id]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/messages/new",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/messages/new/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/messages",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/messages/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/missions",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/missions/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/mlb/teams/[id]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/mlb/teams/[id]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/nba",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/nba/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/nba/players/[id]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/nba/players/[id]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/nba/teams/[id]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/nba/teams/[id]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/nfl/players/[id]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/nfl/players/[id]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/nfl/teams/[abbr]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/nfl/teams/[abbr]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/notifications",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/notifications/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/odds-terminal",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/odds-terminal/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/onboarding",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/onboarding/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/pages/[slug]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/pages/[slug]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/pages/[slug]/settings",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/pages/[slug]/settings/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/pages/create",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/pages/create/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/pages",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/pages/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/picks",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/picks/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/pitcher-report",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/pitcher-report/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/players/[id]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/players/[id]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/posts/[id]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/posts/[id]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/preview/[sport]/data",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/preview/[sport]/data/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/preview/[sport]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/preview/[sport]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/pricing",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/pricing/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/privacy",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/privacy/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/pro",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/pro/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/profile/[username]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/profile/[username]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/research",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/research/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/responsible-gambling",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/responsible-gambling/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/scores",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/scores/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/search",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/search/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/settings/account",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/settings/account/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/settings/blocked",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/settings/blocked/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/settings/connections",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/settings/connections/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/settings/interests",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/settings/interests/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/settings/membership",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/settings/membership/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/settings/notifications",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/settings/notifications/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/settings",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/settings/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/settings/privacy",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/settings/privacy/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/settings/profile",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/settings/profile/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/settings/research",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/settings/research/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/settings/security",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/settings/security/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/slate-breakdown",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/slate-breakdown/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/sports/[sport]/[gameId]",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/sports/[sport]/[gameId]/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/sports",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/sports/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/spray-charts",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/spray-charts/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/stories/create",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/stories/create/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/support",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/support/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/synergy",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/synergy/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/terms",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/terms/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/board",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/board/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/divergence",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/divergence/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/estimate",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/estimate/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/final-results",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/final-results/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/first-basket/odds",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/first-basket/odds/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/first-basket",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/first-basket/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/game-overview",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/game-overview/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/history",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/history/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/intelligence",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/intelligence/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/lineups",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/lineups/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/models",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/models/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/odds-board",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/odds-board/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/profile",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/profile/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/public/capture",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/public/capture/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/public",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/public/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/results",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/results/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/schedule",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/schedule/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/scouting",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/scouting/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/shots",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/shots/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/slate",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/slate/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-paint/tracking",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-paint/tracking/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-public",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/the-public/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-sideline/game-overview",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-sideline/game-overview/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-sideline/market",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-sideline/market/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-sideline",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/the-sideline/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-sideline/results",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-sideline/results/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/the-sideline/touchdown-replay",
+      "kind": "handler",
+      "surface": "website",
+      "source": "hub/src/app/the-sideline/touchdown-replay/route.ts",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/weather-lab",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/weather-lab/page.tsx",
+      "iosAudit": "not-verified"
+    },
+    {
+      "routePattern": "/workspace",
+      "kind": "page",
+      "surface": "website",
+      "source": "hub/src/app/workspace/page.tsx",
+      "iosAudit": "not-verified"
+    }
+  ]
+}
