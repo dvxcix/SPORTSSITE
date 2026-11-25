@@ -135,6 +135,8 @@ export interface Post {
       player_id?: string | null
       sport?: string
       headshot_url?: string | null
+      game_pk?: string | null
+      game_date?: string | null
       prop_key: string
       prop_label: string
       line: string
