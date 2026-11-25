@@ -30,7 +30,7 @@ enum NativeSiteLink: Hashable {
 
     enum AdminSection: Hashable {
         case reports, deletions, members, banned, recentSignIns, badges, nflAccess, audit, notifications
-        case groups, events, forum, posts, stories, articles, pages, emoji, rollouts, banner, changelog, experienceAudit
+        case groups, events, forum, posts, stories, articles, pages, emoji, rollouts, banner, changelog, experienceAudit, matrixBacktest
     }
 
     enum Settings: String {
@@ -176,6 +176,7 @@ enum NativeSiteLink: Hashable {
         case ["admin", "site-banner"]: self = .adminSection(.banner)
         case ["admin", "changelog"]: self = .adminSection(.changelog)
         case ["admin", "product-audit"]: self = .adminSection(.experienceAudit)
+        case ["admin", "matrix-backtest"]: self = .adminSection(.matrixBacktest)
         case ["admin", "mlb-archive"]:
             self = .adminMlbArchive(.init(
                 date: Self.queryValue(query, named: "date", pattern: #"^\d{4}-\d{2}-\d{2}$"#),

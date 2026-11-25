@@ -409,6 +409,9 @@ struct AccountWorkspaceView: View {
                 NavigationLink { AdminMlbArchiveView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("MLB archive", systemImage: "archivebox") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink { AdminMatrixBacktestView(api: .init(account: account, userID: userID)) } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Matrix backtest", systemImage: "chart.line.uptrend.xyaxis") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminBrowserAutomationView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Browser automation", systemImage: "cloud") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())

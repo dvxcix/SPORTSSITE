@@ -2121,6 +2121,11 @@ physical-device push are still open.
 - Task `df0db0042d27a7600f1f57f57a8b80a3eb5c1da8` is pushed. PR #78 preview
   `dpl_HibUZ7AtnYj5qWGke2i5GHbUjWph` reported READY and merged as
   `612bd3470ccfbe351b4d4819d50c10bf0c841697`.
+- Production `dpl_6gYpmwcs7FH6VAnvobYexxfw73Hr` was READY. The signed app
+  opened game `849803` at original frame `1757465`, captured October 26 at
+  11:13 p.m. ET before the October 27 8:00 p.m. ET cutoff. The separate
+  pregame research input and a saved FanDuel market row were visible. The
+  guest archive endpoint returned 401.
 
 ## Profile edits from multiple devices · 25 November 2026
 
@@ -2131,3 +2136,21 @@ physical-device push are still open.
   nullable values, omitted fields, empty edits, and stale edits.
 - Signed Simulator Debug, Hub TypeScript and 135 targeted and baseline
   checks passed. None of the fixture edits reached a live profile.
+- Task `2203131a2b160056e35acd920319d574ec383d13` is pushed. PR #79 merged
+  as `a3eb17cb6a8416535ed8e5f2b9366e8a2f83067c` after preview
+  `dpl_FL638EMcTS5nrb92LPAqvr1jxkqE` was READY.
+
+## Native Matrix backtest · 25 November 2026
+
+- Admin → System health opens Matrix Backtest. It contains the saved Element
+  Code and date inputs, precision and recall, F1, game-level flags, actual
+  home run hitters and the step that excluded each missed hitter. The native
+  adapter uses the website's original evaluator and adds its team artwork.
+- The admin and enrolled-MFA checks run ahead of archive or evaluator reads.
+  The existing MLB off-season switch remains in force. The app displays the
+  pause from the server. The active-path fixture calls the same evaluator
+  contract with its saved factors and 14-day bound. No production backtest ran.
+- Hub TypeScript, signed Simulator Debug and 143 checks passed. The route
+  regression fixture stubs were updated for two dependencies added to the
+  existing proxy and game page since the test was written. No route behavior
+  changed in those files. Live paused-state verification follows release.
