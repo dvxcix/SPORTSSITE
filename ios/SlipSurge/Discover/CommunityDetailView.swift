@@ -14,7 +14,7 @@ struct CommunityDetailView: View {
         let hasMore: Bool
     }
 
-    enum Feed: String, CaseIterable { case posts = "Posts", picks = "Picks" }
+    enum Feed: String, CaseIterable { case posts = "Posts", picks = "Picks", rooms = "Rooms" }
     private struct Membership: Decodable { let member: Bool }
     private struct InviteResult: Decodable { let status: String? }
 
@@ -26,6 +26,8 @@ struct CommunityDetailView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var page: Page?
     @State private var feed: Feed
+    @State private var loadedFeed: Feed?
+    @State private var roomRevision = 0
     @State private var posts: [FeedPost] = []
     @State private var error: (any Error)?
     @State private var feedback: String?
@@ -50,13 +52,18 @@ struct CommunityDetailView: View {
 
     private var path: String { "/api/mobile/communities/\(group.id.uuidString.lowercased())" }
     private var feedAPI: FeedAPI { FeedAPI(account: api.account, userID: api.userID) }
+    private var postFeed: Feed { feed == .rooms ? .posts : feed }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                DiscoverIdentityCard(title: group.name, subtitle: group.sport.map(LeagueArtwork.label) ?? "Community",
-                    detail: group.description, avatar: group.avatarUrl, banner: group.bannerUrl, symbol: "person.2",
-                    count: group.memberCount.map { "\($0.formatted()) members" })
+                if feed == .rooms, page?.role != nil || page == nil && initialMember {
+                    roomIdentity
+                } else {
+                    DiscoverIdentityCard(title: group.name, subtitle: group.sport.map(LeagueArtwork.label) ?? "Community",
+                        detail: group.description, avatar: group.avatarUrl, banner: group.bannerUrl, symbol: "person.2",
+                        count: group.memberCount.map { $0 == 1 ? "1 member" : "\($0.formatted()) members" })
+                }
                 if let feedback { Text(feedback).font(.footnote).foregroundStyle(.secondary) }
                 if api.userID == nil {
                     if group.creatorProductId != nil { paidMembership }
@@ -65,48 +72,17 @@ struct CommunityDetailView: View {
                     invitationActions(invitation)
                 } else if let page {
                     membershipActions(page)
-                    if page.canView, page.role != nil, let userID = api.userID {
-                        HStack(spacing: 7) {
-                            NavigationLink {
-                                ChannelDirectoryView(api: .init(account: api.account, userID: userID), group: group.id)
-                            } label: { Label("Channels", systemImage: "number") }
-                            .buttonStyle(.bordered)
-                            Button("Preferences", systemImage: "slider.horizontal.3") { memberPreferences = true }
-                                .buttonStyle(.bordered)
-                        }
-                        if let discordAccess {
-                            NavigationLink {
-                                CommunityDiscordView(api: .init(account: api.account, userID: userID, groupID: group.id))
-                            } label: {
-                                CommunityDiscordIdentity(title: discordAccess.guildName, detail: "Discord access")
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(10)
-                                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
-                            }
-                            .buttonStyle(SlipSurgePressStyle())
-                        }
-                        Button(feed == .picks ? "Share a pick" : "Write a post", systemImage: "square.and.pencil") { composing = true }
-                            .buttonStyle(SlipSurgePrimaryButtonStyle())
-                    }
                     if page.canView {
-                        ResearchToolRail(title: "Community", choices: Feed.allCases, selection: $feed, label: \.rawValue) {
-                            $0 == .posts ? "text.bubble" : "chart.line.uptrend.xyaxis"
-                        }
-                        if posts.isEmpty {
-                            ContentUnavailableView("No \(feed.rawValue.lowercased()) yet", systemImage: "bubble.left")
-                        }
-                        LazyVStack(spacing: 9) {
-                            ForEach(posts) { post in
-                                FeedPostCard(post: post, operation: { action in Task { await apply(action, post: post) } },
-                                    discussion: { selected = post }, showAuthor: post.author.map { author in { memberProfile = author.username } },
-                                    actionsAPI: feedAPI, postChanged: { _ in Task { await load(feed) } })
-                                    .padding(13).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
-                                    .disabled(pending.contains(post.postID))
+                        if let userID = api.userID, page.role != nil {
+                            if feed == .rooms {
+                                RoomDirectory(api: .init(account: api.account, userID: userID), group: group.id,
+                                    groupName: group.name, revision: roomRevision)
+                            } else {
+                                Button(feed == .picks ? "Share a pick" : "Write a post", systemImage: "square.and.pencil") { composing = true }
+                                    .buttonStyle(SlipSurgePrimaryButtonStyle())
                             }
                         }
-                        if page.hasMore, let cursor = page.nextCursor {
-                            Button("Load more") { Task { await load(feed, cursor: cursor) } }.frame(minHeight: 44)
-                        }
+                        if feed != .rooms { postsContent(page) }
                     } else {
                         Label("Members-only community", systemImage: "lock").foregroundStyle(.secondary)
                         paidMembership
@@ -115,16 +91,46 @@ struct CommunityDetailView: View {
                     Label("Membership required", systemImage: "lock").foregroundStyle(.secondary)
                     paidMembership
                 } else {
-                    ResearchToolMessage(title: "Community couldn’t load", error: error) { Task { await load(feed) } }
+                    ResearchToolMessage(title: "Community couldn’t load", error: error) { Task { await load(postFeed) } }
                 }
             }
             .padding(16)
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let page, page.canView {
+                Picker("Community section", selection: $feed) {
+                    ForEach(Feed.allCases.filter { $0 != .rooms || page.role != nil }, id: \.self) { section in
+                        Text(section.rawValue).tag(section)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+                .background(Brand.background(for: scheme))
+            }
         }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .navigationTitle(group.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if page?.canView == true, page?.role != nil, let userID = api.userID {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu("Community options", systemImage: "ellipsis") {
+                        Button("Preferences", systemImage: "slider.horizontal.3") { memberPreferences = true }
+                        if let discordAccess {
+                            NavigationLink {
+                                CommunityDiscordView(api: .init(account: api.account, userID: userID, groupID: group.id))
+                            } label: { Label("Discord access · \(discordAccess.guildName)", systemImage: "link") }
+                        }
+                        if page?.canLeave == true {
+                            Button("Leave community", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
+                                confirmLeave = true
+                            }.disabled(mutation)
+                        }
+                    }
+                }
+            }
             if page?.canManage == true, let userID = api.userID {
                 ToolbarItem(placement: .primaryAction) {
                     NavigationLink {
@@ -133,13 +139,16 @@ struct CommunityDetailView: View {
                 }
             }
         }
-        .task(id: feed) { await load(feed) }
+        .task(id: postFeed) { await load(postFeed) }
         .task(id: page?.role) {
             guard let userID = api.userID, page?.role != nil else { discordAccess = nil; return }
             let membership = try? await CommunityDiscordAPI(account: api.account, userID: userID, groupID: group.id).membership()
             if !Task.isCancelled, page?.role != nil { discordAccess = membership }
         }
-        .refreshable { await load(feed) }
+        .refreshable {
+            if feed == .rooms { roomRevision += 1 }
+            await load(postFeed)
+        }
         .sheet(item: $selected) { post in
             NavigationStack {
                 FeedThreadView(api: feedAPI, id: post.postID, original: post)
@@ -152,7 +161,7 @@ struct CommunityDetailView: View {
             if let userID = api.userID, let page, page.role != nil {
                 FeedComposerView(account: api.account, userID: userID, allowMLB: page.allowMlb == true, startWithPick: feed == .picks,
                     community: .init(id: group.id, name: group.name, preferredSport: group.sport, artwork: group.avatarUrl, memberOnly: page.publicAudience != true)) {
-                    Task { await load(feed) }
+                    Task { await load(postFeed) }
                 }
             }
         }
@@ -161,6 +170,42 @@ struct CommunityDetailView: View {
             Button("Leave community", role: .destructive) { Task { await changeMembership(false) } }
         } message: {
             if group.accessType == "paid" { Text("Leaving the community keeps your paid membership active.") }
+        }
+    }
+
+    private var roomIdentity: some View {
+        HStack(spacing: 12) {
+            ResearchArtwork(urls: group.avatarUrl.map { [$0] } ?? [], fallback: "person.2.fill")
+                .frame(width: 42, height: 42)
+                .clipShape(.rect(cornerRadius: 12))
+            if let description = group.description, !description.isEmpty {
+                Text(description).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+            } else if let count = group.memberCount {
+                Text(count == 1 ? "1 member" : "\(count.formatted()) members").font(.subheadline).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder private func postsContent(_ page: Page) -> some View {
+        if loadedFeed != postFeed {
+            ProgressView().frame(maxWidth: .infinity, minHeight: 80)
+        } else if posts.isEmpty {
+            ContentUnavailableView("No \(feed.rawValue.lowercased()) yet", systemImage: "bubble.left")
+        } else {
+            LazyVStack(spacing: 9) {
+                ForEach(posts) { post in
+                    FeedPostCard(post: post, operation: { action in Task { await apply(action, post: post) } },
+                        discussion: { selected = post }, showAuthor: post.author.map { author in { memberProfile = author.username } },
+                        actionsAPI: feedAPI, postChanged: { _ in Task { await load(postFeed) } })
+                        .padding(13).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
+                        .disabled(pending.contains(post.postID))
+                }
+            }
+            if page.hasMore, let cursor = page.nextCursor {
+                Button("Load more") { Task { await load(postFeed, cursor: cursor) } }.frame(minHeight: 44)
+            }
         }
     }
 
@@ -193,7 +238,7 @@ struct CommunityDetailView: View {
             Button("Join community", systemImage: "person.badge.plus") {
                 Task { await changeMembership(true) }
             }.buttonStyle(.borderedProminent).disabled(mutation)
-        } else if page.canLeave {
+        } else if page.canLeave, page.role == nil {
             Button("Leave community", systemImage: "person.badge.minus") { confirmLeave = true }
                 .buttonStyle(.bordered).disabled(mutation)
         }
@@ -205,16 +250,18 @@ struct CommunityDetailView: View {
         if let cursor { query.append(.init(name: "cursor", value: cursor)) }
         do {
             let data = try await api.memberRead(Page.self, path: path, query: query)
-            guard !Task.isCancelled, feed == requested else { return }
+            guard !Task.isCancelled, postFeed == requested else { return }
             var seen = Set(cursor == nil ? [] : posts.map(\.id))
             let next = data.posts.filter { seen.insert($0.id).inserted }
             withAnimation(reduceMotion ? nil : .smooth(duration: 0.22)) {
                 page = data
+                loadedFeed = requested
+                if feed == .rooms, data.role == nil || !data.canView { feed = .posts }
                 posts = cursor == nil ? next : posts + next
                 error = nil
             }
         } catch {
-            if !Task.isCancelled, feed == requested {
+            if !Task.isCancelled, postFeed == requested {
                 self.error = error
                 page = nil
                 posts = []
@@ -235,7 +282,7 @@ struct CommunityDetailView: View {
         } catch {
             feedback = "The membership change couldn’t be confirmed."
         }
-        await load(feed)
+        await load(postFeed)
     }
 
     private func respond(_ invite: UUID, accept: Bool) async {
@@ -250,7 +297,7 @@ struct CommunityDetailView: View {
             onMembershipChange()
             responseComplete = true
             feedback = accept ? "Invitation accepted." : "Invitation declined."
-            if accept { await load(feed); if page?.role != nil { memberPreferences = true } }
+            if accept { await load(postFeed); if page?.role != nil { memberPreferences = true } }
         } catch {
             feedback = "The response couldn’t be confirmed."
         }

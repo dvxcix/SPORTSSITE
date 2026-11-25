@@ -1,8 +1,29 @@
 import SwiftUI
 
+struct MessageThreadDraft {
+    struct Unsent: Identifiable { let id = UUID(); var text: String }
+    struct SendAttempt {
+        let id: UUID
+        let text: String
+        let reply: UUID?
+        let image: URL?
+    }
+
+    var text = ""
+    var revision = 0
+    var picture: URL?
+    var responding: MessageThread.Note?
+    var editing: MessageThread.Note?
+    var unsent: [Unsent] = []
+    var lastSendAttempt: SendAttempt?
+    var composing = false
+    var uploading = false
+}
+
 struct MessageThreadView: View {
     let api: MessagesAPI
     let destination: MessageDestination
+    var roomDraft: Binding<MessageThreadDraft>? = nil
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var phase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -10,15 +31,8 @@ struct MessageThreadView: View {
     @FocusState private var focused: Bool
     @State private var thread: MessageThread?
     @State private var error: (any Error)?
-    @State private var draft = ""
-    @State private var draftVersion = 0
-    @State private var unsent: [UnsentDraft] = []
-    @State private var lastSendAttempt: SendAttempt?
-    @State private var picture: URL?
-    @State private var uploading = false
-    @State private var composing = false
-    @State private var responding: MessageThread.Note?
-    @State private var editing: MessageThread.Note?
+    @State private var localDraft = MessageThreadDraft()
+    @State private var memberPreview: MessagePerson?
     @State private var deleting: MessageThread.Note?
     @State private var leave = false
     @State private var actionFailed = false
@@ -42,7 +56,6 @@ struct MessageThreadView: View {
     @State private var forwardAttempts: [UUID: UUID] = [:]
     @State private var forwardedThread: MessageDestination?
 
-    private struct UnsentDraft: Identifiable { let id = UUID(); var text: String }
     private struct ReactionTarget: Identifiable { let id: UUID; let mine: Set<String> }
 
     private struct HistoryPage {
@@ -50,11 +63,10 @@ struct MessageThreadView: View {
         var result: MessageThread
     }
 
-    private struct SendAttempt {
-        let id: UUID
-        let text: String
-        let reply: UUID?
-        let image: URL?
+    private var draftBinding: Binding<MessageThreadDraft> { roomDraft ?? $localDraft }
+    private var draftData: MessageThreadDraft {
+        get { draftBinding.wrappedValue }
+        nonmutating set { draftBinding.wrappedValue = newValue }
     }
 
     var body: some View {
@@ -71,6 +83,9 @@ struct MessageThreadView: View {
         .foregroundStyle(Brand.text(for: scheme))
         .navigationTitle(thread?.title ?? "Messages")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $memberPreview) { member in
+            ChatMemberPreview(viewer: .init(account: api.account, userID: api.userID), member: member)
+        }
         .sheet(item: $selectingReaction) { target in
             NavigationStack {
                 NativeEmojiPicker(title: "React") { symbol in
@@ -243,13 +258,17 @@ struct MessageThreadView: View {
         let pinned = thread.pins.contains(message.id) || history.contains { $0.result.pins.contains(message.id) }
         let counts = Dictionary(grouping: reactions, by: \.emoji)
         let messageID = message.id.uuidString.lowercased()
+        let author = mine ? nil : author(of: message, in: thread)
         return HStack(alignment: .bottom, spacing: 7) {
             if mine { Spacer(minLength: 38) }
-            if !mine, destination.kind == .group {
-                MessageAvatar(person: thread.members.first(where: { $0.id == message.senderId })?.user, size: 26)
-            } else if !mine, destination.kind == .channel {
-                ResearchArtwork(urls: message.sender?.avatarUrl.map { [$0] } ?? [], fallback: "person.crop.circle.fill")
-                    .frame(width: 26, height: 26).clipShape(.circle)
+            if let author {
+                Button { memberPreview = author } label: {
+                    MessageAvatar(person: author, size: 28)
+                        .frame(width: 44, height: 44)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Show profile for \(author.name)")
             }
             VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
                 if !mine, destination.kind != .direct, let sender = message.sender {
@@ -280,7 +299,7 @@ struct MessageThreadView: View {
                 .contextMenu {
                     if message.isDeleted != true {
                         if thread.canSend {
-                            Button("Reply", systemImage: "arrowshape.turn.up.left") { editing = nil; responding = message; focused = true }
+                            Button("Reply", systemImage: "arrowshape.turn.up.left") { draftData.editing = nil; draftData.responding = message; focused = true }
                         }
                         if destination.kind == .direct {
                             Button(pinned ? "Unpin" : "Pin", systemImage: pinned ? "pin.slash" : "pin") {
@@ -297,7 +316,7 @@ struct MessageThreadView: View {
                             }
                         }
                         if mine && (destination.kind != .channel || thread.canSend) {
-                            Button("Edit", systemImage: "pencil") { responding = nil; editing = message; draft = message.content; focused = true }
+                            Button("Edit", systemImage: "pencil") { draftData.responding = nil; draftData.editing = message; draftData.text = message.content; focused = true }
                         }
                         if mine || thread.canModerate == true {
                             Button("Delete", systemImage: "trash", role: .destructive) { deleting = message }
@@ -334,6 +353,14 @@ struct MessageThreadView: View {
         .frame(maxWidth: .infinity)
     }
 
+    private func author(of message: MessageThread.Note, in thread: MessageThread) -> MessagePerson? {
+        if let partner = thread.partner, partner.id == message.senderId { return partner }
+        if let member = thread.members.first(where: { $0.id == message.senderId })?.user { return member }
+        guard let sender = message.sender else { return nil }
+        return .init(id: message.senderId, username: sender.username, displayName: sender.displayName,
+            avatarUrl: sender.avatarUrl, isVerified: nil)
+    }
+
     private func replyPreview(_ text: String, author: String?) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             if let author { Text(verbatim: author).font(.caption2.weight(.semibold)) }
@@ -357,58 +384,58 @@ struct MessageThreadView: View {
                 .font(.caption).foregroundStyle(.secondary)
                 .accessibilityElement(children: .combine)
             }
-            if let context = editing ?? responding {
+            if let context = draftData.editing ?? draftData.responding {
                 HStack {
-                    replyPreview(context.content, author: editing == nil ? "Replying" : "Editing")
+                    replyPreview(context.content, author: draftData.editing == nil ? "Replying" : "Editing")
                     Button("Cancel", systemImage: "xmark.circle.fill") {
-                        if editing != nil { draft = "" }
-                        editing = nil; responding = nil
+                        if draftData.editing != nil { draftData.text = "" }
+                        draftData.editing = nil; draftData.responding = nil
                     }
                     .buttonStyle(.borderless).labelStyle(.iconOnly)
                 }
             }
-            if let picture, editing == nil {
+            if let roomPicture = draftData.picture, draftData.editing == nil {
                 HStack {
-                    if NativeGIFSource.canPlay(picture) {
-                        NativeGIFPlayback(url: picture, maxHeight: 63, maxWidth: 104).clipShape(.rect(cornerRadius: 7))
+                    if NativeGIFSource.canPlay(roomPicture) {
+                        NativeGIFPlayback(url: roomPicture, maxHeight: 63, maxWidth: 104).clipShape(.rect(cornerRadius: 7))
                     } else {
-                        ResearchArtwork(urls: [picture], fallback: "photo").frame(width: 82, height: 56).clipShape(.rect(cornerRadius: 7))
+                        ResearchArtwork(urls: [roomPicture], fallback: "photo").frame(width: 82, height: 56).clipShape(.rect(cornerRadius: 7))
                     }
-                    Button("Remove attachment", systemImage: "xmark.circle.fill") { self.picture = nil }.labelStyle(.iconOnly)
+                    Button("Remove attachment", systemImage: "xmark.circle.fill") { draftData.picture = nil }.labelStyle(.iconOnly)
                     Spacer()
                 }
             }
-            if !unsent.isEmpty, editing == nil {
-                Menu("Unsent drafts (\(unsent.count))", systemImage: "doc.badge.clock") {
-                    ForEach(unsent) { item in Button(String(item.text.prefix(70))) { insertDraft(item) } }
+            if !draftData.unsent.isEmpty, draftData.editing == nil {
+                Menu("Unsent drafts (\(draftData.unsent.count))", systemImage: "doc.badge.clock") {
+                    ForEach(draftData.unsent) { item in Button(String(item.text.prefix(70))) { insertDraft(item) } }
                 }
                 .font(.footnote)
-                .disabled(draft.utf16.count >= 999)
+                .disabled(draftData.text.utf16.count >= 999)
             }
-            if thread.canSend || editing != nil {
+            if thread.canSend || draftData.editing != nil {
                 HStack(alignment: .bottom, spacing: 9) {
-                    if editing == nil {
+                    if draftData.editing == nil {
                         NativePhotoPicker(title: "Attach a photo", upload: { photo in
                             try await NativeMediaUpload.upload(photo, kind: .messages, account: api.account, userID: api.userID)
-                        }, url: $picture, uploading: $uploading)
-                        .labelStyle(.iconOnly).disabled(composing)
+                        }, url: draftBinding.picture, uploading: draftBinding.uploading)
+                        .labelStyle(.iconOnly).disabled(draftData.composing)
                         .padding(.vertical, 7)
-                        NativeGIFPickerButton(account: api.account, userID: api.userID, uploadKind: .messages, compact: true) { picture = $0 }
-                            .disabled(composing || uploading)
+                        NativeGIFPickerButton(account: api.account, userID: api.userID, uploadKind: .messages, compact: true) { draftData.picture = $0 }
+                            .disabled(draftData.composing || draftData.uploading)
                     }
                     NativeEmojiButton(compact: true) { value in
-                        let next = draft.isEmpty ? value : draft + " " + value
-                        if next.utf16.count <= 1_000 { draft = next }
+                        let next = draftData.text.isEmpty ? value : draftData.text + " " + value
+                        if next.utf16.count <= 1_000 { draftData.text = next }
                     }
-                    .disabled(composing)
-                    TextField("Message", text: $draft, axis: .vertical)
+                    .disabled(draftData.composing)
+                    TextField("Message", text: draftBinding.text, axis: .vertical)
                         .lineLimit(1...5).padding(.horizontal, 12).padding(.vertical, 9)
                         .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 17))
                         .focused($focused)
-                        .onChange(of: draft) { _, value in
-                            draftVersion += 1
-                            if value.utf16.count > 1_000 { draft = String(value.prefix(1_000)) }
-                            if editing == nil, thread.canSend, focused {
+                        .onChange(of: draftData.text) { _, value in
+                            draftData.revision += 1
+                            if value.utf16.count > 1_000 { draftData.text = String(value.prefix(1_000)) }
+                            if draftData.editing == nil, thread.canSend, focused {
                                 typingPresence.didType(hasText: !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             }
                         }
@@ -424,12 +451,12 @@ struct MessageThreadView: View {
     }
 
     private var sendControl: some View {
-        let button = Button(editing == nil ? "Send" : "Save", systemImage: editing == nil ? "arrow.up" : "checkmark") {
+        let button = Button(draftData.editing == nil ? "Send" : "Save", systemImage: draftData.editing == nil ? "arrow.up" : "checkmark") {
             Task { await send() }
         }
         .labelStyle(.iconOnly)
         .tint(Brand.accent(for: scheme))
-        .disabled(composing || uploading || (draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (picture == nil || editing != nil)) || draft.utf16.count > 1_000)
+        .disabled(draftData.composing || draftData.uploading || (draftData.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (draftData.picture == nil || draftData.editing != nil)) || draftData.text.utf16.count > 1_000)
         return Group {
             if #available(iOS 26, *) { button.buttonStyle(.glassProminent) }
             else { button.buttonStyle(.borderedProminent).buttonBorderShape(.circle) }
@@ -484,37 +511,37 @@ struct MessageThreadView: View {
     }
 
     private func send() async {
-        guard !composing, !uploading else { return }
-        composing = true
+        guard !draftData.composing, !draftData.uploading else { return }
+        draftData.composing = true
         typingPresence.didType(hasText: false)
-        defer { composing = false }
-        let submitted = draft
-        let submittedVersion = draftVersion
-        let reply = responding?.id
-        let image = editing == nil ? picture : nil
-        if editing == nil, lastSendAttempt?.text != submitted || lastSendAttempt?.reply != reply || lastSendAttempt?.image != image {
-            lastSendAttempt = .init(id: UUID(), text: submitted, reply: reply, image: image)
+        defer { draftData.composing = false }
+        let submitted = draftData.text
+        let submittedVersion = draftData.revision
+        let reply = draftData.responding?.id
+        let image = draftData.editing == nil ? draftData.picture : nil
+        if draftData.editing == nil, draftData.lastSendAttempt?.text != submitted || draftData.lastSendAttempt?.reply != reply || draftData.lastSendAttempt?.image != image {
+            draftData.lastSendAttempt = .init(id: UUID(), text: submitted, reply: reply, image: image)
         }
-        guard let note = editing?.id ?? lastSendAttempt?.id else { return }
-        let change = MessagesAPI.Change(action: editing == nil ? "send" : "edit", message: note.uuidString.lowercased(),
+        guard let note = draftData.editing?.id ?? draftData.lastSendAttempt?.id else { return }
+        let change = MessagesAPI.Change(action: draftData.editing == nil ? "send" : "edit", message: note.uuidString.lowercased(),
             text: submitted, reply: reply?.uuidString.lowercased(), image: image)
         if await perform(change) {
             if change.action == "edit" { await refreshOlderMessage(note, deleted: false) }
-            if draftVersion == submittedVersion { draft = "" }
-            if picture == image { picture = nil }
-            editing = nil
-            responding = nil
-            lastSendAttempt = nil
-        } else if editing == nil, draftVersion != submittedVersion, !submitted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            unsent.append(.init(text: submitted))
+            if draftData.revision == submittedVersion { draftData.text = "" }
+            if draftData.picture == image { draftData.picture = nil }
+            draftData.editing = nil
+            draftData.responding = nil
+            draftData.lastSendAttempt = nil
+        } else if draftData.editing == nil, draftData.revision != submittedVersion, !submitted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            draftData.unsent.append(.init(text: submitted))
         }
         await refresh()
     }
 
-    private func insertDraft(_ item: UnsentDraft) {
-        let separator = draft.isEmpty ? "" : "\n"
-        let available = 1_000 - draft.utf16.count - separator.utf16.count
-        guard available > 0, let index = unsent.firstIndex(where: { $0.id == item.id }) else { return }
+    private func insertDraft(_ item: MessageThreadDraft.Unsent) {
+        let separator = draftData.text.isEmpty ? "" : "\n"
+        let available = 1_000 - draftData.text.utf16.count - separator.utf16.count
+        guard available > 0, let index = draftData.unsent.firstIndex(where: { $0.id == item.id }) else { return }
         var insertion = String.UnicodeScalarView()
         var count = 0
         for scalar in item.text.unicodeScalars {
@@ -524,10 +551,10 @@ struct MessageThreadView: View {
             count += width
         }
         guard !insertion.isEmpty else { return }
-        draft += separator + String(insertion)
+        draftData.text += separator + String(insertion)
         let remaining = item.text.unicodeScalars.dropFirst(insertion.count)
-        if remaining.isEmpty { unsent.remove(at: index) }
-        else { unsent[index].text = String(remaining) }
+        if remaining.isEmpty { draftData.unsent.remove(at: index) }
+        else { draftData.unsent[index].text = String(remaining) }
     }
 
     private func archivedReactions(excluding recentIDs: Set<UUID>) -> [MessageThread.Reaction] {

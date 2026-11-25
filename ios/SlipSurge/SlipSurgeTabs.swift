@@ -40,6 +40,7 @@ struct SlipSurgeTabs: View {
     @State private var resume = NativeResumeStore()
     @State private var choseDestination = false
     @State private var keyboardVisible = false
+    @State private var visibleCommunityRoom: UUID?
 
     private var compactTabs: Bool { horizontalSize == .compact }
 
@@ -86,6 +87,7 @@ struct SlipSurgeTabs: View {
                 DiscoverView(api: DiscoverAPI(account: account, userID: account.memberID),
                     opensDestination: $discoverDestination, opensJoined: true)
             }
+            .environment(\.communityRoomVisibility, trackCommunityRoom)
             .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
             .id(account.memberID)
             .tabItem { Label(Destination.community.rawValue, systemImage: Destination.community.symbol) }
@@ -110,7 +112,7 @@ struct SlipSurgeTabs: View {
         }
         .tint(Brand.accent(for: scheme))
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if compactTabs && !keyboardVisible {
+            if compactTabs && !keyboardVisible && (selected != .community || visibleCommunityRoom == nil) {
                 SlipSurgeTabBar(selection: selected, profile: account.memberID == nil ? nil : account.profileIdentity,
                     unread: inboxUnread.total(for: account.memberID), select: selectTab)
             }
@@ -218,6 +220,11 @@ struct SlipSurgeTabs: View {
         case .you: resume.record(.init(path: "/settings", title: "Account"), account: account, interaction: true)
         case .feed, .research, .inbox: break
         }
+    }
+
+    private func trackCommunityRoom(_ id: UUID, visible: Bool) {
+        if visible { visibleCommunityRoom = id }
+        else if visibleCommunityRoom == id { visibleCommunityRoom = nil }
     }
 
     private var remainingReleases: [SiteAnnouncements.Release] {
@@ -329,6 +336,21 @@ struct SlipSurgeTabs: View {
             sitePresentation = nil
             profilePresentation = nil
             discoverDestination = destination
+            selected = .community
+        case .community(let slug, let section) where !link.needsMember || account.memberID != nil:
+            sitePresentation = nil
+            profilePresentation = nil
+            discoverDestination = .community(slug, section)
+            selected = .community
+        case .channels where account.memberID != nil:
+            sitePresentation = nil
+            profilePresentation = nil
+            discoverDestination = .liveRooms
+            selected = .community
+        case .channel(let slug) where account.memberID != nil:
+            sitePresentation = nil
+            profilePresentation = nil
+            discoverDestination = .liveRoom(slug)
             selected = .community
         default:
             sitePresentation = SitePresentation(target: link)

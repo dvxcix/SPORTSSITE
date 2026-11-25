@@ -64,7 +64,7 @@ struct NativeLinkedSiteView: View {
             }
         case .groupMessage(let id): MessageThreadView(api: messages, destination: .init(kind: .group, id: id))
         case .channels: ChannelDirectoryView(api: messages)
-        case .channel(let slug): linkedChannel(slug, group: nil, api: messages)
+        case .channel(let slug): LinkedPublicRoomView(api: messages, slug: slug)
         case .eventCreate: CommunityEventsView(api: .init(viewer: viewer), opensComposer: true)
         case .threadCreate(let category): ForumIndexView(api: .init(viewer: viewer), opensComposer: true, composerCategory: category)
         case .storyCreate:
@@ -160,31 +160,7 @@ struct NativeLinkedSiteView: View {
     }
 
     private func linkedCommunity(_ slug: String, section: NativeSiteLink.CommunitySection) -> some View {
-        NativeLinkLookup(title: "Community", load: { try await viewer.linkedCommunity(slug) }) { result in
-            let group = result.group
-            switch section {
-            case .settings:
-                if let userID = viewer.userID {
-                    CommunitySettingsView(api: .init(account: account, userID: userID, groupID: group.id))
-                }
-            case .channels(let slug):
-                if let userID = viewer.userID {
-                    let messages = MessagesAPI(account: account, userID: userID)
-                    if let slug { linkedChannel(slug, group: group.id, api: messages) }
-                    else { ChannelDirectoryView(api: messages, group: group.id) }
-                }
-            case .posts, .picks:
-                CommunityDetailView(api: viewer, group: group, initialMember: result.member,
-                    feed: section == .picks ? .picks : .posts)
-            }
-        }
-        .id(viewer.userID)
-    }
-
-    private func linkedChannel(_ slug: String, group: UUID?, api: MessagesAPI) -> some View {
-        NativeLinkLookup(title: "Live room", load: { try await api.linkedChannel(slug, group: group) }) { room in
-            MessageThreadView(api: api, destination: room)
-        }
+        LinkedCommunityView(viewer: viewer, slug: slug, section: section)
     }
 
     private func linkedScore(sport: String, id: String) -> some View {
@@ -197,6 +173,50 @@ struct NativeLinkedSiteView: View {
             return result
         }) { result in
             GameCenterView(api: viewer, game: result.game, date: result.date)
+        }
+    }
+}
+
+struct LinkedCommunityView: View {
+    let viewer: DiscoverAPI
+    let slug: String
+    let section: NativeSiteLink.CommunitySection
+    var onMembershipChange: () -> Void = {}
+
+    var body: some View {
+        NativeLinkLookup(title: "Community", load: { try await viewer.linkedCommunity(slug) }) { result in
+            let group = result.group
+            switch section {
+            case .settings:
+                if let userID = viewer.userID {
+                    CommunitySettingsView(api: .init(account: viewer.account, userID: userID, groupID: group.id))
+                }
+            case .channels(let roomSlug):
+                if let roomSlug, let userID = viewer.userID {
+                    let api = MessagesAPI(account: viewer.account, userID: userID)
+                    NativeLinkLookup(title: "Room", load: { try await api.linkedChannel(roomSlug, group: group.id) }) { room in
+                        RoomConversationView(api: api, group: group.id, groupName: group.name, room: room)
+                    }
+                } else {
+                    CommunityDetailView(api: viewer, group: group, initialMember: result.member, feed: .rooms,
+                        onMembershipChange: onMembershipChange)
+                }
+            case .posts, .picks:
+                CommunityDetailView(api: viewer, group: group, initialMember: result.member,
+                    feed: section == .picks ? .picks : .posts, onMembershipChange: onMembershipChange)
+            }
+        }
+        .id(viewer.userID)
+    }
+}
+
+struct LinkedPublicRoomView: View {
+    let api: MessagesAPI
+    let slug: String
+
+    var body: some View {
+        NativeLinkLookup(title: "Live room", load: { try await api.linkedChannel(slug, group: nil) }) { room in
+            RoomConversationView(api: api, group: nil, groupName: nil, room: room)
         }
     }
 }

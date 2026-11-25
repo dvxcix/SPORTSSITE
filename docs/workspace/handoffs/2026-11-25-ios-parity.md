@@ -2418,3 +2418,29 @@ physical-device push are still open.
   the member’s SlipSurge identity and decoration. Use the existing access rules
   for channels, profiles and direct messages. If adding room unread markers,
   derive them from real read state. Posts and Picks remain part of the group.
+
+## Native community rooms and chat profiles · 25 November 2026
+
+- Joined communities now start on Rooms. A persistent native control places
+  Posts, Picks and Rooms at the top of the group. The Rooms section shows the
+  group image, favorite rooms and the existing permission-filtered catalog.
+  Preferences, Discord access and leaving the community are in its options.
+- Signed-in group and Live Rooms links open in the Community navigation stack.
+  Room chips switch conversations with one tap when the catalog contains more
+  than one room. Draft text, attachments, reply context and retry identifiers
+  stay with their original room. Individual rooms reserve the screen for the
+  conversation and composer. The main tabs return outside the room.
+- Chat avatars open a native member sheet over the thread. It uses the existing
+  profile endpoint to show the member’s SlipSurge avatar decoration, public
+  identity and visible pick record, with actions for the full profile and
+  eligible direct messages. It uses the existing profile and room checks.
+- The signed-in 18 Pro simulator opened Picks Room and switched to MLB
+  General and back. The draft was visible in its original room only. Tapping a
+  sender opened the preview with profile and message actions. The avatar
+  region changed between simulator screenshots while the adjacent background
+  stayed stable. The native and production suites passed 286 checks.
+- The final Xcode Debug build installed and launched on the physical iPhone
+  16 Plus. A signed-in ParlayParty link showed Posts, Picks and Rooms together.
+  Picks Room showed adjacent room chips and a visible Message composer. The
+  main tabs returned when opening the group again. The phone was left in
+  Picks Room, which has an existing message available for trying the preview.

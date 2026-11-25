@@ -5,6 +5,8 @@ enum DiscoverDestination: Hashable {
     case discussions, discussionCategory(String), discussion(UUID)
     case articles(Bool), article(String), articleEditor(UUID?, assistant: Bool)
     case pages(String, create: Bool), page(String, manage: Bool)
+    case community(String, NativeSiteLink.CommunitySection)
+    case liveRooms, liveRoom(String)
 }
 
 struct DiscoverView: View {
@@ -106,6 +108,18 @@ struct DiscoverView: View {
                 if let id { ArticleEditorLoader(api: .init(viewer: api), id: id, saved: articleSaved) }
                 else if articlesAvailable { ArticleEditor(api: .init(viewer: api), draft: .init(), opensAssistant: assistant, saved: articleSaved) }
                 else { ArticlesView(api: .init(viewer: api)) }
+            case .community(let slug, let section):
+                LinkedCommunityView(viewer: api, slug: slug, section: section, onMembershipChange: reloadGroups)
+                    .id(opening)
+            case .liveRooms:
+                if let userID = api.userID {
+                    ChannelDirectoryView(api: .init(account: api.account, userID: userID))
+                }
+            case .liveRoom(let slug):
+                if let userID = api.userID {
+                    LinkedPublicRoomView(api: .init(account: api.account, userID: userID), slug: slug)
+                        .id(opening)
+                }
             default: EmptyView()
             }
         }
@@ -124,7 +138,7 @@ struct DiscoverView: View {
                 destination = nil
                 if opensJoined { yours = false }
                 section = .records
-            case .scores, .events, .discussions, .discussionCategory, .discussion, .articles, .article, .articleEditor, .pages, .page:
+            case .scores, .events, .discussions, .discussionCategory, .discussion, .articles, .article, .articleEditor, .pages, .page, .community, .liveRooms, .liveRoom:
                 destination = opening
             }
             opensDestination = nil
@@ -314,7 +328,8 @@ struct DiscoverView: View {
 
     private func communityLink(_ group: DiscoverAPI.Communities.Community, member: Bool) -> some View {
         NavigationLink {
-            CommunityDetailView(api: api, group: group, initialMember: member, onMembershipChange: reloadGroups)
+            CommunityDetailView(api: api, group: group, initialMember: member,
+                feed: opensJoined && member ? .rooms : .posts, onMembershipChange: reloadGroups)
         } label: {
             DiscoverIdentityCard(title: group.name, subtitle: group.invitationId != nil ? "Invitation pending"
                 : member ? "Member" : group.accessType == "paid" ? "Membership" : "Free community",
