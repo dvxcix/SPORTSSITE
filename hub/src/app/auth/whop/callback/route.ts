@@ -6,6 +6,7 @@ import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { syncTierBadge } from '@/lib/tierBadges'
 import { sendXConversion, clientIpFromRequest } from '@/lib/xConversion'
 import { safeInternalPath } from '@/lib/safeRedirect'
+import { readNativeOAuthRequest, clearNativeOAuthRequest, nativeOAuthComplete, nativeOAuthFailure } from '@/lib/nativeOAuth'
 
 const STATE_COOKIE = 'whop_oauth_state'
 
@@ -31,20 +32,30 @@ export async function GET(request: Request) {
   const { origin, searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const state = searchParams.get('state')
-  const loginFailed = (reason: string) => NextResponse.redirect(`${origin}/auth/login?error=${reason}`)
+  let nativeState: string | null = null
+  const loginFailed = (reason: string) => nativeState !== null
+    ? nativeOAuthFailure(nativeState, reason)
+    : NextResponse.redirect(`${origin}/auth/login?error=${reason}`)
 
   const cookieStore = await cookies()
   const rawStateCookie = cookieStore.get(STATE_COOKIE)?.value
   cookieStore.delete(STATE_COOKIE)
 
-  if (!code || !state || !rawStateCookie) return loginFailed('whop_auth_failed')
+  if (!rawStateCookie) return loginFailed('whop_auth_failed')
 
-  let stored: { state: string; codeVerifier: string; nonce: string; next: string; mode?: 'link'; linkUserId?: string; desktopState?: string }
+  let stored: { state: string; codeVerifier: string; nonce: string; next: string; mode?: 'link'; linkUserId?: string; desktopState?: string; nativeState?: string | null }
   try {
     stored = JSON.parse(rawStateCookie)
   } catch {
     return loginFailed('whop_auth_failed')
   }
+  nativeState = stored.nativeState ?? null
+  const nativeRequest = nativeState === null ? null : await readNativeOAuthRequest(nativeState)
+  if (nativeState !== null) {
+    await clearNativeOAuthRequest()
+    if (nativeRequest?.provider !== 'whop' || stored.mode || stored.desktopState) return loginFailed('whop_auth_failed')
+  }
+  if (!code || !state) return loginFailed('whop_auth_failed')
   // CSRF check — the state Whop echoed back must match what we generated
   // and stashed before redirecting the user away.
   if (state !== stored.state) return loginFailed('whop_auth_failed')
@@ -239,6 +250,7 @@ export async function GET(request: Request) {
   // straight to wherever they were headed, same as today.
   const completeUrl = new URL(`${origin}/auth/whop/complete`)
   completeUrl.searchParams.set('token_hash', linkData.properties.hashed_token)
+  if (nativeRequest) return nativeOAuthComplete(nativeRequest, linkData.properties.hashed_token, authUserId)
   const next = isNewAccount ? '/onboarding' : safeInternalPath(stored.next, '/launch')
   completeUrl.searchParams.set('next', next)
   if (stored.desktopState && /^[0-9a-f-]{36}$/i.test(stored.desktopState)) {

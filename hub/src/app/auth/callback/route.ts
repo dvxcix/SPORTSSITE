@@ -4,10 +4,20 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendXConversion, clientIpFromRequest } from '@/lib/xConversion'
 import { syncDiscordIdentity, syncDiscordRoleForUser } from '@/lib/discord'
 import { safeInternalPath } from '@/lib/safeRedirect'
+import { readNativeOAuthRequest, clearNativeOAuthRequest, nativeOAuthComplete, nativeOAuthFailure } from '@/lib/nativeOAuth'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const nativeState = searchParams.get('native_state')
+  const nativeRequest = nativeState === null ? null : await readNativeOAuthRequest(nativeState)
+  if (nativeState !== null) {
+    await clearNativeOAuthRequest()
+    if (!code || !nativeRequest || nativeRequest.provider === 'whop' ||
+        searchParams.has('desktop_state') || searchParams.has('discord_community')) {
+      return nativeOAuthFailure(nativeState)
+    }
+  }
   const next = safeInternalPath(searchParams.get('next'), '/launch')
   const discordFlow=searchParams.get('discord_community')
   const discordReauthorize=discordFlow==='reauthorize'
@@ -82,6 +92,7 @@ export async function GET(request: Request) {
       // silently match zero rows against a user stuck in limbo. Don't send
       // them into the app in that state.
       if (upsertErr && isNewAccount) {
+        if (nativeRequest) return nativeOAuthFailure(nativeRequest.state, 'profile-setup-failed')
         return NextResponse.redirect(`${origin}/auth/login?error=profile_setup_failed`)
       }
       if (isNewAccount) {
@@ -112,6 +123,15 @@ export async function GET(request: Request) {
         await syncDiscordIdentity(admin, data.user.id)
         await syncDiscordRoleForUser(admin, data.user.id)
       })
+      if (nativeRequest) {
+        if (!data.user.email) return nativeOAuthFailure(nativeRequest.state, 'email-required')
+        const { data: link, error: linkError } = await admin.auth.admin.generateLink({
+          type: 'magiclink', email: data.user.email,
+        })
+        return !linkError && link?.properties?.hashed_token
+          ? nativeOAuthComplete(nativeRequest, link.properties.hashed_token, data.user.id)
+          : nativeOAuthFailure(nativeRequest.state)
+      }
       if (isDesktop && data.user.email) {
         const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
           type: 'magiclink',
@@ -128,6 +148,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}${isNewAccount ? '/onboarding' : next}`)
     }
 
+    if (nativeRequest) return nativeOAuthFailure(nativeRequest.state)
     if (error && wasAlreadyLoggedIn) {
       if(discordCommunity)return discordFailure('provider_link_failed')
       const failUrl = new URL(next, origin)
