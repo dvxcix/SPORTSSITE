@@ -143,10 +143,12 @@ struct ActivityView: View {
 
     private func notification(_ row: ActivityNotification) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            let avatar = row.actor?.avatarUrl.flatMap { $0.scheme == "https" ? $0 : nil }
-            ResearchArtwork(urls: avatar.map { [$0] } ?? [], fallback: row.icon)
-                .frame(width: 32, height: 32)
-                .clipShape(.circle)
+            if let actor = row.actor {
+                NativeMemberAvatar(url: actor.avatarUrl, name: actor.displayName ?? actor.username, size: 32,
+                    style: actor.avatarRingStyle, color: actor.avatarRingColor)
+            } else {
+                Image(systemName: row.icon).frame(width: 32, height: 32).accessibilityHidden(true)
+            }
             VStack(alignment: .leading, spacing: 3) {
                 if let message = row.message { Text(verbatim: message).font(.headline) }
                 if let body = row.body { Text(verbatim: body).font(.subheadline) }

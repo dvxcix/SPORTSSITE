@@ -10,7 +10,6 @@ struct FeedStory: Decodable, Identifiable {
         let avatarRingColor: String?
 
         var name: String { displayName ?? username }
-        var pictures: [URL] { [avatarUrl].compactMap { $0 }.filter(FeedPostCard.allowedMedia) }
     }
 
     let id: UUID

@@ -14,6 +14,18 @@ struct MessagePerson: Decodable, Identifiable {
     let displayName: String?
     let avatarUrl: URL?
     let isVerified: Bool?
+    let avatarRingStyle: String?
+    let avatarRingColor: String?
+
+    init(id: UUID, username: String, displayName: String?, avatarUrl: URL?, isVerified: Bool?, avatarRingStyle: String? = nil, avatarRingColor: String? = nil) {
+        self.id = id
+        self.username = username
+        self.displayName = displayName
+        self.avatarUrl = avatarUrl
+        self.isVerified = isVerified
+        self.avatarRingStyle = avatarRingStyle
+        self.avatarRingColor = avatarRingColor
+    }
 
     var name: String { displayName ?? username }
 }

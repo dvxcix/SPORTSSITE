@@ -54,10 +54,8 @@ struct FeedPostCard: View {
 
     private var authorLabel: some View {
         HStack(spacing: 10) {
-            let portrait = post.author?.avatar.flatMap { Self.allowedMedia($0) ? $0 : nil }
-            ResearchArtwork(urls: portrait.map { [$0] } ?? [], fallback: "person.crop.circle")
-                .frame(width: 36, height: 36)
-                .clipShape(.circle)
+            NativeMemberAvatar(url: post.author?.avatar, name: post.author?.displayName ?? post.author?.username ?? "Member",
+                size: 36, style: post.author?.avatarRingStyle, color: post.author?.avatarRingColor, tone: post.author?.avatarTone)
             VStack(alignment: .leading, spacing: 2) {
                 if let author = post.author {
                     HStack(spacing: 5) {

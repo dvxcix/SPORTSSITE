@@ -226,7 +226,7 @@ struct AdminExperienceAuditView: View {
                 }
             }
         } header: {
-            Text("\(visible.count.formatted()) matching routes")
+            Text("Matching routes (\(visible.count.formatted()))")
         }
     }
 

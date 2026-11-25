@@ -64,6 +64,9 @@ struct MemberProfileView: View {
             let bio: String?
             let avatarUrl: URL?
             let bannerUrl: URL?
+            let avatarRingStyle: String?
+            let avatarRingColor: String?
+            let sportsbooks: [String]?
             let verified: Bool?
             let isPrivate: Bool?
             let allowMessages: Bool?
@@ -201,12 +204,9 @@ struct MemberProfileView: View {
                     AsyncImage(url: url) { image in image.resizable().scaledToFill() } placeholder: { Color.clear }
                         .frame(height: 122).clipped()
                 }
-                ResearchArtwork(urls: [profile.avatarUrl].compactMap { $0 }.filter(FeedPostCard.allowedMedia), fallback: "person.crop.circle.fill")
-                    .frame(width: 64, height: 64)
-                    .background(Brand.surface(for: scheme), in: .circle)
-                    .clipShape(.circle)
-                    .overlay { Circle().strokeBorder(Brand.surface(for: scheme), lineWidth: 3) }
-                    .padding(11)
+                NativeMemberAvatar(url: profile.avatarUrl, name: profile.name, size: 64,
+                    style: profile.avatarRingStyle, color: profile.avatarRingColor, animated: true)
+                    .padding(15)
             }
             .frame(height: 122)
             .clipShape(.rect(cornerRadius: 15))
@@ -264,6 +264,20 @@ struct MemberProfileView: View {
                         }
                     }
                 }
+            }
+            if let books = profile.sportsbooks, !books.isEmpty {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 102), spacing: 6)], alignment: .leading, spacing: 6) {
+                    ForEach(Array(books.enumerated()), id: \.offset) { _, book in
+                        Label {
+                            Text(Sportsbook.name(Sportsbook.normalized(book))).font(.caption.weight(.medium))
+                        } icon: {
+                            ProfileSportsbookLogo(key: book, size: 18)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 29, alignment: .leading)
+                        .padding(.horizontal, 6)
+                        .background(Brand.background(for: scheme), in: .rect(cornerRadius: 7))
+                    }
+                }.accessibilityElement(children: .contain).accessibilityLabel("Sportsbooks")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

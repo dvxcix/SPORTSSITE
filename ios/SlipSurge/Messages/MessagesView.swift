@@ -169,13 +169,16 @@ struct MessageAvatar: View {
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        let url = person?.avatarUrl.flatMap { FeedPostCard.allowedMedia($0) ? $0 : nil }
-        ResearchArtwork(urls: url.map { [$0] } ?? [], fallback: "person.crop.circle.fill")
-            .font(.system(size: size * 0.65))
-            .foregroundStyle(Brand.accent(for: scheme))
-            .frame(width: size, height: size)
-            .background(Brand.background(for: scheme), in: .circle)
-            .clipShape(.circle)
-            .overlay { Circle().strokeBorder(Brand.surface(for: scheme), lineWidth: 2) }
+        if let person {
+            NativeMemberAvatar(url: person.avatarUrl, name: person.name, size: size,
+                style: person.avatarRingStyle, color: person.avatarRingColor)
+        } else {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.system(size: size * 0.65))
+                .foregroundStyle(Brand.accent(for: scheme))
+                .frame(width: size, height: size)
+                .background(Brand.background(for: scheme), in: .circle)
+                .accessibilityHidden(true)
+        }
     }
 }

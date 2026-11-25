@@ -4,12 +4,16 @@ import SwiftUI
 struct ResearchArtwork: View {
     let urls: [URL]
     let fallback: String
+    var contentMode: ContentMode = .fit
+    var fallbackText: String?
     @State private var artwork: (urls: [URL], image: CGImage)?
 
     var body: some View {
         Group {
             if let artwork, artwork.urls == urls {
-                Image(decorative: artwork.image, scale: 1).resizable().scaledToFit()
+                Image(decorative: artwork.image, scale: 1).resizable().aspectRatio(contentMode: contentMode)
+            } else if let fallbackText {
+                Text(fallbackText)
             } else {
                 Image(systemName: fallback)
             }

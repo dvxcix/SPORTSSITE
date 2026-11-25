@@ -2063,3 +2063,33 @@ physical-device push are still open.
   Injected alerts used a fixture ID and did not contact APNs. The Simulator
   did not establish a server device registration. Opening a production alert
   and physical Apple delivery remain unverified.
+- Task `53b3ec9418273468e6e3df165d20b20c812e6a83b` is pushed. PR #76 merged
+  as `fa89217a04b29cd35e17a852ef4e5d690c0ae9e5`. Preview
+  `dpl_4gQepVBeia1FzkntVECk69sJ91Qw` and production
+  `dpl_EBM3vWZE2w9vetsg8u6CaxsNM3a8` were READY. The signed Simulator
+  showed live website traffic and the 163-route audit. Searching for The
+  Court returned its route and opened the dimension detail. A guest request
+  returned 401. The standard signed app was restored after the alert test.
+
+## Avatar styles and sportsbook badges · 25 November 2026
+
+- Profile and Edit Profile now use the existing avatar style, custom ring
+  color, original decoration catalog, and six sportsbook choices. The avatar
+  style picker offers search, sport categories, preview, and the existing
+  save action. Shared Feed, story, chat, and notification avatars use the
+  saved artwork and colors. The profile displays the selected sportsbook
+  logos in saved order.
+- All 50 decorations come from the site's original artwork. The bundled
+  vector animations play in the large profile and picker preview when
+  Reduce Motion is off. Lists use the original still artwork. The native
+  rings are drawn with SwiftUI. Run `node ios/scripts/build-avatar-artwork.mjs`
+  with the Hub dependencies and standard Node installation to regenerate
+  both app resources from the web catalog. Use `--check` to compare them.
+- The native settings request keeps older clients and saved legacy books
+  working. Individual avatar and book edits compare their original database
+  values. A conflicting edit returns 409. The web settings form consumes the
+  shared six-book list with the same order, labels, art and behavior.
+- The generated-resource check, signed Simulator build, Hub TypeScript,
+  and 149 targeted and baseline checks passed. The catalog, animation and
+  cross-surface artwork still need signed and compact checks after the Hub
+  release. No live profile appearance was saved in this checkpoint.

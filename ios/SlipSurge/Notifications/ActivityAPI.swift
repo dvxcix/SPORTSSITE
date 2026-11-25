@@ -5,6 +5,8 @@ struct ActivityNotification: Decodable, Identifiable {
         let username: String
         let displayName: String?
         let avatarUrl: URL?
+        let avatarRingStyle: String?
+        let avatarRingColor: String?
     }
 
     let id: UUID

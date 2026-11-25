@@ -106,10 +106,8 @@ struct StoryAvatar: View {
 
     var body: some View {
         let accent = Color(hex: author.avatarRingColor) ?? Brand.accent(for: scheme)
-        ResearchArtwork(urls: author.pictures, fallback: "person.crop.circle")
-            .frame(width: size - 8, height: size - 8)
-            .background(Color.black.opacity(0.12), in: Circle())
-            .clipShape(Circle())
+        NativeMemberAvatar(url: author.avatarUrl, name: author.name, size: size - 8,
+            style: author.avatarRingStyle, color: author.avatarRingColor)
             .padding(4)
             .background {
                 Circle().strokeBorder(AngularGradient(colors: [accent, accent.opacity(0.28), accent], center: .center), lineWidth: 2)

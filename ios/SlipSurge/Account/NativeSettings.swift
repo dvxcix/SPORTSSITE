@@ -18,6 +18,10 @@ private struct SettingsPayload: Decodable {
         let website: String?
         let avatarUrl: URL?
         let bannerUrl: URL?
+        let avatarRingStyle: String?
+        let avatarRingColor: String?
+        let sportsbooks: [String]?
+        let sportsbookChoices: [String]?
         let socialPlatforms: [Platform]?
         let socialLinks: [String: String]?
     }
@@ -59,6 +63,7 @@ struct NativeSettings: View {
 
     private struct ProfileEdit: Encodable {
         struct LinkChange: Encodable { let before: String; let handle: String }
+        struct Change<Value: Encodable>: Encodable { let before: Value; let value: Value }
 
         let kind = "profile"
         var username = ""
@@ -73,8 +78,16 @@ struct NativeSettings: View {
         var changedBanner = false
         var links: [String: String] = [:]
         var socialChanges: [String: LinkChange] = [:]
+        var ringStyle = AvatarArtwork.Ring.surge.rawValue
+        var ringColor = AvatarArtwork.defaultColor
+        var books: [String] = []
+        var styleChange: Change<String>?
+        var colorChange: Change<String>?
+        var bookChange: Change<[String]>?
 
-        private enum CodingKeys: String, CodingKey { case kind, username, displayName, bio, location, website, avatarUrl, bannerUrl, socialLinks }
+        private enum CodingKeys: String, CodingKey {
+            case kind, username, displayName, bio, location, website, avatarUrl, bannerUrl, socialLinks, avatarRingStyle, avatarRingColor, sportsbooks
+        }
 
         func encode(to encoder: any Encoder) throws {
             var values = encoder.container(keyedBy: CodingKeys.self)
@@ -87,6 +100,9 @@ struct NativeSettings: View {
             if changedAvatar { try values.encode(avatarUrl, forKey: .avatarUrl) }
             if changedBanner { try values.encode(bannerUrl, forKey: .bannerUrl) }
             if !socialChanges.isEmpty { try values.encode(socialChanges, forKey: .socialLinks) }
+            try values.encodeIfPresent(styleChange, forKey: .avatarRingStyle)
+            try values.encodeIfPresent(colorChange, forKey: .avatarRingColor)
+            try values.encodeIfPresent(bookChange, forKey: .sportsbooks)
         }
     }
 
@@ -131,6 +147,7 @@ struct NativeSettings: View {
     @State private var saving = false
     @State private var uploadingAvatar = false
     @State private var uploadingBanner = false
+    @State private var choosingAvatarStyle = false
 
     private static let path = "/api/mobile/account/settings"
 
@@ -165,6 +182,13 @@ struct NativeSettings: View {
         }
         .task(id: retry) { await load() }
         .refreshable { await load() }
+        .sheet(isPresented: $choosingAvatarStyle) {
+            NavigationStack {
+                AvatarAppearancePicker(url: profile.avatarUrl, name: profileName, style: profile.ringStyle, color: profile.ringColor) {
+                    profile.ringStyle = $0
+                }
+            }.presentationDragIndicator(.visible)
+        }
     }
 
     @ViewBuilder
@@ -197,6 +221,7 @@ struct NativeSettings: View {
                 }
             }.disabled(uploadingAvatar)
         }.listRowBackground(Brand.surface(for: scheme))
+        if source?.profile.avatarRingStyle != nil { avatarAppearance }
         SwiftUI.Section {
             TextField("Username", text: $profile.username).textContentType(.username)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
@@ -206,6 +231,7 @@ struct NativeSettings: View {
             TextField("Website", text: $profile.website).keyboardType(.URL).textContentType(.URL)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
         }.listRowBackground(Brand.surface(for: scheme))
+        if let books = source?.profile.sportsbookChoices, !books.isEmpty { sportsbookChoices(books) }
         if let platforms = source?.profile.socialPlatforms, !platforms.isEmpty {
             SwiftUI.Section("Public social links") {
                 ForEach(platforms) { platform in
@@ -231,6 +257,66 @@ struct NativeSettings: View {
             .listRowBackground(Brand.surface(for: scheme))
     }
 
+    private var profileName: String { profile.displayName.isEmpty ? profile.username : profile.displayName }
+
+    private var avatarAppearance: some View {
+        SwiftUI.Section("Avatar style") {
+            Button { choosingAvatarStyle = true } label: {
+                HStack(spacing: 12) {
+                    NativeMemberAvatar(url: profile.avatarUrl, name: profileName, size: 42, style: profile.ringStyle, color: profile.ringColor)
+                    Text(AvatarArtwork.title(profile.ringStyle)).foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.footnote).foregroundStyle(.secondary)
+                }
+                .frame(minHeight: 49)
+            }
+            .accessibilityLabel("Change avatar style")
+            .accessibilityValue(AvatarArtwork.title(profile.ringStyle))
+            if AvatarArtwork.decoration(profile.ringStyle) == nil && profile.ringStyle != "none" {
+                ColorPicker("Ring color", selection: Binding(get: { Color(hex: profile.ringColor) ?? Brand.accent(for: scheme) }, set: { color in
+                    var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 1
+                    guard UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return }
+                    let values = [red, green, blue].map { Int((min(max(0, $0), 1) * 255).rounded()) }
+                    profile.ringColor = String(format: "#%02x%02x%02x", values[0], values[1], values[2])
+                }), supportsOpacity: false)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 6)]) {
+                    ForEach(AvatarArtwork.colors, id: \.self) { hex in
+                        let selected = profile.ringColor.caseInsensitiveCompare(hex) == .orderedSame
+                        Button { profile.ringColor = hex } label: {
+                            Circle().fill(Color(hex: hex) ?? .white)
+                                .frame(width: 29, height: 29)
+                                .overlay { Circle().strokeBorder(.secondary.opacity(0.45)) }
+                                .overlay {
+                                    if selected { Image(systemName: "checkmark").font(.caption.bold()).foregroundStyle(.black) }
+                                }
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel("Use \(hex) ring color")
+                        .accessibilityAddTraits(selected ? .isSelected : [])
+                    }
+                }
+            }
+        }.listRowBackground(Brand.surface(for: scheme))
+    }
+
+    private func sportsbookChoices(_ choices: [String]) -> some View {
+        SwiftUI.Section("Sportsbooks") {
+            ForEach(choices, id: \.self) { book in
+                Toggle(isOn: Binding(get: { profile.books.contains(book) }, set: { enabled in
+                    if enabled { profile.books.append(book) } else { profile.books.removeAll { $0 == book } }
+                })) {
+                    Label {
+                        Text(Sportsbook.name(book))
+                    } icon: {
+                        ProfileSportsbookLogo(key: book)
+                    }
+                }
+            }
+        }.listRowBackground(Brand.surface(for: scheme))
+    }
+
     private var profileArtwork: some View {
         ZStack(alignment: .bottomLeading) {
             Rectangle().fill(Brand.accent(for: scheme).opacity(0.18))
@@ -239,9 +325,8 @@ struct NativeSettings: View {
                     image.resizable().scaledToFill().frame(width: geometry.size.width, height: geometry.size.height).clipped()
                 } placeholder: { Color.clear }
             }.frame(height: 128)
-            ResearchArtwork(urls: profile.avatarUrl.map { [$0] } ?? [], fallback: "person.crop.circle.fill")
-                .frame(width: 56, height: 56).clipShape(.circle)
-                .padding(3).background(Brand.surface(for: scheme), in: .circle).padding(12)
+            NativeMemberAvatar(url: profile.avatarUrl, name: profileName, size: 56, style: profile.ringStyle, color: profile.ringColor)
+                .padding(15)
         }.accessibilityHidden(true).frame(height: 128)
     }
 
@@ -307,7 +392,9 @@ struct NativeSettings: View {
             source = value
             profile = .init(username: value.profile.username, displayName: value.profile.displayName ?? "", bio: value.profile.bio ?? "",
                 location: value.profile.location ?? "", website: value.profile.website ?? "", avatarUrl: value.profile.avatarUrl,
-                bannerUrl: value.profile.bannerUrl, links: value.profile.socialLinks ?? [:])
+                bannerUrl: value.profile.bannerUrl, links: value.profile.socialLinks ?? [:],
+                ringStyle: value.profile.avatarRingStyle ?? "surge", ringColor: value.profile.avatarRingColor ?? AvatarArtwork.defaultColor,
+                books: value.profile.sportsbooks ?? [])
             privacy = .init(isPrivate: value.privacy.isPrivate ?? false, allowMessages: value.privacy.allowMessages ?? true,
                 hideWinRate: value.privacy.hideWinRate ?? false)
             delivery = value.notifications.delivery.defaults
@@ -329,6 +416,9 @@ struct NativeSettings: View {
             case .profile:
                 var edit = profile
                 if edit.username == source?.profile.username { edit.username = "" }
+                if let before = source?.profile.avatarRingStyle, before != edit.ringStyle { edit.styleChange = .init(before: before, value: edit.ringStyle) }
+                if let before = source?.profile.avatarRingColor, before != edit.ringColor { edit.colorChange = .init(before: before, value: edit.ringColor) }
+                if let before = source?.profile.sportsbooks, before != edit.books { edit.bookChange = .init(before: before, value: edit.books) }
                 for platform in source?.profile.socialPlatforms ?? [] {
                     let before = source?.profile.socialLinks?[platform.key] ?? ""
                     let handle = edit.links[platform.key, default: ""].trimmingCharacters(in: .whitespacesAndNewlines)

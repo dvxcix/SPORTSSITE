@@ -9,6 +9,9 @@ struct FeedPost: Decodable, Identifiable {
         let username: String
         let displayName: String?
         let avatar: URL?
+        let avatarRingStyle: String?
+        let avatarRingColor: String?
+        let avatarTone: String?
         let verified: Bool?
     }
 
