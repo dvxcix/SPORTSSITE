@@ -2,6 +2,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isAccountId, isBlockedEitherWay } from '@/lib/blocks'
 import { loadDmHistory, loadGroupHistory } from '@/lib/conversationHistory'
+import type { ChannelHistoryCursor } from '@/lib/channelHistory'
 import { notify } from '@/lib/notify'
 import { isOwnedNativeMedia } from '@/lib/nativeMedia'
 
@@ -32,10 +33,19 @@ export async function openMessageRoom(client: SupabaseClient, userId: string, co
     ? { context, title: group.data.name, partner: null, members: members.data } : null
 }
 
-export async function loadNativeThread(client: SupabaseClient, userId: string, room: Room) {
+export async function loadNativeThread(client: SupabaseClient, userId: string, room: Room, before?: ChannelHistoryCursor) {
   const direct = room.context.kind === 'direct'
   const scope = room.context.id, signal = AbortSignal.timeout(12_000)
-  const messages = await (direct ? loadDmHistory(client, userId, scope, signal) : loadGroupHistory(client, scope, signal))
+  const size = direct ? 100 : 200
+  const page = { limit: size + 1, before }
+  const [history, receipt] = await Promise.all([
+    direct ? loadDmHistory(client, userId, scope, signal, page) : loadGroupHistory(client, scope, signal, page),
+    direct && !before ? client.from('message_read_positions').select('last_read_at').eq('context_type', 'dm')
+      .eq('user_id', scope).eq('partner_id', userId).maybeSingle() : null,
+  ])
+  const messages = history.slice(-size)
+  const oldest = messages[0]
+  const nextCursor = history.length > size && oldest ? `${oldest.created_at}|${oldest.id}` : null
   const ids = messages.filter(message => !message.is_deleted).map(message => message.id)
   const [pins, reactions] = ids.length === 0 ? [{ data: [], error: null }, { data: [], error: null }] : await Promise.all([
     direct ? client.from('message_pins').select('message_id').eq('user_id', userId).in('message_id', ids) : { data: [], error: null },
@@ -51,14 +61,19 @@ export async function loadNativeThread(client: SupabaseClient, userId: string, r
     })
   return { title: room.title, partner: room.partner, members, pins: (pins.data ?? []).map(pin => pin.message_id),
     reactions: (reactions.data ?? []).map(row => ({ messageId: row.message_id, emoji: row.emoji, mine: row.user_id === userId })),
-    messages: messages.map(message => message.is_deleted ? { ...message, content: '', media_urls: [], reply_to: null } : message),
+    messages: messages.map(message => message.is_deleted ? { ...message, content: '', media_urls: [], reply_to: null } : message), nextCursor,
+    partnerLastReadAt: receipt?.data?.last_read_at ?? null,
     canSend: room.partner?.allow_dms ?? true, muted: room.members.find(member => member.user_id === userId)?.muted ?? false,
     owner: room.members.find(member => member.user_id === userId)?.role === 'owner',
   }
 }
 
-function scopedMessage(client: SupabaseClient, userId: string, { kind, id }: Context, messageId: string) {
-  const query = client.from(kind === 'direct' ? 'messages' : 'group_messages').select('id,sender_id,is_deleted,created_at').eq('id', messageId)
+const messageIdentityColumns = 'id,sender_id,is_deleted,created_at'
+
+function scopedMessage<Columns extends string = typeof messageIdentityColumns>(client: SupabaseClient, userId: string,
+  { kind, id }: Context, messageId: string, columns?: Columns) {
+  const selection = columns ?? (messageIdentityColumns as Columns)
+  const query = client.from(kind === 'direct' ? 'messages' : 'group_messages').select(selection).eq('id', messageId)
   return kind === 'direct' ? query.or(`and(sender_id.eq.${userId},dm_recipient_id.eq.${id}),and(sender_id.eq.${id},dm_recipient_id.eq.${userId})`)
     : query.eq('conversation_id', id)
 }
@@ -88,6 +103,31 @@ export async function updateNativeThread(client: SupabaseClient, userId: string,
   const { context, members } = room
   const { id } = context, direct = context.kind === 'direct'
   const verb = action.action
+  if (verb === 'forward' && direct) {
+    const target = typeof action.user === 'string' && isAccountId(action.user) ? action.user : null
+    const source = typeof action.message === 'string' && isAccountId(action.message) ? action.message : null
+    const identity = typeof action.forwardId === 'string' && isAccountId(action.forwardId) ? action.forwardId : null
+    if (!target || !source || !identity || target === userId || identity === source) return 400
+    const recipient = await openMessageRoom(client, userId, { kind: 'direct', id: target })
+    if (!recipient) return 404
+    if (recipient.partner?.allow_dms !== true) return 403
+    const old = await scopedMessage(client, userId, recipient.context, identity, 'id,sender_id,forwarded_from_id').maybeSingle()
+    if (old.error) return 503
+    if (old.data) return old.data.sender_id === userId && old.data.forwarded_from_id === source ? 200 : 409
+
+    const message = await scopedMessage(client, userId, context, source, 'id,content,media_urls,message_type,pick_data,is_deleted').maybeSingle()
+    if (message.error) return 503
+    if (!message.data || message.data.is_deleted) return 404
+    const item = message.data
+    const result = await client.from('messages').insert({ id: identity, sender_id: userId, dm_recipient_id: target,
+      content: item.content, media_urls: item.media_urls ?? [], message_type: item.message_type,
+      pick_data: item.pick_data, forwarded_from_id: source })
+    if (result.error?.code === '23505') {
+      const raced = await scopedMessage(client, userId, recipient.context, identity, 'id,sender_id,forwarded_from_id').maybeSingle()
+      return raced.data?.sender_id === userId && raced.data?.forwarded_from_id === source ? 200 : 409
+    }
+    return result.error ? (result.error.code === '42501' ? 403 : 503) : 200
+  }
   if (verb === 'request' && direct && (action.status === 'accepted' || action.status === 'declined')) {
     const { error } = await client.from('dm_conversation_preferences').upsert({ user_id: userId, partner_id: id,
       status: action.status, updated_at: new Date().toISOString() }, { onConflict: 'user_id,partner_id' })

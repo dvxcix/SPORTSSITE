@@ -12,12 +12,18 @@ function client(admin: boolean) {
     auth: { getUser: async () => ({ data: { user: fixture.user }, error: fixture.authError }) },
     from(table: string) {
       assert.equal(admin, table === 'users', 'Only the verified viewer profile may use the privileged client')
+      let globalOnly = false
       const query = {
         select(columns: string) { fixture.calls.push({ admin, table, columns }); return query },
         eq(column: string, value: string) { fixture.calls.push({ column, value }); return query },
+        is(column: string, value: unknown) { globalOnly = column === 'group_id' && value === null; return query },
         order() { return query },
         single: async () => ({ data: fixture.profileError ? null : fixture.profile, error: fixture.profileError }),
-        then(done: any, failed: any) { return Promise.resolve({ data: [{ id: 'public', slug: 'general-sports', name: 'General Sports', channel_type: 'public' }, { id: 'joined', group_id: 'joined-group', slug: 'joined-room', name: 'Joined room', channel_type: 'private' }], error: null }).then(done, failed) },
+        then(done: any, failed: any) {
+          const rows = [{ id: 'public', slug: 'general-sports', name: 'General Sports', channel_type: 'public' },
+            { id: 'joined', group_id: 'joined-group', slug: 'joined-room', name: 'Joined room', channel_type: 'private' }]
+          return Promise.resolve({ data: rows.filter(row => !globalOnly || row.group_id == null), error: null }).then(done, failed)
+        },
       }
       return query
     },
@@ -25,11 +31,12 @@ function client(admin: boolean) {
 }
 Object.assign(globalThis, { directoryQA: { fixture, client } })
 const stubs: Record<string, string> = {
+  './liveRooms.module.css': 'export default {}',
   '@/lib/supabase/server': 'export const createClient=async()=>globalThis.directoryQA.client(false)',
   '@/lib/supabase/admin': 'export const createAdminClient=()=>{globalThis.directoryQA.fixture.adminCreates++;return globalThis.directoryQA.client(true)}',
   'next/link': `import{createElement as h}from'react';export default({children,...props})=>h('a',props,children)`,
-  '@/components/community/CommunityNav': 'export const CommunityNav=()=>null',
-  '@/components/product/ProductPage': `import{createElement as h}from'react';export const ProductPageShell=({children})=>h('main',null,children);export const ProductHero=({title})=>h('h1',null,title);export const ProductAction=()=>null`,
+  '@/components/community/CommunityNav': 'export const CommunityNav=()=>null; export const CommunityMore=()=>null',
+  '@/components/product/ProductPage': `import{createElement as h}from'react';export const ProductPageShell=({children})=>h('main',null,children);export const ProductAction=({href,children})=>h('a',{href},children)`,
 }
 const bundle = await build({ stdin: { contents: 'export {default as page} from "./src/app/channels/page"', resolveDir: resolve('.'), loader: 'tsx' }, bundle: true, write: false, platform: 'node', format: 'cjs', jsx: 'automatic', external: ['react', 'react-dom'], plugins: [{ name: 'directory-fixture', setup(b) { b.onResolve({ filter: /.*/ }, a => stubs[a.path] ? { path: a.path, namespace: 'qa' } : undefined); b.onLoad({ filter: /.*/, namespace: 'qa' }, a => ({ contents: stubs[a.path], loader: 'tsx' })) } }] })
 const mod = { exports: {} as { page: () => Promise<React.ReactNode> } }; new Function('require', 'module', 'exports', bundle.outputFiles[0].text)(require, mod, mod.exports)
@@ -49,8 +56,15 @@ test('purchased and granted tiers retain access; a Discord discount claim alone 
   }
   reset(); fixture.profile.discord_advanced_claimed = true; assert.doesNotMatch(await page(), /General Sports/)
 })
-test('free accounts retain joined community rooms without gaining tier-gated global rooms', async () => {
-  reset(); const html = await page(); assert.match(html, /Joined room/); assert.doesNotMatch(html, /General Sports/)
+test('free accounts retain community navigation and the global directory excludes group rooms', async () => {
+  reset()
+  const free = await page()
+  assert.match(free, /href="\/groups"/)
+  assert.doesNotMatch(free, /General Sports|Joined room/)
+  fixture.profile = { account_type: 'user', tier: 'basic' }
+  const member = await page()
+  assert.match(member, /General Sports/)
+  assert.doesNotMatch(member, /Joined room/)
 })
 test('failed or missing membership reads show a recoverable error instead of an empty directory', async () => {
   reset(); fixture.profileError = { code: '42501' }; await assert.rejects(page, /Membership access could not be loaded/)
