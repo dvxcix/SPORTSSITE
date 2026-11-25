@@ -43,6 +43,8 @@ function fixture({ role = 'admin', signedIn = true, cutoff = '2026-10-28T00:00:0
     from: () => ({ select() { return this }, eq() { return this }, maybeSingle: async () => ({ data: { account_type: role }, error: null }) }),
   }
   const helpersSource = fs.readFileSync(new URL('../src/lib/mlbArchiveView.ts', import.meta.url), 'utf8')
+  const readerSource = fs.readFileSync(new URL('../src/lib/mlbArchiveReader.ts', import.meta.url), 'utf8')
+  const nativeSource = fs.readFileSync(new URL('../src/app/api/mobile/admin/mlb-archive/route.ts', import.meta.url), 'utf8')
   const pageSource = fs.readFileSync(new URL('../src/app/admin/mlb-archive/page.tsx', import.meta.url), 'utf8')
   function compile(source, mocks) {
     const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
@@ -51,12 +53,19 @@ function fixture({ role = 'admin', signedIn = true, cutoff = '2026-10-28T00:00:0
     return fixtureModule.exports
   }
   const helpers = compile(helpersSource, {})
+  const reader = compile(readerSource, { 'server-only': {}, '@/lib/mlbArchiveView': helpers })
   const page = compile(pageSource, {
     'react/jsx-runtime': require('react/jsx-runtime'), 'next/link': { __esModule: true, default: ({ children, ...props }) => react.createElement('a', props, children) },
     'next/navigation': { notFound: () => { throw Error('not-found') }, redirect: () => { throw Error('redirect') } },
-    '@/lib/supabase/server': { createClient: async () => client }, '@/lib/supabase/admin': { createAdminClient: () => db }, '@/lib/mlbArchiveView': helpers,
+    '@/lib/supabase/server': { createClient: async () => client }, '@/lib/supabase/admin': { createAdminClient: () => db }, '@/lib/mlbArchiveReader': reader,
   })
-  return { page, get reads() { return serviceReads } }
+  const native = compile(nativeSource, {
+    'next/server': { NextResponse: Response }, '@/lib/mlbArchiveReader': reader,
+    '@slipsurge/core/mlbTeamColors': { getTeamLogoPngUrl: code => `https://example.invalid/${code}.png` },
+    '@/lib/supabase/adminDecisionActor': { adminDecisionActor: async () => signedIn && role === 'admin' && !mfa && !missingAssurance
+      ? { admin: db } : { error: Response.json({}, { status: 403 }) } },
+  })
+  return { page, native, get reads() { return serviceReads } }
 }
 
 test('archive verifies admin and MFA before reading saved data', async () => {
@@ -86,4 +95,27 @@ test('archive reads only saved pregame frames and leaves missing cutoff unavaila
   const missing = fixture({ cutoff: null })
   const unavailable = renderToStaticMarkup(await missing.page.default({ searchParams: Promise.resolve({ date: '2026-10-27' }) }))
   assert.match(unavailable, /cutoff is unavailable/); assert.doesNotMatch(unavailable, /Saved player|Late player/)
+})
+
+test('native archive keeps the same pregame cutoff and fails closed for guests and incomplete MFA', async () => {
+  const url = 'https://example.invalid/api/mobile/admin/mlb-archive?date=2026-10-27&game=849803&frame=1'
+  const adminRequest = new Request(url, { headers: { authorization: 'Bearer fixture' } })
+  for (const state of [{ role: 'user' }, { role: 'admin', mfa: true }]) {
+    const f = fixture(state)
+    assert.equal((await f.native.GET(adminRequest)).status, 403)
+    assert.equal(f.reads, 0)
+  }
+  const f = fixture({ manyFrames: true })
+  assert.equal((await f.native.GET(new Request(url))).status, 401)
+  assert.equal(f.reads, 0)
+  const response = await f.native.GET(adminRequest)
+  assert.equal(response.headers.get('cache-control'), 'private, no-store')
+  const data = await response.json()
+  assert.equal(data.frames.length, 31)
+  assert.equal(data.selectedFrame, 1)
+  assert.match(JSON.stringify(data.quotes), /Saved player/)
+  assert.doesNotMatch(JSON.stringify(data), /Late player|-600/)
+  const missing = await (await fixture({ cutoff: null }).native.GET(adminRequest)).json()
+  assert.equal(missing.cutoff, null)
+  assert.deepEqual(missing.quotes.rows, [])
 })
