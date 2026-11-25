@@ -206,3 +206,17 @@ Mac's personal skill directory and were not applied to this native screen.
   full research/tool parity, and creator/admin UI. Commerce needs actual Apple
   products and a reviewed entitlement bridge for the existing Whop accounts.
   See the acceptance table and Apple guidelines link in `docs/ios/README.md`.
+
+### Preview build receipt
+
+Vercel's Git integration built source checkpoint
+`0a4ba3fa738dc0d225f0cd43fb7892308f82cd3b` as the protected branch preview
+`dpl_8n2uPwMkjXz6dnbMhLVub8wjSyyL` and reported READY. Guest feed runtime was
+verified locally. Protected preview HTTP and real signed-in roles remain
+unverified. Production still reports READY at its main baseline `99d15a53`.
+
+The Mac has the project open in Xcode with the standard build running on
+iPhone 18 Pro in Device Hub, left on The Court's Pregame screen. The temporary
+Mac-local feed server was stopped after verification. The Mac reports zero
+valid Apple signing identities. TestFlight and physical-device push need
+device signing, and payment testing needs the Apple product configuration.
