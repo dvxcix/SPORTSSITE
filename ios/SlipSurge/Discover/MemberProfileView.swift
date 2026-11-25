@@ -124,6 +124,7 @@ struct MemberProfileView: View {
 
     let api: DiscoverAPI
     let target: String
+    var isYouTab = false
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
     @State private var page: Page?
@@ -163,14 +164,15 @@ struct MemberProfileView: View {
                         }.padding(.vertical, 5)
                     }
                     if profile.canView, let page {
-                        ResearchToolRail(title: "Profile activity", choices: ProfileTab.allCases, selection: $tab,
-                            label: { selection in
-                                switch selection {
-                                case .all: profile.postCount.map { "Posts \($0.formatted())" } ?? "Posts"
-                                case .reposts: profile.repostCount.map { "Reposts \($0.formatted())" } ?? "Reposts"
-                                default: selection.rawValue
-                                }
-                            }, glyph: \.glyph)
+                        SocialSectionBar(title: "Profile activity", sections: ProfileTab.allCases, selection: $tab, fillsWidth: false) { section in
+                            let count = section == .all ? profile.postCount : section == .reposts ? profile.repostCount : nil
+                            let name = section == .all ? "Posts" : section.rawValue
+                            HStack(spacing: 4) {
+                                Text(name)
+                                if let count { Text(count.formatted()).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
+                            }
+                            .accessibilityElement(children: .combine)
+                        }
                         if loadedKey == fetchKey { profileActivity(page) }
                         if loadedKey != fetchKey || failedKey == fetchKey {
                             ResearchToolMessage(title: "\(tab.rawValue) couldn’t load", error: failedKey == fetchKey ? error : nil) { retry += 1 }
@@ -188,8 +190,9 @@ struct MemberProfileView: View {
             .frame(maxWidth: 640)
             .frame(maxWidth: .infinity)
         }
-        .navigationTitle(page?.profile.username ?? "Profile")
+        .navigationTitle(isYouTab ? "You" : page?.profile.username ?? "Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .socialDetail(!isYouTab)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .navigationDestination(item: $selectedPost) { id in FeedThreadView(api: feed, id: id) }

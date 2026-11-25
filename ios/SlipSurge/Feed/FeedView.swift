@@ -9,8 +9,11 @@ struct NativeFeedSelection: Hashable {
 struct FeedView: View {
     let api: FeedAPI
     @Binding var opensSelection: NativeFeedSelection?
+    let scrollToTopRequest: Int
+    let resumeOffer: NativeResumeOffer?
 
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.nativeResume) private var resume
     @Environment(\.nativeResumeActive) private var resumeActive
@@ -19,13 +22,14 @@ struct FeedView: View {
     @State private var posts: [FeedPost] = []
     @State private var cursor: String?
     @State private var load = State.loading
+    @State private var loadedSelection: Selection?
     @State private var isLoadingMore = false
     @State private var paginationError = false
     @State private var revision = 0
     @State private var generation = 0
     @State private var availableSports = ["NBA", "NFL"]
     @State private var composing = false
-    @State private var discussion: FeedPost?
+    @State private var discussion: UUID?
     @State private var member: String?
     @State private var pending = Set<UUID>()
     @State private var postUpdates: [UUID: FeedPost] = [:]
@@ -42,14 +46,45 @@ struct FeedView: View {
     }
 
     private var selection: Selection { Selection(filter: filter, sport: sport, revision: revision) }
+    private var canCompose: Bool { api.userID != nil && load == .ready }
 
-    init(api: FeedAPI, opensSelection: Binding<NativeFeedSelection?> = .constant(nil)) {
+    init(api: FeedAPI, opensSelection: Binding<NativeFeedSelection?> = .constant(nil), scrollToTopRequest: Int = 0,
+         resumeOffer: NativeResumeOffer? = nil) {
         self.api = api
         _opensSelection = opensSelection
+        self.scrollToTopRequest = scrollToTopRequest
+        self.resumeOffer = resumeOffer
     }
 
     var body: some View {
-        feedScroll(timeline)
+        ScrollViewReader { proxy in
+            feedScroll(timeline)
+                .onChange(of: scrollToTopRequest) {
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.28)) {
+                        proxy.scrollTo("feed-start", anchor: .top)
+                    }
+                    recordPosition(0)
+                }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) { scopes }
+        .safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) {
+            if canCompose {
+                Button {
+                    composing = true
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(scheme == .dark ? .black : .white)
+                        .frame(width: 52, height: 52)
+                        .background(Brand.accent(for: scheme), in: .circle)
+                        .contentShape(.circle)
+                }
+                .buttonStyle(SlipSurgePressStyle())
+                .accessibilityLabel("Compose")
+                .padding(.trailing, 16)
+                .padding(.bottom, 12 + (sizeClass == .compact ? SlipSurgeTabBar.minimumHeight : 0))
+            }
+        }
         .navigationTitle("Feed")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $member) { name in
@@ -65,25 +100,16 @@ struct FeedView: View {
                 }
             }
             if api.userID != nil {
-                ToolbarItemGroup(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
                         NativeSearchView(api: .init(viewer: .init(account: api.account, userID: api.userID)))
                     } label: { Label("Search", systemImage: "magnifyingglass") }
-                    if load == .ready {
-                        Button("Compose", systemImage: "square.and.pencil") { composing = true }
-                    }
                 }
             }
         }
-        .sheet(item: $discussion) { post in
-            NavigationStack {
-                FeedThreadView(api: api, id: post.postID, original: post)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Close", systemImage: "xmark") { discussion = nil }.labelStyle(.iconOnly)
-                        }
-                    }
-            }
+        .navigationDestination(item: $discussion) { id in
+            FeedThreadView(api: api, id: id, original: postUpdates[id] ?? posts.first { $0.postID == id },
+                onPostChange: { postUpdates[id] = $0 }, onPostRemoved: { posts.removeAll { $0.postID == id } })
         }
         .alert("Change couldn’t be confirmed", isPresented: $actionError) {
             Button("OK", role: .cancel) {}
@@ -107,39 +133,22 @@ struct FeedView: View {
             if entry.refreshStories { revision += 1 }
             opensSelection = nil
         }
-        .task(id: selection) { await firstPage() }
+        .task(id: selection) {
+            if loadedSelection != selection || load != .ready { await firstPage() }
+        }
         .refreshable { await firstPage() }
     }
 
     private var timeline: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 8) {
-                    StoriesRail(api: .init(account: api.account, userID: api.userID), sports: availableSports, revision: revision) { member = $0 }
-                    ResearchToolRail(title: "Feed", choices: FeedFilter.allCases.filter { $0 != .following || api.userID != nil },
-                        selection: Binding(get: { filter }, set: { value in
-                            guard filter != value else { return }
-                            filter = value
-                            recordPosition(0)
-                        }), label: { $0.rawValue.capitalized }) {
-                        switch $0 {
-                        case .latest: "clock"
-                        case .top: "flame"
-                        case .picks: "bolt"
-                        case .following: "person.2"
-                        }
-                    }
-                    if !availableSports.isEmpty {
-                        ResearchArtworkPicker(title: "Sport", options: [.init(id: "", title: "All sports", icon: "sportscourt")]
-                            + availableSports.map { .init(id: $0, title: LeagueArtwork.label($0), url: LeagueArtwork.logo($0), icon: "sportscourt") },
-                            selection: Binding(get: { sport }, set: { value in
-                                guard sport != value else { return }
-                                sport = value
-                                recordPosition(0)
-                            }))
-                    }
-                }
-                .padding(.vertical, 4)
+            LazyVStack(alignment: .leading, spacing: 0) {
+                Color.clear.frame(height: 0).id("feed-start").accessibilityHidden(true)
+                if !availableSports.isEmpty { sports }
+                if let resumeOffer { resumeOffer }
+                StoriesRail(api: .init(account: api.account, userID: api.userID), sports: availableSports, revision: revision) { member = $0 }
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 4)
+                Divider()
 
                 switch load {
                 case .loading:
@@ -155,9 +164,54 @@ struct FeedView: View {
                 }
             }
             .scrollTargetLayout()
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
         }
+        .background(Brand.surface(for: scheme))
+    }
+
+    private var scopes: some View {
+        let choices: [FeedFilter] = [.latest, .following, .picks, .top]
+        return SocialSectionBar(title: "Feed sections", sections: choices.filter { $0 != .following || api.userID != nil },
+            selection: Binding(get: { filter }, set: { value in
+                guard filter != value else { return }
+                filter = value
+                recordPosition(0)
+            })) { Text($0.rawValue.capitalized) }
+    }
+
+    private var sports: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 6) {
+                ForEach([""] + availableSports, id: \.self) { league in
+                    Button {
+                        guard sport != league else { return }
+                        sport = league
+                        recordPosition(0)
+                    } label: {
+                        HStack(spacing: 5) {
+                            if !league.isEmpty {
+                                ResearchArtwork(urls: LeagueArtwork.logo(league).map { [$0] } ?? [], fallback: "sportscourt")
+                                    .frame(width: 17, height: 17).accessibilityHidden(true)
+                            }
+                            Text(league.isEmpty ? "All sports" : LeagueArtwork.label(league))
+                                .font(.footnote.weight(sport == league ? .bold : .medium))
+                        }
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 7)
+                        .foregroundStyle(sport == league ? Brand.accent(for: scheme) : Brand.text(for: scheme))
+                        .background(sport == league ? Brand.accent(for: scheme).opacity(0.13) : .clear, in: .capsule)
+                        .frame(minHeight: 44)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(SlipSurgePressStyle())
+                    .accessibilityAddTraits(sport == league ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, 13)
+        }
+        .scrollIndicators(.hidden)
+        .sensoryFeedback(.selection, trigger: sport)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Filter feed by sport")
     }
 
     @ViewBuilder private func feedScroll(_ content: some View) -> some View {
@@ -181,7 +235,7 @@ struct FeedView: View {
     }
 
     private func recordPosition(_ scroll: Int, anchor: UUID? = nil) {
-        guard resumeActive, api.userID != nil else { return }
+        guard resumeActive, api.userID != nil, discussion == nil, member == nil else { return }
         resume?.record(.feed(filter: filter, sport: sport, scroll: scroll, anchor: anchor), account: api.account, interaction: true)
     }
 
@@ -194,14 +248,15 @@ struct FeedView: View {
         ForEach(posts) { post in
             FeedPostCard(post: postUpdates[post.postID] ?? post, operation: api.userID == nil ? nil : { action in
                 Task { await apply(action, to: post.postID) }
-            }, discussion: { discussion = postUpdates[post.postID] ?? post },
+            }, discussion: { discussion = post.postID },
             showAuthor: post.author.map { author in { member = author.username } }, actionsAPI: api,
             postChanged: { removed in
                 if removed { posts.removeAll { $0.postID == post.postID } }
                 Task { await firstPage() }
             })
-            .padding(.horizontal, 13).padding(.vertical, 7)
-            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 19))
+            .padding(.horizontal, 15)
+            .padding(.vertical, 6)
+            .overlay(alignment: .bottom) { Divider().allowsHitTesting(false) }
             .disabled(pending.contains(post.postID))
             .id(post.id)
         }
@@ -213,6 +268,7 @@ struct FeedView: View {
             .buttonStyle(.bordered)
             .controlSize(.large)
             .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
         }
     }
 
@@ -240,6 +296,7 @@ struct FeedView: View {
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.24)) {
                 posts = page.posts.filter { seen.insert($0.id).inserted }
                 cursor = page.hasMore ? page.nextCursor : nil
+                loadedSelection = requested
                 load = .ready
             }
         } catch {

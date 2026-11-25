@@ -33,14 +33,16 @@ struct SlipSurgeTabs: View {
     @State private var researchPath: [ResearchPresentation] = []
     @State private var discoverDestination: DiscoverDestination?
     @State private var inboxSection = InboxSection.activity
+    @State private var opensAccountSettings = false
     @State private var inboxUnread = InboxUnread()
     @State private var feedSelection: NativeFeedSelection?
+    @State private var feedTopRequest = 0
     @State private var emojiLibrary = NativeEmojiLibrary()
     @State private var researchPreferences = MemberResearchPreferenceStore()
     @State private var resume = NativeResumeStore()
     @State private var choseDestination = false
     @State private var keyboardVisible = false
-    @State private var visibleCommunityRoom: UUID?
+    @State private var socialDetails = SocialDetailVisibility()
 
     private var compactTabs: Bool { horizontalSize == .compact }
 
@@ -58,12 +60,22 @@ struct SlipSurgeTabs: View {
         Binding(get: { release == nil ? sitePresentation : nil }, set: { if release == nil { sitePresentation = $0 } })
     }
 
+    private var resumeBanner: NativeResumeOffer? {
+        guard release == nil, sitePresentation == nil, profilePresentation == nil, let offer = resume.offer else { return nil }
+        return NativeResumeOffer(offer: offer, open: {
+            resume.select(offer)
+            _ = routeLink(offer.url, track: false)
+        }, dismiss: resume.dismiss)
+    }
+
     var body: some View {
         TabView(selection: Binding(get: { selected }, set: selectTab)) {
             NavigationStack {
-                FeedView(api: FeedAPI(account: account, userID: account.memberID), opensSelection: $feedSelection)
+                FeedView(api: FeedAPI(account: account, userID: account.memberID), opensSelection: $feedSelection,
+                    scrollToTopRequest: feedTopRequest, resumeOffer: resumeBanner)
                     .environment(\.nativeResumeActive, selected == .feed && sitePresentation == nil)
             }
+            .environment(\.socialTab, .feed)
             .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
             .id(account.memberID)
             .tabItem { Label("Feed", systemImage: "bubble.left.and.bubble.right") }
@@ -87,7 +99,7 @@ struct SlipSurgeTabs: View {
                 DiscoverView(api: DiscoverAPI(account: account, userID: account.memberID),
                     opensDestination: $discoverDestination, opensJoined: true)
             }
-            .environment(\.communityRoomVisibility, trackCommunityRoom)
+            .environment(\.socialTab, .community)
             .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
             .id(account.memberID)
             .tabItem { Label(Destination.community.rawValue, systemImage: Destination.community.symbol) }
@@ -96,6 +108,7 @@ struct SlipSurgeTabs: View {
             NavigationStack {
                 InboxView(account: account, section: $inboxSection, unread: inboxUnread) { selectTab(.you) }
             }
+            .environment(\.socialTab, .inbox)
             .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
             .id(account.memberID)
             .tabItem { Label(Destination.inbox.rawValue, systemImage: Destination.inbox.symbol) }
@@ -103,16 +116,30 @@ struct SlipSurgeTabs: View {
             .tag(Destination.inbox)
 
             NavigationStack {
-                AccountView(account: account, appearance: $appearance, isYou: true)
+                if let userID = account.memberID, !account.needsNewPassword, !account.needsVerification {
+                    MemberProfileView(api: .init(account: account, userID: userID), target: userID.uuidString, isYouTab: true)
+                        .navigationDestination(isPresented: $opensAccountSettings) {
+                            AccountView(account: account, appearance: $appearance)
+                        }
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("Account and settings", systemImage: "gearshape") { opensAccountSettings = true }
+                            }
+                        }
+                } else {
+                    AccountView(account: account, appearance: $appearance, isYou: true)
+                }
             }
+            .environment(\.socialTab, .you)
             .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
             .id(account.user?.id)
             .tabItem { Label(Destination.you.rawValue, systemImage: Destination.you.symbol) }
             .tag(Destination.you)
         }
         .tint(Brand.accent(for: scheme))
+        .environment(socialDetails)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if compactTabs && !keyboardVisible && (selected != .community || visibleCommunityRoom == nil) {
+            if compactTabs && !keyboardVisible && !socialDetails.showsDetail(in: selected) {
                 SlipSurgeTabBar(selection: selected, profile: account.memberID == nil ? nil : account.profileIdentity,
                     unread: inboxUnread.total(for: account.memberID), select: selectTab)
             }
@@ -132,12 +159,7 @@ struct SlipSurgeTabs: View {
                     SiteAnnouncementBanner(banner: banner) { dismissedBannerVersion = banner.updatedAt }
                         .environment(\.openURL, OpenURLAction(handler: openLink))
                 }
-                if release == nil, sitePresentation == nil, profilePresentation == nil, let offer = resume.offer {
-                    NativeResumeOffer(offer: offer, open: {
-                        resume.select(offer)
-                        _ = routeLink(offer.url, track: false)
-                    }, dismiss: resume.dismiss)
-                }
+                if selected == .research, let resumeBanner { resumeBanner }
             }
         }
         .sheet(item: $release, onDismiss: presentNextRelease) { current in
@@ -214,17 +236,13 @@ struct SlipSurgeTabs: View {
 
     private func selectTab(_ tab: Destination) {
         choseDestination = true
+        if selected == .feed, tab == .feed, !socialDetails.showsDetail(in: .feed) { feedTopRequest += 1 }
         selected = tab
         switch tab {
         case .community: resume.record(.init(path: "/community", title: "Community"), account: account, interaction: true)
-        case .you: resume.record(.init(path: "/settings", title: "Account"), account: account, interaction: true)
+        case .you: resume.record(.init(path: "/account", title: "You"), account: account, interaction: true)
         case .feed, .research, .inbox: break
         }
-    }
-
-    private func trackCommunityRoom(_ id: UUID, visible: Bool) {
-        if visible { visibleCommunityRoom = id }
-        else if visibleCommunityRoom == id { visibleCommunityRoom = nil }
     }
 
     private var remainingReleases: [SiteAnnouncements.Release] {
@@ -320,6 +338,7 @@ struct SlipSurgeTabs: View {
         case .account:
             sitePresentation = nil
             profilePresentation = nil
+            opensAccountSettings = account.memberID != nil && url.path.split(separator: "/").last == "settings"
             selected = .you
         case .notifications, .messages:
             sitePresentation = nil
@@ -379,7 +398,7 @@ struct SlipSurgeTabs: View {
 
 }
 
-private struct NativeResumeOffer: View {
+struct NativeResumeOffer: View {
     let offer: NativeResumeStore.Offer
     let open: () -> Void
     let dismiss: () -> Void

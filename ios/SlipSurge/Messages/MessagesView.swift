@@ -6,52 +6,51 @@ struct MessagesView: View {
     var inInbox = false
     var onUnreadChange: (Int) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
-    @FocusState private var queryFocused: Bool
     @State private var inbox: MessageInbox?
     @State private var error: (any Error)?
     @State private var query = ""
-    @State private var section = Section.inbox
+    @State private var showingRequests = false
     @State private var revision = 0
     @State private var composing = false
     @State private var selection: MessageDestination?
     @State private var pending = Set<UUID>()
     @State private var actionError = false
 
-    private enum Section: String, CaseIterable { case inbox = "Inbox", requests = "Requests" }
+    private enum Conversation: Identifiable {
+        case direct(MessageInbox.Direct)
+        case group(MessageInbox.Group)
 
-    var body: some View {
-        if inInbox { conversationList.keyboardDone { queryFocused = false } }
-        else { conversationList.searchable(text: $query, prompt: "Search conversations") }
+        var id: MessageDestination {
+            switch self {
+            case .direct(let item): .init(kind: .direct, id: item.id)
+            case .group(let item): .init(kind: .group, id: item.id)
+            }
+        }
+
+        var date: String {
+            switch self {
+            case .direct(let item): item.createdAt
+            case .group(let item): item.updatedAt
+            }
+        }
     }
 
-    private var conversationList: some View {
+    var body: some View {
         List {
             if let inbox {
-                if inInbox {
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
-                        TextField("Search conversations", text: $query).autocorrectionDisabled()
-                            .focused($queryFocused)
-                            .submitLabel(.search)
-                            .onSubmit { queryFocused = false }
-                    }
-                    .listRowBackground(Brand.surface(for: scheme))
-                }
-                Picker("Conversations", selection: $section) {
-                    ForEach(Section.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .listRowBackground(Brand.surface(for: scheme))
-                rows(inbox)
+                if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { requestsEntry(inbox) }
+                conversations(inbox)
             } else {
                 ResearchToolMessage(title: "Messages couldn’t load", error: error) { revision += 1 }
                     .listRowBackground(Brand.surface(for: scheme))
             }
         }
+        .listStyle(.plain)
+        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search conversations")
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(inInbox ? "Inbox" : "Messages")
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(Brand.surface(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .toolbar {
             ToolbarItem(placement: .primaryAction) { Button("New message", systemImage: "square.and.pencil") { composing = true } }
@@ -65,6 +64,7 @@ struct MessagesView: View {
         .navigationDestination(item: $selection) { destination in
             MessageThreadView(api: api, destination: destination)
         }
+        .navigationDestination(isPresented: $showingRequests) { requestsList }
         .onChange(of: selection) { _, destination in
             if destination == nil { revision += 1 }
         }
@@ -74,49 +74,87 @@ struct MessagesView: View {
         .alert("Request couldn’t be updated", isPresented: $actionError) { Button("OK", role: .cancel) {} }
     }
 
-    @ViewBuilder
-    private func rows(_ inbox: MessageInbox) -> some View {
-        let unreadRequests = inbox.conversations.filter(\.isRequest).count
-        let direct = inbox.conversations.filter { row in
-            row.isRequest == (section == .requests) && matches(row.partner.name, row.partner.username, row.content)
+    private func requestsEntry(_ inbox: MessageInbox) -> some View {
+        let count = inbox.conversations.filter(\.isRequest).count
+        return Button {
+            showingRequests = true
+        } label: {
+            HStack(spacing: 10) {
+                Label("Message requests", systemImage: "tray")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                if count > 0 { Text(count.formatted()).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary).accessibilityHidden(true)
+            }
+            .frame(minHeight: 44).contentShape(.rect)
         }
-        let groups = section == .inbox ? inbox.groupConversations.filter { matches($0.name, $0.lastMessage) } : []
-        if direct.isEmpty && groups.isEmpty {
-            ContentUnavailableView(section == .requests ? "No message requests" : "No conversations", systemImage: "bubble.left.and.bubble.right")
+        .buttonStyle(.plain)
+        .listRowBackground(Brand.surface(for: scheme))
+    }
+
+    private var requestsList: some View {
+        let requests = inbox?.conversations.filter(\.isRequest) ?? []
+        return List {
+            if requests.isEmpty {
+                ContentUnavailableView("No message requests", systemImage: "tray")
+                    .listRowSeparator(.hidden)
+            }
+            ForEach(requests) { item in
+                NavigationLink {
+                    MessageThreadView(api: api, destination: .init(kind: .direct, id: item.id))
+                } label: {
+                    directRow(item)
+                }
+                .swipeActions(allowsFullSwipe: false) {
+                    Button("Decline", role: .destructive) { Task { await respond(to: item, status: "declined") } }
+                        .disabled(pending.contains(item.id))
+                    Button("Accept") { Task { await respond(to: item, status: "accepted") } }
+                        .tint(Brand.accent(for: scheme)).disabled(pending.contains(item.id))
+                }
                 .listRowBackground(Brand.surface(for: scheme))
+            }
         }
-        if !groups.isEmpty {
-            SwiftUI.Section("Group conversations") {
-                ForEach(groups) { group in
-                    Button { selection = .init(kind: .group, id: group.id) } label: {
-                        row(name: group.name, text: group.lastMessage, date: group.updatedAt, unread: group.unreadCount,
-                            people: Array(group.members.filter { $0.id != api.userID }.prefix(2)))
-                    }
-                    .buttonStyle(.plain)
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Brand.surface(for: scheme))
+        .navigationTitle("Requests")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+        .refreshable { await load() }
+    }
+
+    @ViewBuilder
+    private func conversations(_ inbox: MessageInbox) -> some View {
+        let direct = inbox.conversations.filter { !$0.isRequest && matches($0.partner.name, $0.partner.username, $0.content) }
+        let groups = inbox.groupConversations.filter { matches($0.name, $0.lastMessage) }
+        let recent = (direct.map(Conversation.direct) + groups.map(Conversation.group))
+            .map { ($0, SidelineBoard.timestamp($0.date) ?? .distantPast) }
+            .sorted { $0.1 > $1.1 }
+            .map(\.0)
+        if recent.isEmpty {
+            ContentUnavailableView(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "No conversations" : "No matching conversations",
+                systemImage: "bubble.left.and.bubble.right")
+                .listRowBackground(Brand.surface(for: scheme))
+                .listRowSeparator(.hidden)
+        }
+        ForEach(recent) { conversation in
+            Button { selection = conversation.id } label: {
+                switch conversation {
+                case .direct(let item): directRow(item)
+                case .group(let item):
+                    row(name: item.name, text: item.lastMessage, date: item.updatedAt, unread: item.unreadCount,
+                        people: Array(item.members.filter { $0.id != api.userID }.prefix(2)))
                 }
             }
+            .buttonStyle(.plain)
             .listRowBackground(Brand.surface(for: scheme))
         }
-        if !direct.isEmpty {
-            SwiftUI.Section(section == .requests ? "Requests (\(unreadRequests))" : "Direct messages") {
-                ForEach(direct) { item in
-                    Button { selection = .init(kind: .direct, id: item.id) } label: {
-                        row(name: item.partner.name, text: item.lastIsMine && !item.content.isEmpty ? "You: \(item.content)" : item.content,
-                            date: item.createdAt, unread: item.unreadCount, people: [item.partner])
-                    }
-                    .buttonStyle(.plain)
-                    .swipeActions(allowsFullSwipe: false) {
-                        if item.isRequest {
-                            Button("Decline", role: .destructive) { Task { await respond(to: item, status: "declined") } }
-                                .disabled(pending.contains(item.id))
-                            Button("Accept") { Task { await respond(to: item, status: "accepted") } }
-                                .tint(Brand.accent(for: scheme)).disabled(pending.contains(item.id))
-                        }
-                    }
-                }
-            }
-            .listRowBackground(Brand.surface(for: scheme))
-        }
+    }
+
+    private func directRow(_ item: MessageInbox.Direct) -> some View {
+        row(name: item.partner.name, text: item.lastIsMine && !item.content.isEmpty ? "You: \(item.content)" : item.content,
+            date: item.createdAt, unread: item.unreadCount, people: [item.partner])
     }
 
     private func row(name: String, text: String, date: String, unread: Int, people: [MessagePerson]) -> some View {
@@ -135,7 +173,9 @@ struct MessagesView: View {
                     Text(verbatim: name).fontWeight(unread > 0 ? .bold : .semibold)
                     Spacer(minLength: 6)
                     if let date = SidelineBoard.timestamp(date) {
-                        Text(date, style: .relative).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        Text(date, format: Calendar.current.isDateInToday(date) ? .dateTime.hour().minute() : .dateTime.month(.abbreviated).day())
+                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            .accessibilityLabel(date.formatted(date: .abbreviated, time: .shortened))
                     }
                 }
                 HStack {

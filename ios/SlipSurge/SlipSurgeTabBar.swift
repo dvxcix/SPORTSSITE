@@ -1,6 +1,11 @@
 import SwiftUI
 
 struct SlipSurgeTabBar: View {
+    private static let buttonHeight: CGFloat = 50
+    private static let contentPadding: CGFloat = 5
+    private static let bottomPadding: CGFloat = 4
+    static var minimumHeight: CGFloat { buttonHeight + 2 * contentPadding + bottomPadding }
+
     let selection: SlipSurgeTabs.Destination
     let profile: AccountStore.ProfileIdentity?
     let unread: Int
@@ -20,7 +25,7 @@ struct SlipSurgeTabBar: View {
         }
         .frame(maxWidth: 450)
         .padding(.horizontal, 15)
-        .padding(.bottom, 4)
+        .padding(.bottom, Self.bottomPadding)
         .sensoryFeedback(.selection, trigger: selection)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Main tabs")
@@ -49,7 +54,7 @@ struct SlipSurgeTabBar: View {
                             .font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
                     }
                     .foregroundStyle(selection == tab ? Brand.accent(for: scheme) : Brand.text(for: scheme))
-                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .frame(maxWidth: .infinity, minHeight: Self.buttonHeight)
                     .background {
                         if selection == tab {
                             Capsule().fill(Brand.accent(for: scheme).opacity(scheme == .dark ? 0.17 : 0.13))
@@ -64,7 +69,7 @@ struct SlipSurgeTabBar: View {
                 .accessibilityAddTraits(selection == tab ? .isSelected : [])
             }
         }
-        .padding(5)
+        .padding(Self.contentPadding)
         .animation(reduceMotion ? nil : .snappy(duration: 0.26), value: selection)
     }
 

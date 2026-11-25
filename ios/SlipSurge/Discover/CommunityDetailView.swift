@@ -34,7 +34,7 @@ struct CommunityDetailView: View {
     @State private var mutation = false
     @State private var confirmLeave = false
     @State private var responseComplete = false
-    @State private var selected: FeedPost?
+    @State private var selectedPost: UUID?
     @State private var memberPreferences = false
     @State private var composing = false
     @State private var memberProfile: String?
@@ -98,15 +98,10 @@ struct CommunityDetailView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if let page, page.canView {
-                Picker("Community section", selection: $feed) {
-                    ForEach(Feed.allCases.filter { $0 != .rooms || page.role != nil }, id: \.self) { section in
-                        Text(section.rawValue).tag(section)
-                    }
+                SocialSectionBar(title: "Community section", sections: Feed.allCases.filter { $0 != .rooms || page.role != nil },
+                    selection: $feed) { section in
+                    Text(section.rawValue)
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-                .background(Brand.background(for: scheme))
             }
         }
         .background(Brand.background(for: scheme))
@@ -149,10 +144,12 @@ struct CommunityDetailView: View {
             if feed == .rooms { roomRevision += 1 }
             await load(postFeed)
         }
-        .sheet(item: $selected) { post in
-            NavigationStack {
-                FeedThreadView(api: feedAPI, id: post.postID, original: post)
-            }
+        .navigationDestination(item: $selectedPost) { id in
+            FeedThreadView(api: feedAPI, id: id, original: posts.first { $0.postID == id },
+                onPostChange: { post in
+                    if let index = posts.firstIndex(where: { $0.id == post.id }) { posts[index] = post }
+                },
+                onPostRemoved: { posts.removeAll { $0.postID == id } })
         }
         .sheet(isPresented: $memberPreferences) {
             CommunityMemberPreferences(api: api, group: group) { feedback = "Preferences saved." }
@@ -197,7 +194,7 @@ struct CommunityDetailView: View {
             LazyVStack(spacing: 9) {
                 ForEach(posts) { post in
                     FeedPostCard(post: post, operation: { action in Task { await apply(action, post: post) } },
-                        discussion: { selected = post }, showAuthor: post.author.map { author in { memberProfile = author.username } },
+                        discussion: { selectedPost = post.postID }, showAuthor: post.author.map { author in { memberProfile = author.username } },
                         actionsAPI: feedAPI, postChanged: { _ in Task { await load(postFeed) } })
                         .padding(13).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
                         .disabled(pending.contains(post.postID))

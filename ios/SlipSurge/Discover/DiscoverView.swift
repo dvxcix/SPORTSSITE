@@ -52,13 +52,7 @@ struct DiscoverView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 13) {
-                if opensJoined {
-                    Picker("Community view", selection: $yours) {
-                        Text("Joined").tag(true)
-                        Text("Browse").tag(false)
-                    }
-                    .pickerStyle(.segmented)
-                }
+                if opensJoined { communityShortcuts }
                 if !joinedOnly { browseDirectory }
                 if !joinedOnly || communities?.joinedIds.isEmpty == false { filters }
                 switch section {
@@ -77,6 +71,13 @@ struct DiscoverView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .keyboardDone { searchFocused = false }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if opensJoined {
+                SocialSectionBar(title: "Community view", sections: [true, false], selection: $yours) { joined in
+                    Text(joined ? "Joined" : "Browse")
+                }
+            }
+        }
         .navigationTitle(opensJoined ? "Community" : "Discover")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -184,9 +185,45 @@ struct DiscoverView: View {
 
     private func reloadGroups() { revision += 1 }
 
-    @ViewBuilder private var browseDirectory: some View {
-        NavigationLink { ScoresView(api: api) } label: { scoresEntry }
+    private var communityShortcuts: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) { shortcutLinks }
+            VStack(spacing: 6) { shortcutLinks }
+        }
+    }
+
+    @ViewBuilder private var shortcutLinks: some View {
+        if let userID = api.userID {
+            NavigationLink {
+                ChannelDirectoryView(api: .init(account: api.account, userID: userID))
+            } label: {
+                shortcut("Live Rooms", symbol: "bubble.left.and.bubble.right")
+            }
             .buttonStyle(SlipSurgePressStyle())
+        }
+        NavigationLink { ScoresView(api: api) } label: {
+            shortcut("Live Scores", symbol: "waveform.path")
+        }
+        .buttonStyle(SlipSurgePressStyle())
+    }
+
+    private func shortcut(_ title: String, symbol: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: symbol).foregroundStyle(Brand.accent(for: scheme)).accessibilityHidden(true)
+            Text(title).fixedSize(horizontal: true, vertical: false)
+        }
+        .font(.subheadline.weight(.semibold))
+        .padding(.horizontal, 11)
+        .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
+        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+        .contentShape(.rect)
+    }
+
+    @ViewBuilder private var browseDirectory: some View {
+        if !opensJoined {
+            NavigationLink { ScoresView(api: api) } label: { scoresEntry }
+                .buttonStyle(SlipSurgePressStyle())
+        }
         if api.userID != nil {
             NavigationLink {
                 NativeExploreView(api: api)
@@ -212,9 +249,11 @@ struct DiscoverView: View {
         if let userID = api.userID {
             ScrollView(.horizontal) {
                 HStack(spacing: 7) {
-                    NavigationLink {
-                        ChannelDirectoryView(api: .init(account: api.account, userID: userID))
-                    } label: { Label("Live Rooms", systemImage: "dot.radiowaves.left.and.right") }
+                    if !opensJoined {
+                        NavigationLink {
+                            ChannelDirectoryView(api: .init(account: api.account, userID: userID))
+                        } label: { Label("Live Rooms", systemImage: "dot.radiowaves.left.and.right") }
+                    }
                     if eventsAvailable {
                         NavigationLink { CommunityEventsView(api: .init(viewer: api)) } label: { Label("Events", systemImage: "calendar") }
                     }
@@ -337,12 +376,41 @@ struct DiscoverView: View {
             CommunityDetailView(api: api, group: group, initialMember: member,
                 feed: opensJoined && member ? .rooms : .posts, onMembershipChange: reloadGroups)
         } label: {
-            DiscoverIdentityCard(title: group.name, subtitle: group.invitationId != nil ? "Invitation pending"
-                : member ? "Member" : group.accessType == "paid" ? "Membership" : "Free community",
-                detail: group.description, avatar: group.avatarUrl, banner: group.bannerUrl,
-                symbol: "person.2", count: group.memberCount.map { "\($0.formatted()) members" })
+            if joinedOnly, member || group.invitationId != nil {
+                joinedCommunityRow(group)
+            } else {
+                DiscoverIdentityCard(title: group.name, subtitle: group.invitationId != nil ? "Invitation pending"
+                    : member ? "Member" : group.accessType == "paid" ? "Membership" : "Free community",
+                    detail: group.description, avatar: group.avatarUrl, banner: group.bannerUrl,
+                    symbol: "person.2", count: group.memberCount.map { "\($0.formatted()) members" })
+            }
         }
         .buttonStyle(SlipSurgePressStyle())
+    }
+
+    private func joinedCommunityRow(_ group: DiscoverAPI.Communities.Community) -> some View {
+        HStack(spacing: 12) {
+            ResearchArtwork(urls: [group.avatarUrl, group.bannerUrl].compactMap { $0 }, fallback: "person.2.fill", contentMode: .fill)
+                .frame(width: 44, height: 44)
+                .clipShape(.rect(cornerRadius: 12))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(group.name).font(.headline).lineLimit(2)
+                if group.invitationId != nil {
+                    Text("Invitation pending").font(.caption).foregroundStyle(.secondary)
+                } else if let count = group.memberCount {
+                    Text(count == 1 ? "1 member" : "\(count.formatted()) members")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary).accessibilityHidden(true)
+        }
+        .padding(11)
+        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+        .contentShape(.rect)
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder

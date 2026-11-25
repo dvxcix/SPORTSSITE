@@ -1,9 +1,16 @@
 import SwiftUI
 
 struct FeedThreadView: View {
+    private enum Attachment: Hashable, Identifiable {
+        case gif, emoji
+        var id: Self { self }
+    }
+
     let api: FeedAPI
     let id: UUID
     var original: FeedPost?
+    var onPostChange: (FeedPost) -> Void = { _ in }
+    var onPostRemoved: () -> Void = {}
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -18,6 +25,7 @@ struct FeedThreadView: View {
     @State private var member: String?
     @State private var comment = ""
     @State private var draft = UUID()
+    @State private var attachment: Attachment?
     @FocusState private var composerFocused: Bool
 
     private var post: FeedPost? { thread?.post ?? (unavailable ? nil : original) }
@@ -29,11 +37,27 @@ struct FeedThreadView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .scrollBounceBehavior(.always, axes: .vertical)
-        .keyboardDone { composerFocused = false }
         .navigationTitle("Post")
         .navigationBarTitleDisplayMode(.inline)
+        .socialDetail()
+        .presentationContentInteraction(.scrolls)
+        .interactiveDismissDisabled(composerFocused || !comment.isEmpty)
         .navigationDestination(item: $member) { name in
             MemberProfileView(api: DiscoverAPI(account: api.account, userID: api.userID), target: name)
+        }
+        .sheet(item: $attachment) { kind in
+            switch kind {
+            case .gif:
+                if let userID = api.userID {
+                    NativeGIFPickerSheet(account: api.account, userID: userID, uploadKind: .posts) { url in
+                        appendToDraft(url.absoluteString)
+                        attachment = nil
+                    }
+                }
+            case .emoji:
+                NavigationStack { NativeEmojiPicker(select: appendToDraft) }
+                    .presentationDetents([.medium, .large])
+            }
         }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
@@ -56,7 +80,7 @@ struct FeedThreadView: View {
                 FeedPostCard(post: post, operation: operation, showDiscussionButton: false,
                     showAuthor: post.author.map { author in { member = author.username } }, actionsAPI: api,
                     postChanged: { removed in
-                        if removed { dismiss() } else { Task { await load() } }
+                        if removed { onPostRemoved(); dismiss() } else { Task { await load() } }
                     })
                     .padding(14).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
             }
@@ -91,41 +115,81 @@ struct FeedThreadView: View {
                         comment = ""
                         draft = UUID()
                     }
-                    .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 32)
+                    .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
                 }
             }
             HStack(alignment: .bottom, spacing: 8) {
-                if let userID = api.userID {
-                    NativeGIFPickerButton(account: api.account, userID: userID, uploadKind: .posts, compact: true) { url in
-                        let candidate = comment.isEmpty ? url.absoluteString : comment + " " + url.absoluteString
-                        if candidate.utf16.count <= 1_000 { comment = candidate }
-                        else { notice = "Shorten the comment before adding a GIF." }
+                Menu {
+                    Button("GIF", systemImage: "play.rectangle") {
+                        composerFocused = false
+                        attachment = .gif
                     }
-                    .disabled(pending)
-                    NativeEmojiButton(compact: true) { value in
-                        let next = comment.isEmpty ? value : comment + " " + value
-                        if next.utf16.count <= 1_000 { comment = next }
-                        else { notice = "Shorten the comment before adding emoji." }
+                    Button("Emoji", systemImage: "face.smiling") {
+                        composerFocused = false
+                        attachment = .emoji
                     }
-                    .disabled(pending)
+                } label: {
+                    Image(systemName: "plus").font(.body.weight(.semibold))
+                        .frame(width: 44, height: 46)
+                        .background(Brand.surface(for: scheme), in: .circle)
+                        .contentShape(.rect)
                 }
-                TextField("Write a comment", text: $comment, axis: .vertical)
-                    .focused($composerFocused)
-                    .lineLimit(1...4).padding(10)
-                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
+                .accessibilityLabel("Add to reply")
+                .disabled(pending)
+                HStack(alignment: .bottom, spacing: 0) {
+                    TextField("Write a reply", text: $comment, axis: .vertical)
+                        .focused($composerFocused)
+                        .lineLimit(1...4)
+                        .padding(.vertical, 11)
+                        .padding(.leading, 13)
+                        .padding(.trailing, composerFocused ? 0 : 13)
+                        .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
+                        .accessibilityIdentifier("post-reply-input")
+                    if composerFocused {
+                        Button {
+                            composerFocused = false
+                        } label: {
+                            Image(systemName: "keyboard.chevron.compact.down")
+                                .foregroundStyle(.secondary).frame(width: 44, height: 46).contentShape(.rect)
+                        }
+                        .buttonStyle(SlipSurgePressStyle())
+                        .accessibilityLabel("Hide keyboard")
+                    }
+                }
+                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 23))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 23).strokeBorder(.secondary.opacity(0.18)).allowsHitTesting(false)
+                }
                 Button {
                     submit()
                 } label: {
-                    Image(systemName: "arrow.up.circle.fill").font(.system(size: 33, weight: .semibold))
-                        .foregroundStyle(Brand.accent(for: scheme)).frame(width: 44, height: 44)
+                    Image(systemName: editing == nil ? "arrow.up" : "checkmark").font(.body.weight(.bold))
+                        .foregroundStyle(commentIsSendable ? (scheme == .dark ? .black : .white) : .secondary)
+                        .frame(width: 46, height: 46)
+                        .background(commentIsSendable ? Brand.accent(for: scheme) : Brand.surface(for: scheme), in: .circle)
+                        .contentShape(.circle)
                 }
                 .buttonStyle(SlipSurgePressStyle())
-                .accessibilityLabel(editing == nil ? "Send comment" : "Save comment")
-                .disabled(pending || comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || comment.utf16.count > 1_000)
+                .accessibilityLabel(editing == nil ? "Send reply" : "Save reply")
+                .disabled(!commentIsSendable)
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
-        .background(.ultraThinMaterial)
+        .background { Brand.background(for: scheme).ignoresSafeArea(.container, edges: .bottom) }
+        .overlay(alignment: .top) { Divider().allowsHitTesting(false) }
+    }
+
+    private var commentIsSendable: Bool {
+        !pending && !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && comment.utf16.count <= 1_000
+    }
+
+    private func appendToDraft(_ text: String) {
+        let next = comment.isEmpty ? text : comment + " " + text
+        guard next.utf16.count <= 1_000 else {
+            notice = "Shorten the reply before adding more."
+            return
+        }
+        comment = next
     }
 
     @ViewBuilder
@@ -247,6 +311,7 @@ struct FeedThreadView: View {
         do {
             let value = try await api.thread(id)
             guard !Task.isCancelled else { return }
+            onPostChange(value.post)
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
                 thread = value
                 unavailable = false

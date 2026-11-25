@@ -73,19 +73,33 @@ struct FeedPostCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 if let author = post.author {
                     HStack(spacing: 5) {
-                        Text(author.displayName ?? author.username).font(.headline)
+                        Text(author.displayName ?? author.username).font(.subheadline.weight(.semibold))
                         if author.verified == true {
                             Image(systemName: "checkmark.seal.fill")
                                 .accessibilityLabel("Verified")
                         }
                     }
-                    Text("@\(author.username)").font(.caption).foregroundStyle(.secondary)
+                    let posted = SidelineBoard.timestamp(post.createdAt)?
+                        .formatted(.relative(presentation: .numeric, unitsStyle: .abbreviated))
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 5) {
+                            Text("@\(author.username)").fixedSize(horizontal: true, vertical: false)
+                            if let posted {
+                                Text("·").accessibilityHidden(true)
+                                Text(posted).fixedSize(horizontal: true, vertical: false)
+                            }
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("@\(author.username)").lineLimit(1)
+                            if let posted { Text(posted) }
+                        }
+                    }
+                    .font(.caption).foregroundStyle(.secondary)
                 } else {
-                    Text("SlipSurge member").font(.headline)
-                }
-                if let posted = SidelineBoard.timestamp(post.createdAt) {
-                    Text(posted.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption).foregroundStyle(.secondary)
+                    Text("SlipSurge member").font(.subheadline.weight(.semibold))
+                    if let posted = SidelineBoard.timestamp(post.createdAt) {
+                        Text(posted, style: .relative).font(.caption).foregroundStyle(.secondary)
+                    }
                 }
             }
         }

@@ -2506,3 +2506,32 @@ physical-device push are still open.
 - Left the iPhone 18 Pro simulator in Picks Room for design review. The
   paired iPhone 16 Plus was updating during this pass. Physical screen
   sharing and verification of this build remain pending.
+
+## Social navigation and screen hierarchy · 25 November 2026
+
+- Live Device Hub viewing worked on the paired iPhone 16 Plus after its
+  update to iOS 27.2.1. Reviewed Real’s sport and date navigation, X’s
+  timeline and compose placement, then Discord’s channel context and room
+  composer on the phone. Supplemented this with [X’s iOS timeline](https://mobbin.com/screens/491afc8c-f081-45fe-ae26-c970bb2d3882)
+  and [Discord’s iOS channel list](https://mobbin.com/screens/64d1c1ea-6abb-4d93-8da1-6765cb45e3cf).
+- Feed has a fixed Latest, Following, Picks and Top row and direct league
+  filters with SlipSurge’s existing logos. Post rows use slim separators and
+  preserve sportsbook media. Compose sits above the dock. The resume offer
+  is inside Feed on the social tabs. Posts open in the navigation stack
+  with the compact reply composer. Returning keeps the feed selection and
+  tapping the active Feed tab again scrolls to the top.
+- Community opens on Joined with compact group rows and direct entry to
+  Live Rooms and Live Scores. The room title opens a menu of available
+  rooms and the visible chips still switch with one tap. Inbox keeps
+  Activity and Messages badges, sorts direct and group threads together by
+  recency and gives message requests a dedicated screen. The signed-in You
+  tab opens the existing animated profile, with a gear and the existing
+  settings deep link opening Account.
+- Signed Xcode Debug builds passed for the iPhone 18 Pro simulator and
+  physical iPhone 16 Plus. Installed the final signed build on the phone
+  and verified Feed, Activity, Messages, You, Joined, and Picks Room with
+  its composer. Left the phone on Feed. On the simulator, verified Compose
+  open and cancel, NBA Picks, post navigation and return, Feed reselect,
+  the empty Requests screen, room switching and the signed-in settings
+  link. The native and production suites passed 286 checks. Live sending
+  and request moderation were outside those checks.

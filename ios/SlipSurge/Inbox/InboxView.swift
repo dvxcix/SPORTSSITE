@@ -18,7 +18,6 @@ struct InboxView: View {
     let unread: InboxUnread
     let signIn: () -> Void
     @Environment(\.colorScheme) private var scheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         content
@@ -55,42 +54,15 @@ struct InboxView: View {
     }
 
     private var sectionPicker: some View {
-        HStack(spacing: 4) {
-            ForEach(InboxSection.allCases, id: \.self) { item in
-                let count = unread.count(for: item, memberID: account.memberID)
-                Button {
-                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { section = item }
-                } label: {
-                    HStack(spacing: 6) {
-                        ViewThatFits(in: .horizontal) {
-                            Label(item.rawValue, systemImage: item.symbol).fixedSize(horizontal: true, vertical: false)
-                            Text(item.rawValue)
-                        }
-                        if count > 0 { InboxBadge(count: count) }
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(section == item ? Brand.accent(for: scheme) : Brand.text(for: scheme))
-                    .padding(.horizontal, 6)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .background {
-                        if section == item { Capsule().fill(Brand.accent(for: scheme).opacity(0.14)) }
-                    }
-                    .contentShape(.capsule)
-                }
-                .buttonStyle(SlipSurgePressStyle())
-                .accessibilityLabel(item.rawValue)
-                .accessibilityValue(count > 0 ? "\(count.formatted()) unread" : "")
-                .accessibilityAddTraits(section == item ? .isSelected : [])
+        SocialSectionBar(title: "Inbox sections", sections: InboxSection.allCases, selection: $section) { item in
+            let count = unread.count(for: item, memberID: account.memberID)
+            HStack(spacing: 6) {
+                Text(item.rawValue)
+                if count > 0 { InboxBadge(count: count) }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityValue(count > 0 ? "\(count.formatted()) unread" : "")
         }
-        .padding(4)
-        .background(Brand.surface(for: scheme), in: .capsule)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 5)
-        .background(Brand.background(for: scheme))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Inbox sections")
-        .sensoryFeedback(.selection, trigger: section)
     }
 
     private func update(_ section: InboxSection, count: Int, memberID: UUID) {

@@ -92,6 +92,7 @@ struct MessageThreadView: View {
         .foregroundStyle(Brand.text(for: scheme))
         .navigationTitle(thread?.title ?? "Messages")
         .navigationBarTitleDisplayMode(.inline)
+        .socialDetail()
         .presentationContentInteraction(.scrolls)
         .interactiveDismissDisabled(focused != nil || !draftData.text.isEmpty || draftData.picture != nil || draftData.uploading)
         .photosPicker(isPresented: $showingPhotos, selection: $selectedPhoto, matching: .images, preferredItemEncoding: .current)
