@@ -101,6 +101,9 @@ test('post writes derive the viewer, respect blocks and forbid another author’
   fixture.writes = []
   assert.equal((await send({ kind: 'repost', enabled: true })).status, 401)
   assert.equal((await send({ kind: 'comment-edit', id: commentId, text: 'new' }, true)).status, 403)
+  assert.equal((await send({ kind: 'post-edit', text: 'not the author' }, true)).status, 403)
+  assert.equal((await send({ kind: 'post-delete' }, true)).status, 403)
+  assert.equal((await send({ kind: 'post-report', reason: 'unknown report category' }, true)).status, 400)
   assert.equal(fixture.writes.length, 0)
   assert.equal((await send({ kind: 'bookmark', enabled: true }, true)).status, 200)
   assert.deepEqual(fixture.writes, ['bookmarks:insert'])

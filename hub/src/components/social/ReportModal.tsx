@@ -3,15 +3,7 @@
 import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { X, Flag } from 'lucide-react'
-
-const REASONS = [
-  'Spam or misleading',
-  'Harassment or bullying',
-  'False pick / misleading record',
-  'Inappropriate content',
-  'Impersonation',
-  'Other',
-]
+import { REPORT_REASONS } from '@/lib/reportReasons'
 
 export function ReportModal({ targetType, targetId, onClose }: {
   targetType: 'post' | 'user' | 'comment' | 'blog' | 'event' | 'page'
@@ -63,7 +55,7 @@ export function ReportModal({ targetType, targetId, onClose }: {
               <button type="button" onClick={onClose} aria-label="Close report dialog" className="text-[var(--text-3)] hover:text-[var(--text-1)] transition-colors"><X size={18} /></button>
             </div>
             <div className="space-y-2 mb-4">
-              {REASONS.map(r => (
+              {REPORT_REASONS.map(r => (
                 <label key={r} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${reason === r ? 'border-[color-mix(in_srgb,var(--red)_40%,transparent)] bg-[color-mix(in_srgb,var(--red)_10%,transparent)]' : 'border-[var(--border)] hover:border-[var(--border-2)]'}`}>
                   <input type="radio" name="reason" value={r} checked={reason === r} onChange={() => setReason(r)} className="accent-red-500" />
                   <span className="text-sm text-[var(--text-2)]">{r}</span>
