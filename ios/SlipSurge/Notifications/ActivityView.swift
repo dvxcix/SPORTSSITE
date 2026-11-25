@@ -3,6 +3,8 @@ import SwiftUI
 struct ActivityView: View {
     let api: ActivityAPI
     var opensNotification: UUID? = nil
+    var inInbox = false
+    var onUnreadChange: (Int) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
     @State private var selection = Filter.all
     @State private var destination: ActivityNotification.Destination?
@@ -52,7 +54,7 @@ struct ActivityView: View {
                 .listRowBackground(Brand.surface(for: scheme))
             }
         }
-        .navigationTitle("Notifications")
+        .navigationTitle(inInbox ? "Inbox" : "Notifications")
         .navigationDestination(item: $destination) { chosen in
             switch chosen {
             case .post(let id): FeedThreadView(api: FeedAPI(account: api.account, userID: api.userID), id: id)
@@ -177,8 +179,12 @@ struct ActivityView: View {
             try Task.checkCancellation()
             rows = loaded
             state = .ready
+            onUnreadChange(loaded.unreadCount)
         } catch let response as SlipSurgeHTTP.Status where response.code == 403 {
-            if !Task.isCancelled { state = .denied }
+            if !Task.isCancelled {
+                state = .denied
+                onUnreadChange(0)
+            }
         } catch {
             if !Task.isCancelled { state = .unavailable }
         }

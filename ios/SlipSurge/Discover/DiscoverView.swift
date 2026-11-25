@@ -11,6 +11,7 @@ struct DiscoverView: View {
     private enum Section: String, CaseIterable { case communities = "Communities", creators = "Creators", records = "Leaderboard" }
 
     let api: DiscoverAPI
+    private let opensJoined: Bool
     var opensCommunity: UUID? = nil
     @Binding var opensDestination: DiscoverDestination?
     @Environment(\.colorScheme) private var scheme
@@ -19,7 +20,7 @@ struct DiscoverView: View {
     @State private var communities: DiscoverAPI.Communities?
     @State private var creators: DiscoverAPI.Creators?
     @State private var records: DiscoverAPI.Records?
-    @State private var yours = false
+    @State private var yours: Bool
     @State private var sport = ""
     @State private var search = ""
     @State private var thisWeek = false
@@ -33,42 +34,30 @@ struct DiscoverView: View {
     @State private var pagesAvailable = false
     @State private var destination: DiscoverDestination?
 
-    init(api: DiscoverAPI, opensCommunity: UUID? = nil, opensDestination: Binding<DiscoverDestination?> = .constant(nil)) {
+    init(api: DiscoverAPI, opensCommunity: UUID? = nil, opensDestination: Binding<DiscoverDestination?> = .constant(nil),
+         opensJoined: Bool = false) {
         self.api = api
         self.opensCommunity = opensCommunity
+        self.opensJoined = opensJoined
         _opensDestination = opensDestination
+        _yours = State(initialValue: opensJoined)
     }
 
     private var request: String { "\(section.rawValue):\(revision)" }
+    private var joinedOnly: Bool { opensJoined && yours }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 13) {
-                NavigationLink {
-                    ScoresView(api: api)
-                } label: {
-                    scoresEntry
-                }
-                .buttonStyle(SlipSurgePressStyle())
-                if api.userID != nil {
-                    NavigationLink {
-                        NativeExploreView(api: api)
-                    } label: {
-                        Label("Explore", systemImage: "safari")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                if opensJoined {
+                    Picker("Community view", selection: $yours) {
+                        Text("Joined").tag(true)
+                        Text("Browse").tag(false)
                     }
-                    .buttonStyle(SlipSurgePressStyle())
+                    .pickerStyle(.segmented)
                 }
-                communityDestinations
-                ResearchToolRail(title: "Discover", choices: Section.allCases, selection: $section, label: \.rawValue, glyph: {
-                    switch $0 {
-                    case .communities: "person.2"
-                    case .creators: "person.crop.square"
-                    case .records: "trophy"
-                    }
-                }, compact: true)
-                filters
+                if !joinedOnly { browseDirectory }
+                if !joinedOnly || communities?.joinedIds.isEmpty == false { filters }
                 switch section {
                 case .communities:
                     if let communities { communitiesView(communities) } else { loading }
@@ -83,7 +72,7 @@ struct DiscoverView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
-        .navigationTitle("Discover")
+        .navigationTitle(opensJoined ? "Community" : "Discover")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) { VoltTeaser() }
@@ -97,7 +86,7 @@ struct DiscoverView: View {
         }
         .navigationDestination(item: $routedCommunity) { id in
             if let data = communities, let group = (data.invitations + data.groups).first(where: { $0.id == id }) {
-                CommunityDetailView(api: api, group: group, initialMember: data.joinedIds.contains(id))
+                CommunityDetailView(api: api, group: group, initialMember: data.joinedIds.contains(id), onMembershipChange: reloadGroups)
             }
         }
         .navigationDestination(item: $destination) { opening in
@@ -126,11 +115,14 @@ struct DiscoverView: View {
             case .communities:
                 destination = nil
                 section = .communities
+                if opensJoined { yours = true }
             case .creators:
                 destination = nil
+                if opensJoined { yours = false }
                 section = .creators
             case .leaderboard:
                 destination = nil
+                if opensJoined { yours = false }
                 section = .records
             case .scores, .events, .discussions, .discussionCategory, .discussion, .articles, .article, .articleEditor, .pages, .page:
                 destination = opening
@@ -152,6 +144,12 @@ struct DiscoverView: View {
             sport = ""
             thisWeek = false
         }
+        .onChange(of: yours) { _, isJoined in
+            guard opensJoined else { return }
+            if isJoined { section = .communities }
+            search = ""
+            sport = ""
+        }
         .refreshable { await load(section) }
         .task(id: api.userID) {
             async let events = CommunityEventsAPI(viewer: api).available()
@@ -165,6 +163,32 @@ struct DiscoverView: View {
 
     private func articleSaved(_ receipt: ArticlesAPI.Receipt) {
         opensDestination = receipt.status == "published" ? .article(receipt.slug) : .articles(true)
+    }
+
+    private func reloadGroups() { revision += 1 }
+
+    @ViewBuilder private var browseDirectory: some View {
+        NavigationLink { ScoresView(api: api) } label: { scoresEntry }
+            .buttonStyle(SlipSurgePressStyle())
+        if api.userID != nil {
+            NavigationLink {
+                NativeExploreView(api: api)
+            } label: {
+                Label("Explore", systemImage: "safari")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            }
+            .buttonStyle(SlipSurgePressStyle())
+        }
+        communityDestinations
+        ResearchToolRail(title: opensJoined ? "Browse" : "Discover", choices: Section.allCases, selection: $section,
+            label: \.rawValue, glyph: {
+                switch $0 {
+                case .communities: "person.2"
+                case .creators: "person.crop.square"
+                case .records: "trophy"
+                }
+            }, compact: true)
     }
 
     @ViewBuilder private var communityDestinations: some View {
@@ -210,13 +234,13 @@ struct DiscoverView: View {
 
     private var filters: some View {
         let sports: [String] = switch section {
-        case .communities: Set((communities?.groups ?? []).compactMap(\.sport).map { $0.uppercased() }).sorted()
+        case .communities: Set(visibleGroups.compactMap(\.sport).map { $0.uppercased() }).sorted()
         case .creators: Set((creators?.creators ?? []).flatMap(\.sports).map { $0.uppercased() }).sorted()
         case .records: Set((records?.allSports ?? []).map { $0.uppercased() }).sorted()
         }
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
-                if section == .communities, api.userID != nil {
+                if section == .communities, api.userID != nil, !opensJoined {
                     ResearchToolFilter(title: "Membership", selection: yours ? "Yours" : "All communities") {
                         Picker("Membership", selection: $yours) {
                             Text("All communities").tag(false)
@@ -248,11 +272,18 @@ struct DiscoverView: View {
         }
     }
 
+    private var visibleGroups: [DiscoverAPI.Communities.Community] {
+        guard let communities else { return [] }
+        guard yours else { return communities.groups }
+        let joined = Set(communities.joinedIds)
+        return communities.groups.filter { joined.contains($0.id) }
+    }
+
     @ViewBuilder
     private func communitiesView(_ data: DiscoverAPI.Communities) -> some View {
         let joined = Set(data.joinedIds)
-        let groups = data.groups.filter { (!yours || joined.contains($0.id)) && matches($0.sport, texts: [$0.name, $0.description]) }
-        if let userID = api.userID, search.isEmpty {
+        let groups = visibleGroups.filter { matches($0.sport, texts: [$0.name, $0.description]) }
+        if let userID = api.userID, search.isEmpty, !joinedOnly {
             NavigationLink {
                 CreatorStoreView(api: .init(account: api.account, userID: userID))
             } label: { Label("Create community", systemImage: "plus.circle") }
@@ -264,7 +295,16 @@ struct DiscoverView: View {
                 communityLink(group, member: false)
             }
         }
-        if groups.isEmpty {
+        if joinedOnly, joined.isEmpty {
+            ContentUnavailableView {
+                Label("No joined communities", systemImage: "person.2")
+            } actions: {
+                Button { yours = false } label: {
+                    Text("Browse communities").foregroundStyle(scheme == .dark ? .black : .white)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        } else if groups.isEmpty {
             ContentUnavailableView("No communities found", systemImage: "person.2")
         }
         LazyVStack(spacing: 9) {
@@ -274,7 +314,7 @@ struct DiscoverView: View {
 
     private func communityLink(_ group: DiscoverAPI.Communities.Community, member: Bool) -> some View {
         NavigationLink {
-            CommunityDetailView(api: api, group: group, initialMember: member)
+            CommunityDetailView(api: api, group: group, initialMember: member, onMembershipChange: reloadGroups)
         } label: {
             DiscoverIdentityCard(title: group.name, subtitle: group.invitationId != nil ? "Invitation pending"
                 : member ? "Member" : group.accessType == "paid" ? "Membership" : "Free community",

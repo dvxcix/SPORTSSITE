@@ -52,6 +52,10 @@ struct MessageInbox: Decodable {
 
     let conversations: [Direct]
     let groupConversations: [Group]
+
+    var unreadCount: Int {
+        conversations.reduce(0) { $0 + $1.unreadCount } + groupConversations.reduce(0) { $0 + $1.unreadCount }
+    }
 }
 
 struct MessageThread: Decodable {

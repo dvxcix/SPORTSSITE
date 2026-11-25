@@ -3,6 +3,7 @@ import SwiftUI
 struct SlipSurgeTabBar: View {
     let selection: SlipSurgeTabs.Destination
     let profile: AccountStore.ProfileIdentity?
+    let unread: Int
     let select: (SlipSurgeTabs.Destination) -> Void
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -31,7 +32,7 @@ struct SlipSurgeTabBar: View {
                 Button { select(tab) } label: {
                     VStack(spacing: 2) {
                         ZStack {
-                            if tab == .account, let profile {
+                            if tab == .you, let profile {
                                 NativeMemberAvatar(url: profile.avatarUrl, name: profile.name, size: 22,
                                     style: profile.avatarRingStyle, color: profile.avatarRingColor)
                             } else {
@@ -39,6 +40,11 @@ struct SlipSurgeTabBar: View {
                             }
                         }
                         .frame(height: 28)
+                        .overlay(alignment: .topTrailing) {
+                            if tab == .inbox, unread > 0 {
+                                InboxBadge(count: unread).offset(x: 11, y: -3)
+                            }
+                        }
                         Text(tab.rawValue)
                             .font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
                     }
@@ -54,11 +60,19 @@ struct SlipSurgeTabBar: View {
                 }
                 .buttonStyle(SlipSurgePressStyle())
                 .accessibilityLabel(tab.rawValue)
-                .accessibilityValue(tab == .account ? profile.map { "@\($0.username)" } ?? "" : "")
+                .accessibilityValue(accessibilityValue(for: tab))
                 .accessibilityAddTraits(selection == tab ? .isSelected : [])
             }
         }
         .padding(5)
         .animation(reduceMotion ? nil : .snappy(duration: 0.26), value: selection)
+    }
+
+    private func accessibilityValue(for tab: SlipSurgeTabs.Destination) -> String {
+        switch tab {
+        case .you: profile.map { "@\($0.username)" } ?? ""
+        case .inbox where unread > 0: "\(unread.formatted()) unread"
+        default: ""
+        }
     }
 }

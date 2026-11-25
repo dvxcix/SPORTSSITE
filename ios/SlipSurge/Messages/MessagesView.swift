@@ -3,6 +3,8 @@ import SwiftUI
 struct MessagesView: View {
     let api: MessagesAPI
     var startsComposing = false
+    var inInbox = false
+    var onUnreadChange: (Int) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
     @State private var inbox: MessageInbox?
     @State private var error: (any Error)?
@@ -17,8 +19,20 @@ struct MessagesView: View {
     private enum Section: String, CaseIterable { case inbox = "Inbox", requests = "Requests" }
 
     var body: some View {
+        if inInbox { conversationList }
+        else { conversationList.searchable(text: $query, prompt: "Search conversations") }
+    }
+
+    private var conversationList: some View {
         List {
             if let inbox {
+                if inInbox {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
+                        TextField("Search conversations", text: $query).autocorrectionDisabled()
+                    }
+                    .listRowBackground(Brand.surface(for: scheme))
+                }
                 Picker("Conversations", selection: $section) {
                     ForEach(Section.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
@@ -30,8 +44,8 @@ struct MessagesView: View {
                     .listRowBackground(Brand.surface(for: scheme))
             }
         }
-        .searchable(text: $query, prompt: "Search conversations")
-        .navigationTitle("Messages")
+        .scrollDismissesKeyboard(.interactively)
+        .navigationTitle(inInbox ? "Inbox" : "Messages")
         .scrollContentBackground(.hidden)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
@@ -149,6 +163,7 @@ struct MessagesView: View {
             try Task.checkCancellation()
             inbox = value
             error = nil
+            onUnreadChange(value.unreadCount)
         } catch {
             if !Task.isCancelled { self.error = error }
         }

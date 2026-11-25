@@ -67,6 +67,10 @@ struct ActivityNotification: Decodable, Identifiable {
     }
 }
 
+extension [ActivityNotification] {
+    var unreadCount: Int { count(where: { !$0.read }) }
+}
+
 struct ActivityAPI {
     let account: AccountStore
     let userID: UUID

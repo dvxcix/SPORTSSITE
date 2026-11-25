@@ -8,14 +8,15 @@ struct SlipSurgeTabs: View {
     @Environment(\.scenePhase) private var phase
     @Environment(\.horizontalSizeClass) private var horizontalSize
     enum Destination: String, CaseIterable {
-        case feed = "Feed", research = "Research", discover = "Discover", account = "Account"
+        case feed = "Feed", research = "Research", community = "Community", inbox = "Inbox", you = "You"
 
         var symbol: String {
             switch self {
             case .feed: "bubble.left.and.bubble.right"
             case .research: "chart.bar.xaxis"
-            case .discover: "magnifyingglass"
-            case .account: "person.crop.circle"
+            case .community: "person.2"
+            case .inbox: "tray"
+            case .you: "person.crop.circle"
             }
         }
     }
@@ -31,6 +32,8 @@ struct SlipSurgeTabs: View {
     @State private var pendingProfilePresentation: SitePresentation?
     @State private var researchPath: [ResearchPresentation] = []
     @State private var discoverDestination: DiscoverDestination?
+    @State private var inboxSection = InboxSection.activity
+    @State private var inboxUnread = InboxUnread()
     @State private var feedSelection: NativeFeedSelection?
     @State private var emojiLibrary = NativeEmojiLibrary()
     @State private var researchPreferences = MemberResearchPreferenceStore()
@@ -80,25 +83,36 @@ struct SlipSurgeTabs: View {
             .tag(Destination.research)
 
             NavigationStack {
-                DiscoverView(api: DiscoverAPI(account: account, userID: account.memberID), opensDestination: $discoverDestination)
+                DiscoverView(api: DiscoverAPI(account: account, userID: account.memberID),
+                    opensDestination: $discoverDestination, opensJoined: true)
             }
             .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
             .id(account.memberID)
-            .tabItem { Label("Discover", systemImage: "magnifyingglass") }
-            .tag(Destination.discover)
+            .tabItem { Label(Destination.community.rawValue, systemImage: Destination.community.symbol) }
+            .tag(Destination.community)
 
             NavigationStack {
-                AccountView(account: account, appearance: $appearance)
+                InboxView(account: account, section: $inboxSection, unread: inboxUnread) { selectTab(.you) }
+            }
+            .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
+            .id(account.memberID)
+            .tabItem { Label(Destination.inbox.rawValue, systemImage: Destination.inbox.symbol) }
+            .badge(inboxUnread.total(for: account.memberID))
+            .tag(Destination.inbox)
+
+            NavigationStack {
+                AccountView(account: account, appearance: $appearance, isYou: true)
             }
             .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
             .id(account.user?.id)
-            .tabItem { Label("Account", systemImage: "person.crop.circle") }
-            .tag(Destination.account)
+            .tabItem { Label(Destination.you.rawValue, systemImage: Destination.you.symbol) }
+            .tag(Destination.you)
         }
         .tint(Brand.accent(for: scheme))
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if compactTabs && !keyboardVisible {
-                SlipSurgeTabBar(selection: selected, profile: account.memberID == nil ? nil : account.profileIdentity, select: selectTab)
+                SlipSurgeTabBar(selection: selected, profile: account.memberID == nil ? nil : account.profileIdentity,
+                    unread: inboxUnread.total(for: account.memberID), select: selectTab)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardVisible = true }
@@ -159,6 +173,9 @@ struct SlipSurgeTabs: View {
         .task(id: account.memberID) { await account.refreshProfileIdentity() }
         .task(id: account.memberID) { await resume.refresh(account: account, userID: account.memberID) }
         .task(id: account.memberID) { await applyLaunchPreference() }
+        .task(id: InboxUnread.Scope(memberID: account.memberID, active: phase == .active)) {
+            if phase == .active { await inboxUnread.observe(account: account) }
+        }
         .task(id: account.memberID) {
             let userID = account.memberID
             dismissedReleases = []
@@ -170,9 +187,9 @@ struct SlipSurgeTabs: View {
                 if phase == .active { await refreshAnnouncements(for: userID) }
             }
         }
-        .onChange(of: account.needsNewPassword) { _, ready in if ready { selected = .account } }
+        .onChange(of: account.needsNewPassword) { _, ready in if ready { selected = .you } }
         .onChange(of: account.user?.id) { _, signedIn in
-            if signedIn != nil, !account.onboardingComplete { selected = .account }
+            if signedIn != nil, !account.onboardingComplete { selected = .you }
         }
         .onChange(of: incomingURL, initial: true) {
             guard let url = incomingURL else { return }
@@ -197,9 +214,9 @@ struct SlipSurgeTabs: View {
         choseDestination = true
         selected = tab
         switch tab {
-        case .discover: resume.record(.init(path: "/community", title: "Communities"), account: account, interaction: true)
-        case .account: resume.record(.init(path: "/settings", title: "Account"), account: account, interaction: true)
-        case .feed, .research: break
+        case .community: resume.record(.init(path: "/community", title: "Community"), account: account, interaction: true)
+        case .you: resume.record(.init(path: "/settings", title: "Account"), account: account, interaction: true)
+        case .feed, .research, .inbox: break
         }
     }
 
@@ -296,7 +313,12 @@ struct SlipSurgeTabs: View {
         case .account:
             sitePresentation = nil
             profilePresentation = nil
-            selected = .account
+            selected = .you
+        case .notifications, .messages:
+            sitePresentation = nil
+            profilePresentation = nil
+            inboxSection = link == .notifications ? .activity : .messages
+            selected = .inbox
         case .launch:
             if let target = researchPreferences.read(for: account.memberID)?.launch {
                 return routeLink(target, track: track)
@@ -307,7 +329,7 @@ struct SlipSurgeTabs: View {
             sitePresentation = nil
             profilePresentation = nil
             discoverDestination = destination
-            selected = .discover
+            selected = .community
         default:
             sitePresentation = SitePresentation(target: link)
         }

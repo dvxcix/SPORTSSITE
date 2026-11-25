@@ -2339,3 +2339,34 @@ physical-device push are still open.
   Debug and unsigned arm64 Release passed. iPad keeps system tabs. Visual
   references were [X's iOS post actions](https://mobbin.com/screens/aec94d01-7930-4083-b198-ad33e0a2987e)
   and [Beli's iOS profile hierarchy](https://mobbin.com/screens/aaa8cc34-89a1-419e-948b-80aa6218cf3b).
+
+## Five-tab navigation and physical iPhone review · 25 November 2026
+
+- Feed, Research, Community, Inbox and You are the five native tabs. Feed
+  places Search next to the existing Compose action for members. The compact
+  header and action placement draw on [X’s iOS Feed](https://mobbin.com/screens/a2cfcd93-6142-40b1-a749-7c1b79127936).
+  The existing Feed filters and sportsbook cards stay in the timeline.
+- Community starts with Joined groups and invitations. Browse opens the
+  directory, scores, creators, leaderboard and available community tools.
+  Successful membership changes and invitation replies refresh the directory.
+- Inbox has independent Activity and Messages unread counts, with their total
+  on the tab. The app counts the notifications returned by the existing
+  50-row endpoint and the unread direct and group messages returned by the
+  existing conversation inbox. One request can fail while the other updates.
+  The app refreshes in the foreground and reuses the results of in-view loads.
+  The You tab shows the member photo with its saved animation.
+- Xcode 27.2 Debug built and launched on the active iPhone 18 Pro Max
+  (`A1643902-9394-4831-9FEC-0A391E605804`). Verified the five-tab shell and
+  guest Research, Joined, Activity and You. The Pro Max had no signed-in
+  session. Guest Messages deep-link verification stopped at iOS’s open-app
+  confirmation. On the signed iPhone 18 Pro, verified a joined group, Activity
+  with a live unread badge, the Messages list and native You. Two captures
+  showed movement in the You avatar and a stable neighboring Inbox icon.
+- The unread fixture verified independent counts, partial failure, total and
+  account scoping. The native and production suites passed 286 checks. The
+  pinned Node runtime passed the avatar asset check. This checkpoint contains
+  iOS code and this handoff. The live home returned 200 on the existing site.
+- The owner paused simulator design review in favor of a real iPhone. The next
+  review uses the native X, Discord and TheRealApp apps on that phone. No
+  installation or signing on the physical phone was attempted at this
+  checkpoint. Use the iOS task branch for this review.

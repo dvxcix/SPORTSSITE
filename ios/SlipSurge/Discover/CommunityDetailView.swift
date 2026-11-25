@@ -21,6 +21,7 @@ struct CommunityDetailView: View {
     let api: DiscoverAPI
     let group: DiscoverAPI.Communities.Community
     let initialMember: Bool
+    let onMembershipChange: () -> Void
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var page: Page?
@@ -38,10 +39,12 @@ struct CommunityDetailView: View {
     @State private var discordAccess: CommunityDiscordAPI.Membership?
     @State private var pending = Set<UUID>()
 
-    init(api: DiscoverAPI, group: DiscoverAPI.Communities.Community, initialMember: Bool, feed: Feed = .posts) {
+    init(api: DiscoverAPI, group: DiscoverAPI.Communities.Community, initialMember: Bool, feed: Feed = .posts,
+         onMembershipChange: @escaping () -> Void = {}) {
         self.api = api
         self.group = group
         self.initialMember = initialMember
+        self.onMembershipChange = onMembershipChange
         _feed = State(initialValue: feed)
     }
 
@@ -226,6 +229,7 @@ struct CommunityDetailView: View {
         defer { mutation = false }
         do {
             let reply = try await api.write(Membership.self, path: path, body: ["join": join])
+            onMembershipChange()
             feedback = reply.member ? "You joined \(group.name)." : "You left \(group.name)."
             if join && reply.member { memberPreferences = true }
         } catch {
@@ -243,6 +247,7 @@ struct CommunityDetailView: View {
         do {
             _ = try await api.write(InviteResult.self, path: "/api/mobile/communities/invitation",
                 body: Request(inviteId: invite.uuidString.lowercased(), accept: accept))
+            onMembershipChange()
             responseComplete = true
             feedback = accept ? "Invitation accepted." : "Invitation declined."
             if accept { await load(feed); if page?.role != nil { memberPreferences = true } }

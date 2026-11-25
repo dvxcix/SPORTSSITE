@@ -3,6 +3,7 @@ import SwiftUI
 struct AccountView: View {
     let account: AccountStore
     @Binding var appearance: Appearance
+    var isYou = false
     @EnvironmentObject private var push: PushNotifications
     @Environment(\.colorScheme) private var scheme
     @State private var code = ""
@@ -17,7 +18,7 @@ struct AccountView: View {
                 AccountSignInView(account: account, appearance: $appearance)
             }
         }
-        .navigationTitle("Account")
+        .navigationTitle(isYou ? "You" : "Account")
         .task { await account.checkProviders() }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
@@ -51,15 +52,17 @@ struct AccountView: View {
                         } label: {
                             Label("Profile & membership", systemImage: "person.text.rectangle")
                         }
-                        NavigationLink {
-                            ActivityView(api: ActivityAPI(account: account, userID: userID))
-                        } label: {
-                            Label("Notifications", systemImage: "bell")
-                        }
-                        NavigationLink {
-                            MessagesView(api: MessagesAPI(account: account, userID: userID))
-                        } label: {
-                            Label("Messages", systemImage: "bubble.left.and.bubble.right")
+                        if !isYou {
+                            NavigationLink {
+                                ActivityView(api: ActivityAPI(account: account, userID: userID))
+                            } label: {
+                                Label("Notifications", systemImage: "bell")
+                            }
+                            NavigationLink {
+                                MessagesView(api: MessagesAPI(account: account, userID: userID))
+                            } label: {
+                                Label("Messages", systemImage: "bubble.left.and.bubble.right")
+                            }
                         }
                         NavigationLink {
                             FeedBookmarksView(api: FeedAPI(account: account, userID: userID))

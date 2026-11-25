@@ -64,11 +64,11 @@ struct FeedView: View {
                     Text("SlipSurge").font(.headline.weight(.heavy)).accessibilityAddTraits(.isHeader)
                 }
             }
-            if let userID = api.userID {
+            if api.userID != nil {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     NavigationLink {
-                        MessagesView(api: MessagesAPI(account: api.account, userID: userID))
-                    } label: { Label("Messages", systemImage: "bubble.left.and.bubble.right") }
+                        NativeSearchView(api: .init(viewer: .init(account: api.account, userID: api.userID)))
+                    } label: { Label("Search", systemImage: "magnifyingglass") }
                     if load == .ready {
                         Button("Compose", systemImage: "square.and.pencil") { composing = true }
                     }
