@@ -45,6 +45,28 @@ export async function GET(request: Request) {
       auth.error ? undefined : auth.data.user?.banned_until ?? null), authAvailable: !auth.error })
   }
 
+  if (query.get('view') === 'recent') {
+    const auth = await admin.auth.admin.listUsers({ perPage: 1000 })
+    if (auth.error) return reply({ error: 'Recent sign-ins could not be loaded' }, 503)
+    const signedIn = auth.data.users.flatMap(user => {
+      const at = Date.parse(user.last_sign_in_at ?? '')
+      return Number.isFinite(at) ? [{ id: user.id, email: user.email, at }] : []
+    }).sort((a, b) => b.at - a.at).slice(0, 100)
+    if (!signedIn.length) return reply({ signIns: [] })
+    const profiles = await actor.supabase.from('users').select('id,username,display_name,avatar_url').in('id', signedIn.map(user => user.id))
+    if (profiles.error) return reply({ error: 'Recent member profiles could not be loaded' }, 503)
+    const byId = new Map(profiles.data.map(profile => [profile.id, profile]))
+    const threshold = Date.now() - 15 * 60_000
+    return reply({ signIns: signedIn.map(user => {
+      const profile = byId.get(user.id)
+      return {
+        id: user.id, name: profile?.display_name || profile?.username || user.email || 'No profile',
+        username: profile?.username ?? null, avatarUrl: profile?.avatar_url ?? null,
+        lastSignIn: new Date(user.at).toISOString(), recent: user.at >= threshold,
+      }
+    }) })
+  }
+
   const search = (query.get('q') ?? '').trim().slice(0, 64).replace(/[^\p{L}\p{N}@._+\-' ]/gu, '')
   const type = query.get('type'), tier = query.get('tier')
   if (type && !accountTypes.includes(type) || tier && !tiers.includes(tier)) return reply({ error: 'Invalid member filters' }, 400)

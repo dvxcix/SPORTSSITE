@@ -17,7 +17,7 @@ const stubs: Record<string, string> = {
   '@/lib/supabase/adminDecisionActor': `export async function adminDecisionActor(request) {
     const fixture = globalThis.adminMemberFixture
     if (request.headers.get('authorization') !== 'Bearer ready') return {error: Response.json({}, {status: 403})}
-    return { user: {id: '${id}'}, admin: fixture.admin }
+    return { user: {id: '${id}'}, admin: fixture.admin, supabase: fixture.supabase }
   }`,
   '@/lib/blocks': `export function isAccountId(value) { return value === '${id}' }`,
   '@/lib/supabase/admin': 'export const createAdminClient = () => globalThis.adminMemberFixture.admin',
@@ -71,6 +71,44 @@ test('native member detail exposes subscription and account status only after ad
   assert.deepEqual(body.member.connections, { discord: true, x: false, whop: true })
   assert.doesNotMatch(JSON.stringify(body), /fixture-provider-subject|fixture-whop-id/)
   assert.equal(privilegedReads, 1)
+})
+
+test('recent sign-ins use the existing admin scope and return only the directory fields', async () => {
+  const now = Date.now()
+  const older = 'cf40236a-8277-47a3-ad15-f47c1f482554'
+  const newAt = new Date(now - 60_000).toISOString()
+  const oldAt = new Date(now - 16 * 60_000).toISOString()
+  const directory = [
+    { id: older, last_sign_in_at: oldAt, email: 'legacy@example.invalid', phone: 'private-number' },
+    { id, last_sign_in_at: newAt, email: 'omitted@example.invalid', phone: 'private-number' },
+    { id: 'unused', last_sign_in_at: 'invalid', email: 'unused@example.invalid' },
+  ]
+  const fixture = {
+    admin: { auth: { admin: { listUsers: async ({ perPage }: { perPage: number }) => {
+      assert.equal(perPage, 1000)
+      return { data: { users: directory } }
+    } } } },
+    supabase: { from(table: string) {
+      assert.equal(table, 'users')
+      return { select(columns: string) {
+        assert.equal(columns, 'id,username,display_name,avatar_url')
+        return { in(key: string, ids: string[]) {
+          assert.deepEqual([key, ids], ['id', [id, older]])
+          return { data: [{ id, display_name: 'Member', username: 'member', avatar_url: 'https://example.invalid/avatar.png' }] }
+        } }
+      } }
+    } },
+  }
+  Object.assign(globalThis, { adminMemberFixture: fixture })
+  const url = 'https://slipsurge.invalid/api/mobile/admin/members?view=recent'
+  assert.equal((await GET(new Request(url))).status, 401)
+  assert.equal((await GET(new Request(url, { headers: { authorization: 'Bearer stale' } }))).status, 403)
+  const response = await GET(new Request(url, { headers: { authorization: 'Bearer ready' } }))
+  assert.equal(response.headers.get('cache-control'), 'private, no-store')
+  const body = await response.json()
+  assert.deepEqual(body.signIns.map((entry: { id: string; lastSignIn: string; recent: boolean }) =>
+    [entry.id, entry.lastSignIn, entry.recent]), [[id, newAt, true], [older, oldAt, false]])
+  assert.doesNotMatch(JSON.stringify(body), /private-number|omitted@example.invalid|unused@example.invalid/)
 })
 
 test('native feature controls require the version that was reviewed before changing a rollout', async () => {
