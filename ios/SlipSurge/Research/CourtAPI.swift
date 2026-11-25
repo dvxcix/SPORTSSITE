@@ -96,11 +96,14 @@ struct CourtBoard: Decodable {
             let season: Int?
             let status: String
             let statusState: String?
+            let homeTeamId: Int?
+            let visitorTeamId: Int?
         }
 
         let id: Int
         let period: Int?
         let player: Identity
+        let team: Identity?
         let game: LoggedGame
         let min: String?
         let pts: Double?
@@ -120,6 +123,15 @@ struct CourtBoard: Decodable {
             guard let min, min.range(of: #"^\d+(?:\.\d+|:[0-5]\d)?$"#, options: .regularExpression) != nil else { return false }
             return min.contains { ("1"..."9").contains(String($0)) }
                 || [pts, reb, ast, fg3m, stl, blk, turnover, fga, fgm, fg3a, fta, ftm].contains { ($0 ?? 0) > 0 }
+        }
+
+        var minutes: Double? {
+            guard let min else { return nil }
+            let parts = min.split(separator: ":")
+            if parts.count == 2, let whole = Double(parts[0]), let seconds = Double(parts[1]), (0..<60).contains(seconds) {
+                return whole + seconds / 60
+            }
+            return Double(min)
         }
     }
 

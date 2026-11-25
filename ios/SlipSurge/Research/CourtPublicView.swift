@@ -126,7 +126,8 @@ struct CourtPublicView: View {
                     ResearchToolCard(color: colors.primary) {
                         NavigationLink {
                             CourtPlayerView(player: player, game: board.game, mode: board.oddsMode, frozen: board.isFrozen,
-                                tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason, initialMarket: row.market)
+                                tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason, initialMarket: row.market,
+                                researchScope: scope)
                         } label: {
                             CourtPlayerIdentity(player: player)
                         }

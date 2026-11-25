@@ -11,6 +11,7 @@ struct CourtPlayerBoard: View {
     let ranks: [Int: CourtAPI.Rank]
     let matrixMatches: [Int: [CourtMatrixResults.Match]]
     let matrixFilter: String?
+    let scope: CourtView.Scope
 
     @Environment(\.colorScheme) private var scheme
 
@@ -48,7 +49,8 @@ struct CourtPlayerBoard: View {
                             CourtPlayerView(
                                 player: player, game: board.game, mode: board.oddsMode,
                                 frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason,
-                                initialBook: quote?.vendor ?? sportsbook, initialMarket: market.rawValue, initialSide: side
+                                initialBook: quote?.vendor ?? sportsbook, initialMarket: market.rawValue, initialSide: side,
+                                researchScope: scope
                             )
                         } label: {
                             playerRow(player, quote: quote)

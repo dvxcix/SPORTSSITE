@@ -254,15 +254,21 @@ struct CourtView: View {
         } else if tool == .crossMarket {
             CourtCrossMarketView(scope: scope, board: board, revision: revision)
                 .id("\(board.game.id):\(mode.rawValue)")
+        } else if tool == .scouting {
+            CourtRoleView(scope: scope, board: board, observedAt: observedAt, revision: revision)
+                .id("\(board.game.id):\(mode.rawValue)")
+        } else if tool == .tracking {
+            CourtTrackingView(scope: scope, board: board, revision: revision)
+                .id("\(board.game.id):\(mode.rawValue)")
         } else if board.hasUsableResearch {
             if !board.issues.isEmpty {
                 Text("Some research is unavailable for this matchup.").font(.caption).foregroundStyle(.secondary)
             }
             if let tool {
                 switch tool {
-                case .matchup: CourtMatchupLab(board: board, observedAt: observedAt)
-                case .availability: CourtAvailability(board: board, observedAt: observedAt)
-                case .firstBasket, .cheatsheets, .slateEdge, .score, .defense, .lineups, .publicActivity, .crossMarket: EmptyView()
+                case .matchup: CourtMatchupLab(board: board, observedAt: observedAt, scope: scope)
+                case .availability: CourtAvailability(board: board, observedAt: observedAt, scope: scope)
+                case .firstBasket, .cheatsheets, .slateEdge, .score, .defense, .lineups, .publicActivity, .crossMarket, .scouting, .tracking: EmptyView()
                 }
             } else {
                 switch section {
@@ -311,7 +317,8 @@ struct CourtView: View {
     ) -> some View {
         ForEach([board.game.visitorTeam, board.game.homeTeam], id: \.id) { team in
             CourtPlayerBoard(team: team, board: board, observedAt: observedAt, market: market,
-                sportsbook: sportsbook, side: side, search: playerSearch, ranks: ranks, matrixMatches: matches, matrixFilter: filter)
+                sportsbook: sportsbook, side: side, search: playerSearch, ranks: ranks, matrixMatches: matches, matrixFilter: filter,
+                scope: scope)
         }
     }
 

@@ -30,6 +30,7 @@ struct CourtPlayerView: View {
     var initialBook: String?
     var initialMarket: String?
     var initialSide = CourtPlayerMarket.Side.over
+    var researchScope: CourtView.Scope?
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
@@ -66,6 +67,11 @@ struct CourtPlayerView: View {
             } else {
                 Section("Recent form") {
                     trend
+                    if let researchScope {
+                        NavigationLink {
+                            CourtShotView(api: .init(scope: researchScope), player: player, game: game, mode: mode)
+                        } label: { Label("Shot map", systemImage: "scope") }
+                    }
                 }
                 .listRowBackground(Brand.surface(for: scheme))
                 if let average = player.average {

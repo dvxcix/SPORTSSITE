@@ -78,7 +78,7 @@ struct CourtLineupView: View {
                     if let player = board.players.first(where: { $0.id == entry.id && $0.team.id == team.id }) {
                         NavigationLink {
                             CourtPlayerView(player: player, game: board.game, mode: board.oddsMode, frozen: board.isFrozen,
-                                tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason)
+                                tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason, researchScope: scope)
                         } label: {
                             CourtPlayerIdentity(player: player)
                                 .frame(maxWidth: .infinity, alignment: .leading)

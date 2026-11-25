@@ -11,6 +11,8 @@ enum CourtMatchupTool: String, CaseIterable {
     case lineups = "Starting Lineups"
     case publicActivity = "The Public"
     case crossMarket = "Cross-market"
+    case scouting = "Role & Minutes"
+    case tracking = "Game Tracking"
 
     var glyph: String {
         switch self {
@@ -24,6 +26,8 @@ enum CourtMatchupTool: String, CaseIterable {
         case .lineups: "person.3"
         case .publicActivity: "person.2"
         case .crossMarket: "arrow.left.arrow.right"
+        case .scouting: "gauge.open.with.lines.needle.33percent"
+        case .tracking: "waveform.path"
         }
     }
 }
@@ -54,6 +58,7 @@ struct CourtMatchupLab: View {
 
     let board: CourtBoard
     let observedAt: Date
+    let scope: CourtView.Scope
     @State private var metric = Metric.pace
     @Environment(\.colorScheme) private var scheme
 
@@ -112,7 +117,7 @@ struct CourtMatchupLab: View {
             ForEach(list.prefix(8)) { player in
                 NavigationLink {
                     CourtPlayerView(player: player, game: board.game, mode: board.oddsMode,
-                        frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason)
+                        frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason, researchScope: scope)
                 } label: {
                     HStack {
                         CourtPlayerIdentity(player: player)
@@ -142,6 +147,7 @@ struct CourtAvailability: View {
 
     let board: CourtBoard
     let observedAt: Date
+    let scope: CourtView.Scope
     @State private var filter = Filter.all
     @Environment(\.colorScheme) private var scheme
 
@@ -171,7 +177,7 @@ struct CourtAvailability: View {
                     ForEach(players) { player in
                         NavigationLink {
                             CourtPlayerView(player: player, game: board.game, mode: board.oddsMode,
-                                frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason)
+                                frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason, researchScope: scope)
                         } label: {
                             card(player, color: color)
                         }

@@ -900,6 +900,10 @@ physical-device push are still open.
   `dpl_A9CyzqtCsjMcGdoZ4ScKH4wF29Zf` and production
   `dpl_BMNi6g9fJAFwGGKPYHoSgCBDKJeR` reported READY. Invalid weather,
   park history and spray requests returned 401. Guest Feed returned 200.
+- On the signed iPhone 18 Pro Simulator, the September 25 Spray Charts
+  slate loaded Fenway Park with 111 captured batted balls and two near
+  home runs. The existing traced field, marks, and selected date rendered
+  from production. Direct marker and PNG export checks are still pending.
 
 ## Native Pitcher Report, The Public and Batter Cost · 25 November 2026
 
@@ -919,3 +923,24 @@ physical-device push are still open.
 - Signed Xcode Debug, Hub TypeScript and 41 focused freeze, public movement,
   tier and tool contract checks passed. Dated production walkthroughs follow
   for these three boards.
+- Task checkpoint `94de6d9467d19f1e4f96a0356b9a5bc91ee6b449` is pushed.
+  PR #35 merged as `aac35dd2d452cb01d7ed4b27b3433dd4311d36de`. Preview
+  `dpl_CLZihugqNAZWuNDiZQN96aHM6ztY` and production
+  `dpl_5SdVy63HcSgcNcFzQdLYf4gkbkVz` reported READY.
+
+## Native NBA Shot Map, Role & Minutes, and Game Tracking · 25 November 2026
+
+- Court player details open the native Shot Map for completed appearances
+  within the selected matchup's pretip sample. The half court uses the
+  provider's feet-based coordinates. Made and missed markers, quarter and
+  shot-value filters, heatmap, and the attempt inspector retain missed
+  locations and incomplete coverage as explicit states.
+- Role & Minutes uses the app's selected NBA sample for L5/L10/L20 minutes,
+  period-over-period movement, attempts, and points per 36. Season scouting
+  uses the saved provider usage, potential assists, rebound chances and
+  drives. Game Tracking keeps original completed-game observations,
+  canonical metric groups, home and away splits, and the per-player graph.
+- Signed Xcode Debug, Hub TypeScript and 76 focused NBA route, source
+  coverage, matchup-snapshot, and public-preview checks passed. Preview
+  access remains scoped to the featured matchup. Simulator walkthroughs
+  of the new NBA panels remain pending production rollout.
