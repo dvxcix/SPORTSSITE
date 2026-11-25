@@ -1,6 +1,18 @@
 import SwiftUI
 
 enum Sportsbook {
+    private static let slipPalettes: [String: [String]] = {
+        guard let url = Bundle.main.url(forResource: "SportsbookSlipPalettes", withExtension: "json"),
+              let data = try? Data(contentsOf: url) else { return [:] }
+        return (try? JSONDecoder().decode([String: [String]].self, from: data)) ?? [:]
+    }()
+
+    static func slipPalette(_ vendor: String?) -> (primary: Color, secondary: Color)? {
+        guard let vendor, let palette = slipPalettes[normalized(vendor)], palette.count == 2,
+              let primary = Color(hex: palette[0]), let secondary = Color(hex: palette[1]) else { return nil }
+        return (primary, secondary)
+    }
+
     static func normalized(_ vendor: String) -> String {
         let name = vendor.lowercased().filter { $0.isASCII && $0.isLetter }
         switch name {

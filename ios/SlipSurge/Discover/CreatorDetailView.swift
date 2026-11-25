@@ -136,7 +136,7 @@ struct CreatorDetailView: View {
                 ContentUnavailableView("No public research yet", systemImage: "chart.line.uptrend.xyaxis")
             } else {
                 ForEach(store.posts) { post in
-                    FeedPostCard(post: post, discussion: { selectedPost = post.postID })
+                    FeedPostCard(post: post, discussion: { selectedPost = post.postID }, actionsAPI: .init(account: api.account, userID: api.userID))
                         .padding(12).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
                 }
             }

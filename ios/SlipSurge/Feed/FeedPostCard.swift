@@ -13,6 +13,18 @@ struct FeedPostCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var revealed = false
     @State private var showingEmoji = false
+    @State private var showingQuickReactions = false
+    @State private var expandReactions = false
+    @State private var reactionFailed = false
+    @State private var heartPulse = 0
+
+    private static let heart = "❤️"
+    private static let quickReactions = ["🔥", "⚡", "👀", "👏", "😂"]
+    private var canReact: Bool { actionsAPI?.userID != nil }
+    private var reactions: (selected: Set<String>, counts: [String: Int]) {
+        if let actionsAPI { return actionsAPI.account.postReactions.reactions(for: post) }
+        return (Set(post.reacted ?? []), post.reactionSummary ?? [Self.heart: post.reactions])
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -50,12 +62,14 @@ struct FeedPostCard: View {
             }
             .presentationDetents([.medium, .large])
         }
+        .alert("Reaction couldn’t sync", isPresented: $reactionFailed) { Button("OK", role: .cancel) {} }
     }
 
     private var authorLabel: some View {
         HStack(spacing: 10) {
             NativeMemberAvatar(url: post.author?.avatar, name: post.author?.displayName ?? post.author?.username ?? "Member",
-                size: 36, style: post.author?.avatarRingStyle, color: post.author?.avatarRingColor, tone: post.author?.avatarTone)
+                size: 36, style: post.author?.avatarRingStyle, color: post.author?.avatarRingColor, tone: post.author?.avatarTone,
+                animated: post.author?.avatarRingStyle != nil)
             VStack(alignment: .leading, spacing: 2) {
                 if let author = post.author {
                     HStack(spacing: 5) {
@@ -91,7 +105,8 @@ struct FeedPostCard: View {
                 FeedMedia(url: url)
             }
         }
-        if let summary = post.reactionSummary, !summary.isEmpty {
+        let summary = reactions.counts.filter { $0.key != Self.heart && $0.value > 0 }
+        if !summary.isEmpty {
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
                     ForEach(summary.keys.sorted { first, second in
@@ -102,10 +117,17 @@ struct FeedPostCard: View {
                                 NativeReactionArtwork(symbol: symbol)
                                 Text((summary[symbol] ?? 0).formatted()).monospacedDigit()
                             }
+                            .padding(.horizontal, 9).frame(minHeight: 44)
+                            .background {
+                                Capsule().fill(reactions.selected.contains(symbol) ? Brand.accent(for: scheme).opacity(0.15) : Color.secondary.opacity(0.08))
+                                    .frame(height: 28)
+                            }
                         }
-                        .buttonStyle(.bordered)
-                        .disabled(operation == nil)
+                        .buttonStyle(SlipSurgePressStyle())
+                        .disabled(!canReact)
                         .accessibilityLabel("\(symbol) reaction, \(summary[symbol] ?? 0)")
+                        .accessibilityAddTraits(reactions.selected.contains(symbol) ? .isSelected : [])
+                        .transition(.scale(scale: 0.88).combined(with: .opacity))
                     }
                 }
                 .font(.caption)
@@ -116,24 +138,9 @@ struct FeedPostCard: View {
     }
 
     private var interactions: some View {
-        HStack(spacing: 4) {
-            if let operation {
-                actionButton("React", icon: post.reacted?.contains("❤️") == true ? "heart.fill" : "heart",
-                    value: post.reactions, active: post.reacted?.contains("❤️") == true) {
-                    operation(.init(kind: "react", enabled: post.reacted?.contains("❤️") != true, emoji: "❤️"))
-                }
-                .contextMenu {
-                    Button("More reactions", systemImage: "face.smiling") { showingEmoji = true }
-                    ForEach(["🔥", "⚡", "👀", "👏"], id: \.self) { symbol in
-                        Button("React \(symbol)") { react(symbol) }
-                    }
-                }
-                .accessibilityAction(named: "More reactions") { showingEmoji = true }
-            } else {
-                count("Reactions", icon: "heart", value: post.reactions)
-            }
+        HStack(spacing: 0) {
             if showDiscussionButton, let discussion {
-                actionButton("Comments", icon: "bubble", value: post.comments, action: discussion)
+                actionButton("Replies", icon: "bubble", value: post.comments, action: discussion)
             } else {
                 count("Comments", icon: "bubble", value: post.comments)
             }
@@ -144,7 +151,14 @@ struct FeedPostCard: View {
             } else {
                 count("Reposts", icon: "arrow.2.squarepath", value: post.reposts)
             }
-            Spacer(minLength: 0)
+            heartButton
+            if canReact {
+                Button("More reactions", systemImage: "face.smiling") { showingQuickReactions = true }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(SlipSurgePressStyle())
+                    .frame(minWidth: 44, minHeight: 44)
+                    .popover(isPresented: $showingQuickReactions, arrowEdge: .bottom) { quickReactionPicker }
+            }
             if let operation {
                 actionButton(post.bookmarked == true ? "Remove bookmark" : "Bookmark",
                     icon: post.bookmarked == true ? "bookmark.fill" : "bookmark", active: post.bookmarked == true) {
@@ -153,12 +167,84 @@ struct FeedPostCard: View {
             }
             if post.shareable, let url = URL(string: "https://\(SlipSurgeHTTP.site)/posts/\(post.postID.uuidString.lowercased())") {
                 ShareLink(item: url) {
-                    Image(systemName: "square.and.arrow.up").frame(minWidth: 39, minHeight: 44)
+                    Image(systemName: "square.and.arrow.up").frame(minWidth: 44, minHeight: 44)
                 }.accessibilityLabel("Share post")
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .font(.subheadline.weight(.medium))
         .foregroundStyle(.secondary)
+    }
+
+    @ViewBuilder
+    private var heartButton: some View {
+        let liked = reactions.selected.contains(Self.heart)
+        let count = reactions.counts[Self.heart] ?? 0
+        if canReact {
+            Button { react(Self.heart) } label: {
+                HStack(spacing: 4) {
+                    Group {
+                        if reduceMotion { Image(systemName: liked ? "heart.fill" : "heart") }
+                        else { Image(systemName: liked ? "heart.fill" : "heart").symbolEffect(.bounce.up, value: heartPulse) }
+                    }
+                    if count > 0 {
+                        Text(count.formatted()).monospacedDigit().contentTransition(.numericText())
+                    }
+                }
+                .foregroundStyle(liked ? Color(rgb: scheme == .dark ? 0xFF6C8C : 0xC22B5A) : .secondary)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
+                .overlay(alignment: .leading) {
+                    if !reduceMotion { LikeBurst(trigger: heartPulse).offset(x: 9) }
+                }
+            }
+            .buttonStyle(SlipSurgePressStyle())
+            .accessibilityLabel(liked ? "Unlike post" : "Like post")
+            .accessibilityValue("\(count) likes")
+            .accessibilityAddTraits(liked ? .isSelected : [])
+            .accessibilityAction(named: "More reactions") { showingQuickReactions = true }
+            .contextMenu {
+                ForEach(Self.quickReactions, id: \.self) { symbol in
+                    Button("\(reactions.selected.contains(symbol) ? "Remove" : "React") \(symbol)") { react(symbol) }
+                }
+                Button("All reactions", systemImage: "face.smiling") { showingEmoji = true }
+            }
+            .sensoryFeedback(.impact(weight: .light), trigger: heartPulse)
+        } else {
+            self.count("Likes", icon: "heart", value: count)
+        }
+    }
+
+    private var quickReactionPicker: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 0) { reactionOptions }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 44, maximum: 52))], spacing: 4) { reactionOptions }
+        }
+        .padding(7)
+        .presentationCompactAdaptation(.popover)
+        .onDisappear {
+            if expandReactions {
+                expandReactions = false
+                showingEmoji = true
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var reactionOptions: some View {
+        ForEach(Self.quickReactions, id: \.self) { symbol in
+            Button { react(symbol) } label: {
+                Text(symbol).font(.title3).frame(width: 44, height: 44)
+                    .background(reactions.selected.contains(symbol) ? Brand.accent(for: scheme).opacity(0.16) : .clear, in: .circle)
+            }
+            .buttonStyle(SlipSurgePressStyle())
+            .accessibilityLabel("\(reactions.selected.contains(symbol) ? "Remove reaction" : "React") \(symbol)")
+        }
+        Button("All reactions", systemImage: "plus.circle") {
+            expandReactions = true
+            showingQuickReactions = false
+        }
+        .labelStyle(.iconOnly).buttonStyle(SlipSurgePressStyle()).frame(width: 44, height: 44)
     }
 
     private func actionButton(_ label: String, icon: String, value: Int? = nil, active: Bool = false, action: @escaping () -> Void) -> some View {
@@ -168,7 +254,7 @@ struct FeedPostCard: View {
                 if let value, value > 0 { Text(value.formatted()).monospacedDigit() }
             }
             .foregroundStyle(active ? Brand.accent(for: scheme) : .secondary)
-            .frame(minWidth: 39, minHeight: 44)
+            .frame(minWidth: 44, minHeight: 44)
             .contentShape(.rect)
         }
         .buttonStyle(SlipSurgePressStyle())
@@ -216,13 +302,21 @@ struct FeedPostCard: View {
 
     private func react(_ symbol: String) {
         let value = symbol.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty, value.utf16.count <= 32 else { return }
-        operation?(.init(kind: "react", enabled: !(post.reacted?.contains(value) ?? false), emoji: value))
+        guard let actionsAPI, !value.isEmpty, value.utf16.count <= 32 else { return }
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) {
+            if actionsAPI.account.postReactions.toggle(value, post: post, api: actionsAPI, failed: { reactionFailed = true }),
+               value == Self.heart { heartPulse += 1 }
+        }
+        showingQuickReactions = false
         showingEmoji = false
     }
 
     private func count(_ label: String, icon: String, value: Int) -> some View {
-        Label(value.formatted(), systemImage: icon)
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+            if value > 0 { Text(value.formatted()).monospacedDigit() }
+        }
+        .frame(minWidth: 44, minHeight: 44)
             .accessibilityLabel("\(value) \(label.lowercased())")
     }
 
@@ -232,6 +326,29 @@ struct FeedPostCard: View {
         return host == SlipSurgeHTTP.site || host == "hkldweedwnxartkfhror.supabase.co" ||
             host == "media.tenor.com" || host == "a.espncdn.com" || host == "cdn.nba.com" || host == "static.www.nfl.com" || host == "img.mlbstatic.com" ||
             host == "cdn.discordapp.com" || host == "pbs.twimg.com" || host.hasSuffix(".public.blob.vercel-storage.com")
+    }
+}
+
+private struct LikeBurst: View {
+    let trigger: Int
+
+    var body: some View {
+        Color.clear.frame(width: 19, height: 19)
+            .keyframeAnimator(initialValue: 1.0, trigger: trigger) { content, progress in
+                content.overlay {
+                    ForEach(0..<6) { index in
+                        let angle = Double(index) * (.pi / 3) - .pi / 6
+                        let radius = 8 + 11 * progress
+                        Circle().fill(index.isMultiple(of: 2) ? Color(rgb: 0xFF6C8C) : Color(rgb: 0xFFB84D))
+                            .frame(width: 3, height: 3).offset(x: cos(angle) * radius, y: sin(angle) * radius)
+                            .opacity(max(0, (1 - progress) * 0.85))
+                    }
+                }
+            } keyframes: { _ in
+                MoveKeyframe(0)
+                CubicKeyframe(1, duration: 0.34)
+            }
+            .allowsHitTesting(false).accessibilityHidden(true)
     }
 }
 

@@ -34,6 +34,18 @@ struct AccountView: View {
                         Text(address).textContentType(.emailAddress)
                     }
                     if let userID = account.memberID {
+                        if let identity = account.profileIdentity {
+                            NavigationLink {
+                                MemberProfileView(api: .init(account: account, userID: userID), target: userID.uuidString)
+                            } label: {
+                                Label {
+                                    Text("View profile")
+                                } icon: {
+                                    NativeMemberAvatar(url: identity.avatarUrl, name: identity.name, size: 26,
+                                        style: identity.avatarRingStyle, color: identity.avatarRingColor)
+                                }
+                            }
+                        }
                         NavigationLink {
                             MemberAccountView(account: account, userID: userID)
                         } label: {

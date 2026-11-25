@@ -16,7 +16,7 @@ struct MemberProfileView: View {
         }
     }
 
-    private struct Page: Decodable {
+    struct Page: Decodable {
         struct Profile: Decodable {
             struct Team: Decodable, Identifiable {
                 let id: String
@@ -142,7 +142,7 @@ struct MemberProfileView: View {
     @State private var reportProfile = false
     @State private var notice: String?
     @State private var selectedPost: UUID?
-    @State private var selectedBadge: Page.Profile.Badge?
+    @State private var showDetails = false
 
     private var fetchKey: String { "\(target):\(tab.rawValue):\(retry)" }
     private var feed: FeedAPI { FeedAPI(account: api.account, userID: api.userID) }
@@ -151,12 +151,26 @@ struct MemberProfileView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
                 if let profile = page?.profile {
-                    header(profile)
+                    MemberProfileHeader(profile: profile, api: api, changing: changing, details: { showDetails = true }) {
+                        Task { await change(profile, action: "follow", enabled: !profile.following) }
+                    }
                     if let notice { Text(notice).font(.footnote).foregroundStyle(.secondary) }
-                    if let creator = profile.creator { creatorPanel(profile, creator) }
-                    favorites(profile)
+                    if let creator = profile.creator {
+                        DisclosureGroup {
+                            creatorPanel(profile, creator).padding(.top, 10)
+                        } label: {
+                            Label("Creator memberships", systemImage: "storefront").font(.subheadline.weight(.semibold))
+                        }.padding(.vertical, 5)
+                    }
                     if profile.canView, let page {
-                        ResearchToolRail(title: "Profile activity", choices: ProfileTab.allCases, selection: $tab, label: \.rawValue, glyph: \.glyph)
+                        ResearchToolRail(title: "Profile activity", choices: ProfileTab.allCases, selection: $tab,
+                            label: { selection in
+                                switch selection {
+                                case .all: profile.postCount.map { "Posts \($0.formatted())" } ?? "Posts"
+                                case .reposts: profile.repostCount.map { "Reposts \($0.formatted())" } ?? "Reposts"
+                                default: selection.rawValue
+                                }
+                            }, glyph: \.glyph)
                         if loadedKey == fetchKey { profileActivity(page) }
                         if loadedKey != fetchKey || failedKey == fetchKey {
                             ResearchToolMessage(title: "\(tab.rawValue) couldn’t load", error: failedKey == fetchKey ? error : nil) { retry += 1 }
@@ -170,7 +184,9 @@ struct MemberProfileView: View {
                     ResearchToolMessage(title: "Profile couldn’t load", error: error) { retry += 1 }
                 }
             }
-            .padding(16)
+            .padding(.horizontal, 16).padding(.bottom, 14)
+            .frame(maxWidth: 640)
+            .frame(maxWidth: .infinity)
         }
         .navigationTitle(page?.profile.username ?? "Profile")
         .navigationBarTitleDisplayMode(.inline)
@@ -195,14 +211,10 @@ struct MemberProfileView: View {
         .confirmationDialog("Block this account?", isPresented: $confirmBlock, titleVisibility: .visible) {
             if let profile = page?.profile { Button("Block @\(profile.username)", role: .destructive) { Task { await change(profile, action: "block", enabled: true) } } }
         }
-        .sheet(item: $selectedBadge) { badge in
-            VStack(spacing: 12) {
-                ResearchArtwork(urls: [badge.cardImageUrl, badge.iconUrl].compactMap { $0 }, fallback: "rosette")
-                    .frame(maxWidth: 190, maxHeight: 145)
-                Text(badge.name).font(.title3.bold())
-                if let description = badge.description { Text(description).font(.subheadline).foregroundStyle(.secondary) }
+        .sheet(isPresented: $showDetails) {
+            if let profile = page?.profile {
+                MemberProfileDetails(profile: profile)
             }
-            .padding(22).presentationDetents([.medium])
         }
         .sheet(isPresented: $reportProfile) {
             if let profile = page?.profile {
@@ -218,129 +230,6 @@ struct MemberProfileView: View {
         }
         .task(id: fetchKey) { await load() }
         .refreshable { await load() }
-    }
-
-    private func header(_ profile: Page.Profile) -> some View {
-        let colors = profile.teams.first?.colors?.compactMap { Color(hex: $0) } ?? []
-        let primary = colors.first ?? Brand.accent(for: scheme), secondary = colors.dropFirst().first ?? Brand.surface(for: scheme)
-        let stats = profileStats(profile)
-        return VStack(alignment: .leading, spacing: 10) {
-            ZStack(alignment: .bottomLeading) {
-                LinearGradient(colors: [primary, secondary], startPoint: .topLeading, endPoint: .bottomTrailing)
-                if let url = profile.bannerUrl, FeedPostCard.allowedMedia(url) {
-                    AsyncImage(url: url) { image in image.resizable().scaledToFill() } placeholder: { Color.clear }
-                        .frame(height: 122).clipped()
-                }
-                NativeMemberAvatar(url: profile.avatarUrl, name: profile.name, size: 64,
-                    style: profile.avatarRingStyle, color: profile.avatarRingColor, animated: true)
-                    .padding(15)
-            }
-            .frame(height: 122)
-            .clipShape(.rect(cornerRadius: 15))
-            HStack(spacing: 6) {
-                Text(profile.name).font(.title2.weight(.bold))
-                if profile.verified == true { Image(systemName: "checkmark.seal.fill").accessibilityLabel("Verified member") }
-                if profile.creator != nil {
-                    Image(systemName: "storefront.fill").foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Creator")
-                }
-            }
-            Text("@\(profile.username)").font(.subheadline).foregroundStyle(.secondary)
-            if let bio = profile.bio, !bio.isEmpty { Text(verbatim: bio).font(.subheadline) }
-            if let location = profile.location, !location.isEmpty { Label(location, systemImage: "mappin").font(.caption).foregroundStyle(.secondary) }
-            if let website = profile.website, website.scheme == "https", website.user == nil, website.password == nil, let host = website.host {
-                Link(destination: website) { Label(host, systemImage: "link").font(.caption) }
-            }
-            if let createdAt = profile.createdAt, let joined = SidelineBoard.timestamp(createdAt) {
-                Label("Joined \(joined.formatted(.dateTime.month(.wide).year()))", systemImage: "calendar")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            ResearchToolValues(items: stats, preferredColumns: stats.count == 6 ? 3 : 2)
-            if let viewer = api.userID {
-                HStack {
-                    if profile.own {
-                        NavigationLink("Edit profile", destination: NativeSettings(account: api.account, userID: viewer, section: .profile))
-                            .buttonStyle(.bordered)
-                    } else {
-                        Button(profile.following ? "Following" : "Follow", systemImage: profile.following ? "person.fill.checkmark" : "person.badge.plus") {
-                            Task { await change(profile, action: "follow", enabled: !profile.following) }
-                        }
-                        .buttonStyle(.borderedProminent).disabled(changing)
-                        if profile.allowMessages != false {
-                            NavigationLink {
-                                MessageThreadView(api: MessagesAPI(account: api.account, userID: viewer), destination: .init(kind: .direct, id: profile.id))
-                            } label: { Label("Message", systemImage: "bubble") }
-                                .buttonStyle(.bordered)
-                        }
-                    }
-                }
-            }
-            if let links = profile.socialLinks {
-                ForEach(links) { link in
-                    if let destination = link.href {
-                        Link(destination: destination) { socialBadge(link) }
-                    } else {
-                        socialBadge(link)
-                    }
-                }
-            } else {
-                ForEach(profile.verifiedSocials.keys.sorted(), id: \.self) { provider in
-                    if let identity = profile.verifiedSocials[provider] {
-                        Link(destination: identity.profileUrl) {
-                            HStack(spacing: 7) {
-                                Image("sign-in-\(provider)").resizable().scaledToFit().frame(width: 18, height: 18)
-                                Text(identity.handle).font(.caption)
-                                Image(systemName: "checkmark.seal.fill").font(.caption2).accessibilityLabel("Verified")
-                            }
-                        }
-                    }
-                }
-            }
-            if let books = profile.sportsbooks, !books.isEmpty {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 102), spacing: 6)], alignment: .leading, spacing: 6) {
-                    ForEach(Array(books.enumerated()), id: \.offset) { _, book in
-                        Label {
-                            Text(Sportsbook.name(Sportsbook.normalized(book))).font(.caption.weight(.medium))
-                        } icon: {
-                            ProfileSportsbookLogo(key: book, size: 18)
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 29, alignment: .leading)
-                        .padding(.horizontal, 6)
-                        .background(Brand.background(for: scheme), in: .rect(cornerRadius: 7))
-                    }
-                }.accessibilityElement(children: .contain).accessibilityLabel("Sportsbooks")
-            }
-            if !profile.sports.isEmpty {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 6) {
-                        ForEach(profile.sports, id: \.self) { sport in
-                            HStack(spacing: 4) {
-                                ResearchArtwork(urls: LeagueArtwork.logo(sport).map { [$0] } ?? [], fallback: "sportscourt")
-                                    .frame(width: 17, height: 17).accessibilityHidden(true)
-                                Text(LeagueArtwork.label(sport)).font(.caption.weight(.semibold))
-                            }
-                            .padding(.horizontal, 8).padding(.vertical, 5)
-                            .background(Brand.background(for: scheme), in: .capsule)
-                        }
-                    }
-                }.scrollIndicators(.hidden).accessibilityLabel("Favorite sports")
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 18))
-    }
-
-    private func profileStats(_ profile: Page.Profile) -> [ResearchToolValues.Value] {
-        var values: [ResearchToolValues.Value] = []
-        if let count = profile.postCount { values.append(.init(label: "Posts", text: count.formatted())) }
-        if let count = profile.repostCount { values.append(.init(label: "Reposts", text: count.formatted())) }
-        values.append(.init(label: "Following", text: (profile.followingCount ?? 0).formatted()))
-        values.append(.init(label: "Followers", text: (profile.followerCount ?? 0).formatted()))
-        if let record = profile.record, let rate = record.rate {
-            values.append(.init(label: "Pick Record", text: "\(record.wins)–\(record.losses)", tone: Brand.accent(for: scheme)))
-            values.append(.init(label: "Win Rate", text: rate.formatted(.percent.precision(.fractionLength(0)))))
-        }
-        return values
     }
 
     private func creatorPanel(_ profile: Page.Profile, _ creator: Page.Profile.Creator) -> some View {
@@ -392,50 +281,6 @@ struct MemberProfileView: View {
         }
     }
 
-    private func socialBadge(_ link: Page.Profile.PublicLink) -> some View {
-        HStack(spacing: 7) {
-            ResearchArtwork(urls: link.iconUrl.map { [$0] } ?? [], fallback: "at")
-                .frame(width: 20, height: 20).accessibilityHidden(true)
-            Text(link.handle).font(.subheadline.weight(.medium))
-            if link.verified {
-                Image(systemName: "checkmark.seal.fill").font(.caption2)
-                    .foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Verified")
-            }
-        }.padding(.horizontal, 9).frame(minHeight: 44)
-            .background(Brand.background(for: scheme), in: .capsule)
-            .accessibilityElement(children: .combine)
-            .accessibilityHint(link.name)
-    }
-
-    @ViewBuilder
-    private func favorites(_ profile: Page.Profile) -> some View {
-        if !profile.badges.isEmpty || !profile.teams.isEmpty || !profile.players.isEmpty {
-            ScrollView(.horizontal) {
-                HStack(spacing: 12) {
-                    ForEach(profile.badges) { badge in
-                        Button { selectedBadge = badge } label: {
-                            profileMark(badge.name, url: badge.iconUrl ?? badge.cardImageUrl, symbol: "rosette")
-                        }.buttonStyle(.plain)
-                    }
-                    ForEach(profile.teams) { team in profileMark(team.title, url: team.logo, symbol: "shield") }
-                    ForEach(profile.players) { player in profileMark(player.name, url: player.headshot ?? player.teamLogo, symbol: "person.fill") }
-                }
-            }
-            .scrollIndicators(.hidden)
-        }
-    }
-
-    private func profileMark(_ name: String, url: URL?, symbol: String) -> some View {
-        VStack(spacing: 4) {
-            ResearchArtwork(urls: [url].compactMap { $0 }.filter(FeedPostCard.allowedMedia), fallback: symbol)
-                .frame(width: 30, height: 30)
-            Text(name).font(.caption2).lineLimit(2)
-        }
-        .frame(width: 73, height: 62)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 9))
-        .accessibilityElement(children: .combine)
-    }
-
     @ViewBuilder
     private func profileActivity(_ page: Page) -> some View {
         if tab == .replies {
@@ -469,7 +314,10 @@ struct MemberProfileView: View {
             if page.communities.isEmpty { ContentUnavailableView("No visible communities", systemImage: "person.2") }
         } else {
             ForEach(posts) { post in
-                FeedPostCard(post: post, discussion: { selectedPost = post.postID })
+                FeedPostCard(post: post, discussion: { selectedPost = post.postID }, actionsAPI: feed, postChanged: { removed in
+                    if removed { posts.removeAll { $0.postID == post.postID } }
+                    else { Task { await load() } }
+                })
                     .padding(12).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
             }
             if posts.isEmpty { ContentUnavailableView("No \(tab == .all ? "posts" : tab.rawValue.lowercased())", systemImage: tab.glyph) }

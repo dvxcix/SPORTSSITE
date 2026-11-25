@@ -183,7 +183,8 @@ struct GameCenterView: View {
             if picks.isEmpty { ContentUnavailableView("No picks for this matchup", systemImage: "bolt") }
             ForEach(picks) { post in
                 FeedPostCard(post: post, discussion: { selectedPost = post.postID },
-                    showAuthor: post.author.map { author in { selectedMember = author.username } })
+                    showAuthor: post.author.map { author in { selectedMember = author.username } },
+                    actionsAPI: .init(account: api.account, userID: api.userID))
                     .padding(11).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
             }
         case .room:

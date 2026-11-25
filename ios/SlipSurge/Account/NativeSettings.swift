@@ -432,6 +432,7 @@ struct NativeSettings: View {
                 }
                 try await patch(Self.path, body: edit)
                 await load()
+                await account.refreshProfileIdentity()
             case .privacy: try await patch(Self.path, body: privacy)
             case .alerts:
                 guard let baseline else { return }

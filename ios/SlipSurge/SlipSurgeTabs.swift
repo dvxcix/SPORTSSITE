@@ -6,7 +6,19 @@ struct SlipSurgeTabs: View {
     @Binding var incomingURL: URL?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var phase
-    private enum Destination { case feed, research, discover, account }
+    @Environment(\.horizontalSizeClass) private var horizontalSize
+    enum Destination: String, CaseIterable {
+        case feed = "Feed", research = "Research", discover = "Discover", account = "Account"
+
+        var symbol: String {
+            switch self {
+            case .feed: "bubble.left.and.bubble.right"
+            case .research: "chart.bar.xaxis"
+            case .discover: "magnifyingglass"
+            case .account: "person.crop.circle"
+            }
+        }
+    }
     @State private var selected = Destination.feed
     @State private var announcements: SiteAnnouncements?
     @State private var dismissedBannerVersion: String?
@@ -15,6 +27,8 @@ struct SlipSurgeTabs: View {
     @State private var savingRelease = false
     @State private var releaseProblem: String?
     @State private var sitePresentation: SitePresentation?
+    @State private var profilePresentation: SitePresentation?
+    @State private var pendingProfilePresentation: SitePresentation?
     @State private var researchPath: [ResearchPresentation] = []
     @State private var discoverDestination: DiscoverDestination?
     @State private var feedSelection: NativeFeedSelection?
@@ -22,6 +36,9 @@ struct SlipSurgeTabs: View {
     @State private var researchPreferences = MemberResearchPreferenceStore()
     @State private var resume = NativeResumeStore()
     @State private var choseDestination = false
+    @State private var keyboardVisible = false
+
+    private var compactTabs: Bool { horizontalSize == .compact }
 
     private struct SitePresentation: Identifiable {
         let id = UUID()
@@ -38,19 +55,12 @@ struct SlipSurgeTabs: View {
     }
 
     var body: some View {
-        TabView(selection: Binding(get: { selected }, set: { tab in
-            choseDestination = true
-            selected = tab
-            switch tab {
-            case .discover: resume.record(.init(path: "/community", title: "Communities"), account: account, interaction: true)
-            case .account: resume.record(.init(path: "/settings", title: "Account"), account: account, interaction: true)
-            case .feed, .research: break
-            }
-        })) {
+        TabView(selection: Binding(get: { selected }, set: selectTab)) {
             NavigationStack {
                 FeedView(api: FeedAPI(account: account, userID: account.memberID), opensSelection: $feedSelection)
                     .environment(\.nativeResumeActive, selected == .feed && sitePresentation == nil)
             }
+            .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
             .id(account.memberID)
             .tabItem { Label("Feed", systemImage: "bubble.left.and.bubble.right") }
             .tag(Destination.feed)
@@ -63,6 +73,7 @@ struct SlipSurgeTabs: View {
                             .id(route.id)
                     }
             }
+            .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
             .id(account.memberID)
             .environment(\.nativeResumeActive, selected == .research && sitePresentation == nil)
             .tabItem { Label("Research", systemImage: "chart.bar.xaxis") }
@@ -71,6 +82,7 @@ struct SlipSurgeTabs: View {
             NavigationStack {
                 DiscoverView(api: DiscoverAPI(account: account, userID: account.memberID), opensDestination: $discoverDestination)
             }
+            .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
             .id(account.memberID)
             .tabItem { Label("Discover", systemImage: "magnifyingglass") }
             .tag(Destination.discover)
@@ -78,11 +90,19 @@ struct SlipSurgeTabs: View {
             NavigationStack {
                 AccountView(account: account, appearance: $appearance)
             }
+            .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
             .id(account.user?.id)
             .tabItem { Label("Account", systemImage: "person.crop.circle") }
             .tag(Destination.account)
         }
         .tint(Brand.accent(for: scheme))
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if compactTabs && !keyboardVisible {
+                SlipSurgeTabBar(selection: selected, profile: account.memberID == nil ? nil : account.profileIdentity, select: selectTab)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardVisible = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardVisible = false }
         .environment(\.nativeEmojiLibrary, emojiLibrary)
         .environment(\.memberResearchPreferences, researchPreferences)
         .environment(\.nativeResume, resume)
@@ -96,7 +116,7 @@ struct SlipSurgeTabs: View {
                     SiteAnnouncementBanner(banner: banner) { dismissedBannerVersion = banner.updatedAt }
                         .environment(\.openURL, OpenURLAction(handler: openLink))
                 }
-                if release == nil, sitePresentation == nil, let offer = resume.offer {
+                if release == nil, sitePresentation == nil, profilePresentation == nil, let offer = resume.offer {
                     NativeResumeOffer(offer: offer, open: {
                         resume.select(offer)
                         _ = routeLink(offer.url, track: false)
@@ -122,8 +142,21 @@ struct SlipSurgeTabs: View {
             .environment(\.openURL, OpenURLAction(handler: openLink))
             .sheet(item: $sitePresentation) { site in siteSheet(site) }
         }
-        .sheet(item: appSheet, onDismiss: presentNextRelease) { site in siteSheet(site) }
+        .sheet(item: appSheet, onDismiss: presentQueuedProfileOrRelease) { site in siteSheet(site) }
+        .fullScreenCover(item: $profilePresentation, onDismiss: presentNextRelease) { site in
+            NavigationStack {
+                NativeLinkedSiteView(account: account, target: site.target, appearance: $appearance)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close profile", systemImage: "xmark") { profilePresentation = nil }.labelStyle(.iconOnly)
+                        }
+                    }
+            }
+            .environment(\.openURL, OpenURLAction(handler: openLink))
+            .environment(\.nativeEmojiLibrary, emojiLibrary)
+        }
         .task { await account.restore() }
+        .task(id: account.memberID) { await account.refreshProfileIdentity() }
         .task(id: account.memberID) { await resume.refresh(account: account, userID: account.memberID) }
         .task(id: account.memberID) { await applyLaunchPreference() }
         .task(id: account.memberID) {
@@ -150,12 +183,23 @@ struct SlipSurgeTabs: View {
             if phase == .active {
                 Task {
                     await account.restore()
+                    await account.refreshProfileIdentity()
                     await refreshAnnouncements(for: account.memberID)
                     await resume.refresh(account: account, userID: account.memberID)
                 }
             } else if phase == .background {
                 Task { await resume.flush(account: account) }
             }
+        }
+    }
+
+    private func selectTab(_ tab: Destination) {
+        choseDestination = true
+        selected = tab
+        switch tab {
+        case .discover: resume.record(.init(path: "/community", title: "Communities"), account: account, interaction: true)
+        case .account: resume.record(.init(path: "/settings", title: "Account"), account: account, interaction: true)
+        case .feed, .research: break
         }
     }
 
@@ -171,9 +215,18 @@ struct SlipSurgeTabs: View {
     }
 
     private func presentNextRelease() {
-        guard release == nil, account.memberID != nil, sitePresentation == nil else { return }
+        guard release == nil, account.memberID != nil, sitePresentation == nil, profilePresentation == nil else { return }
         releaseProblem = nil
         release = remainingReleases.first
+    }
+
+    private func presentQueuedProfileOrRelease() {
+        if let pendingProfilePresentation {
+            self.pendingProfilePresentation = nil
+            profilePresentation = pendingProfilePresentation
+        } else {
+            presentNextRelease()
+        }
     }
 
     private func dismissRelease(_ current: SiteAnnouncements.Release) async {
@@ -215,7 +268,9 @@ struct SlipSurgeTabs: View {
     private func routeLink(_ url: URL, track: Bool) -> OpenURLAction.Result {
         if let link = ResearchDeepLink(url) {
             choseDestination = true
+            pendingProfilePresentation = nil
             sitePresentation = nil
+            profilePresentation = nil
             researchPath = [ResearchPresentation(link: link)]
             selected = .research
             if track, let target = NativeResumeLocation.destination(url) { resume.record(target, account: account, interaction: true) }
@@ -223,14 +278,24 @@ struct SlipSurgeTabs: View {
         }
         guard let link = NativeSiteLink(url) else { return .systemAction }
         choseDestination = true
+        pendingProfilePresentation = nil
         if track, let target = NativeResumeLocation.destination(url) { resume.record(target, account: account, interaction: true) }
         switch link {
+        case .profile where release == nil:
+            let profile = SitePresentation(target: link)
+            if sitePresentation == nil { profilePresentation = profile }
+            else {
+                pendingProfilePresentation = profile
+                sitePresentation = nil
+            }
         case .feed(let feed):
             sitePresentation = nil
+            profilePresentation = nil
             feedSelection = feed
             selected = .feed
         case .account:
             sitePresentation = nil
+            profilePresentation = nil
             selected = .account
         case .launch:
             if let target = researchPreferences.read(for: account.memberID)?.launch {
@@ -240,6 +305,7 @@ struct SlipSurgeTabs: View {
             selected = .feed
         case .discover(let destination):
             sitePresentation = nil
+            profilePresentation = nil
             discoverDestination = destination
             selected = .discover
         default:

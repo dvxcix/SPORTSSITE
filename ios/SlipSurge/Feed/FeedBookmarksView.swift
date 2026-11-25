@@ -8,6 +8,7 @@ struct FeedBookmarksView: View {
     @State private var bookmarks: Bookmarks?
     @State private var error: (any Error)?
     @State private var revision = 0
+    @State private var selected: UUID?
 
     var body: some View {
         ScrollView {
@@ -17,16 +18,10 @@ struct FeedBookmarksView: View {
                         ContentUnavailableView("No bookmarks", systemImage: "bookmark", description: Text("Save a post from Feed to find it here."))
                     }
                     ForEach(bookmarks.posts) { post in
-                        NavigationLink {
-                            FeedThreadView(api: api, id: post.postID, original: post)
-                        } label: {
-                            FeedPostCard(post: post)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(12)
-                                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 18))
-                                .allowsHitTesting(false)
-                        }
-                        .buttonStyle(SlipSurgePressStyle())
+                        FeedPostCard(post: post, discussion: { selected = post.postID }, actionsAPI: api, postChanged: { _ in revision += 1 })
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 18))
                         .contextMenu {
                             Button("Remove bookmark", systemImage: "bookmark.slash", role: .destructive) {
                                 Task {
@@ -46,6 +41,7 @@ struct FeedBookmarksView: View {
             .padding(16)
         }
         .navigationTitle("Bookmarks")
+        .navigationDestination(item: $selected) { id in FeedThreadView(api: api, id: id, original: bookmarks?.posts.first { $0.postID == id }) }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .task(id: revision) { await load() }

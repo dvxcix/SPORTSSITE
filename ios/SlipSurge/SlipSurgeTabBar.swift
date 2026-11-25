@@ -1,0 +1,64 @@
+import SwiftUI
+
+struct SlipSurgeTabBar: View {
+    let selection: SlipSurgeTabs.Destination
+    let profile: AccountStore.ProfileIdentity?
+    let select: (SlipSurgeTabs.Destination) -> Void
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var selectionMotion
+
+    var body: some View {
+        Group {
+            if #available(iOS 26, *) {
+                buttons.glassEffect(.regular, in: .capsule)
+            } else {
+                buttons.background(.regularMaterial, in: .capsule)
+                    .overlay { Capsule().strokeBorder(.secondary.opacity(0.15)) }
+            }
+        }
+        .frame(maxWidth: 450)
+        .padding(.horizontal, 15)
+        .padding(.bottom, 4)
+        .sensoryFeedback(.selection, trigger: selection)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Main tabs")
+    }
+
+    private var buttons: some View {
+        HStack(spacing: 3) {
+            ForEach(SlipSurgeTabs.Destination.allCases, id: \.self) { tab in
+                Button { select(tab) } label: {
+                    VStack(spacing: 2) {
+                        ZStack {
+                            if tab == .account, let profile {
+                                NativeMemberAvatar(url: profile.avatarUrl, name: profile.name, size: 22,
+                                    style: profile.avatarRingStyle, color: profile.avatarRingColor)
+                            } else {
+                                Image(systemName: tab.symbol).font(.system(size: 19, weight: .semibold))
+                            }
+                        }
+                        .frame(height: 28)
+                        Text(tab.rawValue)
+                            .font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    .foregroundStyle(selection == tab ? Brand.accent(for: scheme) : Brand.text(for: scheme))
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background {
+                        if selection == tab {
+                            Capsule().fill(Brand.accent(for: scheme).opacity(scheme == .dark ? 0.17 : 0.13))
+                                .matchedGeometryEffect(id: "activeTab", in: selectionMotion)
+                        }
+                    }
+                    .contentShape(.capsule)
+                }
+                .buttonStyle(SlipSurgePressStyle())
+                .accessibilityLabel(tab.rawValue)
+                .accessibilityValue(tab == .account ? profile.map { "@\($0.username)" } ?? "" : "")
+                .accessibilityAddTraits(selection == tab ? .isSelected : [])
+            }
+        }
+        .padding(5)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.26), value: selection)
+    }
+}

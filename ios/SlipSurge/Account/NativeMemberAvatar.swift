@@ -1,5 +1,4 @@
 import SwiftUI
-import WebKit
 
 @MainActor
 enum AvatarArtwork {
@@ -7,7 +6,6 @@ enum AvatarArtwork {
         let id: String
         let name: String
         let sport: String
-        let preview: String
     }
 
     enum Ring: String, CaseIterable {
@@ -51,7 +49,6 @@ enum AvatarArtwork {
 
     static func still(_ item: Decoration) -> CGImage? { tiles[item.id] }
 }
-
 struct NativeMemberAvatar: View {
     let url: URL?
     let name: String
@@ -59,7 +56,7 @@ struct NativeMemberAvatar: View {
     var style: String?
     var color: String?
     var tone: String?
-    var animated = false
+    var animated = true
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var phase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -92,7 +89,7 @@ struct NativeMemberAvatar: View {
     }
 
     @ViewBuilder private var ornament: some View {
-        let motion = animated && !reduceMotion && phase == .active
+        let motion = animated && style != nil && !reduceMotion && phase == .active
         if let item = AvatarArtwork.decoration(style) {
             Group {
                 if motion {
@@ -140,36 +137,4 @@ struct NativeMemberAvatar: View {
             EmptyView()
         }
     }
-}
-
-private struct MovingAvatarDecoration: UIViewRepresentable {
-    let item: AvatarArtwork.Decoration
-
-    func makeUIView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        configuration.defaultWebpagePreferences.allowsContentJavaScript = false
-        configuration.websiteDataStore = .nonPersistent()
-        let view = WKWebView(frame: .zero, configuration: configuration)
-        view.isOpaque = false
-        view.backgroundColor = .clear
-        view.scrollView.backgroundColor = .clear
-        view.scrollView.isScrollEnabled = false
-        view.isUserInteractionEnabled = false
-        return view
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    func updateUIView(_ view: WKWebView, context: Context) {
-        guard context.coordinator.art != item.id else { return }
-        context.coordinator.art = item.id
-        view.loadHTMLString("""
-          <!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
-          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
-          <style>html,body,svg{display:block;width:100%;height:100%;margin:0;overflow:hidden;background:transparent}</style>
-          </head><body>\(item.preview)</body></html>
-          """, baseURL: nil)
-    }
-
-    final class Coordinator { var art: String? }
 }

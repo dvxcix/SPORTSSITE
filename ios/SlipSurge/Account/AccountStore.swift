@@ -5,7 +5,18 @@ import Observation
 @MainActor
 @Observable
 final class AccountStore {
+    struct ProfileIdentity: Decodable {
+        let username: String
+        let displayName: String?
+        let avatarUrl: URL?
+        let avatarRingStyle: String?
+        let avatarRingColor: String?
+
+        var name: String { displayName ?? username }
+    }
+
     private let api = AccountAPI()
+    let postReactions = FeedReactionStore()
     private var session: AccountSession?
     private var rotatedSession: AccountSession?
     private var pendingVerification: AccountSession?
@@ -16,6 +27,7 @@ final class AccountStore {
     private(set) var notice: String?
     private(set) var providersAvailable = false
     private(set) var onboardingComplete = false
+    private(set) var profileIdentity: ProfileIdentity?
     private var restored = false
 
     var isConfigured: Bool { api.isConfigured }
@@ -29,6 +41,16 @@ final class AccountStore {
 
     func registrationAvailability() async throws -> AccountAPI.RegistrationAvailability {
         try await api.registrationAvailability()
+    }
+
+    func refreshProfileIdentity() async {
+        guard let id = memberID else { profileIdentity = nil; return }
+        struct Settings: Decodable { let profile: ProfileIdentity }
+        do {
+            let data = try await SlipSurgeHTTP.memberData("/api/mobile/account/settings", account: self, userID: id, timeout: 25)
+            let response = try JSONDecoder().decode(Settings.self, from: data)
+            if memberID == id, !Task.isCancelled { profileIdentity = response.profile }
+        } catch { }
     }
 
     func beginEmail(_ registration: AccountAPI.Registration) async -> Bool {
@@ -306,6 +328,8 @@ final class AccountStore {
             if let renewal { _ = try? await renewal.value }
             let latest = rotatedSession ?? session ?? pendingVerification ?? original
             try AccountKeychain.remove()
+            postReactions.reset()
+            profileIdentity = nil
             session = nil
             rotatedSession = nil
             pendingVerification = nil
@@ -371,6 +395,8 @@ final class AccountStore {
         let verified = try await api.validatedUser(updated)
         if verified.hasVerifiedFactor && !updated.isMFAAuthenticated {
             try AccountKeychain.remove()
+            postReactions.reset()
+            profileIdentity = nil
             session = nil
             rotatedSession = nil
             onboardingComplete = false
@@ -396,6 +422,8 @@ final class AccountStore {
     }
 
     private func clearExpiredSession() {
+        postReactions.reset()
+        profileIdentity = nil
         session = nil
         rotatedSession = nil
         pendingVerification = nil

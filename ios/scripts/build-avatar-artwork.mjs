@@ -14,16 +14,13 @@ const output = new URL('../SlipSurge/', import.meta.url)
 const art = await Promise.all(catalog.map(async (entry, index) => {
   if (!/^[a-z0-9-]+$/.test(entry.id)) throw new Error('Invalid avatar decoration ID')
   const still = await readFile(new URL(`still/${entry.id}.svg`, source))
-  const preview = await readFile(new URL(`animated/${entry.id}.svg`, source), 'utf8')
-  assert.match(preview, /<svg [^>]+viewBox="-120 -120 240 240"/)
-  assert.doesNotMatch(preview, /<script|<foreignObject/i)
   return {
     tile: {
       input: await sharp(still, { density: 96 }).resize(atlasSize, atlasSize).png().toBuffer(),
       left: index % columns * atlasSize,
       top: Math.floor(index / columns) * atlasSize,
     },
-    entry: { ...entry, preview },
+    entry,
   }
 }))
 

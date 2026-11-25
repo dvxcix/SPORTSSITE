@@ -1,0 +1,14 @@
+{
+  "fanduel": ["#1493FF", "#164AA8"],
+  "fanatics": ["#DA1927", "#34333D"],
+  "draftkings": ["#53A318", "#EA781A"],
+  "betmgm": ["#B89A62", "#51422F"],
+  "caesars": ["#0B7A53", "#B8960C"],
+  "betrivers": ["#003F9E", "#F4C430"],
+  "pinnacle": ["#215997", "#E57320"],
+  "betparx": ["#A900FF", "#442680"],
+  "ballybet": ["#E31837", "#7E1732"],
+  "kalshi": ["#00B97C", "#014737"],
+  "polymarket": ["#4779EE", "#19346D"],
+  "espnbet": ["#20B9A5", "#124B54"]
+}

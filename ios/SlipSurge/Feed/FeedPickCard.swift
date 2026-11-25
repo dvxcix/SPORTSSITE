@@ -6,23 +6,22 @@ struct FeedPickCard: View {
     @Environment(\.colorScheme) private var scheme
 
     private var league: String? { pick.single.sport ?? sport }
-    private var tint: Color { palette(pick.legs.first ?? pick.single).0 }
+    private var bookPalette: (primary: Color, secondary: Color)? { Sportsbook.slipPalette(pick.book) }
+    private var tint: Color { bookPalette?.primary ?? palette(pick.legs.first ?? pick.single).0 }
 
     var body: some View {
-        ResearchToolCard(color: tint) {
+        VStack(alignment: .leading, spacing: 11) {
             HStack(spacing: 8) {
                 if let league {
                     ResearchArtwork(urls: LeagueArtwork.logo(league).map { [$0] } ?? [], fallback: "sportscourt")
                         .frame(width: 24, height: 24)
                         .accessibilityLabel(LeagueArtwork.label(league))
                 }
-                if !pick.legs.isEmpty {
-                    Text("\(pick.legs.count) legs").font(.caption.weight(.semibold))
-                }
+                Text(pick.legs.isEmpty ? "Pick" : "\(pick.legs.count)-leg parlay")
+                    .font(.caption.weight(.semibold))
                 Spacer(minLength: 4)
                 result(pick.single.result, compact: false)
             }
-        } content: {
             if pick.legs.isEmpty {
                 line(pick.single, includeResult: false)
             } else {
@@ -32,14 +31,12 @@ struct FeedPickCard: View {
                 }
             }
             if pick.book != nil || pick.combinedOdds != nil {
+                Divider().opacity(0.55)
                 HStack(spacing: 7) {
                     if let book = pick.book {
                         let normalized = Sportsbook.normalized(book)
-                        if let mark = Sportsbook.artwork(normalized) {
-                            Image(mark).resizable().scaledToFit().frame(width: 20, height: 20)
-                                .accessibilityHidden(true)
-                        }
-                        Text(Sportsbook.name(normalized)).font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                        ProfileSportsbookLogo(key: book, size: 19)
+                        Text(Sportsbook.name(normalized)).font(.caption.weight(.semibold))
                     }
                     Spacer()
                     if let raw = pick.combinedOdds {
@@ -49,6 +46,21 @@ struct FeedPickCard: View {
                     }
                 }
             }
+        }
+        .padding(13)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .foregroundStyle(Brand.text(for: scheme))
+        .background {
+            let shape = RoundedRectangle(cornerRadius: 15)
+            shape.fill(Brand.surface(for: scheme))
+                .overlay {
+                    shape.fill(LinearGradient(stops: [
+                        .init(color: tint.opacity(scheme == .dark ? 0.35 : 0.22), location: 0),
+                        .init(color: (bookPalette?.secondary ?? tint).opacity(scheme == .dark ? 0.22 : 0.12), location: 0.67),
+                        .init(color: .clear, location: 1),
+                    ], startPoint: .topLeading, endPoint: .bottomTrailing))
+                }
+                .overlay { shape.strokeBorder(tint.opacity(scheme == .dark ? 0.52 : 0.41)) }
         }
     }
 

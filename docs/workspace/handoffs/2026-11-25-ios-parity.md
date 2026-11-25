@@ -2297,3 +2297,34 @@ physical-device push are still open.
   The local iOS build also showed Geeejpg's live Fanatics slip with its
   two legs in light mode and Guan's FanDuel slip with three legs in dark mode.
   The narrow Hub release is tracked separately from the native profile work.
+- Task `e11158c656e2552291c30391427b2347092e3d4d` is pushed. PR #84 preview
+  `dpl_63gE3AEGCifkTAVJiFXnXYd1qNfU` was READY and returned the real public
+  post plus both share PNGs with 200. The PR merged as
+  `fe7244efaee87484f3fee7eb6f01bf8675b5a5ab`.
+
+## Native Feed reactions, avatars and profiles · 25 November 2026
+
+- The heart shows the heart count, reacts immediately with native feedback and
+  a brief burst, and reverses on a failed save. Rapid taps reconcile the latest
+  intent in order. The quick reaction popover and the full emoji picker use
+  the same post reaction API. Bookmarks, profiles and other signed-in post
+  surfaces use the same reaction state. Guest counts remain readable.
+- The compact tab bar shows the signed-in member's actual avatar and saved
+  decoration. Profile edits refresh that identity. Feed and profile avatars
+  play the existing decoration art through native sprite playback, with
+  stills for Reduce Motion. The source animations are rendered at build-asset
+  generation time. `ios/scripts/build-avatar-motion.mjs --check` verifies
+  the generated bundle against all of the source designs.
+- The profile now leads with a width-constrained cover and portrait, native
+  actions, inline follower and pick metrics, branded social links, and the
+  activity tabs. Details keeps original links, favorite sports, sportsbooks
+  and achievements accessible. Creator memberships remain reachable from the
+  compact disclosure and storefront. Feed author taps still push a native
+  profile, and external profile links open a full-screen native view.
+- Signed iPhone 18 Pro and compact iPhone 17e Simulator builds passed. The
+  live signed account's own post moved from 12 hearts to 13 and back to 12.
+  A fire reaction appeared and was removed, preserving the original state.
+  An isolated Swift fixture exercised rapid reversal and failure rollback.
+  On the guest profile, the avatar region differed between two captures while
+  the banner stayed pixel-for-pixel stable. Hub TypeScript, 287 checks and
+  the shared-palette and artwork comparisons passed. iPad keeps system tabs.
