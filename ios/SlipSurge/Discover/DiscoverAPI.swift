@@ -153,9 +153,9 @@ enum LeagueArtwork {
 
 extension DiscoverAPI {
     func memberRead<Response: Decodable>(_ type: Response.Type, path: String, query: [URLQueryItem] = [],
-        keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy = .useDefaultKeys) async throws -> Response {
+        keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy = .useDefaultKeys, timeout: TimeInterval = 120) async throws -> Response {
         guard let userID else { throw URLError(.userAuthenticationRequired) }
-        let response = try await SlipSurgeHTTP.memberData(path, query: query, account: account, userID: userID)
+        let response = try await SlipSurgeHTTP.memberData(path, query: query, account: account, userID: userID, timeout: timeout)
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = keyDecodingStrategy
         return try decoder.decode(type, from: response)

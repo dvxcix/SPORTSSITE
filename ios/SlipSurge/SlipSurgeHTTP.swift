@@ -19,9 +19,9 @@ enum SlipSurgeHTTP {
     @MainActor
     static func memberData(
         _ path: String, query: [URLQueryItem] = [],
-        account: AccountStore, userID: UUID
+        account: AccountStore, userID: UUID, timeout: TimeInterval = 120
     ) async throws -> Data {
-        var request = try request(host: site, path: path, query: query, timeout: 120)
+        var request = try request(host: site, path: path, query: query, timeout: timeout)
         let token = try await account.accessToken(for: userID)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         let data: Data

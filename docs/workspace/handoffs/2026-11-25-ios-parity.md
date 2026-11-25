@@ -2138,7 +2138,8 @@ physical-device push are still open.
   checks passed. None of the fixture edits reached a live profile.
 - Task `2203131a2b160056e35acd920319d574ec383d13` is pushed. PR #79 merged
   as `a3eb17cb6a8416535ed8e5f2b9366e8a2f83067c` after preview
-  `dpl_FL638EMcTS5nrb92LPAqvr1jxkqE` was READY.
+  `dpl_FL638EMcTS5nrb92LPAqvr1jxkqE` was READY. Production
+  `dpl_Bs9yxxzR2kuVo9PLcC24JEwq9XJj` reported READY.
 
 ## Native Matrix backtest · 25 November 2026
 
@@ -2154,3 +2155,24 @@ physical-device push are still open.
   regression fixture stubs were updated for two dependencies added to the
   existing proxy and game page since the test was written. No route behavior
   changed in those files. Live paused-state verification follows release.
+- Task `285fe61a609a5730712d43936baa3a22d1960a44` is pushed. PR #80 merged
+  as `37a58efcff0a9c1d0e8c4adb044f53578468024a`. Preview
+  `dpl_FFhac1i5wjfVdXZwfKKoyYexxfw73Hr` and production
+  `dpl_GptzAY8Kv6orgMYmkmidn9vFBYVn` reported READY. The signed Simulator
+  opened the production tool and displayed the off-season pause alongside
+  the saved Matrix inputs. The guest endpoint returned 401.
+
+## Native HR Intelligence · 25 November 2026
+
+- The native administrator view uses the existing HR Intelligence evaluator,
+  which keeps the original coverage thresholds and the off-season guard. It
+  includes branded game selection, both pregame reads, the complete player
+  board, each market and MM window, separate postgame grading, and detailed
+  home run settlements. The website uses the same shared reader and labels.
+- Native artwork follows the existing player and team IDs. The read endpoint
+  uses the established five-minute analysis limit. An incomplete exposure
+  fixture received 503 and no rank data. The active-path fixture verified the
+  original response and the added team and player artwork separately.
+- Signed Simulator Debug, Hub TypeScript and 144 checks passed. The native
+  off-season status is ready for production verification after release. No
+  live analysis was run.

@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { buildHrIntelligenceSlate } from '@/lib/hrIntelligenceData'
+import { readHrIntelligence } from '@/lib/adminHrIntelligence'
 import { MLB_HIBERNATING, mlbPausedResponse } from '@/lib/mlbOffseason'
 
 export const revalidate = 0
 export const maxDuration = 300
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -22,46 +20,5 @@ export async function GET(request: Request) {
   if (authError) return authError
   if (MLB_HIBERNATING) return mlbPausedResponse(503)
 
-  const url = new URL(request.url)
-  const date = url.searchParams.get('date') ?? ''
-  const rawGamePk = url.searchParams.get('gamePk')
-  const gamePk = rawGamePk == null ? undefined : Number(rawGamePk)
-  if (!DATE_RE.test(date)) {
-    return NextResponse.json({ error: 'Pass date as YYYY-MM-DD.' }, { status: 400 })
-  }
-  if (rawGamePk != null && (!Number.isInteger(gamePk) || Number(gamePk) <= 0)) {
-    return NextResponse.json({ error: 'gamePk must be a positive integer.' }, { status: 400 })
-  }
-
-  try {
-    const result = await buildHrIntelligenceSlate(date, gamePk)
-    if (gamePk != null && result.games.length === 0) {
-      return NextResponse.json({ error: 'That game was not found on the selected slate.' }, { status: 404 })
-    }
-    const incompleteExposureGames = result.games.filter(game =>
-      game.diagnostics.picksCoveragePct < 80 || game.diagnostics.crossMarketPicksCoveragePct < 70,
-    )
-    if (!result.diagnostics.pikkitRowsPresent || incompleteExposureGames.length > 0) {
-      const affectedGames = incompleteExposureGames.map(game => game.gameKey).join(', ')
-      console.error('[hr-intelligence] required Pikkit exposure unavailable', {
-        date,
-        gamePk: gamePk ?? null,
-        affectedGames,
-      })
-      return NextResponse.json({
-        error: affectedGames
-          ? `Analysis stopped because public exposure is incomplete for ${affectedGames}. No ranking was produced.`
-          : 'Analysis stopped because public exposure is unavailable. No ranking was produced.',
-      }, { status: 503 })
-    }
-    return NextResponse.json(result, {
-      headers: {
-        'Cache-Control': 'private, no-store, max-age=0',
-        'X-Robots-Tag': 'noindex, nofollow',
-      },
-    })
-  } catch (error) {
-    console.error('[hr-intelligence] analysis failed', error)
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Analysis failed.' }, { status: 500 })
-  }
+  return readHrIntelligence(request)
 }

@@ -109,3 +109,47 @@ test('the shared date backtest passes the saved pipeline and bounded dates to th
   assert.equal(data.dates[0].games[0].awayLogo, 'https://example.test/TOR.png')
   assert.equal(data.aggregate.precision, 0.5)
 })
+
+test('HR Intelligence rejects incomplete exposure and uses the same reads with native artwork', async t => {
+  t.mock.method(console, 'error', () => {})
+  let paused = true, authorized = false, reads = 0
+  const player = { mlbId: 10, name: 'Fixture Hitter', team: 'TOR' }
+  const game = { gamePk: 99, gameKey: 'TOR@LAD', awayTeam: 'TOR', homeTeam: 'LAD', players: [player],
+    diagnostics: { picksCoveragePct: 80, crossMarketPicksCoveragePct: 70 }, validation: { realizedHrOutcomes: [player] } }
+  const slate = { games: [game], diagnostics: { pikkitRowsPresent: true } }
+  const analysis = load('lib/adminHrIntelligence.ts', {
+    'server-only': {}, 'next/server': { NextResponse: Response },
+    '@slipsurge/core/mlbTeamColors': { getTeamLogoPngUrl: team => `https://fixture.test/${team}.png` },
+    '@slipsurge/core/mlb-api': { mlbHeadshot: id => `https://fixture.test/${id}.png` },
+    '@/lib/hrIntelligenceLabels': { HR_INTEL_MARKET_LABELS: { hr2: '2+ HR' }, HR_INTEL_PICK_LABELS: { home_runs: 'HR' } },
+    '@/lib/sportTeamArtwork': { sportTeamColors: () => ['#112233', '#556677'] },
+    '@/lib/hrIntelligenceData': { buildHrIntelligenceSlate: async () => { reads++; return slate } },
+  })
+  const native = state => load('app/api/mobile/admin/hr-intelligence/route.ts', {
+    'next/server': { NextResponse: Response }, '@/lib/adminHrIntelligence': analysis,
+    '@/lib/mlbOffseason': { MLB_HIBERNATING: state, mlbPausedResponse: status => Response.json({ paused: true }, { status }) },
+    '@/lib/supabase/adminDecisionActor': { adminDecisionActor: async () => authorized
+      ? { admin: {} } : { error: Response.json({}, { status: 403 }) } },
+  })
+  const url = 'https://fixture.test/api/mobile/admin/hr-intelligence'
+  const req = (query = '', bearer = true) => new Request(`${url}${query}`, { headers: bearer ? { authorization: 'Bearer fixture' } : {} })
+  assert.equal((await native(paused).GET(req('', false))).status, 401)
+  assert.equal((await native(paused).GET(req())).status, 403)
+  authorized = true
+  assert.deepEqual(await (await native(paused).GET(req())).json(), { paused: true })
+  assert.equal((await native(paused).GET(req('?date=2026-10-27'))).status, 503)
+  assert.equal(reads, 0)
+  paused = false
+  assert.deepEqual(await (await analysis.readHrIntelligence(req('?date=2026-10-27'))).json(), slate)
+  const result = await (await native(paused).GET(req('?date=2026-10-27'))).json()
+  assert.equal(result.games[0].players[0].teamLogo, 'https://fixture.test/TOR.png')
+  assert.equal(result.games[0].validation.realizedHrOutcomes[0].headshot, 'https://fixture.test/10.png')
+  assert.equal(result.marketLabels.hr2, '2+ HR')
+  assert.equal(result.pickLabels.home_runs, 'HR')
+  game.diagnostics.picksCoveragePct = 79
+  const incomplete = await native(paused).GET(req('?date=2026-10-27'))
+  assert.equal(incomplete.status, 503)
+  const blocked = await incomplete.json()
+  assert.equal(blocked.games, undefined)
+  assert.match(blocked.error, /public exposure is incomplete/)
+})
