@@ -6,6 +6,10 @@ struct AccountWorkspaceView: View {
         var title: String { self == .admin ? "Admin" : "Creator Studio" }
     }
 
+    enum StudioSection: String {
+        case overview, products, communities, members, content, promotion, analytics, settings
+    }
+
     private struct Studio: Decodable {
         struct Offer: Decodable, Identifiable {
             let id: UUID
@@ -15,6 +19,7 @@ struct AccountWorkspaceView: View {
             let price: Double
             let currency: String?
             let billingPeriodDays: Int?
+            let providerReady: Bool?
         }
 
         struct Community: Decodable, Identifiable {
@@ -25,6 +30,7 @@ struct AccountWorkspaceView: View {
             let avatarUrl: URL?
             let memberCount: Int?
             let accessType: String
+            let creatorProductId: UUID?
         }
 
         struct Storefront: Decodable {
@@ -77,6 +83,8 @@ struct AccountWorkspaceView: View {
     @State private var changingOffer: Studio.Offer?
     @State private var offerBusy = false
     @State private var offerProblem: String?
+    @State private var newOffer = false
+    @State private var newCommunity: CommunityDraft?
 
     private struct Editor: Identifiable {
         let id = UUID()
@@ -87,7 +95,23 @@ struct AccountWorkspaceView: View {
         let isDelete: Bool
         var id: UUID { post.id }
     }
+    private struct CommunityDraft: Identifiable {
+        let id = UUID()
+        let offer: UUID?
+    }
     private var scheduleAPI: CreatorScheduleAPI { .init(account: account, userID: userID) }
+
+    init(account: AccountStore, userID: UUID, workspace: Workspace, studioSection: StudioSection = .overview) {
+        self.account = account
+        self.userID = userID
+        self.workspace = workspace
+        let initialTab: StudioTab = switch studioSection {
+        case .communities: .groups
+        case .content: .drafts
+        default: .offers
+        }
+        _studioTab = State(initialValue: initialTab)
+    }
 
     var body: some View {
         ScrollView {
@@ -97,7 +121,11 @@ struct AccountWorkspaceView: View {
                 } else if let admin {
                     adminContent(admin)
                 } else if let status = error as? SlipSurgeHTTP.Status, status.code == 403 {
-                    ContentUnavailableView("Workspace access required", systemImage: "lock")
+                    if workspace == .studio {
+                        NavigationLink {
+                            CreatorStoreView(api: .init(account: account, userID: userID))
+                        } label: { Label("Set up your storefront", systemImage: "storefront") }.buttonStyle(.borderedProminent)
+                    } else { ContentUnavailableView("Workspace access required", systemImage: "lock") }
                 } else {
                     ResearchToolMessage(title: "Workspace couldn’t load", error: error) { retry += 1 }
                 }
@@ -115,6 +143,15 @@ struct AccountWorkspaceView: View {
                 CreatorScheduleEditor(api: scheduleAPI, existing: editor.post,
                     targets: studio.groups.map { .init(id: $0.id, name: $0.name, avatar: $0.avatarUrl) },
                     allowMLB: studio.allowMlb == true) { await load() }
+            }
+        }
+        .sheet(isPresented: $newOffer) {
+            CreatorOfferEditor(api: .init(account: account, userID: userID)) { _ in await load() }
+        }
+        .sheet(item: $newCommunity) { draft in
+            NavigationStack {
+                CommunityCreateView(api: .init(account: account, userID: userID), initialOffer: draft.offer, completed: { await load() })
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { newCommunity = nil } } }
             }
         }
         .confirmationDialog(removing?.isDelete == true ? "Delete this draft?" : "Cancel this scheduled post?",
@@ -151,12 +188,21 @@ struct AccountWorkspaceView: View {
             } label: { Label("Storefront", systemImage: "storefront") }
             .buttonStyle(.bordered)
             NavigationLink {
+                CreatorAnalyticsView(api: .init(account: account, userID: userID))
+            } label: { Label("Analytics", systemImage: "chart.bar.xaxis") }
+                .buttonStyle(.bordered)
+            NavigationLink {
+                CreatorBusinessView(api: .init(account: account, userID: userID), section: .promotion)
+            } label: { Label("Promotion", systemImage: "megaphone") }
+                .buttonStyle(.bordered)
+            NavigationLink {
                 CreatorWalletView(api: .init(account: account, userID: userID))
             } label: { Label("Balance & payouts", systemImage: "wallet.bifold") }
             .buttonStyle(.bordered)
             ResearchToolRail(title: "Creator Studio", choices: StudioTab.allCases, selection: $studioTab, label: \.rawValue, compact: true)
             switch studioTab {
             case .offers:
+                Button("New product", systemImage: "plus") { newOffer = true }.buttonStyle(.borderedProminent)
                 NavigationLink {
                     CreatorMembersView(account: account, userID: userID)
                 } label: { Label("View members", systemImage: "person.2") }
@@ -171,6 +217,14 @@ struct AccountWorkspaceView: View {
                         Text(offer.price.formatted(.currency(code: offer.currency?.uppercased() ?? "USD")) + (offer.billingPeriodDays.map { " / \($0) days" } ?? ""))
                             .font(.subheadline.weight(.semibold))
                         Text(pretty(offer.status)).font(.caption).foregroundStyle(.secondary)
+                        if let group = studio.groups.first(where: { $0.creatorProductId == offer.id }) {
+                            NavigationLink {
+                                CommunitySettingsView(api: .init(account: account, userID: userID, groupID: group.id))
+                            } label: { Label(group.name, systemImage: "person.2") }.buttonStyle(.bordered)
+                        } else if offer.providerReady == true, ["draft", "active"].contains(offer.status) {
+                            Button("Connect community", systemImage: "plus.circle") { newCommunity = .init(offer: offer.id) }
+                                .buttonStyle(.bordered)
+                        }
                         if ["active", "paused", "draft"].contains(offer.status) {
                             Button(offer.status == "active" ? "Pause offer" : "Publish offer", systemImage: offer.status == "active" ? "pause.circle" : "arrow.up.circle") {
                                 changingOffer = offer
@@ -179,6 +233,7 @@ struct AccountWorkspaceView: View {
                     }
                 }
             case .groups:
+                Button("New community", systemImage: "plus.circle") { newCommunity = .init(offer: nil) }.buttonStyle(.borderedProminent)
                 if studio.groups.isEmpty { ContentUnavailableView("No communities", systemImage: "person.2") }
                 ForEach(studio.groups) { group in
                     NavigationLink {
@@ -287,6 +342,9 @@ struct AccountWorkspaceView: View {
                     }
                     NavigationLink { AdminMatrixMarketplaceView(api: .init(account: account, userID: userID)) } label: {
                         Label("Matrix Marketplace", systemImage: "square.grid.3x3")
+                    }
+                    NavigationLink { AdminCreatorBusinessView(api: .init(viewer: .init(account: account, userID: userID))) } label: {
+                        Label("Creator operations", systemImage: "storefront")
                     }
                 }
             } else if adminTab == .members {

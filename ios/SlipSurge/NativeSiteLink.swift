@@ -5,7 +5,7 @@ enum NativeSiteLink: Hashable {
     case post(UUID), profile(String), community(String, CommunitySection)
     case notifications, bookmarks, picks, messages, newMessage, directMessage(String), groupMessage(UUID)
     case channels, channel(String), pricing, preview(Preview), registration, passwordRecovery
-    case settings(Settings), creatorStudio, creatorPayouts, communityCreator, researchWorkspace, admin
+    case settings(Settings), creatorStudio(AccountWorkspaceView.StudioSection), creatorPayouts, creatorStoreSetup, communityCreator(UUID?), researchWorkspace, admin
     case activityReplay, missions, launch
     case search(String), topic(String), explore
     case scoreGame(String, String)
@@ -15,7 +15,7 @@ enum NativeSiteLink: Hashable {
     case nbaEntity(NbaDirectoryEntityView.Kind, Int, game: Int?, mode: CourtResearchMode)
     case nflEntity(NflDirectoryEntityView.Kind, String)
     case mlbTeam(Int)
-    case adminMarketplace
+    case adminMarketplace, adminCreatorBusiness
 
     enum CommunitySection: Hashable {
         case posts, picks, settings, channels(String?)
@@ -95,8 +95,18 @@ enum NativeSiteLink: Hashable {
         case ["messages"]: self = .messages
         case ["messages", "new"]: self = .newMessage
         case ["channels"]: self = .channels
-        case ["groups", "create"]: self = .communityCreator
-        case ["creators", "studio"], ["creators", "apply"]: self = .creatorStudio
+        case ["groups", "create"]:
+            let offers = query.filter { $0.name == "offer" }
+            guard offers.count <= 1 else { return nil }
+            self = .communityCreator(offers.first?.value.flatMap(UUID.init(uuidString:)))
+        case ["creators", "studio"], ["creators", "apply"]:
+            let entries = query.filter { $0.name == "section" }
+            guard entries.count <= 1 else { return nil }
+            let section = entries.first?.value.flatMap(AccountWorkspaceView.StudioSection.init(rawValue:)) ?? .overview
+            if Self.queryValue(query, named: "setup", pattern: "^1$") == "1" { self = .creatorStoreSetup }
+            else if section == .communities, let offers = Self.queryValue(query, named: "offer", pattern: #"^[a-fA-F0-9-]{36}$"#),
+                    let id = UUID(uuidString: offers) { self = .communityCreator(id) }
+            else { self = .creatorStudio(section) }
         case ["creators", "payouts"]: self = .creatorPayouts
         case ["workspace"]: self = .researchWorkspace
         case ["marketplace"]:
@@ -117,6 +127,7 @@ enum NativeSiteLink: Hashable {
         case ["launch"]: self = .launch
         case ["admin"]: self = .admin
         case ["admin", "marketplace"]: self = .adminMarketplace
+        case ["admin", "creators"]: self = .adminCreatorBusiness
         default:
             if segments.count == 2 {
                 let name = segments[1]
@@ -222,8 +233,8 @@ enum NativeSiteLink: Hashable {
     var needsMember: Bool {
         switch self {
         case .notifications, .activityReplay, .missions, .search, .topic, .explore, .bookmarks, .picks, .messages, .newMessage, .directMessage, .groupMessage,
-            .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .communityCreator, .researchWorkspace, .admin,
-            .marketplace, .nbaEntity, .nflEntity, .mlbTeam, .creatorAccess, .adminMarketplace,
+            .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .creatorStoreSetup, .communityCreator, .researchWorkspace, .admin,
+            .marketplace, .nbaEntity, .nflEntity, .mlbTeam, .creatorAccess, .adminMarketplace, .adminCreatorBusiness,
             .community(_, .settings), .community(_, .channels): true
         default: false
         }

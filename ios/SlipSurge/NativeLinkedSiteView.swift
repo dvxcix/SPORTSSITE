@@ -66,14 +66,24 @@ struct NativeLinkedSiteView: View {
         case .channel(let slug): linkedChannel(slug, group: nil, api: messages)
         case .community(let slug, let section): linkedCommunity(slug, section: section)
         case .settings(let section): settings(section, userID: userID)
-        case .creatorStudio: AccountWorkspaceView(account: account, userID: userID, workspace: .studio)
+        case .creatorStudio(let section):
+            switch section {
+            case .analytics: CreatorAnalyticsView(api: viewer)
+            case .members: CreatorMembersView(account: account, userID: userID)
+            case .promotion: CreatorBusinessView(api: .init(account: account, userID: userID), section: .promotion)
+            case .settings: CreatorBusinessView(api: .init(account: account, userID: userID), section: .settings)
+            case .overview, .products, .communities, .content:
+                AccountWorkspaceView(account: account, userID: userID, workspace: .studio, studioSection: section)
+            }
         case .creatorPayouts: CreatorWalletView(api: .init(account: account, userID: userID))
         case .creatorAccess(let id, let outcome): CreatorAccessCompletionView(api: .init(client: viewer), offerID: id, outcome: outcome)
-        case .communityCreator: CreatorStoreView(api: .init(account: account, userID: userID))
+        case .creatorStoreSetup: CreatorStoreView(api: .init(account: account, userID: userID))
+        case .communityCreator(let offer): CommunityCreateView(api: .init(account: account, userID: userID), initialOffer: offer)
         case .researchWorkspace: ResearchLibraryView(api: .init(account: account, userID: userID))
         case .marketplace(let target): NativeMarketplaceView(api: viewer, userID: userID, target: target)
         case .admin: AccountWorkspaceView(account: account, userID: userID, workspace: .admin)
         case .adminMarketplace: AdminMatrixMarketplaceView(api: viewer)
+        case .adminCreatorBusiness: AdminCreatorBusinessView(api: .init(viewer: viewer))
         default: EmptyView()
         }
     }

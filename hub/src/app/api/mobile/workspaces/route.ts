@@ -54,9 +54,9 @@ export async function GET(request: Request) {
     return respond({ error: 'Creator access required' }, 403)
   }
   const [offers, groups, memberships, scheduled, storefront] = await Promise.all([
-    supabase.from('creator_products').select('id,title,description,price,currency,status,billing_period_days')
+    supabase.from('creator_products').select('id,title,description,price,currency,status,billing_period_days,whop_plan_id')
       .eq('creator_id', userId).order('created_at', { ascending: false }).limit(100),
-    supabase.from('groups').select('id,name,description,sport,avatar_url,member_count,access_type').eq('owner_id', userId)
+    supabase.from('groups').select('id,name,description,sport,avatar_url,member_count,access_type,creator_product_id').eq('owner_id', userId)
       .order('created_at', { ascending: false }).limit(100),
     supabase.from('creator_entitlements').select('id,status,current_period_end').eq('creator_id', userId).limit(1000),
     supabase.from('creator_scheduled_posts').select('id,group_id,content,post_type,visibility,scheduled_for,status,sport,updated_at').eq('creator_id', userId)
@@ -69,6 +69,6 @@ export async function GET(request: Request) {
   return respond({ displayName: profile.display_name ?? profile.username, paymentStatus: profile.creator_commerce_status, allowMlb: canShowMlb,
     followers: profile.follower_count, activeMembers: memberships.data?.length === 1000 ? null :
       (memberships.data ?? []).filter(hasCurrentCreatorAccess).length,
-    offers: offers.data ?? [], groups: groups.data?.filter(visible) ?? [],
+    offers: (offers.data ?? []).map(({ whop_plan_id, ...offer }) => ({ ...offer, providerReady: Boolean(whop_plan_id) })), groups: groups.data?.filter(visible) ?? [],
     drafts: scheduled.data?.filter(visible) ?? [], storefront: storefront.data })
 }

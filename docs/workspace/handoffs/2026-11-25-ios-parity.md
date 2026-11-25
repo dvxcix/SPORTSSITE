@@ -1604,5 +1604,36 @@ physical-device push are still open.
   retain their own member or admin authorization.
 - Signed Xcode Simulator build, Hub TypeScript, existing production source
   smoke checks and focused gate, archive and moderation checks passed.
-  Verify released team, recap and admin reads, and signed-out creator and
-  game links. No active listing was changed for QA.
+  Checkpoint `158d469e9b9aa415abec2818ee8d9fac6751baf9` is pushed. PR
+  #60 merged as `3ae26e689348eea48e7a336c85a5f63fb80a3570`; preview
+  `dpl_7APrnasaiZ4xy4JQTjrjeNdvaZLP` and production
+  `dpl_8AAGXKnFWzR5NintRLGNTJcVPZvV` were READY. Guest API checks opened
+  the exact active creator offer, storefront, and Miami at Philadelphia.
+  Guest team, recap and admin routes returned 401. The signed Simulator
+  showed the 38-player Yankees roster, the October 27 Daily Recap, a real
+  home-run detail and price receipt, and live Admin Matrix publications
+  with their moderation controls. Unsigned arm64 device Release also
+  passed. No active listing was changed for QA.
+
+## Creator analytics, community setup and admin commerce · 25 November 2026
+
+- Studio opens its requested products, communities, content, memberships,
+  promotion, analytics or settings destination. Analytics uses the member’s
+  exact creator identity and the existing thirty-day revenue, member,
+  engagement and conversion inputs. Creator promotion uses the live
+  storefront, its published state and native sharing.
+- Free, public or invite-only communities and eligible paid membership
+  communities use the standard atomic creation RPC. The initial live
+  channel and owner role come from the backend. A repeated exact
+  request can recover its own existing group. Artwork uploads are checked
+  against the member’s existing media path and can be repaired independently.
+- Admin Creator Operations lists the original owners, offers, communities,
+  memberships, payment events and published promotions. Native requests
+  can execute the existing creator management and promotion actions
+  through the same admin and MFA checks. The browser cookie and same-origin
+  checks remain in force. Paid access holds still require a reason and
+  provider verification for restoration.
+- Signed Xcode Simulator, Hub TypeScript, eight targeted creator storefront,
+  analytics, community setup and admin access tests, plus all 134 baseline
+  source checks passed. Live workflows need release verification. No live
+  groups, promotions, access holds or creator payments were changed for QA.

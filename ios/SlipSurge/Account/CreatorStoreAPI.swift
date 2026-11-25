@@ -14,6 +14,7 @@ struct CreatorStorePage: Decodable {
         let communityId: UUID?
         let productId: UUID?
         let hasDraft: Bool?
+        let featured: Bool?
     }
 
     struct Offer: Decodable, Identifiable {
@@ -36,6 +37,7 @@ struct CreatorStorePage: Decodable {
     }
 
     let store: Store?
+    let username: String?
     let storeName: String
     let paymentStatus: String?
     let paymentConnected: Bool
