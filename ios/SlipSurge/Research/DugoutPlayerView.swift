@@ -5,6 +5,7 @@ struct DugoutPlayerView: View {
     let player: DugoutBoard.Batter
     let game: DugoutBoard.Game
     @State var window: DugoutWindow
+    var showsDone = true
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
 
@@ -61,7 +62,7 @@ struct DugoutPlayerView: View {
         .navigationTitle(player.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            if showsDone { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }
 

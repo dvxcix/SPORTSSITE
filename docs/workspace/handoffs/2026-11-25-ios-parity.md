@@ -894,3 +894,28 @@ physical-device push are still open.
   retained Basic and Ultimate floors, indoor carry, actual recorded
   coordinates and park geometry. Production replay, chart interaction and
   PNG export still need Simulator verification after release.
+- Task checkpoint `61f71265b418fb6603aeef2e028b955df85aec73` is pushed and
+  was sent to the existing Cloud chat. PR #34 merged as
+  `61e4b1f0049468fd1dde0f521e3c44bea86b8cbe`. Preview
+  `dpl_A9CyzqtCsjMcGdoZ4ScKH4wF29Zf` and production
+  `dpl_BMNi6g9fJAFwGGKPYHoSgCBDKJeR` reported READY. Invalid weather,
+  park history and spray requests returned 401. Guest Feed returned 200.
+
+## Native Pitcher Report, The Public and Batter Cost · 25 November 2026
+
+- Pitcher Report opens from the selected starter or the Dugout tools. It
+  uses the existing dated, matchup-bound 3, 5 and 10-start pregame samples.
+  Pitch usage, handedness, pitch colors, batter splits, top pitches and
+  manual pins use the actual saved samples. Missing samples stay
+  unavailable, including after the first-pitch boundary.
+- The Public carries the existing dated market categories, observed pick
+  counts and movement, exact prices and cleared lines, result states, and
+  game filters with both team marks. Same-game observations take precedence
+  over legacy rows. The app keeps zero outcomes neutral until final.
+- Batter Cost shows the canonical opening and current FanDuel prices,
+  movement, Power Vehicle signal, and HR/FHR season comparisons. Historical
+  season baselines come from the same game's archived inputs where present.
+  The Public retains the Advanced floor; Batter Cost retains Ultimate.
+- Signed Xcode Debug, Hub TypeScript and 41 focused freeze, public movement,
+  tier and tool contract checks passed. Dated production walkthroughs follow
+  for these three boards.

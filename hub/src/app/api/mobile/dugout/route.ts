@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTeamLogoPngUrl, MLB_TEAM_COLORS, MLB_TEAM_SECONDARY_COLORS } from '@slipsurge/core/mlbTeamColors'
+import { normName, resolveNameEntry } from '@slipsurge/core/nameNorm'
+import { hasTierAccess } from '@slipsurge/core/tiers'
 import { loadDugoutData, MARKET_BOOK_TO_OPEN_FIELD } from '@/lib/dugoutData'
+import type { MlbPublicMovement } from '@/lib/mlbPublicMovement'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { getEffectiveTier } from '@/lib/requireTier'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
@@ -27,12 +30,15 @@ const markets = {
 }
 
 type PriceFields = Record<string, Record<string, number | null> | undefined>
+type PublicPick = { player_name: string | null; game_key: string | null; prop_type?: string | null; market?: string | null;
+  picks: number | null; movement?: MlbPublicMovement | null }
 type Batter = {
-  mlb_id: number; name: string; team: string; batting_order: number; position: string; bats: string; projected: boolean
+  mlb_id: number; name: string; name_norm?: string; team: string; batting_order: number; position: string; bats: string; projected: boolean
   props: PriceFields | null; matrixMatches: { id: string; name: string; color: string }[]
   statcast: unknown; mechanics: unknown; research?: {
     mmByWindow: unknown; bookRankByWindow: unknown; paperRankByWindow: unknown
   } | null
+  pregameInputs?: { fhrAvg?: { fd?: number | null } | null; saAvg?: { fd?: number | null; cz?: number | null } | null }
 }
 type Pitcher = { id: number; name: string; hand: string; props: PriceFields | null }
 type DugoutGame = {
@@ -43,6 +49,7 @@ type DugoutGame = {
   homeLineupConfirmed: boolean; awayLineupConfirmed: boolean; noHr: { fanduel: number; openingFanduel?: number | null } | null
   researchSnapshot: { unavailable?: boolean; frozen?: boolean; observedAt?: string; startAt?: string }
   outcomes: Record<string, Record<string, number | null>>
+  pregameInputs?: { communityPicks?: PublicPick[] }
 }
 
 function isPrice(value: unknown): value is number {
@@ -77,9 +84,42 @@ function pitcher(value: Pitcher | null) {
   return value && { id: value.id, name: value.name, hand: value.hand, headshot: mlbHeadshot(value.id), markets: quotes(value.props) }
 }
 
-function game(value: DugoutGame) {
+function batterCost(player: Batter, archivedResearch: boolean) {
+  const props = player.props
+  if (!props) return null
+  const homeRun = props.sa?.fanduel ?? null
+  const double = props.doubles?.fanduel ?? null
+  const bases = props.tb4?.fanduel ?? null
+  const ratio = (numerator: number | null, denominator: number | null) => numerator != null && denominator != null && denominator !== -100
+    ? Math.round((numerator + 100) / (denominator + 100) * 10) / 10 : null
+  const powerIndex = ratio(homeRun, double), powerGate = ratio(homeRun, bases)
+  const difference = (price: number | null, baseline: number | null | undefined) =>
+    archivedResearch && price != null && baseline ? (price - baseline) / baseline : null
+  return {
+    homeRunVsSeason: difference(homeRun, player.pregameInputs?.saAvg?.fd || player.pregameInputs?.saAvg?.cz),
+    firstHomeRunVsSeason: difference(props.fhr?.fanduel ?? null, player.pregameInputs?.fhrAvg?.fd),
+    power: powerIndex != null && powerGate != null && powerIndex >= 1.35 && powerIndex <= 1.60 && powerGate <= 3.8,
+  }
+}
+
+function game(value: DugoutGame, includePublic: boolean, includeCost: boolean) {
   const { gamePk: id, gameKey: key, gameNum: number, gameDate: startsAt, locked, status, detailedStatus, isVoid, venue,
     homeLineupConfirmed, awayLineupConfirmed, noHr, researchSnapshot: snapshot } = value
+  const crowd: Record<string, Record<string, PublicPick>> = Object.create(null)
+  if (includePublic) {
+    for (const row of value.pregameInputs?.communityPicks ?? []) {
+      const name = normName(row.player_name ?? '')
+      const market = row.prop_type || row.market
+      if (!name || !market || row.game_key && row.game_key !== key) continue
+      const byMarket = crowd[name] ??= Object.create(null)
+      if (!byMarket[market] || row.game_key === key) byMarket[market] = row
+    }
+  }
+  const publicPicks = (player: Batter) => {
+    const rows = resolveNameEntry(crowd, player.name_norm || normName(player.name))
+    return rows ? Object.fromEntries(Object.entries(rows).flatMap(([market, row]) => row.picks != null && Number.isSafeInteger(row.picks) && row.picks >= 0
+      ? [[market, { count: row.picks, movement: row.movement ?? null }]] : [])) : null
+  }
   const batter = (player: Batter) => ({
     id: player.mlb_id, name: player.name, team: player.team, order: player.batting_order, position: player.position,
     bats: player.bats, projected: player.projected, headshot: mlbHeadshot(player.mlb_id), markets: quotes(player.props),
@@ -90,6 +130,8 @@ function game(value: DugoutGame) {
     mm: snapshot.unavailable ? null : player.research?.mmByWindow ?? null,
     bookRank: snapshot.unavailable ? null : player.research?.bookRankByWindow ?? null,
     paperRank: snapshot.unavailable ? null : player.research?.paperRankByWindow ?? null,
+    crowd: publicPicks(player),
+    cost: includeCost ? batterCost(player, !snapshot.unavailable) : null,
   })
   const lineup = (players: Batter[]) => players
     .filter(player => !snapshot.unavailable || !snapshot.frozen || !player.projected)
@@ -129,5 +171,8 @@ export async function GET(request: Request) {
   const response = await loadDugoutData(new Request(url), { tier: gate.tier, userId: account.userId })
   if (!response.ok) return response
   const board = await response.json() as { date: string; games: DugoutGame[] }
-  return NextResponse.json({ date: board.date, mode, games: board.games.map(game) }, { headers })
+  const publicAccess = hasTierAccess(gate.tier, 'advanced')
+  const batterCostAccess = hasTierAccess(gate.tier, 'ultimate')
+  return NextResponse.json({ date: board.date, mode, publicAccess, batterCostAccess,
+    games: board.games.map(value => game(value, publicAccess, batterCostAccess)) }, { headers })
 }

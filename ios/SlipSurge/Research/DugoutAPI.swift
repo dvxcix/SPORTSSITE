@@ -49,6 +49,22 @@ struct DugoutBoard: Decodable {
     }
 
     struct Batter: Decodable, Identifiable {
+        struct Crowd: Decodable {
+            struct Movement: Decodable {
+                let previous: Int?
+                let delta: Int?
+                let capturedAt: String
+            }
+            let count: Int
+            let movement: Movement?
+        }
+
+        struct Cost: Decodable {
+            let homeRunVsSeason: Double?
+            let firstHomeRunVsSeason: Double?
+            let power: Bool
+        }
+
         struct Matrix: Decodable, Identifiable {
             let id: String
             let name: String
@@ -78,6 +94,8 @@ struct DugoutBoard: Decodable {
         let paperRank: [String: Int?]?
         let statcast: [String: [String: Double?]]?
         let mechanics: [String: Mechanics]?
+        let crowd: [String: Crowd]?
+        let cost: Cost?
 
         func mismatch(_ window: DugoutWindow) -> Int? { mm?[window.rawValue] ?? nil }
         func bookRanking(_ window: DugoutWindow) -> Int? { bookRank?[window.rawValue] ?? nil }
@@ -147,6 +165,8 @@ struct DugoutBoard: Decodable {
     let date: String
     let mode: DugoutMode
     let games: [Game]
+    let publicAccess: Bool?
+    let batterCostAccess: Bool?
 }
 
 struct DugoutAPI {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DugoutView: View {
-    private enum Tool: Hashable { case weather, spray }
+    private enum Tool: Hashable { case weather, spray, pitcher, publicPicks, batterCost }
     private enum Board: String, CaseIterable {
         case lineup = "Lineups", mismatch = "MM", odds = "Odds Board", matrices = "Matrix Matches"
 
@@ -70,6 +70,9 @@ struct DugoutView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Dugout tools", systemImage: mode == .live ? "dot.radiowaves.left.and.right" : "square.grid.2x2") {
+                    Button("Pitcher Report", systemImage: "gauge") { tool = .pitcher }
+                    Button("The Public", systemImage: "person.2") { tool = .publicPicks }
+                    Button("Batter Cost", systemImage: "chart.line.uptrend.xyaxis") { tool = .batterCost }
                     Button("Weather Lab", systemImage: "cloud.sun") { tool = .weather }
                     Button("Spray Charts", systemImage: "scope") { tool = .spray }
                     Divider()
@@ -85,6 +88,9 @@ struct DugoutView: View {
             switch destination {
             case .weather: DugoutWeatherView(api: tools, date: date)
             case .spray: DugoutSprayView(api: tools, date: date)
+            case .pitcher: DugoutPitcherReport(api: api, date: date)
+            case .publicPicks: DugoutMarketSlateView(api: api, date: date, mode: .publicPicks)
+            case .batterCost: DugoutMarketSlateView(api: api, date: date, mode: .cost)
             }
         }
         .task(id: request) { await load(request) }
@@ -259,7 +265,7 @@ struct DugoutView: View {
             }
             if let pitcher = team.code == game.home.code ? game.homePitcher : game.awayPitcher, search.isEmpty {
                 NavigationLink {
-                    DugoutPitcherView(pitcher: pitcher, team: team)
+                    DugoutPitcherReport(api: api, date: date, linkedStarter: "\(game.id):\(pitcher.id)")
                 } label: {
                     HStack {
                         ResearchToolPortrait(name: pitcher.name, subtitle: pitcher.hand == "L" ? "Left-handed starter" : "Right-handed starter",
