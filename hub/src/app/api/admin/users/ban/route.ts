@@ -1,23 +1,14 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { adminMemberOperator } from '@/lib/supabase/adminMemberOperator'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { writeAdminAudit } from '@/lib/adminAudit'
 import { safeApiError } from '@/lib/safeApiError'
-
-async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
-  const { data: profile } = await supabase.from('users').select('account_type').eq('id', user.id).single()
-  if (profile?.account_type !== 'admin') return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  return { adminId: user.id }
-}
 
 // Ban state lives in Supabase Auth (auth.users.banned_until) — there's no
 // column for it on public.users, so this has to go through the Admin Auth
 // API with the service-role key, not a normal table update.
 export async function POST(req: Request) {
-  const auth = await requireAdmin()
+  const auth = await adminMemberOperator(req)
   if (auth.error) return auth.error
 
   const { userId, ban } = await req.json().catch(() => ({}))
