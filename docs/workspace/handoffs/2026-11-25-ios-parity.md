@@ -1696,5 +1696,35 @@ physical-device push are still open.
   and three focused archived-market tests passed. The signed Simulator
   opened the November 24 Detroit–Orlando snapshot and Wendell Carter Jr.’s
   exact DraftKings under 7.5 rebounds at +110, with Orlando artwork, L3,
-  L5, L10 and L20 samples and observed red/green game bars. Release and
-  signed device verification of the new Market Story adapter are pending.
+  L5, L10 and L20 samples and observed red/green game bars. A second exact
+  link replaced the open player with Compare Sportsbooks and another opened
+  Prop Ladders with DraftKings selected.
+- Task `305ab549c21399d00ad34ec0fbd8ab463cd185f6` is pushed. PR #63 merged
+  as `aa9526523a418ae511fa169c940cc5cb50d9abf5`. Preview
+  `dpl_3gY6hEGu22j1W17QYHqwyZdHrPbc` and production
+  `dpl_4z7zvknnC6HNxLb3FkdZE56C6Mqe` were READY. The signed Simulator
+  opened the exact player Market Story. The last pregame capture was
+  6:58 p.m. Eastern, +110 against the recorded +102 opening, and a
+  1.9 percentage-point lengthening. Guest Market Story returned 401 and
+  public Feed returned 200.
+
+## NFL Usage, Tracking, Matchup Lab, custom views and capture replay · 25 November 2026
+
+- The Sideline adds Game Day player rows, Usage, Tracking, Team, All and
+  Custom, plus the eight original Matchup Lab views. Cards show the same
+  frozen sample, team tendencies, role metrics and verified odds inputs.
+  They preserve missing measurements and show unavailable prices while
+  lineup verification is stale.
+- Links can resolve an exact NFL game even when the date is omitted, select
+  the original sample, open a supported prop ladder with its player and
+  rung, or open Market Story at the requested historical capture. Custom
+  metric visibility and order persist on the iOS device for the signed-in
+  account. The browser persists these layout choices locally as well.
+- Market Story resolves against the existing kickoff-bounded archive
+  index. It identifies saved player, book, line, opening, price and receipt
+  times, carries the legacy verification state, and keeps the opening price
+  comparison at the same exact line. No live refresh jobs were invoked.
+- Signed Xcode Simulator build, Hub TypeScript, 134 baseline source checks,
+  and six combined NBA and NFL archive and authorization fixtures passed.
+  Production and signed Simulator walkthroughs of these new NFL routes
+  follow the mobile adapter release.

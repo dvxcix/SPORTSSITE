@@ -34,6 +34,7 @@ struct ResearchDeepLink: Hashable {
     let courtContext: CourtLinkContext
     let courtMarket: String?
     let sidelineEntry: SidelineView.Entry?
+    let sidelineContext: SidelineLinkContext
     let book: String?
     let workspaceGame: String?
     let workspacePanel: DugoutWorkspaceGame.Panel?
@@ -60,7 +61,8 @@ struct ResearchDeepLink: Hashable {
             tool = matched
         }
         let items = components.queryItems ?? []
-        guard items.count <= (tool == .court ? 18 : 6) else { return nil }
+        let itemLimit = tool == .court ? 18 : tool == .sideline ? 10 : 6
+        guard items.count <= itemLimit else { return nil }
         var values: [String: String] = [:]
         for item in items {
             guard let value = item.value, value.utf8.count <= 720, values[item.name] == nil else { return nil }
@@ -77,7 +79,7 @@ struct ResearchDeepLink: Hashable {
         case .court:
             allowed = ["date", "game", "view", "mode", "book", "market", "side", "sort", "order",
                        "player", "panel", "line", "type", "metric", "books", "contract", "target"]
-        case .sideline: allowed = ["date", "game", "view", "mode", "book"]
+        case .sideline: allowed = ["date", "game", "view", "mode", "book", "sample", "at", "preview", "player", "line"]
         case .synergy: allowed = ["game", "sort"]
         case .publicPicks, .costs, .recap: allowed = ["date"]
         }
@@ -123,11 +125,18 @@ struct ResearchDeepLink: Hashable {
             courtContext = context
         } else { courtContext = .init() }
         let sidelineEntry = tool == .sideline ? (rawMode ?? rawView).flatMap(SidelineView.Entry.init(rawValue:)) : nil
+        let sidelineContext: SidelineLinkContext
+        if tool == .sideline {
+            guard let context = SidelineLinkContext(values) else { return nil }
+            sidelineContext = context
+        } else { sidelineContext = .init() }
         switch tool {
         case .court:
             guard rawView == nil || courtEntry != nil, rawMode == nil || courtMode != nil else { return nil }
         case .sideline:
-            guard rawMode == nil || rawView == nil, rawMode == nil && rawView == nil || sidelineEntry != nil else { return nil }
+            guard rawMode == nil || ["research", "public", "markets", "cheatsheets", "mm", "slate-edge", "ladders"].contains(rawMode ?? ""),
+                  rawView == nil || rawMode != nil || sidelineEntry != nil,
+                  !sidelineContext.preview || date != nil && nflGameID != nil else { return nil }
         case .spray:
             guard rawView == nil || rawView == "points" || rawView == "heat" else { return nil }
         default: break
@@ -154,6 +163,7 @@ struct ResearchDeepLink: Hashable {
         self.courtContext = courtContext
         courtMarket = tool == .court ? values["market"] : nil
         self.sidelineEntry = sidelineEntry
+        self.sidelineContext = sidelineContext
         self.book = book
         self.workspaceGame = workspaceGame
         workspacePanel = tool == .workspace ? rawView.flatMap(DugoutWorkspaceGame.Panel.init(rawValue:)) : nil
@@ -185,7 +195,7 @@ struct LinkedResearchView: View {
         case .sideline:
             if let userID = account.memberID {
                 SidelineView(api: SidelineAPI(scope: .member(account, userID)), date: link.date, linkedGame: link.nflGameID,
-                    entry: link.sidelineEntry ?? .core, book: link.book ?? preferredBook)
+                    entry: link.sidelineEntry ?? .core, book: link.book ?? preferredBook, link: link.sidelineContext)
             } else if link.date != nil || link.nflGameID != nil || link.sidelineEntry != nil {
                 ContentUnavailableView("Sign in to open this matchup", systemImage: "lock")
             } else { SidelineView(api: SidelineAPI()) }

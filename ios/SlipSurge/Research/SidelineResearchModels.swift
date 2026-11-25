@@ -5,6 +5,8 @@ enum SidelineResearchTool: String {
     case cheatsheets
     case slateEdge = "slate-edge"
     case ladders
+    case board
+    case matchup
 }
 
 enum SidelineResearchSample: String, CaseIterable {

@@ -51,13 +51,14 @@ struct SidelineResearchView: View {
     @State private var selectedRow: SidelineResearchPayload.Row?
 
     init(api: SidelineAPI, tool: SidelineResearchTool, date: String, game: String, teams: [SidelineMarketTools.Visual],
-        revision: Int, initialBook: String? = nil) {
+        revision: Int, initialBook: String? = nil, initialSample: SidelineResearchSample = .automatic) {
         self.api = api
         self.tool = tool
         self.date = date
         self.game = game
         self.teams = teams
         self.revision = revision
+        _sample = State(initialValue: initialSample)
         if let initialBook { _book = State(initialValue: initialBook) }
     }
 

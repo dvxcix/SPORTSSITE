@@ -208,9 +208,10 @@ struct SidelineAPI {
         return false
     }
 
-    func schedule(date: String?) async throws -> SidelineSchedule {
+    func schedule(date: String?, game: String? = nil) async throws -> SidelineSchedule {
         guard case .member(let account, let userID) = scope else { throw URLError(.userAuthenticationRequired) }
-        let query = date.map { [URLQueryItem(name: "date", value: $0)] } ?? []
+        var query = date.map { [URLQueryItem(name: "date", value: $0)] } ?? []
+        if let game { query.append(.init(name: "game", value: game)) }
         let data = try await SlipSurgeHTTP.memberData("/api/mobile/sideline/schedule", query: query, account: account, userID: userID)
         let schedule = try JSONDecoder().decode(SidelineSchedule.self, from: data)
         guard let parsed = SlateDate.fromKey(schedule.date), SlateDate.key(parsed) == schedule.date,

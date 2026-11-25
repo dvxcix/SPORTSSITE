@@ -26,6 +26,15 @@ struct SidelineSlateEdgeView: View {
     @State private var error: (any Error)?
     @State private var retry = 0
 
+    init(api: SidelineAPI, date: String, teams: [SidelineMarketTools.Visual], revision: Int,
+        initialSample: SidelineResearchSample = .automatic) {
+        self.api = api
+        self.date = date
+        self.teams = teams
+        self.revision = revision
+        _sample = State(initialValue: initialSample)
+    }
+
     private var request: Request { .init(date: date, sample: sample, revision: revision, retry: retry) }
     private var data: SidelineEdgePayload? { result.flatMap { $0.0 == request ? $0.1 : nil } }
 

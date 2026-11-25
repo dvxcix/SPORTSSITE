@@ -31,6 +31,8 @@ struct SidelineLaddersView: View {
     let game: String
     let teams: [SidelineMarketTools.Visual]
     let revision: Int
+    let initialPlayer: Int?
+    let initialLine: Double?
     @Environment(\.colorScheme) private var scheme
     @State private var market = "receiving_yards"
     @State private var book = "fanduel"
@@ -52,13 +54,20 @@ struct SidelineLaddersView: View {
     @State private var saved: [String: UUID] = [:]
     @State private var saving = false
     @State private var notice: String?
+    @State private var openedLinkedQuote = false
+    @State private var linkedQuoteUnavailable = false
 
-    init(api: SidelineAPI, date: String, game: String, teams: [SidelineMarketTools.Visual], revision: Int, initialBook: String? = nil) {
+    init(api: SidelineAPI, date: String, game: String, teams: [SidelineMarketTools.Visual], revision: Int,
+        initialBook: String? = nil, initialSample: SidelineResearchSample = .automatic, initialPlayer: Int? = nil, initialLine: Double? = nil) {
         self.api = api
         self.date = date
         self.game = game
         self.teams = teams
         self.revision = revision
+        self.initialPlayer = initialPlayer
+        self.initialLine = initialLine
+        _sample = State(initialValue: initialSample)
+        _threshold = State(initialValue: initialLine)
         if let initialBook { _book = State(initialValue: initialBook) }
     }
 
@@ -70,6 +79,10 @@ struct SidelineLaddersView: View {
         let data = result.flatMap { $0.0 == request ? $0.1 : nil }
         VStack(alignment: .leading, spacing: 9) {
             filters
+            if linkedQuoteUnavailable {
+                Label("The linked player price is unavailable for this book and matchup.", systemImage: "clock.badge.questionmark")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if let data {
                 information(data)
                 ladder(data)
@@ -257,14 +270,27 @@ struct SidelineLaddersView: View {
 
     private func load(_ requested: Request) async {
         error = nil
-        threshold = nil
+        if openedLinkedQuote || initialLine == nil { threshold = nil }
         do {
             let data = try await api.research(SidelineLadderData.self, tool: .ladders, date: date, game: game, sample: requested.sample,
                 filters: [.init(name: "market", value: requested.market), .init(name: "book", value: requested.book),
                     .init(name: "kind", value: requested.kind.rawValue), .init(name: "side", value: requested.side.rawValue)])
             guard data.gameId == game, data.date == date, data.market == requested.market, data.book == requested.book,
                 data.kind == requested.kind.rawValue, data.side == requested.side.rawValue else { throw URLError(.cannotParseResponse) }
-            if !Task.isCancelled { result = (requested, data) }
+            if !Task.isCancelled, requested == request {
+                result = (requested, data)
+                if !openedLinkedQuote, let initialPlayer {
+                    openedLinkedQuote = true
+                    if let row = data.rows.first(where: { $0.id == initialPlayer }) {
+                        if let initialLine, let offer = row.contracts.first(where: { $0.line == initialLine }) {
+                            selection = .init(player: row.player, contract: offer, lineTitle: lineName(offer.line),
+                                book: book, market: market, canPost: data.canPost)
+                        } else if initialLine == nil {
+                            selectedPlayer = row
+                        } else { linkedQuoteUnavailable = true }
+                    } else { linkedQuoteUnavailable = true }
+                }
+            }
         } catch { if !Task.isCancelled { self.error = error } }
     }
 

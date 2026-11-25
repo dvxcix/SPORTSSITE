@@ -6,6 +6,7 @@ struct SidelineGameDay: View {
     let away: ResearchMatchup.Team
     let home: ResearchMatchup.Team
     let date: String
+    var initialBook: String?
     @Environment(\.scenePhase) private var scenePhase
     @State private var offers: [GameMarketBook]?
     @State private var unavailable = false
@@ -14,7 +15,7 @@ struct SidelineGameDay: View {
     var body: some View {
         Group {
             if let offers {
-                GameMarkets(away: away, home: home, offers: offers)
+                GameMarkets(away: away, home: home, offers: offers, initialBook: initialBook)
             } else if unavailable {
                 VStack(alignment: .leading, spacing: 8) {
                     ResearchSectionTitle(title: "Game markets")

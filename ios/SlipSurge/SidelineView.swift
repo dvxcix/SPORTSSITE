@@ -2,17 +2,22 @@ import SwiftUI
 
 struct SidelineView: View {
     private enum Section: String, CaseIterable {
-        case gameDay = "Game Day", props = "Props", oddsBoard = "Odds Board"
+        case gameDay = "Game Day", touchdowns = "TDs", props = "Props", oddsBoard = "Odds Board", capture = "Market Story"
+        case usage = "Usage", tracking = "Tracking", team = "Team", all = "All", custom = "Custom"
+
+        var statsMode: SidelineStatMode? { SidelineStatMode(rawValue: rawValue) }
+        var quotes: Bool { self == .touchdowns || self == .props || self == .oddsBoard }
     }
 
     enum Entry: String {
         case core, props, oddsBoard = "odds-board", touchdowns, publicActivity = "public", markets, cheatsheets
-        case mismatch = "mm", slateEdge = "slate-edge", ladders
+        case mismatch = "mm", slateEdge = "slate-edge", ladders, usage, tracking, team, all, custom, research, movement
     }
 
     private enum Workspace: String, CaseIterable {
         case matchup = "The Sideline", mismatch = "MM", cheatsheets = "Cheatsheets", slateEdge = "Slate Edge"
         case publicActivity = "The Public", sportsbooks = "Sportsbooks", ladders = "Prop Ladders"
+        case matchupLab = "Matchup Lab"
 
         var glyph: String {
             switch self {
@@ -23,6 +28,7 @@ struct SidelineView: View {
             case .publicActivity: "person.2"
             case .sportsbooks: "chart.bar"
             case .ladders: "line.3.horizontal.decrease"
+            case .matchupLab: "chart.xyaxis.line"
             }
         }
     }
@@ -51,6 +57,7 @@ struct SidelineView: View {
     private let linkedGame: String?
     private let linkedDate: String?
     private let preferredBook: String?
+    private let link: SidelineLinkContext
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -66,11 +73,13 @@ struct SidelineView: View {
     @State private var useDefaultDate = true
     @State private var matrices = false
 
-    init(api: SidelineAPI, date: Date? = nil, linkedGame: String? = nil, entry: Entry = .core, book: String? = nil) {
+    init(api: SidelineAPI, date: Date? = nil, linkedGame: String? = nil, entry: Entry = .core, book: String? = nil,
+        link: SidelineLinkContext = .init()) {
         self.api = api
         self.linkedGame = linkedGame
         linkedDate = date.map(SlateDate.key)
         preferredBook = book == "all" ? nil : book
+        self.link = link
         _date = State(initialValue: date ?? .now)
         _selectedGameID = State(initialValue: linkedGame)
         _useDefaultDate = State(initialValue: date == nil)
@@ -82,11 +91,24 @@ struct SidelineView: View {
         case .publicActivity: workspace = .publicActivity
         case .markets: workspace = .sportsbooks
         case .ladders: workspace = .ladders
+        case .research: workspace = .matchupLab
         default: workspace = .matchup
         }
-        _tool = State(initialValue: workspace)
-        _section = State(initialValue: entry == .oddsBoard ? .oddsBoard :
-            entry == .props || entry == .touchdowns ? .props : .gameDay)
+        let exactProp = link.line != nil
+        _tool = State(initialValue: exactProp && link.capture == nil ? .ladders : workspace)
+        let selected: Section = switch entry {
+        case .oddsBoard: .oddsBoard
+        case .touchdowns: .touchdowns
+        case .props: .props
+        case .usage: .usage
+        case .tracking: .tracking
+        case .team: .team
+        case .all: .all
+        case .custom: .custom
+        case .movement: .capture
+        default: .gameDay
+        }
+        _section = State(initialValue: link.capture == nil ? selected : .capture)
         var initialOdds = OddsSelection()
         if entry == .touchdowns { initialOdds.market = "anytime_td" }
         if let book, book != "all" { initialOdds.book = book }
@@ -96,11 +118,15 @@ struct SidelineView: View {
     private var dayRequest: DayRequest { .init(date: SlateDate.key(date), revision: revision) }
 
     private var requestKey: RequestKey {
-        RequestKey(date: dayRequest.date, selection: selection, revision: revision, fetchQuotes: api.isFeatured || tool == .matchup && section != .gameDay)
+        RequestKey(date: dayRequest.date, selection: selection, revision: revision, fetchQuotes: api.isFeatured || tool == .matchup && section.quotes)
     }
 
     private var dateSelection: Binding<Date> {
-        Binding(get: { date }, set: { useDefaultDate = false; date = $0 })
+        Binding(get: { date }, set: { next in
+            if SlateDate.key(next) != SlateDate.key(date) { selectedGameID = nil }
+            useDefaultDate = false
+            date = next
+        })
     }
 
     var body: some View {
@@ -161,10 +187,11 @@ struct SidelineView: View {
     }
 
     private var boardPicker: some View {
-        Picker("Board", selection: $section) {
-            ForEach(Section.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+        ResearchToolRail(title: "Board", choices: api.isFeatured ? [.gameDay, .props, .oddsBoard] : Section.allCases,
+            selection: $section, label: \.rawValue)
+        .onChange(of: section) { _, current in
+            if current == .touchdowns { selection.market = "anytime_td" }
         }
-        .pickerStyle(.segmented)
     }
 
     @ViewBuilder
@@ -179,7 +206,7 @@ struct SidelineView: View {
         case .loaded(let slate):
             if slate.date != dayRequest.date {
                 loading("Loading slate")
-            } else if let linkedGame, selectedGameID == linkedGame, dayRequest.date == linkedDate,
+            } else if let linkedGame, selectedGameID == linkedGame, (linkedDate == nil || dayRequest.date == linkedDate),
                       !slate.games.contains(where: { $0.id == linkedGame }) {
                 ContentUnavailableView {
                     Label("Matchup unavailable on this slate", systemImage: "calendar")
@@ -189,15 +216,25 @@ struct SidelineView: View {
             } else if let game = slate.games.first(where: { $0.id == selectedGameID }) ?? slate.games.first {
                 if tool != .slateEdge { matchupPicker(slate, selected: game.id) }
                 toolPicker
+                let teams = [game.away, game.home].map(marketVisual)
                 if tool != .matchup {
                     let slateTeams = slate.games.flatMap { [$0.away, $0.home] }.map(marketVisual)
-                    toolContent(date: slate.date, gameID: game.id, selectedTeams: [game.away, game.home].map(marketVisual), slateTeams: slateTeams)
+                    toolContent(date: slate.date, gameID: game.id, selectedTeams: teams, slateTeams: slateTeams)
                 } else {
                     boardPicker
                     if section == .gameDay {
-                        SidelineGameDay(api: api, gameID: game.id, away: matchupTeam(game.away), home: matchupTeam(game.home), date: slate.date)
+                        SidelineGameDay(api: api, gameID: game.id, away: matchupTeam(game.away), home: matchupTeam(game.home),
+                            date: slate.date, initialBook: preferredBook)
                             .id(game.id)
-                    } else {
+                    }
+                    if let mode = section.statsMode {
+                        statBoard(date: slate.date, gameID: game.id, teams: teams, mode: mode)
+                    } else if section == .capture {
+                        SidelineMarketStory(api: api, game: game.id, teams: teams, initialBook: preferredBook,
+                            initialCapture: game.id == linkedGame ? link.capture : nil,
+                            initialPlayer: game.id == linkedGame ? link.player : nil)
+                            .id(game.id)
+                    } else if section.quotes {
                         oddsContent()
                     }
                 }
@@ -205,6 +242,13 @@ struct SidelineView: View {
                 ContentUnavailableView("No games on this date", systemImage: "calendar")
             }
         }
+    }
+
+    private func statBoard(date: String, gameID: String, teams: [SidelineMarketTools.Visual], mode: SidelineStatMode) -> some View {
+        SidelineStatBoard(api: api, game: gameID, date: date, teams: teams, mode: mode, revision: revision,
+            initialSample: link.sample, initialBook: preferredBook,
+            initialPlayer: link.line == nil && (gameID == linkedGame || linkedGame == nil) ? link.player : nil)
+            .id("\(gameID):\(mode.rawValue)")
     }
 
     private var toolPicker: some View {
@@ -230,13 +274,17 @@ struct SidelineView: View {
                 .id("\(gameID):\(tool.rawValue)")
         case .mismatch, .cheatsheets:
             SidelineResearchView(api: api, tool: tool == .mismatch ? .mismatch : .cheatsheets,
-                date: date, game: gameID, teams: selectedTeams, revision: revision, initialBook: preferredBook)
+                date: date, game: gameID, teams: selectedTeams, revision: revision, initialBook: preferredBook, initialSample: link.sample)
                 .id("\(gameID):\(tool.rawValue)")
         case .slateEdge:
-            SidelineSlateEdgeView(api: api, date: date, teams: slateTeams, revision: revision)
+            SidelineSlateEdgeView(api: api, date: date, teams: slateTeams, revision: revision, initialSample: link.sample)
         case .ladders:
-            SidelineLaddersView(api: api, date: date, game: gameID, teams: selectedTeams, revision: revision, initialBook: preferredBook)
+            SidelineLaddersView(api: api, date: date, game: gameID, teams: selectedTeams, revision: revision,
+                initialBook: preferredBook, initialSample: link.sample, initialPlayer: gameID == linkedGame ? link.player : nil,
+                initialLine: gameID == linkedGame ? link.line : nil)
                 .id(gameID)
+        case .matchupLab:
+            statBoard(date: date, gameID: gameID, teams: selectedTeams, mode: .matchup)
         }
     }
 
@@ -305,7 +353,7 @@ struct SidelineView: View {
             } else if board.games.isEmpty {
                 ContentUnavailableView(api.isFeatured ? "Preview unavailable" : "No games on this date", systemImage: "calendar")
             } else if board.market == selection.market, board.book == selection.book {
-                if section == .props {
+                if section == .props || section == .touchdowns {
                     if let game = board.games.first(where: { $0.id == selectedGameID }) ?? (api.isFeatured ? board.games.first : nil) {
                         quoteBoard(board, game: game)
                     } else {
@@ -405,11 +453,12 @@ struct SidelineView: View {
         let requested = dayRequest
         if case .loaded(let slate) = schedule, slate.date != requested.date { schedule = .loading }
         do {
-            let slate = try await api.schedule(date: useDefaultDate ? nil : requested.date)
+            let slate = try await api.schedule(date: useDefaultDate ? nil : requested.date,
+                game: useDefaultDate ? linkedGame : nil)
             try Task.checkCancellation()
             guard requested == dayRequest else { return }
             useDefaultDate = false
-            if !(linkedGame != nil && selectedGameID == linkedGame && requested.date == linkedDate),
+            if !(linkedGame != nil && selectedGameID == linkedGame && (linkedDate == nil || requested.date == linkedDate)),
                !slate.games.contains(where: { $0.id == selectedGameID }) { selectedGameID = slate.games.first?.id }
             schedule = .loaded(slate)
             if slate.date != requested.date, let nextDate = SlateDate.fromKey(slate.date) { date = nextDate }

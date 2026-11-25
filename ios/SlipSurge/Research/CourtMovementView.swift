@@ -161,7 +161,8 @@ struct CourtMovementView: View {
         let index = capture.flatMap { captures.firstIndex(of: $0) } ?? captures.count - 1
         return HStack {
             Button("Previous capture", systemImage: "chevron.left") { capture = captures[index - 1] }
-                .labelStyle(.iconOnly).disabled(index == 0).frame(minWidth: 44, minHeight: 44)
+                .labelStyle(.iconOnly).buttonStyle(.borderless)
+                .disabled(index == 0).frame(minWidth: 44, minHeight: 44)
             Picker("Capture", selection: $capture) {
                 Text("Latest capture").tag(nil as String?)
                 ForEach(captures.dropLast().reversed(), id: \.self) { Text(displayTime($0)).tag(Optional($0)) }
@@ -169,7 +170,8 @@ struct CourtMovementView: View {
             Button("Next capture", systemImage: "chevron.right") {
                 capture = index == captures.count - 2 ? nil : captures[index + 1]
             }
-            .labelStyle(.iconOnly).disabled(index >= captures.count - 1).frame(minWidth: 44, minHeight: 44)
+            .labelStyle(.iconOnly).buttonStyle(.borderless)
+            .disabled(index >= captures.count - 1).frame(minWidth: 44, minHeight: 44)
         }
         .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
         .accessibilityHint("Capture \(index + 1) of \(captures.count)")
@@ -227,13 +229,14 @@ struct CourtMovementView: View {
         } content: {
             ResearchToolValues(items: [
                 .init(label: "Line", text: line),
-                .init(label: "Latest price", text: ResearchFormat.price(row.price)),
+                .init(label: capture == nil ? "Latest price" : "Capture price", text: ResearchFormat.price(row.price)),
                 .init(label: row.openingKnown ? "Opening" : "First observed", text: ResearchFormat.price(row.firstPrice)),
                 .init(label: "Price move", text: ResearchFormat.points(row.movement),
                     tone: Brand.signal(row.movement, for: scheme)),
             ])
             if contract == .standard, let first = row.firstLine, let move = row.lineChange {
-                Label("\(first.formatted()) → \(row.line.formatted())", systemImage: move < 0 ? "arrow.down.right" : "arrow.up.right")
+                Label("\(first.formatted()) → \(row.line.formatted())",
+                    systemImage: move == 0 ? "minus" : move < 0 ? "arrow.down.right" : "arrow.up.right")
                     .font(.caption.weight(.semibold)).foregroundStyle(Brand.signal(move, for: scheme))
             }
             if let first = row.firstAt { Text(displayTime(first)).font(.caption).foregroundStyle(.secondary) }
