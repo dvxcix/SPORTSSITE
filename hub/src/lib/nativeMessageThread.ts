@@ -5,6 +5,7 @@ import { loadDmHistory, loadGroupHistory } from '@/lib/conversationHistory'
 import type { ChannelHistoryCursor } from '@/lib/channelHistory'
 import { notify } from '@/lib/notify'
 import { isNativeSocialGif, isOwnedNativeMedia } from '@/lib/nativeMedia'
+import { nativeChatReaction } from '@/lib/nativeChatReaction'
 
 type Context = { kind: 'direct' | 'group'; id: string }
 type Partner = { id: string; username: string; display_name: string | null; avatar_url: string | null; allow_dms: boolean }
@@ -204,8 +205,10 @@ export async function updateNativeThread(client: SupabaseClient, userId: string,
     const result = await (action.enabled ? pins.insert(identity) : pins.delete().match(identity))
     return !result.error || result.error.code === '23505' ? 200 : 503
   }
-  if (verb === 'react' && typeof action.enabled === 'boolean' && typeof action.emoji === 'string' && action.emoji.trim() && [...action.emoji].length <= 16) {
-    const reaction: Record<string, string> = { user_id: userId, emoji: action.emoji.trim(),
+  if (verb === 'react' && typeof action.enabled === 'boolean' && typeof action.emoji === 'string') {
+    const selection = await nativeChatReaction(client, action.emoji, action.enabled)
+    if (selection.status) return selection.status
+    const reaction: Record<string, string> = { user_id: userId, emoji: selection.emoji,
       ...(direct ? { target_id: messageId, target_type: 'message' } : { message_id: messageId }) }
     const reactions = client.from(direct ? 'reactions' : 'group_message_reactions')
     const result = await (action.enabled ? reactions.insert(reaction) : reactions.delete().match(reaction))
