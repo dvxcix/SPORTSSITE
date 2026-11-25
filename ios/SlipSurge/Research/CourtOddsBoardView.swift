@@ -33,6 +33,15 @@ struct CourtOddsBoardView: View {
     @State private var state = State.loading
     @State private var attempt = 0
 
+    init(scope: CourtView.Scope, date: String, gameID: Int?, mode: CourtResearchMode, reload: Int, initialBook: String? = nil) {
+        self.scope = scope
+        self.date = date
+        self.gameID = gameID
+        self.mode = mode
+        self.reload = reload
+        if let initialBook, initialBook != "all" { _book = SwiftUI.State(initialValue: initialBook) }
+    }
+
     private var request: Request {
         .init(date: date, market: market, book: book, mode: mode, revision: reload + attempt)
     }

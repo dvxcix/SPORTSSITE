@@ -10,6 +10,29 @@ struct CourtView: View {
         case players = "Player Board", odds = "Odds Board", markets = "Game Markets"
     }
 
+    enum Entry: String {
+        case research, oddsBoard = "odds-board", gameMarkets = "game-markets"
+        case firstBasket = "first-basket", cheatsheets, slate, score, dvp, matchup
+        case availability, usage, tracking, publicActivity = "public", divergence
+
+        fileprivate var tool: CourtMatchupTool? {
+            switch self {
+            case .firstBasket: .firstBasket
+            case .cheatsheets: .cheatsheets
+            case .slate: .slateEdge
+            case .score: .score
+            case .dvp: .defense
+            case .matchup: .matchup
+            case .availability: .availability
+            case .usage: .scouting
+            case .tracking: .tracking
+            case .publicActivity: .publicActivity
+            case .divergence: .crossMarket
+            default: nil
+            }
+        }
+    }
+
     private enum Slate {
         case loading
         case games(String, [CourtBoard.Game])
@@ -46,6 +69,8 @@ struct CourtView: View {
     let scope: Scope
     private let linkedGame: Int?
     private let linkedDate: String
+    private let preferredBook: String?
+    private let comparisonBook: String?
     private let api = CourtAPI()
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
@@ -66,12 +91,19 @@ struct CourtView: View {
     @State private var matrices = false
     @State private var matrixRevision = 0
 
-    init(scope: Scope, date: Date = .now, linkedGame: Int? = nil) {
+    init(scope: Scope, date: Date = .now, linkedGame: Int? = nil, entry: Entry = .research,
+        startingMode: CourtResearchMode = .pregame, book: String? = nil, comparisonBook: String? = nil) {
         self.scope = scope
         self.linkedGame = linkedGame
+        preferredBook = book
+        self.comparisonBook = comparisonBook
         linkedDate = SlateDate.key(date)
         _date = State(initialValue: date)
         _selectedGameID = State(initialValue: linkedGame)
+        _section = State(initialValue: entry == .oddsBoard ? .odds : entry == .gameMarkets ? .markets : .players)
+        _tool = State(initialValue: entry.tool)
+        _mode = State(initialValue: startingMode)
+        _sportsbook = State(initialValue: book == "all" ? nil : book)
     }
 
     private var isPreview: Bool {
@@ -217,9 +249,11 @@ struct CourtView: View {
         }
         selectors
         if tool == .slateEdge {
-            CourtSlateEdgeView(scope: scope, date: slateRequest.date, mode: mode, games: games, reload: revision)
+            CourtSlateEdgeView(scope: scope, date: slateRequest.date, mode: mode, games: games, reload: revision,
+                initialGame: linkedGame, initialBook: preferredBook)
         } else if tool == nil, section == .odds {
-            CourtOddsBoardView(scope: scope, date: slateRequest.date, gameID: selectedGame?.id, mode: mode, reload: revision)
+            CourtOddsBoardView(scope: scope, date: slateRequest.date, gameID: selectedGame?.id, mode: mode,
+                reload: revision, initialBook: preferredBook)
         } else {
             playerOrMarketContent()
         }
@@ -258,10 +292,10 @@ struct CourtView: View {
         }
 
         if tool == .firstBasket {
-            CourtFirstBasketView(scope: scope, board: board, reload: revision)
+            CourtFirstBasketView(scope: scope, board: board, reload: revision, explicitBook: comparisonBook)
                 .id("\(board.game.id):\(mode.rawValue)")
         } else if tool == .cheatsheets {
-            CourtCheatsheetsView(scope: scope, board: board, reload: revision)
+            CourtCheatsheetsView(scope: scope, board: board, reload: revision, initialBook: preferredBook)
                 .id("\(board.game.id):\(mode.rawValue)")
         } else if tool == .lineups {
             CourtLineupView(scope: scope, board: board, observedAt: observedAt, revision: revision)

@@ -27,16 +27,21 @@ struct ResearchDeepLink: Hashable {
     let players: Set<Int>?
     let result: DugoutSpraySlate.Result
     let heat: Bool
+    let courtEntry: CourtView.Entry?
+    let courtMode: CourtResearchMode?
+    let sidelineEntry: SidelineView.Entry?
+    let book: String?
 
     init?(_ url: URL) {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               components.user == nil, components.password == nil, components.port == nil, components.fragment == nil else { return nil }
         let isWebsite = components.scheme == "https" && [SlipSurgeHTTP.site, "slipsurge.com"].contains(components.host ?? "")
         let isNative = components.scheme == "slipsurge-research" && components.host == "research"
-        guard isWebsite || isNative else { return nil }
+        let isSiteScheme = components.scheme == "slipsurge-app" && components.host == "site"
+        guard isWebsite || isNative || isSiteScheme else { return nil }
         let encodedPath = components.percentEncodedPath
         let profilePrefix = "/players/"
-        let profilePathID = isWebsite && encodedPath.hasPrefix(profilePrefix) ? String(encodedPath.dropFirst(profilePrefix.count)) : nil
+        let profilePathID = (isWebsite || isSiteScheme) && encodedPath.hasPrefix(profilePrefix) ? String(encodedPath.dropFirst(profilePrefix.count)) : nil
         let tool: Tool
         if profilePathID != nil {
             tool = .mlbPlayer
@@ -58,8 +63,8 @@ struct ResearchDeepLink: Hashable {
         case .mlbPlayer: allowed = profilePathID == nil ? ["id"] : []
         case .spray: allowed = ["date", "game", "players", "result", "view"]
         case .pitcher: allowed = ["date", "pitcherId"]
-        case .weather, .dugout, .court, .oddsMovement, .slateBreakdown: allowed = ["date", "game"]
-        case .sideline: allowed = ["date", "game"]
+        case .weather, .dugout, .oddsMovement, .slateBreakdown: allowed = ["date", "game"]
+        case .court, .sideline: allowed = ["date", "game", "view", "mode", "book"]
         case .synergy: allowed = ["game", "sort"]
         case .publicPicks, .costs: allowed = ["date"]
         }
@@ -91,8 +96,25 @@ struct ResearchDeepLink: Hashable {
             guard !parsed.isEmpty, parsed.count == ids.count, parsed.count <= 60 else { return nil }
             players = Set(parsed)
         }
-        guard let result = DugoutSpraySlate.Result(rawValue: values["result"] ?? "all"),
-              values["view"] == nil || values["view"] == "points" || values["view"] == "heat" else { return nil }
+        guard let result = DugoutSpraySlate.Result(rawValue: values["result"] ?? "all") else { return nil }
+        let rawView = values["view"]
+        let rawMode = values["mode"]
+        let courtEntry = tool == .court ? rawView.flatMap(CourtView.Entry.init(rawValue:)) : nil
+        let courtMode = tool == .court ? rawMode.flatMap(CourtResearchMode.init(rawValue:)) : nil
+        let sidelineEntry = tool == .sideline ? (rawMode ?? rawView).flatMap(SidelineView.Entry.init(rawValue:)) : nil
+        switch tool {
+        case .court:
+            guard rawView == nil || courtEntry != nil, rawMode == nil || courtMode != nil else { return nil }
+        case .sideline:
+            guard rawMode == nil || rawView == nil, rawMode == nil && rawView == nil || sidelineEntry != nil else { return nil }
+        case .spray:
+            guard rawView == nil || rawView == "points" || rawView == "heat" else { return nil }
+        default: break
+        }
+        let book = values["book"]
+        if let book, book != "all" {
+            guard book.range(of: #"^[a-z0-9_]{1,30}$"#, options: .regularExpression) != nil, Sportsbook.isKnown(book) else { return nil }
+        }
 
         self.tool = tool
         self.date = date
@@ -104,7 +126,11 @@ struct ResearchDeepLink: Hashable {
         self.playerID = playerID
         self.players = players
         self.result = result
-        heat = values["view"] == "heat"
+        heat = rawView == "heat"
+        self.courtEntry = courtEntry
+        self.courtMode = courtMode
+        self.sidelineEntry = sidelineEntry
+        self.book = book
     }
 
     init?(sitePath: String) {
@@ -124,20 +150,24 @@ struct ResearchDeepLink: Hashable {
 struct LinkedResearchView: View {
     let account: AccountStore
     let link: ResearchDeepLink
+    var preferredBook: String? = nil
 
     var body: some View {
         let date = link.date ?? .now
         switch link.tool {
         case .sideline:
             if let userID = account.memberID {
-                SidelineView(api: SidelineAPI(scope: .member(account, userID)), date: link.date, linkedGame: link.nflGameID)
-            } else if link.date != nil || link.nflGameID != nil {
+                SidelineView(api: SidelineAPI(scope: .member(account, userID)), date: link.date, linkedGame: link.nflGameID,
+                    entry: link.sidelineEntry ?? .core, book: link.book ?? preferredBook)
+            } else if link.date != nil || link.nflGameID != nil || link.sidelineEntry != nil {
                 ContentUnavailableView("Sign in to open this matchup", systemImage: "lock")
             } else { SidelineView(api: SidelineAPI()) }
         case .court:
             if let userID = account.memberID {
-                CourtView(scope: .member(account, userID), date: date, linkedGame: link.gameID)
-            } else if link.date != nil || link.gameID != nil {
+                CourtView(scope: .member(account, userID), date: date, linkedGame: link.gameID,
+                    entry: link.courtEntry ?? .research, startingMode: link.courtMode ?? .pregame,
+                    book: link.book ?? preferredBook, comparisonBook: link.book)
+            } else if link.date != nil || link.gameID != nil || link.courtEntry != nil || link.courtMode == .live {
                 ContentUnavailableView("Sign in to open this matchup", systemImage: "lock")
             } else { CourtView(scope: .preview) }
         default:

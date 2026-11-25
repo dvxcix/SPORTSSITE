@@ -18,6 +18,8 @@ struct SlipSurgeTabs: View {
     @State private var researchLink: ResearchDeepLink?
     @State private var discoverDestination: DiscoverDestination?
     @State private var emojiLibrary = NativeEmojiLibrary()
+    @State private var researchPreferences = MemberResearchPreferenceStore()
+    @State private var choseDestination = false
 
     private struct SitePresentation: Identifiable {
         let id = UUID()
@@ -29,7 +31,10 @@ struct SlipSurgeTabs: View {
     }
 
     var body: some View {
-        TabView(selection: $selected) {
+        TabView(selection: Binding(get: { selected }, set: { tab in
+            choseDestination = true
+            selected = tab
+        })) {
             NavigationStack {
                 FeedView(api: FeedAPI(account: account, userID: account.memberID))
             }
@@ -60,6 +65,7 @@ struct SlipSurgeTabs: View {
         }
         .tint(Brand.accent(for: scheme))
         .environment(\.nativeEmojiLibrary, emojiLibrary)
+        .environment(\.memberResearchPreferences, researchPreferences)
         .environment(\.openURL, OpenURLAction(handler: openLink))
         .task { await emojiLibrary.refresh() }
         .onChange(of: phase) { _, current in if current == .active { Task { await emojiLibrary.refresh() } } }
@@ -90,6 +96,7 @@ struct SlipSurgeTabs: View {
         }
         .sheet(item: appSheet, onDismiss: presentNextRelease) { site in siteSheet(site) }
         .task { await account.restore() }
+        .task(id: account.memberID) { await applyLaunchPreference() }
         .task(id: account.memberID) {
             let userID = account.memberID
             dismissedReleases = []
@@ -155,14 +162,30 @@ struct SlipSurgeTabs: View {
         }
     }
 
+    private func applyLaunchPreference() async {
+        guard let userID = account.memberID else {
+            researchPreferences.apply(nil, for: nil)
+            return
+        }
+        guard let options = try? await MemberResearchPreferencesAPI(account: account, userID: userID).load(),
+              !Task.isCancelled, account.memberID == userID else { return }
+        guard researchPreferences.read(for: userID) == nil else { return }
+        researchPreferences.apply(options, for: userID)
+        if !choseDestination, selected == .feed, sitePresentation == nil, let url = options.launch {
+            _ = openLink(url)
+        }
+    }
+
     private func openLink(_ url: URL) -> OpenURLAction.Result {
         if let link = ResearchDeepLink(url) {
+            choseDestination = true
             sitePresentation = nil
             researchLink = link
             selected = .research
             return .handled
         }
         guard let link = NativeSiteLink(url) else { return .systemAction }
+        choseDestination = true
         switch link {
         case .feed:
             sitePresentation = nil
@@ -170,6 +193,12 @@ struct SlipSurgeTabs: View {
         case .account:
             sitePresentation = nil
             selected = .account
+        case .launch:
+            if let target = researchPreferences.read(for: account.memberID)?.launch {
+                return openLink(target)
+            }
+            sitePresentation = nil
+            selected = .feed
         case .discover(let destination):
             sitePresentation = nil
             discoverDestination = destination
@@ -195,6 +224,7 @@ struct SlipSurgeTabs: View {
             }
             .environment(\.openURL, OpenURLAction(handler: openLink))
             .environment(\.nativeEmojiLibrary, emojiLibrary)
+            .environment(\.memberResearchPreferences, researchPreferences)
         }
     }
 
@@ -204,14 +234,16 @@ private struct ResearchHome: View {
     let account: AccountStore
     @Binding var researchLink: ResearchDeepLink?
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.memberResearchPreferences) private var preferences
     @State private var dugoutAvailable = false
+    private var book: String? { preferences?.read(for: account.memberID)?.preferences.primaryBook }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 NavigationLink {
                     if let userID = account.memberID {
-                        SidelineView(api: SidelineAPI(scope: .member(account, userID)))
+                        SidelineView(api: SidelineAPI(scope: .member(account, userID)), book: book)
                     } else {
                         SidelineView(api: SidelineAPI())
                     }
@@ -220,7 +252,7 @@ private struct ResearchHome: View {
                 }
                 NavigationLink {
                     if let userID = account.memberID {
-                        CourtView(scope: .member(account, userID))
+                        CourtView(scope: .member(account, userID), book: book)
                     } else {
                         CourtView(scope: .preview)
                     }
@@ -267,7 +299,9 @@ private struct ResearchHome: View {
         .navigationTitle("Research")
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
-        .navigationDestination(item: $researchLink) { link in LinkedResearchView(account: account, link: link).id(link) }
+        .navigationDestination(item: $researchLink) { link in
+            LinkedResearchView(account: account, link: link, preferredBook: book).id(link)
+        }
         .task(id: account.memberID) {
             guard let userID = account.memberID else { dugoutAvailable = false; return }
             let allowed = (try? await DugoutAPI(account: account, userID: userID).available()) == true

@@ -34,9 +34,13 @@ enum Sportsbook {
     static func artwork(_ key: String) -> String? {
         switch key {
         case "ballybet", "betmgm", "betparx", "betrivers", "caesars",
-             "draftkings", "fanduel", "fanatics", "pinnacle": "book-\(key)"
+             "draftkings", "fanduel", "fanatics", "kalshi", "pinnacle", "polymarket": "book-\(key)"
         default: nil
         }
+    }
+
+    static func isKnown(_ key: String) -> Bool {
+        artwork(normalized(key)) != nil
     }
 }
 

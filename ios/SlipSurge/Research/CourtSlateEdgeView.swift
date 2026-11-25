@@ -32,6 +32,17 @@ struct CourtSlateEdgeView: View {
     @State private var error: (any Error)?
     @State private var retry = 0
 
+    init(scope: CourtView.Scope, date: String, mode: CourtResearchMode, games: [CourtBoard.Game], reload: Int,
+        initialGame: Int? = nil, initialBook: String? = nil) {
+        self.scope = scope
+        self.date = date
+        self.mode = mode
+        self.games = games
+        self.reload = reload
+        _selectedGame = State(initialValue: initialGame)
+        _book = State(initialValue: initialBook ?? "all")
+    }
+
     private var filters: Filters {
         .init(date: date, mode: mode, market: market, book: book, side: side, reload: reload, retry: retry)
     }

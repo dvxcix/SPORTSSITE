@@ -46,6 +46,13 @@ struct CourtCheatsheetsView: View {
     @State private var error: (any Error)?
     @State private var retry = 0
 
+    init(scope: CourtView.Scope, board: CourtBoard, reload: Int, initialBook: String? = nil) {
+        self.scope = scope
+        self.board = board
+        self.reload = reload
+        _book = State(initialValue: initialBook ?? "all")
+    }
+
     private var filters: Filters {
         .init(market: market, book: book, side: side, location: location, contract: contract, line: line, reload: reload, retry: retry)
     }

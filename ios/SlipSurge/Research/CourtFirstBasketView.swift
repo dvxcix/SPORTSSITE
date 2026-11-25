@@ -10,10 +10,12 @@ struct CourtFirstBasketView: View {
     let scope: CourtView.Scope
     let board: CourtBoard
     let reload: Int
+    var explicitBook: String?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.memberResearchPreferences) private var preferences
     @State private var page = Page.odds
-    @State private var book = "all"
+    @State private var book: String?
     @State private var market: String?
     @State private var odds: OddsObservation?
     @State private var history: CourtFirstBasketHistory?
@@ -54,7 +56,14 @@ struct CourtFirstBasketView: View {
                 let rows = currentRows(odds)
                 let markets = Set(rows.map(\.offer.propType)).sorted()
                 let books = Set(rows.map(\.offer.vendor)).sorted()
-                let visible = rows.filter { (book == "all" || $0.offer.vendor == book) && (market == nil || $0.offer.propType == market) }
+                let preferred = preferredBooks(in: books)
+                let selection = book ?? explicitBook ?? (preferred.isEmpty ? "all" : "preferred")
+                let visible = rows.filter { row in
+                    let vendor = row.offer.vendor
+                    let matchesBook = selection == "all" || selection == "preferred" && preferred.contains(vendor) ||
+                        Sportsbook.normalized(vendor) == Sportsbook.normalized(selection)
+                    return matchesBook && (market == nil || row.offer.propType == market)
+                }
                 HStack {
                     ResearchToolFilter(title: "Market", selection: market.map(marketLabel) ?? "All markets") {
                         Picker("Market", selection: $market) {
@@ -64,8 +73,8 @@ struct CourtFirstBasketView: View {
                     }
                     Spacer(minLength: 0)
                     ResearchArtworkPicker(title: "Sportsbook",
-                        options: [.init(id: "all", title: "All books", icon: "books.vertical")] + books.map(ResearchArtworkPicker.Option.sportsbook),
-                        selection: $book)
+                        options: bookOptions(books, preferred: preferred),
+                        selection: Binding(get: { selection }, set: { book = $0 }))
                 }
                 if odds.payload.status == "partial" || odds.payload.status == "connection_unavailable" {
                     Label("Some sportsbook prices are unavailable.", systemImage: "info.circle")
@@ -100,6 +109,25 @@ struct CourtFirstBasketView: View {
         } else {
             ResearchToolMessage(title: "First Basket odds couldn’t load", error: oddsError) { retry += 1 }
         }
+    }
+
+    private func preferredBooks(in books: [String]) -> [String] {
+        guard case .member(_, let userID) = scope,
+              let wanted = preferences?.read(for: userID)?.preferences.books else { return [] }
+        return books.filter { wanted.contains(Sportsbook.normalized($0)) }
+    }
+
+    private func bookOptions(_ books: [String], preferred: [String]) -> [ResearchArtworkPicker.Option] {
+        var items = [ResearchArtworkPicker.Option(id: "all", title: "All books", icon: "books.vertical")]
+        if let first = preferred.first {
+            let logo = ResearchArtworkPicker.Option.sportsbook(first)
+            items.append(.init(id: "preferred", title: "Preferred books", asset: logo.asset,
+                url: logo.url, icon: "books.vertical"))
+        }
+        if let explicitBook, explicitBook != "all", !books.contains(explicitBook) {
+            items.append(.sportsbook(explicitBook))
+        }
+        return items + books.map(ResearchArtworkPicker.Option.sportsbook)
     }
 
     @ViewBuilder

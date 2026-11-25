@@ -5,6 +5,11 @@ struct SidelineView: View {
         case gameDay = "Game Day", props = "Props", oddsBoard = "Odds Board"
     }
 
+    enum Entry: String {
+        case core, props, oddsBoard = "odds-board", touchdowns, publicActivity = "public", markets, cheatsheets
+        case mismatch = "mm", slateEdge = "slate-edge", ladders
+    }
+
     private enum Workspace: String, CaseIterable {
         case matchup = "The Sideline", mismatch = "MM", cheatsheets = "Cheatsheets", slateEdge = "Slate Edge"
         case publicActivity = "The Public", sportsbooks = "Sportsbooks", ladders = "Prop Ladders"
@@ -45,6 +50,7 @@ struct SidelineView: View {
     let api: SidelineAPI
     private let linkedGame: String?
     private let linkedDate: String?
+    private let preferredBook: String?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -60,13 +66,31 @@ struct SidelineView: View {
     @State private var useDefaultDate = true
     @State private var matrices = false
 
-    init(api: SidelineAPI, date: Date? = nil, linkedGame: String? = nil) {
+    init(api: SidelineAPI, date: Date? = nil, linkedGame: String? = nil, entry: Entry = .core, book: String? = nil) {
         self.api = api
         self.linkedGame = linkedGame
         linkedDate = date.map(SlateDate.key)
+        preferredBook = book == "all" ? nil : book
         _date = State(initialValue: date ?? .now)
         _selectedGameID = State(initialValue: linkedGame)
         _useDefaultDate = State(initialValue: date == nil)
+        let workspace: Workspace
+        switch entry {
+        case .mismatch: workspace = .mismatch
+        case .slateEdge: workspace = .slateEdge
+        case .cheatsheets: workspace = .cheatsheets
+        case .publicActivity: workspace = .publicActivity
+        case .markets: workspace = .sportsbooks
+        case .ladders: workspace = .ladders
+        default: workspace = .matchup
+        }
+        _tool = State(initialValue: workspace)
+        _section = State(initialValue: entry == .oddsBoard ? .oddsBoard :
+            entry == .props || entry == .touchdowns ? .props : .gameDay)
+        var initialOdds = OddsSelection()
+        if entry == .touchdowns { initialOdds.market = "anytime_td" }
+        if let book, book != "all" { initialOdds.book = book }
+        _selection = State(initialValue: initialOdds)
     }
 
     private var dayRequest: DayRequest { .init(date: SlateDate.key(date), revision: revision) }
@@ -206,12 +230,12 @@ struct SidelineView: View {
                 .id("\(gameID):\(tool.rawValue)")
         case .mismatch, .cheatsheets:
             SidelineResearchView(api: api, tool: tool == .mismatch ? .mismatch : .cheatsheets,
-                date: date, game: gameID, teams: selectedTeams, revision: revision)
+                date: date, game: gameID, teams: selectedTeams, revision: revision, initialBook: preferredBook)
                 .id("\(gameID):\(tool.rawValue)")
         case .slateEdge:
             SidelineSlateEdgeView(api: api, date: date, teams: slateTeams, revision: revision)
         case .ladders:
-            SidelineLaddersView(api: api, date: date, game: gameID, teams: selectedTeams, revision: revision)
+            SidelineLaddersView(api: api, date: date, game: gameID, teams: selectedTeams, revision: revision, initialBook: preferredBook)
                 .id(gameID)
         }
     }

@@ -77,6 +77,7 @@ struct NativeLinkedSiteView: View {
         case .interests: AccountFavoritesView(account: account, userID: userID)
         case .membership: MembershipBillingView(account: account, userID: userID, refreshAccount: {})
         case .blocked: MutedAndBlockedView(api: viewer)
+        case .research: ResearchPreferencesView(api: .init(account: account, userID: userID))
         }
     }
 

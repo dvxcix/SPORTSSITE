@@ -1423,5 +1423,33 @@ physical-device push are still open.
   capture or migration was replayed.
 - Signed Xcode Simulator build, Hub TypeScript, 19 focused checks and all
   134 source smoke checks passed. Mutations used fixtures. Next steps are
-  checking live read routes, adding launch pages and sportsbook preferences,
-  and continuing the native research and social parity work.
+  continuing the native research and social parity work. Task
+  `cd2b10e7c2ab45d95b420e54d915cf9b4c5a9714` is pushed. PR #53 merged as
+  `e8b86f8a06d06cb6984f83b54aee0e748c482830`, with preview
+  `dpl_vFkNF4ZUs9sGC9vLGbFFEQqKurKN` and production
+  `dpl_AnKVCxyPaWmbUXtR9BEsfpwzRksM` READY. The signed Simulator opened
+  Activity Replay with existing events. Guest private routes returned 401
+  and Feed and desktop Groups returned 200.
+
+## Research launch and sportsbook preferences · 25 November 2026
+
+- Native Research preferences use the site's saved launch and sportsbook
+  defaults, current league entitlements, and existing compare-and-save
+  write. The picker offers launch destinations already implemented in native
+  iOS. Any saved desktop destination outside that set is retained until the
+  member changes it.
+- Supported shared Court and Sideline links initialize the requested board,
+  date, matchup, and valid explicit sportsbook. Supported saved defaults
+  apply when a restored member first opens the app without another destination.
+  First Basket displays available preferred sportsbooks, and the primary book
+  sets the initial choice on supported single-book boards. Pregame remains
+  the default. Available research snapshots and ranking pools stay on the
+  canonical server routes.
+- The picker uses native team and sportsbook artwork. The Kalshi docs icon
+  and the Polymarket brand-kit icon are bundled, with source provenance from
+  [Kalshi](https://docs.kalshi.com/) and the
+  [Polymarket brand kit](https://polymarket.com/uk/brand).
+- Signed Xcode Simulator, 26 focused tests and 134 source checks passed.
+  Verify the signed settings read and initial sportsbook on the released
+  routes. Continue the remaining Explore, search, launch destinations and
+  admin operations work.

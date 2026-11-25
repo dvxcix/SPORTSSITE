@@ -6,7 +6,7 @@ enum NativeSiteLink: Hashable {
     case notifications, bookmarks, picks, messages, newMessage, directMessage(String), groupMessage(UUID)
     case channels, channel(String), pricing, preview(Preview), registration, passwordRecovery
     case settings(Settings), creatorStudio, creatorPayouts, communityCreator, researchWorkspace, admin
-    case activityReplay, missions
+    case activityReplay, missions, launch
 
     enum CommunitySection: Hashable {
         case posts, picks, settings, channels(String?)
@@ -15,7 +15,7 @@ enum NativeSiteLink: Hashable {
     enum Preview: String { case nba, nfl }
 
     enum Settings: String {
-        case account, profile, connections, security, privacy, notifications, interests, membership, blocked
+        case account, profile, connections, security, privacy, notifications, interests, membership, blocked, research
     }
 
     init?(_ url: URL) {
@@ -73,6 +73,7 @@ enum NativeSiteLink: Hashable {
         case ["creators", "studio"], ["creators", "apply"]: self = .creatorStudio
         case ["creators", "payouts"]: self = .creatorPayouts
         case ["workspace"]: self = .researchWorkspace
+        case ["launch"]: self = .launch
         case ["admin"]: self = .admin
         default:
             if segments.count == 2 {

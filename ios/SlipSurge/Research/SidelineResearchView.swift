@@ -50,6 +50,17 @@ struct SidelineResearchView: View {
     @State private var retry = 0
     @State private var selectedRow: SidelineResearchPayload.Row?
 
+    init(api: SidelineAPI, tool: SidelineResearchTool, date: String, game: String, teams: [SidelineMarketTools.Visual],
+        revision: Int, initialBook: String? = nil) {
+        self.api = api
+        self.tool = tool
+        self.date = date
+        self.game = game
+        self.teams = teams
+        self.revision = revision
+        if let initialBook { _book = State(initialValue: initialBook) }
+    }
+
     private var mismatch: Bool { tool == .mismatch }
     private var filters: Filters { .init(sample: sample, window: window, market: market, book: book, revision: revision, retry: retry) }
     private var activeSort: Sort { sort ?? (mismatch ? .mismatch : page == .exact ? .hits : .edge) }

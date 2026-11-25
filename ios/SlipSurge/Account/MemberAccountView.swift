@@ -93,6 +93,11 @@ struct MemberAccountView: View {
                 Label("Muted and blocked", systemImage: "speaker.slash")
             }
             NavigationLink {
+                ResearchPreferencesView(api: .init(account: account, userID: userID))
+            } label: {
+                Label("Research preferences", systemImage: "slider.horizontal.3")
+            }
+            NavigationLink {
                 NativeSettings(account: account, userID: userID, section: .alerts)
             } label: {
                 Label("Alert preferences", systemImage: "bell.badge")

@@ -53,6 +53,15 @@ struct SidelineLaddersView: View {
     @State private var saving = false
     @State private var notice: String?
 
+    init(api: SidelineAPI, date: String, game: String, teams: [SidelineMarketTools.Visual], revision: Int, initialBook: String? = nil) {
+        self.api = api
+        self.date = date
+        self.game = game
+        self.teams = teams
+        self.revision = revision
+        if let initialBook { _book = State(initialValue: initialBook) }
+    }
+
     private var request: Request {
         .init(market: market, book: book, kind: kind, side: kind == .milestone ? .over : side, sample: sample, revision: revision, retry: retry)
     }
