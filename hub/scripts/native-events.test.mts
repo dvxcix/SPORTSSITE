@@ -12,8 +12,11 @@ const stubs: Record<string, string> = {
       ? { userId: '${member}', supabase: globalThis.eventsFixture.client }
       : { error: Response.json({}, { status: 401 }) }
   }`,
-  '@/lib/nativeSocial': 'export const nativeAnonymousClient = () => globalThis.eventsFixture.client',
   '@/lib/featureFlags.server': 'export async function isFeatureEnabledServer() { return globalThis.eventsFixture.enabled }',
+  '@/lib/requireTier': `export async function requireVerifiedUserTier(userId, tier) {
+    if (tier !== 'basic') throw Error('Expected Basic community access')
+    return globalThis.eventsFixture.free ? {error: Response.json({}, {status: 403})} : {userId}
+  }`,
   '@/lib/blocks': 'export const isAccountId = input => /^[0-9a-f-]{36}$/i.test(input)',
   '@/lib/supabase/adminDecisionActor': `export async function adminDecisionActor(request) {
     return request.headers.get('authorization') === 'Bearer admin'
@@ -42,8 +45,19 @@ const request = (suffix = '', payload?: unknown, auth?: string) => new Request(e
 test('an off rollout hides events and rejects RSVP without contacting event data', async () => {
   Object.assign(globalThis, {eventsFixture: {enabled: false, client: {from() { throw new Error('Unexpected event read') }}}})
   assert.deepEqual(await (await GET(request('?view=access'))).json(), {enabled: false})
-  assert.equal((await GET(request('?view=detail&id=' + event))).status, 403)
+  assert.equal((await GET(request('?view=detail&id=' + event))).status, 401)
+  assert.equal((await GET(request('?view=detail&id=' + event, undefined, 'Bearer member'))).status, 403)
   assert.equal((await POST(request('', {kind: 'attendance', id: event, status: 'going'}, 'Bearer member'))).status, 403)
+})
+
+test('a globally enabled rollout never exposes Basic event data or actions to guests and Free members', async () => {
+  Object.assign(globalThis, {eventsFixture: {enabled: true, free: true, client: {from() { throw new Error('Unexpected event read') }}}})
+  const member = 'Bearer member'
+  assert.deepEqual(await (await GET(request('?view=access'))).json(), {enabled: false})
+  assert.equal((await GET(request('?view=list'))).status, 401)
+  assert.deepEqual(await (await GET(request('?view=access', undefined, member))).json(), {enabled: false})
+  assert.equal((await GET(request('?view=list', undefined, member))).status, 403)
+  assert.equal((await POST(request('', {kind: 'attendance', id: event, status: 'going'}, member))).status, 403)
 })
 
 test('RSVP reads a visible event and writes only the authenticated member’s row', async () => {
