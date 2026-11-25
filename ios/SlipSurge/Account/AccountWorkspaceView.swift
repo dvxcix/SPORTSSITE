@@ -276,6 +276,15 @@ struct AccountWorkspaceView: View {
                     NavigationLink { AdminEmojiStudio(viewer: .init(account: account, userID: userID)) } label: {
                         Label("Custom emoji", systemImage: "face.smiling")
                     }
+                    NavigationLink { AdminSocialContent(viewer: .init(account: account, userID: userID), kind: .posts) } label: {
+                        Label("Manage posts", systemImage: "text.bubble")
+                    }
+                    NavigationLink { AdminSocialContent(viewer: .init(account: account, userID: userID), kind: .stories) } label: {
+                        Label("Manage stories", systemImage: "circle.dashed.inset.filled")
+                    }
+                    NavigationLink { AdminOperationsView(viewer: .init(account: account, userID: userID), mode: .groups) } label: {
+                        Label("Manage communities", systemImage: "person.3")
+                    }
                 }
             } else if adminTab == .members {
                 NavigationLink {
@@ -296,6 +305,12 @@ struct AccountWorkspaceView: View {
                     AdminAnnouncementsView(account: account, userID: userID)
                 } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Announcements", systemImage: "megaphone") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink { AdminOperationsView(viewer: .init(account: account, userID: userID), mode: .audit) } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Audit log", systemImage: "list.bullet.rectangle") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink { AdminOperationsView(viewer: .init(account: account, userID: userID), mode: .notifications) } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Notification history", systemImage: "bell") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
             } else {
                 ForEach(admin.pipelines) { pipeline in

@@ -237,7 +237,7 @@ struct FeedPostCard: View {
     }
 }
 
-private struct FeedMedia: View {
+struct FeedMedia: View {
     let url: URL
     @State private var player: AVPlayer?
 

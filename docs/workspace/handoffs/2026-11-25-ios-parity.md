@@ -1349,6 +1349,28 @@ physical-device push are still open.
   upload kinds. Edits check the original record and assignments record the
   verified awarding admin. No live studio mutations were used for QA.
 - Signed Xcode, TypeScript and 25 focused regressions passed. The source smoke
-  suite was 134/134. The authoritative database currently has 71 custom emoji
-  and six badges. The narrow Hub release and signed studio walkthroughs are
-  still to verify.
+  suite was 134/134. Task checkpoint `27332e36084623eb8b6264ea585b188277ecec17`
+  is pushed. PR #50 merged as `74fcf4ef33290e55a04eb112b875d52a21b03116`.
+  Preview `dpl_5JdR2W1E86L7QCL5RCLqDRyyAoUR` and production
+  `dpl_ATgAhuNhdNAg7qLbitTWTzCVHJZN` were READY. The live catalog returned 71
+  custom emoji and six standard categories. The signed admin Simulator opened
+  the Custom emoji studio and showed the real MLB/NFL team categories and
+  image rows. Guest studio requests returned 401. Both Feed entry points
+  returned 200. Badge and user picker walkthroughs are pending.
+
+## Native admin content and operations · 25 November 2026
+
+- Admin Moderation has native post and story directories, filters, visible
+  media, author and content destinations, engagement and explicit confirmed
+  deletion through the original verified role. Content queries retain the
+  browser’s request-scoped visibility. Native deletion first verifies that the
+  actor can see the exact record and records an audit event after success.
+- Admin can review the community directory, drill into the original member
+  feed when authorized, and confirm community deletion. Audit log and
+  notification history use their existing visibility boundaries. They support
+  the canonical action, recipient, actor, date and request filters and have
+  no native write controls. No content was deleted or mutated for QA.
+- Signed Xcode, Hub TypeScript, 30 focused checks, and 134 production source
+  checks passed. Signed moderation reads will be checked against the released
+  routes. Remaining operations, account-provider consent and physical device
+  delivery and purchase checks stay open.
