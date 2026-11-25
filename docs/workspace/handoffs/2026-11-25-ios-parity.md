@@ -1147,7 +1147,12 @@ physical-device push are still open.
   merged as `cd45772c63bd12b3f2e556398c0413438e4b28b2`. Preview
   `dpl_cQ6FXiD6tWFBJrZkWjroM9gKUX63` and production
   `dpl_5QWMhb7CesNLfSzqo4Y8GRzfT7Gu` reported READY. No observations or jobs
-  were replayed. The production Simulator and guest checks are in progress.
+  were replayed. Anonymous list and starter requests returned 401 and the
+  guest Feed returned 200. The signed Simulator resolved the October 28
+  selection `849799` to both confirmed lineups and showed the first-pitch
+  seal. That game had no independent pitch sample. September 25 `824703`
+  showed no archived roster; its separate Odds Terminal captures remain
+  available.
 
 ## Native announcements and Leaderboard · 25 November 2026
 
@@ -1167,3 +1172,22 @@ physical-device push are still open.
   announcements and admin-access checks passed. Announcements API preview,
   signed mobile walkthrough and the next feature-flagged community tools
   are pending.
+
+## Native Events and live-season Slate Breakdown · 25 November 2026
+
+- Discover opens Events for members and visitors according to the website’s
+  original rollout. Native pages show the existing Upcoming and Recent lists,
+  host profiles, sport artwork, event details, links and attendee counts.
+  Members can create an event, respond Going, Interested or Can’t Go, and
+  remove their RSVP. The request targets only the signed member’s attendance
+  row. A stable draft ID lets an interrupted create retry safely.
+- Admin has the same dated event directory and confirmed event deletion.
+  These actions continue using the original records and controls. No live
+  events, RSVPs, deletions or rollout values were written for testing.
+- For an active, open MLB matchup with no saved roster, native Slate
+  Breakdown now uses the existing one-game pregame capture before reading
+  the roster back. It never starts this capture during the offseason, from
+  a historic selection, or from an individual pitch request.
+- Signed Xcode, Hub TypeScript and 14 focused event, archive, profile, admin
+  and announcement checks passed. Live feature-gated reads follow the narrow
+  release. Forum, Articles and custom Pages remain in progress.

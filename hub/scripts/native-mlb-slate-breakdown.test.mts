@@ -8,9 +8,16 @@ const bindings: Record<string, string> = {
   'next/cache': 'export const unstable_cache = loader => loader',
   '@slipsurge/core/mlbSchedule': `export async function getTodaysMatchups() { return globalThis.slateFixture.games }
     export async function fetchTeamPitcherIds() { throw new Error('Unexpected current staff lookup') }`,
-  '@/lib/dugoutData': 'export async function getMlbResearchGame(date, id) { return globalThis.slateFixture.games.find(game => game.gamePk === id) }',
+  '@/lib/dugoutData': `export async function getMlbResearchGame(date, id) { return globalThis.slateFixture.games.find(game => game.gamePk === id) }
+    export async function loadDugoutData(request, options) {
+      const fixture = globalThis.slateFixture
+      if (!fixture.pendingRoster) throw new Error('Unexpected new pregame observation')
+      fixture.warmed.push(options)
+      fixture.board = fixture.pendingRoster
+      return Response.json({})
+    }`,
   '@/lib/featuredGame': 'export const getFeaturedGameKey = async () => "CHC@BOS"',
-  '@/lib/mlbOffseason': 'export const MLB_HIBERNATING = true',
+  '@/lib/mlbOffseason': 'export const MLB_HIBERNATING = false',
   '@/lib/mlbViewerAccess': 'export const canViewMlb = async () => true',
   '@/lib/requireTier': 'export async function getEffectiveTier() { return { userId: "fixture", tier: globalThis.slateFixture.tier } }',
   '@/lib/supabase/nativeAccount': `export async function requireNativeAccount(request) {
@@ -18,6 +25,7 @@ const bindings: Record<string, string> = {
       : { error: Response.json({}, { status: 401 }) }
   }`,
   '@/lib/mlbPregameResearchData': `export class MlbPregameResearchUnavailable extends Error {}
+    export const mlbPregameResearchOpen = () => globalThis.slateFixture.open === true
     export async function readMlbPregameResearch() { return globalThis.slateFixture.board }
     export async function mlbPregameResearch(game, load, resource) {
       const fixture = globalThis.slateFixture
@@ -83,4 +91,17 @@ test('pregame returns the sealed roster and missing samples stay missing', async
   const live = await (await read('mode=live')).json()
   assert.equal(live.liveUnavailable, true)
   assert.deepEqual(live.games, [])
+})
+
+test('an open matchup uses the existing one-game archive capture to obtain a missing roster', async () => {
+  const state = { tier: 'basic', games: [makeGame(824703, 'CHC@BOS')], board: null, open: true,
+    pendingRoster: { value: saved, ...observation, frozen: false }, warmed: [] as object[] }
+  Object.assign(globalThis, { slateFixture: state })
+  const before = await (await read('view=starter&game=824703&side=away')).json()
+  assert.equal(before.sample, null)
+  assert.deepEqual(state.warmed, [])
+  const matchup = await (await read('view=matchup&game=824703')).json()
+  assert.deepEqual(state.warmed, [{tier: 'ultimate', warmGameIds: [824703]}])
+  assert.equal(matchup.roster.awayStarter.id, 381)
+  assert.equal(matchup.archive.frozen, false)
 })

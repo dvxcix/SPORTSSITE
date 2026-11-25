@@ -16,6 +16,7 @@ struct SlipSurgeTabs: View {
     @State private var savingRelease = false
     @State private var releaseProblem: String?
     @State private var informationPage: InformationPage?
+    @State private var discoverDestination: DiscoverDestination?
 
     var body: some View {
         TabView(selection: $selected) {
@@ -34,7 +35,7 @@ struct SlipSurgeTabs: View {
             .tag(Destination.research)
 
             NavigationStack {
-                DiscoverView(api: DiscoverAPI(account: account, userID: account.memberID))
+                DiscoverView(api: DiscoverAPI(account: account, userID: account.memberID), opensDestination: $discoverDestination)
             }
             .id(account.memberID)
             .tabItem { Label("Discover", systemImage: "magnifyingglass") }
@@ -150,7 +151,19 @@ struct SlipSurgeTabs: View {
             informationPage = page
         } else if ["", "feed", "home"].contains(path) {
             selected = .feed
-        } else if ["discover", "groups", "creators", "leaderboard", "scores"].contains(path) {
+        } else if path == "discover" || path == "groups" {
+            discoverDestination = .communities
+            selected = .discover
+        } else if path == "creators" || path == "leaderboard" || path == "scores" || path == "events" {
+            switch path {
+            case "creators": discoverDestination = .creators
+            case "leaderboard": discoverDestination = .leaderboard
+            case "scores": discoverDestination = .scores
+            default: discoverDestination = .events(nil)
+            }
+            selected = .discover
+        } else if path.hasPrefix("events/"), let id = UUID(uuidString: String(path.dropFirst(7))) {
+            discoverDestination = .events(id)
             selected = .discover
         } else if ["account", "settings", "auth/login"].contains(path) {
             selected = .account

@@ -261,6 +261,9 @@ struct AccountWorkspaceView: View {
                     ForEach([("webhooks", "Webhook failures"), ("delivery", "Delivery failures")], id: \.0) { key, label in
                         LabeledContent(label, value: count(admin.queues[key] ?? nil))
                     }
+                    NavigationLink {
+                        AdminCommunityEventsView(api: .init(viewer: .init(account: account, userID: userID)))
+                    } label: { Label("Manage events", systemImage: "calendar.badge.clock") }
                 }
             } else if adminTab == .members {
                 NavigationLink {

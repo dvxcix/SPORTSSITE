@@ -4,11 +4,11 @@ import { mlbHeadshot, PITCH_COLORS, pitchLabel } from '@slipsurge/core/mlb-api'
 import { fetchTeamPitcherIds, getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
 import { getTeamLogoPngUrl, MLB_TEAM_COLORS, MLB_TEAM_SECONDARY_COLORS } from '@slipsurge/core/mlbTeamColors'
 import { hasTierAccess } from '@slipsurge/core/tiers'
-import { getMlbResearchGame } from '@/lib/dugoutData'
+import { getMlbResearchGame, loadDugoutData } from '@/lib/dugoutData'
 import { getFeaturedGameKey } from '@/lib/featuredGame'
 import { isArchiveDate } from '@/lib/mlbArchiveView'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
-import { mlbPregameResearch, MlbPregameResearchUnavailable, readMlbPregameResearch, type MlbResearchSnapshot } from '@/lib/mlbPregameResearchData'
+import { mlbPregameResearch, mlbPregameResearchOpen, MlbPregameResearchUnavailable, readMlbPregameResearch, type MlbResearchGame, type MlbResearchSnapshot } from '@/lib/mlbPregameResearchData'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { fetchPlayerPitchRows } from '@/lib/pitchLogFetch'
 import { getEffectiveTier } from '@/lib/requireTier'
@@ -29,6 +29,25 @@ function team(code: string, name: string, score: number | null) {
 }
 
 type Roster = Pick<TodayGame, 'awayPitcher' | 'homePitcher' | 'awayLineup' | 'homeLineup' | 'awayLineupConfirmed' | 'homeLineupConfirmed'>
+const rosterLoads = new Map<number, Promise<MlbResearchSnapshot<Roster> | null>>()
+
+async function matchupRoster(game: MlbResearchGame, date: string, gamePk: number, allowCapture: boolean) {
+  const saved = await readMlbPregameResearch<Roster>(game)
+  if (saved || !allowCapture || !mlbPregameResearchOpen(game)) return saved
+  let request = rosterLoads.get(gamePk)
+  if (!request) {
+    request = (async () => {
+      const query = new URLSearchParams({ date, research: '1' })
+      // Use the existing one-game warmer with no member context. Only the
+      // dated roster is read back through this route's own access check.
+      await loadDugoutData(new Request(`https://internal.slipsurge/dugout?${query}`), { tier: 'ultimate', warmGameIds: [gamePk] })
+      return readMlbPregameResearch<Roster>(game)
+    })()
+    rosterLoads.set(gamePk, request)
+  }
+  try { return await request }
+  finally { if (rosterLoads.get(gamePk) === request) rosterLoads.delete(gamePk) }
+}
 
 function slateCard(game: TodayGame, locked: boolean) {
   return { id: game.gamePk, key: game.gameKey, startsAt: game.gameDate, status: game.status, bucket: game.abstractStatus,
@@ -99,7 +118,7 @@ export async function GET(request: Request) {
     if (!visible(game)) return reply({ error: 'Advanced access required for this matchup' }, 403)
     const exactGame = await getMlbResearchGame(date, game.gamePk)
     if (!exactGame) return reply({ error: 'The dated MLB matchup could not be confirmed' }, 404)
-    const board = live ? null : await readMlbPregameResearch<Roster>(exactGame)
+    const board = live ? null : await matchupRoster(exactGame, date, game.gamePk, view === 'matchup' && !MLB_HIBERNATING)
     const roster = live ? game : board?.value
     if (view === 'matchup') {
       return reply({ game: slateCard(game, false), archive: archiveInfo(board, live), pitches: pitchKinds, roster: roster ? {

@@ -1,10 +1,15 @@
 import SwiftUI
 
+enum DiscoverDestination: Hashable {
+    case communities, creators, leaderboard, scores, events(UUID?)
+}
+
 struct DiscoverView: View {
     private enum Section: String, CaseIterable { case communities = "Communities", creators = "Creators", records = "Leaderboard" }
 
     let api: DiscoverAPI
     var opensCommunity: UUID? = nil
+    @Binding var opensDestination: DiscoverDestination?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var section = Section.communities
@@ -19,6 +24,14 @@ struct DiscoverView: View {
     @State private var revision = 0
     @State private var routedCommunity: UUID?
     @State private var routed = false
+    @State private var eventsAvailable = false
+    @State private var destination: DiscoverDestination?
+
+    init(api: DiscoverAPI, opensCommunity: UUID? = nil, opensDestination: Binding<DiscoverDestination?> = .constant(nil)) {
+        self.api = api
+        self.opensCommunity = opensCommunity
+        _opensDestination = opensDestination
+    }
 
     private var request: String { "\(section.rawValue):\(revision)" }
 
@@ -37,13 +50,19 @@ struct DiscoverView: View {
                     } label: { Label("Live Rooms", systemImage: "dot.radiowaves.left.and.right") }
                     .buttonStyle(.bordered)
                 }
-                ResearchToolRail(title: "Discover", choices: Section.allCases, selection: $section, label: \.rawValue) {
+                if eventsAvailable {
+                    NavigationLink {
+                        CommunityEventsView(api: .init(viewer: api))
+                    } label: { Label("Events", systemImage: "calendar") }
+                    .buttonStyle(.bordered)
+                }
+                ResearchToolRail(title: "Discover", choices: Section.allCases, selection: $section, label: \.rawValue, glyph: {
                     switch $0 {
                     case .communities: "person.2"
                     case .creators: "person.crop.square"
                     case .records: "trophy"
                     }
-                }
+                }, compact: true)
                 filters
                 switch section {
                 case .communities:
@@ -66,6 +85,32 @@ struct DiscoverView: View {
                 CommunityDetailView(api: api, group: group, initialMember: data.joinedIds.contains(id))
             }
         }
+        .navigationDestination(item: $destination) { opening in
+            switch opening {
+            case .scores: ScoresView(api: api)
+            case .events(let id):
+                if let id { CommunityEventDetail(api: .init(viewer: api), id: id, refreshList: {}) }
+                else { CommunityEventsView(api: .init(viewer: api)) }
+            default: EmptyView()
+            }
+        }
+        .onChange(of: opensDestination, initial: true) { _, opening in
+            guard let opening else { return }
+            switch opening {
+            case .communities:
+                destination = nil
+                section = .communities
+            case .creators:
+                destination = nil
+                section = .creators
+            case .leaderboard:
+                destination = nil
+                section = .records
+            case .scores, .events:
+                destination = opening
+            }
+            opensDestination = nil
+        }
         .onChange(of: communities != nil, initial: true) { _, ready in
             if ready, !routed, let opensCommunity, let data = communities,
                (data.invitations + data.groups).contains(where: { $0.id == opensCommunity }) {
@@ -82,6 +127,7 @@ struct DiscoverView: View {
             thisWeek = false
         }
         .refreshable { await load(section) }
+        .task(id: api.userID) { eventsAvailable = await CommunityEventsAPI(viewer: api).available() }
         .task(id: request) { await load(section) }
     }
 
