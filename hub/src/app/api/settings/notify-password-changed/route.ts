@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { consumeServerRateLimit } from '@/lib/serverRateLimit'
 import { brandedEmailHtml, sendEmail } from '@/lib/email'
+import { accountSettingsActor } from '@/lib/supabase/accountSettingsActor'
 
 export const revalidate = 0
 
@@ -12,10 +12,11 @@ export const revalidate = 0
 // otherwise notify nobody — including the real owner if an attacker with
 // account access changed it. This sends that missing security alert
 // directly via Resend's API, independent of Supabase's own email system.
-export async function POST() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function POST(request: Request) {
+  const account = await accountSettingsActor(request)
+  if (account.error) return account.error
+  const { user } = account
+  if (!user.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const rate = await consumeServerRateLimit(user.id, 'password_alert', 10, 24 * 60 * 60)
   if (!rate.available || !rate.allowed) return NextResponse.json({ ok: true, skipped: 'rate limited' })
