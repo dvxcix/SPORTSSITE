@@ -34,16 +34,25 @@ const stubs: Record<string, string> = {
     return {confirmed:true,season:2026,homeAbbr:'NYY',homeTeam:'New York Yankees',awayAbbr:'BOS',awayTeam:'Boston Red Sox',
       batters:[{mlbId:123,name:'Fixture',team:'NYY',career:4,season:2,position:'CF'}]}
   }`,
+  '@/app/api/pitcher-report/live-window/route': `export async function GET(request) {
+    const query=new URL(request.url).searchParams
+    const calls=globalThis.nativeMlBToolsFixture.reads
+    calls.push(query.toString())
+    if(query.get('pitcherId')==='222')return Response.json({unavailable:true},{status:503})
+    return Response.json({window:{games:5},pitcherRows:{R:[{pitch_type:'FF',pitches:23}],L:[]},
+      researchSnapshot:{mode:'pregame',frozen:true}})
+  }`,
 }
 const source = await build({
-  stdin: { contents: 'export * from "./src/app/api/mobile/dugout/tools/route"', resolveDir: process.cwd(), loader: 'ts' },
+  stdin: { contents: 'export * from "./src/app/api/mobile/dugout/tools/route"; export {GET as window} from "./src/app/api/mobile/dugout/pitcher-window/route"',
+    resolveDir: process.cwd(), loader: 'ts' },
   bundle: true, write: false, format: 'cjs', platform: 'node', tsconfig: 'tsconfig.json', external: ['next/server'],
   plugins: [{ name: 'native-mlb-tools', setup(plugin) {
     plugin.onResolve({ filter: /.*/ }, args => args.path in stubs ? { path: args.path, namespace: 'fixture' } : undefined)
     plugin.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: stubs[args.path], loader: 'js' }))
   } }],
 })
-const route = { exports: {} as typeof import('../src/app/api/mobile/dugout/tools/route') }
+const route = { exports: {} as typeof import('../src/app/api/mobile/dugout/tools/route') & { window: typeof import('../src/app/api/mobile/dugout/pitcher-window/route').GET } }
 new Function('require', 'module', 'exports', source.outputFiles[0].text)(createRequire(import.meta.url), route, route.exports)
 const read = (query: string, signed = true) => route.exports.GET(new Request(`https://slipsurge.invalid/api/mobile/dugout/tools?${query}`,
   { headers: signed ? { authorization: 'Bearer fixture' } : {} }))
@@ -83,4 +92,23 @@ test('the native spray chart keeps recorded coordinates, park shapes and player 
   const homeRuns = await read('tool=park-hr&gamePk=111')
   assert.equal(homeRuns.status, 200)
   assert.equal((await homeRuns.json()).batters[0].career, 4)
+})
+
+test('the native pitcher report uses the archived matchup window and keeps absent history unavailable', async () => {
+  const run = (query: string) => route.exports.window(new Request(`https://slipsurge.invalid/api/mobile/dugout/pitcher-window?${query}`,
+    { headers: { authorization: 'Bearer fixture' } }))
+  const base = 'date=2026-11-25&gamePk=111&games=5'
+  assert.equal((await run(base + '&pitcherId=123&mode=live')).status, 400)
+  const response = await run(base + '&pitcherId=123&batterIds=200,300')
+  assert.equal(response.status, 200)
+  const query = new URLSearchParams(fixture.reads.at(-1))
+  assert.equal(query.get('mode'), 'pregame')
+  assert.equal(query.has('batterIds'), false)
+  const result = await response.json()
+  assert.equal(result.researchSnapshot.frozen, true)
+  assert.equal(result.pitcherRows.R[0].label, '4-Seam')
+  assert.equal(result.pitcherRows.R[0].color, '#E74C3C')
+  const unavailable = await run(base + '&pitcherId=222')
+  assert.equal(unavailable.status, 503)
+  assert.equal((await unavailable.json()).unavailable, true)
 })
