@@ -2370,3 +2370,19 @@ physical-device push are still open.
   review uses the native X, Discord and TheRealApp apps on that phone. No
   installation or signing on the physical phone was attempted at this
   checkpoint. Use the iOS task branch for this review.
+
+## First physical iPhone run · 25 November 2026
+
+- The five-tab source at `bcf6e0de` signed, installed and launched from
+  Xcode 27.2 on a USB-connected iPhone 16 Plus running iOS 26.6.2.
+  Xcode showed the live device run and CoreDevice confirmed the
+  SlipSurge process. Developer Mode, the developer certificate trust on the
+  phone and the first Keychain signing approval were required.
+- This is a Personal Team Debug build using `com.slipsurge.ios.development`.
+  The team setting lives in the ignored Mac `ios/LocalAuth.xcconfig`.
+  The installed development profile expires on 2 December 2026. Renew through
+  Xcode if needed. Distribution signing, APNs and universal-link verification
+  are separate from this run.
+- Device Hub manages this phone and reports that its live screen sharing
+  requires iOS 27. The installed apps include SlipSurge and Real. The reference
+  review and signed-in feature checks on the physical phone are pending.
