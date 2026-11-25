@@ -9,7 +9,6 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { unpackSidelineBoard, type PackedOdds } from '@/lib/sidelineWire'
-import { ladderMatrixValue } from '@/lib/nflLadders'
 const LadderBoard = dynamic(() => import('./LadderBoard').then(module => module.LadderBoard))
 const NflOddsBoard = dynamic(() => import('./NflOddsBoard').then(module => module.NflOddsBoard))
 import { buildBoardHeat } from './boardHeat'
@@ -33,7 +32,8 @@ import { americanImpliedProbability, impliedProbabilityRatio } from '@/lib/nflMa
 import { contextualNflScore, nflContextVolume } from '@/lib/nflContextScore'
 import { nflUnverifiedScoreInputs } from '@/lib/nflScoreIntegrity'
 import { addNflMmRanks } from '@/lib/nflMmRanks'
-import { evaluateNflMatrix, type NflMatrix, type NflMatrixFactor } from '@/lib/nflMatrix'
+import type { NflMatrix } from '@/lib/nflMatrix'
+import { baselineMove, findMarketPlayer, nflMatrixMatches } from '@/lib/nflMatrixMatches'
 import type { NflMarketOffer, NflOddsPlayer, NflPlayerMarket, SidelineOddsBoard } from '@/lib/nflOddsTypes'
 import type { NflTouchdownEvent } from '@/lib/nflTouchdownFeed'
 import { NflScorerBadges, NflScorerProvider } from '@/components/sideline/NflScorerBadges'
@@ -303,11 +303,6 @@ function oddsLabel(value: number | null | undefined) {
   return value > 0 ? `+${value}` : String(value)
 }
 
-function findMarketPlayer(board: SidelineOddsBoard, player: Pick<SidelinePlayer, 'name' | 'team'>) {
-  const name = normalizedName(player.name)
-  return board.players.find(candidate => normalizedName(candidate.name) === name && (!candidate.team || normalizedTeam(candidate.team) === normalizedTeam(player.team))) ?? null
-}
-
 function findMarket(player: NflOddsPlayer | null, propType: string) {
   if (!player) return null
   return nflPrimaryMarket(player, propType)
@@ -490,10 +485,6 @@ function roleYards(row: PlayerRow) {
   if (['RB', 'FB'].includes(row.position)) return row.rushingYards + row.receivingYards
   if (['WR', 'TE'].includes(row.position)) return row.receivingYards
   return row.explosivePlays
-}
-
-function baselineMove(player: NflOddsPlayer | null, propType: 'first_td' | 'anytime_td', vendor = 'fanduel') {
-  return player?.tdBaselines?.find(item => item.propType === propType && normalizedName(item.vendor) === normalizedName(vendor)) ?? null
 }
 
 function BaselineCell({ player, propType }: { player: NflOddsPlayer | null; propType: 'first_td' | 'anytime_td' }) {
@@ -1643,89 +1634,10 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
     ).map(row => unverifiedEnvironment || affectedMarkets.has(row.contextProp ?? 'anytime_td') ? { ...row, mm: null, sportsbookRank: null, performanceRank: null } : row)
   }, [baseRows, board, scoreProp, selected.home.abbr, selected.gameday])
 
-  const matrixMatches = useMemo(() => {
-    if (!matrices.length) return new Map<string, NflMatrix[]>()
-    const playerByWindow = new Map<SidelineWindow, Map<string, SidelinePlayer>>()
-    const teamByWindow = new Map<SidelineWindow, Map<string, SidelineTeamProfile>>()
-    WINDOW_OPTIONS.forEach(option => {
-      playerByWindow.set(option.id, new Map(lens.windows[option.id].players.map(player => [`${normalizedTeam(player.team)}:${normalizedName(player.name)}`, player])))
-      teamByWindow.set(option.id, new Map(lens.windows[option.id].teams.map(profile => [normalizedTeam(profile.team.abbr), profile])))
-    })
-    const candidateFor = (row: PlayerRow) => ({
-      id: row.id,
-      team: normalizedTeam(row.team),
-      values: (factor: NflMatrixFactor) => {
-        if (factor.category === 'picks' || factor.category === 'market') return ladderMatrixValue(findMarketPlayer(board, row), factor)
-        if (factor.category === 'baseline') {
-          const prop = factor.field === 'ftdPct' ? 'first_td' : 'anytime_td'
-          const delta = baselineMove(row.market, prop)?.deltaPct
-          return delta == null ? null : Math.round(delta * 1000) / 10
-        }
-        const key = `${normalizedTeam(row.team)}:${normalizedName(row.name)}`
-        const windowPlayer = playerByWindow.get(factor.window)?.get(key)
-        if (factor.category === 'team') {
-          const profile = teamByWindow.get(factor.window)?.get(normalizedTeam(row.team))
-          const opponent = teamByWindow.get(factor.window)?.get(normalizedTeam(row.team) === normalizedTeam(selected.away.abbr) ? normalizedTeam(selected.home.abbr) : normalizedTeam(selected.away.abbr))
-          const values: Record<string, number | undefined> = {
-            teamPassRate: profile?.passRate,
-            teamNeutralPassRate: profile?.neutralPassRate,
-            teamShotgunRate: profile?.shotgunRate,
-            teamNoHuddleRate: profile?.noHuddleRate,
-            teamSuccessRate: profile?.successRate,
-            teamExplosiveRate: profile?.explosiveRate,
-            teamRedZoneTdRate: profile?.redZoneTdRate,
-            teamThirdDownRate: profile?.thirdDownRate,
-            oppSuccessAllowed: opponent?.defenseSuccessAllowed,
-            oppExplosiveAllowed: opponent?.defenseExplosiveAllowed,
-          }
-          return values[factor.field] ?? null
-        }
-        if (!windowPlayer) return null
-        if (windowPlayer.unavailableMetrics?.includes(factor.field)) return null
-        const values: Record<string, number> = {
-          index: windowPlayer.index,
-          volume: windowPlayer.volume,
-          geometry: windowPlayer.geometry,
-          redZone: windowPlayer.redZone,
-          breakaway: windowPlayer.breakaway,
-          evidence: windowPlayer.evidence,
-          targets: windowPlayer.targets,
-          targetShare: windowPlayer.targetShare,
-          receptions: windowPlayer.receptions,
-          receivingYards: windowPlayer.receivingYards,
-          carries: windowPlayer.carries,
-          carryShare: windowPlayer.carryShare,
-          rushingYards: windowPlayer.rushingYards,
-          passAttempts: windowPlayer.passAttempts,
-          completions: windowPlayer.completions,
-          passingYards: windowPlayer.passingYards,
-          passingTouchdowns: windowPlayer.passingTouchdowns,
-          touchdowns: windowPlayer.touchdowns,
-          redZoneLooks: windowPlayer.redZoneLooks,
-          goalLineLooks: windowPlayer.goalLineLooks,
-          airYards: windowPlayer.airYards,
-          airYardsShare: windowPlayer.airYardsShare,
-          separation: windowPlayer.separation,
-          yacAboveExpected: windowPlayer.yacAboveExpected,
-          rushOverExpected: windowPlayer.rushOverExpected,
-          catchRate: windowPlayer.catchRate,
-          completionRate: windowPlayer.completionRate,
-          cpoe: windowPlayer.cpoe,
-          timeToThrow: windowPlayer.timeToThrow,
-          explosivePlays: windowPlayer.explosivePlays,
-        }
-        return values[factor.field] ?? null
-      },
-    })
-    const candidates = rows.filter(row => row.eligible !== false).map(candidateFor)
-    const result = new Map<string, NflMatrix[]>()
-    matrices
-      .filter(matrix => matrix.enabled)
-      .forEach(matrix => {
-        evaluateNflMatrix(matrix, candidates).forEach(id => result.set(id, [...(result.get(id) ?? []), matrix]))
-      })
-    return result
-  }, [board, lens.windows, matrices, rows, selected.away.abbr, selected.home.abbr])
+  const matrixMatches = useMemo(
+    () => nflMatrixMatches(board, lens.windows, matrices, rows, selected.away.abbr, selected.home.abbr),
+    [board, lens.windows, matrices, rows, selected.away.abbr, selected.home.abbr],
+  )
 
   const resolvedColumns = useMemo(() => {
     const ordered = (columnOrder.map(id => columns.find(column => column.id === id)).filter(Boolean) as ColumnDefinition[]).filter(column=>!column.vendor||bookFilter.books.includes(column.vendor))
