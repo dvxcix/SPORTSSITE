@@ -1,6 +1,9 @@
 'use client'
 import React, { useState } from 'react'
 import { SafeImage } from '@/components/ui/SafeImage'
+import { normalizeVendor } from '@/lib/sportsbookSlip'
+
+export { normalizeVendor } from '@/lib/sportsbookSlip'
 
 // Vendor key → display info. Logos are served from our own /public/sportsbooks
 // (copied from mlb-party's asset set) — remote sportsbook favicons are
@@ -18,22 +21,6 @@ const BOOKS: Record<string, { favicon: string; initials: string; bg: string; col
   ballybet:   { favicon: '/sportsbooks/ballybet.webp',  initials: 'BB', bg: '#e31837', color: '#ffffff' },
   kalshi:     { favicon: 'https://kalshi.com/Kalshi_Favicon.png?v=20260807', initials: 'K', bg: '#014737', color: '#00DD94' },
   polymarket: { favicon: 'https://polymarket.com/images/brand/icon-blue.png', initials: 'PM', bg: '#071633', color: '#8eacff' },
-}
-
-// Normalize vendor key from any alias
-export function normalizeVendor(v: string): string {
-  const k = (v || '').toLowerCase().replace(/[^a-z]/g, '')
-  if (k === 'fanduel' || k === 'fd') return 'fanduel'
-  if (k === 'draftkings' || k === 'dk') return 'draftkings'
-  if (k === 'betmgm' || k === 'mgm') return 'betmgm'
-  if (k === 'caesars' || k === 'cz' || k === 'williamhillus' || k === 'williamhill') return 'caesars'
-  if (k === 'fanatics' || k === 'fan') return 'fanatics'
-  if (k === 'betrivers' || k === 'br') return 'betrivers'
-  if (k === 'ballybet' || k === 'ballys' || k === 'bally') return 'ballybet'
-  if (k === 'betparx' || k === 'parx') return 'betparx'
-  if (k === 'kalshi' || k === 'kal') return 'kalshi'
-  if (k === 'polymarket' || k === 'poly' || k === 'pm') return 'polymarket'
-  return k
 }
 
 export function bookName(vendor: string): string {

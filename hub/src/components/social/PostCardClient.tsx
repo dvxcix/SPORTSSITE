@@ -18,7 +18,8 @@ import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { usePostLiveUpdates } from '@/context/PostLiveContext'
 import { ShareImageModal } from './ShareImageModal'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
-import { BookLogo } from '@/components/BookLogo'
+import { BookLogo, bookName } from '@/components/BookLogo'
+import { pickSlipBook, sportsbookSlipPalette } from '@/lib/sportsbookSlip'
 import { sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
 import { TeamMark } from '@/components/sports/TeamMark'
 import { sportLogoUrl } from '@/lib/sportLogos'
@@ -266,6 +267,8 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
   }
 
   const pickResult = post.pick_data?.result
+  const slipBook = pickSlipBook(post.pick_data?.book, post.book)
+  const slipPalette = sportsbookSlipPalette(slipBook)
   const totalPollVotes = pollCounts.reduce((a, b) => a + b, 0)
   const pollEnded = post.poll_data?.ends_at && new Date(post.poll_data.ends_at) < new Date()
 
@@ -819,10 +822,10 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
               ))}
 
               {post.pick_data && (
-                <div className="ss-post-pick-card" style={{
-                  marginTop: 12, borderRadius: 10, border: `1px solid ${pickBorderColor}`,
-                  background: pickBg, padding: '12px 14px',
-                }}>
+                <div className="ss-post-pick-card" data-book-slip={slipPalette ? '' : undefined} style={{
+                  '--pick-fallback-border': pickBorderColor, '--pick-fallback-background': pickBg,
+                  '--pick-book-primary': slipPalette?.[0], '--pick-book-secondary': slipPalette?.[1],
+                } as CSSProperties}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <TrendingUp size={13} style={{ color: 'var(--gold)', flexShrink: 0 }} />
                     <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.06em' }}>PICK</span>
@@ -864,7 +867,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                         </div>
                       ))}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 6, marginTop: 2, borderTop: '1px solid var(--border)' }}>
-                        {post.pick_data.book && <BookLogo vendor={post.pick_data.book} size={16} />}
+                        {slipBook && <><BookLogo vendor={slipBook} size={16} /><span className="ss-pick-book-name">{bookName(slipBook)}</span></>}
                         <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: 'var(--accent)', fontFamily: 'monospace' }}>
                           {post.pick_data.combined_odds != null ? (Number(post.pick_data.combined_odds) > 0 ? `+${post.pick_data.combined_odds}` : post.pick_data.combined_odds) : ''}
                         </span>
@@ -893,7 +896,7 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                               {Number(post.pick_data.odds) > 0 ? `+${post.pick_data.odds}` : post.pick_data.odds}
                             </span>
                           )}
-                          {post.pick_data.book && <BookLogo vendor={post.pick_data.book} size={16} />}
+                          {slipBook && <><BookLogo vendor={slipBook} size={16} /><span className="ss-pick-book-name">{bookName(slipBook)}</span></>}
                         </div>
                       </div>
                     </div>
@@ -908,8 +911,8 @@ export function PostCardClient({ post: initialPost, index = 0, detail = false }:
                         </>}
                         {post.pick_data.book && <>
                           <span style={{ color: 'var(--border-3)', fontSize: 12 }}>·</span>
-                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{post.pick_data.book}</span>
                         </>}
+                        {slipBook && <><BookLogo vendor={slipBook} size={16} /><span className="ss-pick-book-name">{bookName(slipBook)}</span></>}
                       </div>
                     </>
                   )}

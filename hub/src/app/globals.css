@@ -1234,7 +1234,25 @@ img { max-width: 100%; }
 .ss-post-menu .ss-dropdown-item { min-height: 38px; border-radius: 8px; }
 .ss-post-copy { margin-top: 7px !important; font-size: 14.5px; line-height: 1.52; }
 .ss-post-media { display: block; width: 100%; max-width: 100%; max-height: 560px; margin-top: 10px; border: 1px solid var(--border); border-radius: 16px; object-fit: cover; background: var(--surface-2); }
-.ss-post-pick-card { margin-top: 10px !important; border-radius: 14px !important; }
+.ss-post-pick-card {
+  margin-top: 10px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--pick-fallback-border);
+  background: var(--pick-fallback-background);
+}
+.ss-post-pick-card[data-book-slip] {
+  --pick-primary-strength: 35%;
+  --pick-secondary-strength: 22%;
+  border-color: color-mix(in srgb, var(--pick-book-primary) 40%, var(--border));
+  background: linear-gradient(128deg, color-mix(in srgb, var(--pick-book-primary) var(--pick-primary-strength), var(--surface)),
+    color-mix(in srgb, var(--pick-book-secondary) var(--pick-secondary-strength), var(--surface)) 67%, var(--surface));
+}
+html[data-theme="light"] .ss-post-pick-card[data-book-slip] {
+  --pick-primary-strength: 22%;
+  --pick-secondary-strength: 12%;
+}
+.ss-pick-book-name { color: var(--text-2); font-size: 12px; font-weight: 650; }
 .ss-post-reactions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 10px; }
 .ss-post-actions { justify-content: space-between; gap: 2px; margin-top: 10px; padding-top: 8px; }
 .ss-post-actions > div { margin-left: 0 !important; }
