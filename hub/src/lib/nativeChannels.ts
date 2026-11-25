@@ -2,7 +2,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isAccountId } from './blocks'
 import { loadChannelHistory, type ChannelHistoryCursor } from './channelHistory'
-import { isOwnedNativeMedia } from './nativeMedia'
+import { isNativeSocialGif, isOwnedNativeMedia } from './nativeMedia'
 import { canViewMlb } from './mlbViewerAccess'
 import { requireTier } from './requireTier'
 
@@ -102,7 +102,7 @@ export async function changeNativeChannel(client: SupabaseClient, userId: string
   if (input.action === 'send') {
     if (message) return message.sender_id === userId ? 200 : 409
     if (!permission.send) return 403
-    const image = input.image == null ? null : isOwnedNativeMedia(input.image, userId, 'messages') ? input.image : null
+    const image = isOwnedNativeMedia(input.image, userId, 'messages') || isNativeSocialGif(input.image) ? input.image : null
     if (!text && !image || text.length > 1000 || input.image != null && !image) return 400
     let reply: string | null = null
     if (input.reply != null) {

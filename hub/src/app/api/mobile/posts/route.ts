@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { notifyMentions } from '@/lib/mentions'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
-import { isOwnedNativeMedia } from '@/lib/nativeMedia'
+import { isNativeSocialGif, isOwnedNativeMedia } from '@/lib/nativeMedia'
 import { nativeCommunityPublishing } from '@/lib/nativeCommunityPublishing'
 
 const headers = { 'Cache-Control': 'private, no-store' }
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       Object.keys(value).some(key => !['id', 'content', 'kind', 'sport', 'visibility', 'spoiler', 'poll', 'image', 'groupId'].includes(key))) return invalid()
 
   const { id, content, kind, sport, visibility, spoiler, poll, image, groupId } = value as Record<string, unknown>
-  const media = image == null ? null : isOwnedNativeMedia(image, userId, 'posts') ? image : null
+  const media = isOwnedNativeMedia(image, userId, 'posts') || isNativeSocialGif(image) ? image : null
   if (image != null && !media) return invalid()
   if (typeof id !== 'string' || !uuid.test(id) || typeof content !== 'string' || content.length > 500 ||
       (kind !== 'text' && kind !== 'analysis' && kind !== 'poll') ||
