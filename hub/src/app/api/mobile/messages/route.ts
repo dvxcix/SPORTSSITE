@@ -4,6 +4,7 @@ import { loadMessageInbox } from '@/lib/messageInboxServer'
 import { searchMessageRecipients } from '@/lib/messageRecipients'
 import { loadNativeThread, messageContext, openMessageRoom, updateNativeThread } from '@/lib/nativeMessageThread'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
+import { changeNativeChannel, listNativeChannels, loadNativeChannel, openNativeChannel } from '@/lib/nativeChannels'
 
 const headers = { 'Cache-Control': 'private, no-store' }
 const respond = (data: unknown, status = 200) => NextResponse.json(data, { status, headers })
@@ -17,7 +18,17 @@ export async function GET(request: Request) {
     switch (query.get('view') ?? 'inbox') {
       case 'inbox': return respond(await loadMessageInbox(supabase, userId))
       case 'search': return respond({ users: await searchMessageRecipients(supabase, userId, query.get('q') ?? '') })
+      case 'channels': {
+        const directory = await listNativeChannels(supabase, userId, query.get('group'))
+        return directory.status ? respond({ error: 'Channels unavailable' }, directory.status) : respond(directory)
+      }
       case 'thread': {
+        if (query.get('kind') === 'channel') {
+          const id = query.get('id')
+          if (!id || !isAccountId(id)) return respond({ error: 'Invalid channel' }, 400)
+          const result = await openNativeChannel(supabase, userId, id)
+          return result.room ? respond(await loadNativeChannel(supabase, userId, result.room)) : respond({ error: 'Channel unavailable' }, result.status)
+        }
         const context = messageContext(query)
         if (!context) return respond({ error: 'Invalid conversation' }, 400)
         const room = await openMessageRoom(supabase, userId, context)
@@ -55,7 +66,16 @@ export async function POST(request: Request) {
       if (error || typeof data !== 'string' || !isAccountId(data)) return respond({ error: 'Group conversation could not be created' }, 403)
       return respond({ ok: true, id: data })
     }
-    const context = messageContext(new URL(request.url).searchParams)
+    const query = new URL(request.url).searchParams
+    if (query.get('kind') === 'channel') {
+      const id = query.get('id')
+      if (!id || !isAccountId(id)) return respond({ error: 'Invalid channel' }, 400)
+      const result = await openNativeChannel(supabase, userId, id)
+      if (!result.room) return respond({ error: 'Channel unavailable' }, result.status)
+      const status = await changeNativeChannel(supabase, userId, result.room, body)
+      return status === 200 ? respond({ ok: true }) : respond({ error: 'Message action couldn’t be confirmed' }, status)
+    }
+    const context = messageContext(query)
     if (!context) return respond({ error: 'Invalid conversation' }, 400)
     const room = await openMessageRoom(supabase, userId, context)
     if (!room) return respond({ error: 'Conversation unavailable' }, 404)
