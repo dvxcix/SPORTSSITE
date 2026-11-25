@@ -18,8 +18,8 @@ struct GameMarketBook: Decodable, Identifiable {
 }
 
 struct GameMarkets: View {
-    let away: String
-    let home: String
+    let away: ResearchMatchup.Team
+    let home: ResearchMatchup.Team
     let offers: [GameMarketBook]
     @State private var pickedBook: String?
     @Environment(\.colorScheme) private var scheme
@@ -30,7 +30,7 @@ struct GameMarkets: View {
     }
 
     private var selected: GameMarketBook? {
-        ordered.first { $0.vendor == pickedBook } ?? ordered.first { $0.vendor == "fanduel" } ?? ordered.first
+        ordered.first { $0.vendor == pickedBook } ?? ordered.first { Sportsbook.normalized($0.vendor) == "fanduel" } ?? ordered.first
     }
 
     var body: some View {
@@ -38,24 +38,9 @@ struct GameMarkets: View {
             HStack {
                 ResearchSectionTitle(title: "Game markets")
                 Spacer()
-                if let selected {
-                    Menu {
-                        ForEach(ordered) { book in
-                            Button(Sportsbook.name(book.vendor)) { pickedBook = book.vendor }
-                        }
-                    } label: {
-                        HStack(spacing: 5) {
-                            if let image = Sportsbook.artwork(selected.vendor) {
-                                Image(image).resizable().scaledToFit().frame(width: 17, height: 17)
-                                    .accessibilityHidden(true)
-                            }
-                            Text(Sportsbook.name(selected.vendor))
-                            Image(systemName: "chevron.down").font(.caption2)
-                        }
-                        .font(.subheadline.weight(.medium))
-                        .frame(minHeight: 44)
-                    }
-                    .accessibilityLabel("Sportsbook, \(Sportsbook.name(selected.vendor))")
+                if selected != nil {
+                    SportsbookPicker(books: ordered.map(\.vendor), selection: Binding(
+                        get: { selected?.vendor ?? "" }, set: { pickedBook = $0 }))
                 }
             }
 
@@ -71,13 +56,13 @@ struct GameMarkets: View {
                     .foregroundStyle(.secondary)
                     Divider()
                     GridRow {
-                        Text(away).font(.footnote.bold())
+                        team(away)
                         cell(nil, selected.moneylineAway)
                         cell(line(selected.spreadAway, signed: true), selected.spreadAwayOdds)
                         cell(selected.total.map { "O \($0.formatted())" }, selected.totalOverOdds)
                     }
                     GridRow {
-                        Text(home).font(.footnote.bold())
+                        team(home)
                         cell(nil, selected.moneylineHome)
                         cell(line(selected.spreadHome, signed: true), selected.spreadHomeOdds)
                         cell(selected.total.map { "U \($0.formatted())" }, selected.totalUnderOdds)
@@ -97,6 +82,18 @@ struct GameMarkets: View {
         }
         .padding(14)
         .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+    }
+
+    private func team(_ team: ResearchMatchup.Team) -> some View {
+        VStack(alignment: .center, spacing: 3) {
+            ResearchArtwork(urls: team.logo.map { [$0] } ?? [], fallback: "shield")
+                .frame(width: 20, height: 20)
+            Text(verbatim: team.name).font(.caption2.weight(.bold))
+        }
+        .padding(5)
+        .frame(minWidth: 39)
+        .background(team.color.opacity(scheme == .dark ? 0.38 : 0.13), in: .rect(cornerRadius: 9))
+        .accessibilityElement(children: .combine)
     }
 
     private func cell(_ line: String?, _ odds: Int?) -> some View {

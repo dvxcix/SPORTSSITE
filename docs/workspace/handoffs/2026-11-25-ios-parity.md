@@ -601,3 +601,24 @@ physical-device push are still open.
   its FanDuel game lines, loaded Ronnie Rivers' MM +11, and showed his colored
   player trends, exact FanDuel +1900, saved cutoff and game log control. The
   new creator and admin APIs are pending preview and production checks.
+  Task checkpoint `5b2bd7e8ef479b556d29a950db362f9a2662bf3b` was pushed and
+  sent to the existing Cloud chat.
+
+## Native public information and game markets · 25 November 2026
+
+- SwiftUI now presents Terms, Privacy Policy, FAQ, Support, About, Responsible
+  Gambling and a Free/Ultimate membership comparison. The public endpoint
+  projects the same authored content and membership feature list as the web.
+  Internal research, privacy, account, plan and provider links open their
+  native screens. Contact and external resources use the system URL handler.
+- NBA and NFL game market rows now use their actual team colors and logos.
+  The sportsbook selector shows vendor marks inside the selection sheet.
+  The previous signed-in NFL review confirmed the actual MM rankings and an
+  open branded player sportsbook sheet on the iPhone 18 Pro. No prices or
+  historical research were synthesized.
+- The local Next route served Terms (18 sections), Privacy (14), Responsible
+  Gambling (9), About (5), FAQ (8), Support (4), and the 10-feature membership
+  comparison. FAQ preview and connected-account links and the support email
+  were preserved. Unknown pages returned 404. Signed Xcode Debug, TypeScript
+  and 203 focused checks passed. The public endpoint still needs its
+  production deployment and Simulator walkthrough.

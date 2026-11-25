@@ -143,7 +143,7 @@ struct SidelineView: View {
                 } else {
                     boardPicker
                     if section == .gameDay {
-                        SidelineGameDay(api: api, gameID: game.id, away: game.away.abbreviation, home: game.home.abbreviation, date: slate.date)
+                        SidelineGameDay(api: api, gameID: game.id, away: matchupTeam(game.away), home: matchupTeam(game.home), date: slate.date)
                             .id(game.id)
                     } else {
                         oddsContent()
@@ -245,7 +245,7 @@ struct SidelineView: View {
             if !api.isFeatured, board.date != dayRequest.date {
                 loading("Loading board")
             } else if api.isFeatured, section == .gameDay, let game = board.games.first {
-                SidelineGameDay(api: api, gameID: game.id, away: game.away, home: game.home, date: board.date)
+                SidelineGameDay(api: api, gameID: game.id, away: matchupTeam(game.away, game, board), home: matchupTeam(game.home, game, board), date: board.date)
                     .id(game.id)
             } else if board.games.isEmpty {
                 ContentUnavailableView(api.isFeatured ? "Preview unavailable" : "No games on this date", systemImage: "calendar")

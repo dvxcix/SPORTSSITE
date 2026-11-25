@@ -209,8 +209,9 @@ struct AccountSignInView: View {
                 VStack(alignment: .leading) { recovery; registration }
             }
             HStack(spacing: 12) {
-                SiteLink("Terms", path: "/terms")
-                SiteLink("Privacy", path: "/privacy")
+                InformationLink(page: .terms, account: account, label: "Terms")
+                InformationLink(page: .privacy, account: account, label: "Privacy")
+                InformationLink(page: .faq, account: account)
             }
             .font(.caption)
         }

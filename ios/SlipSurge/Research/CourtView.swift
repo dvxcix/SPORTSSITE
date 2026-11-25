@@ -262,7 +262,7 @@ struct CourtView: View {
                     EmptyView()
                 case .markets:
                     GameMarkets(
-                        away: board.game.visitorTeam.abbreviation, home: board.game.homeTeam.abbreviation,
+                        away: matchupTeam(board.game.visitorTeam), home: matchupTeam(board.game.homeTeam),
                         offers: board.gameOdds?.map(\.book) ?? []
                     )
                 }

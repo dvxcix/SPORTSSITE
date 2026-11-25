@@ -108,8 +108,8 @@ struct EmailAccountForm: View {
                 }
             TextField("Display name", text: $displayName).textContentType(.name).textFieldStyle(.roundedBorder)
             HStack(spacing: 14) {
-                SiteLink("Terms", path: "/terms")
-                SiteLink("Privacy", path: "/privacy")
+                InformationLink(page: .terms, account: account, label: "Terms")
+                InformationLink(page: .privacy, account: account, label: "Privacy")
             }.font(.caption)
         }
         if flow == .password {

@@ -76,10 +76,10 @@ private struct ResearchHome: View {
                     destination("The Court", league: "NBA", logo: "nba")
                 }
                 if account.memberID == nil {
-                    Text("Preview one matchup. Ultimate includes the full workspaces.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 2)
+                    NavigationLink {
+                        NativeMembershipOverview(account: account)
+                    } label: { Label("Compare memberships", systemImage: "bolt.circle") }
+                        .buttonStyle(.bordered)
                 } else if let id = account.memberID {
                     NavigationLink {
                         ResearchLibraryView(api: ResearchLibraryAPI(account: account, userID: id))

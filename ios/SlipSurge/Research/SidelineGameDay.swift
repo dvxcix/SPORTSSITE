@@ -3,8 +3,8 @@ import SwiftUI
 struct SidelineGameDay: View {
     let api: SidelineAPI
     let gameID: String
-    let away: String
-    let home: String
+    let away: ResearchMatchup.Team
+    let home: ResearchMatchup.Team
     let date: String
     @Environment(\.scenePhase) private var scenePhase
     @State private var offers: [GameMarketBook]?

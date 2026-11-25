@@ -160,35 +160,37 @@ with a shared `SlipSurge` scheme and a minimum deployment target of iOS 17.
 Open the project in Xcode, choose the `SlipSurge` scheme and an installed
 iPhone simulator, then press Run. On the verified Mac with Xcode 27.2, the
 interactive iPhone view is in Device Hub, available from Xcode's
-**Open Developer Tool** menu. From the repository root, an unsigned Simulator
-build can also be run with:
+**Open Developer Tool** menu. Use normal Simulator signing so the app can read
+its Keychain. The Mac's Xcode run and verification records are in the [iOS
+handoff](../workspace/handoffs/2026-11-25-ios-parity.md).
+
+Run the signed build from the repository root.
 
 ```sh
 xcodebuild -project ios/SlipSurge.xcodeproj -scheme SlipSurge \
   -configuration Debug -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath /tmp/slipsurge-ios-derived CODE_SIGNING_ALLOWED=NO build
+  -derivedDataPath /tmp/slipsurge-ios-derived build
 ```
 
-The signed-out Sideline preview is implemented. It uses the existing public
-one-game dispatcher, so it needs an internet connection and no credentials or
-local backend. See the [Mac checkpoint](../workspace/handoffs/2026-11-25-ios-parity.md#mac-implementation-checkpoint--25-november-2026)
-for verified behavior, limits and the next member-session slice.
+The public NBA and NFL research previews and Feed read SlipSurge's hosted
+services directly. They need an internet connection. Sign-in uses the same
+primary Supabase project, and account changes appear where that website and
+iOS share the same account workflow.
 
 ## Native parity acceptance
 
 Use the website source inventory and the dated page-by-page ledger together.
 A route counts as verified when its mobile interactions, server permissions,
 data fidelity and failure states have been exercised for the applicable roles.
-Safari links are usable entry points while native screens are being built. Keep
-their native implementations open in this ledger.
+Track implementation and live verification independently in the handoff.
 
 | Flow | Current native coverage | Still open |
 | --- | --- | --- |
-| Visitor and discovery | SwiftUI Home and Research tabs, one featured matchup for NBA and NFL, external entry points for public browsing and legal pages | Native creator and community discovery, profiles, scores, records, pricing and remaining external pages |
-| Identity | Native email/password, Keychain, refresh/sign-out and TOTP/onboarding checks. Discord/X/Whop browser handoff code is available on the task branch | Positive member tests, enable and exercise the provider handoffs, Apple-equivalent login for distribution, registration, recovery, onboarding and linked accounts |
-| Research | Sideline's featured NFL odds and authenticated slate client, Court's featured NBA roster, frozen averages and player odds, plus explicit Live mode and scores. Both use website artwork and team colors | Authenticated role testing, Court endpoint release, remaining NBA/NFL tools and Live views, MLB, score tools, histories, saved research, watchlists and resume |
-| Social | Native guest/member feed reads, filters, member pagination, pick/parlay cards, spoiler reveal and share. Text, analysis and poll composition, plus inbox read, mark and clear use member-scoped routes | Release and role-test endpoints. Native post detail, pick and media composition, reactions, comments, reposts, poll voting, bookmarks, blocking, moderation, communities, channels, messages and APNs delivery |
-| Membership, creators and admins | Native profile and read-only membership status, with existing server role/tier checks for research. Creator and admin links remain available on the web | StoreKit and region-specific checkout and restore, native creator/admin workspaces, role/action testing and App Store signing |
+| Visitor and discovery | Public Feed, scores, profiles, communities, creators, records, NBA and NFL previews, native information reader and membership comparison | Remaining public content and interactions, guest flows on compact screens, production checks on newly staged information routes |
+| Identity | Email/password, OAuth, Keychain, registration and recovery screens, onboarding, account security, connected providers, export and deletion request | Complete Discord, X and Whop using consenting accounts. Verify email redirects and delivery, signed-device setup and all role gates |
+| Research | NFL and NBA slate dates and matchups, Odds Boards, player trends, frozen pregame policies, explicit Live mode, MM, Cheatsheets, First Basket, Slate Edge, My Picks, Watchlist, notes and collaboration | Full board coverage, Matrix editing, shared item provenance, other leagues, resume and verification across each role and date |
+| Social | Feed, post details and interactions, polls, comments, picks, images, messages, notifications, bookmarks, moderation controls and discussion | Live write QA with test accounts, additional community workflows and creation, complete media formats and physical APNs |
+| Membership, creators and admins | Whop checkout for eligible storefronts, existing-plan management, Creator Studio, scheduled posts and member lists, admin previews and review queues | Real checkout and restore, StoreKit and Apple signing, detailed creator and admin operations, full role and write-path verification |
 
 ### Local account configuration
 
@@ -199,11 +201,9 @@ available. The repository still builds the public research app without account
 configuration. Keep account credentials and tokens out of build settings and
 the repository.
 
-The Court's native member schedule and board use `/api/mobile/court/*`. Those
-branch-only routes require a verified bearer account, MFA where configured and
+The Court's native member schedule and board use `/api/mobile/court/*`. The
+production routes require a verified bearer account, MFA where configured and
 completed onboarding before delegating to the existing tier-gated readers.
-Release the reviewed routes through the normal GitHub/Vercel workflow before
-certifying the live native member Court.
 
 Apple's [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
 sections 3.1 and 4.8 apply to the subscription and third-party login work.
@@ -226,10 +226,8 @@ native state parameter on the existing SlipSurge callback and exercise all
 three providers using consenting test accounts after configuration. The local
 unit tests cover wrong proof/state, expiry and tampering.
 
-The guest Feed was exercised using a separate Simulator review build pointed
-at a Mac-loopback Next server. This used the primary project's anonymous
-client key and real public rows. That build and its local network override
-stay outside Git. Release the reviewed `/api/mobile/feed`,
-`/api/mobile/account`, `/api/mobile/posts` and `/api/mobile/notifications` adapters before certifying
-their use from the standard app against production. Member mutations, real
-provider login and Apple push remain open verification items.
+The signed Simulator builds run against production and have exercised the
+public Feed and selected authenticated research, profile, Workspace and
+security reads. Testing notes distinguish live reads from sample fixtures and
+from member writes. Provider login completion and real-device push remain
+open verification items.

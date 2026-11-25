@@ -91,8 +91,15 @@ struct AccountView: View {
             }
             .listRowBackground(Brand.surface(for: scheme))
             Section {
-                SiteLink("Terms", path: "/terms")
-                SiteLink("Privacy policy", path: "/privacy")
+                NavigationLink {
+                    NativeMembershipOverview(account: account)
+                } label: { Text("Memberships") }
+                InformationLink(page: .support, account: account)
+                InformationLink(page: .faq, account: account)
+                InformationLink(page: .about, account: account)
+                InformationLink(page: .responsibleGambling, account: account)
+                InformationLink(page: .terms, account: account)
+                InformationLink(page: .privacy, account: account)
             }
             .listRowBackground(Brand.surface(for: scheme))
         }
