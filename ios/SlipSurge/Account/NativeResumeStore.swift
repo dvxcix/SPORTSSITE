@@ -5,9 +5,10 @@ struct NativeResumeLocation: Equatable {
     let title: String
     var scrollY = 0
 
-    static func feed(filter: FeedFilter, sport: String, scroll: Int = 0) -> Self {
+    static func feed(filter: FeedFilter, sport: String, scroll: Int = 0, anchor: UUID? = nil) -> Self {
         let items = [URLQueryItem(name: "filter", value: filter == .latest ? nil : filter.rawValue),
-            URLQueryItem(name: "sport", value: sport.isEmpty ? nil : sport.lowercased())].filter { $0.value != nil }
+            URLQueryItem(name: "sport", value: sport.isEmpty ? nil : sport.lowercased()),
+            URLQueryItem(name: "iosPost", value: anchor?.uuidString.lowercased())].filter { $0.value != nil }
         var components = URLComponents()
         components.path = "/feed"
         components.queryItems = items.isEmpty ? nil : items
@@ -101,6 +102,7 @@ final class NativeResumeStore {
         let id = UUID()
         let selection: NativeFeedSelection
         let offset: Int
+        let anchor: UUID?
     }
 
     private(set) var offer: Offer?
@@ -174,7 +176,8 @@ final class NativeResumeStore {
 
     func select(_ offer: Offer) {
         if let destination = NativeSiteLink(offer.url), case .feed(let selection) = destination {
-            feedRestore = FeedRestore(selection: selection, offset: offer.scrollY)
+            let anchor = URLComponents(url: offer.url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "iosPost" }?.value
+            feedRestore = FeedRestore(selection: selection, offset: offer.scrollY, anchor: anchor.flatMap(UUID.init(uuidString:)))
         }
         dismiss()
     }

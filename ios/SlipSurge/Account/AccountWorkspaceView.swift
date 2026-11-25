@@ -376,6 +376,9 @@ struct AccountWorkspaceView: View {
                 NavigationLink { AdminSocialPlatformsView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Social platforms", systemImage: "at") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink { AdminEmailOperationsView(api: .init(account: account, userID: userID)) } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Email operations", systemImage: "envelope.badge.shield.half.filled") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
             } else {
                 NavigationLink { AdminPipelineHealthView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Pipeline health", systemImage: "waveform.path") } content: {}

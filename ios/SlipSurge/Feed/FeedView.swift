@@ -165,7 +165,9 @@ struct FeedView: View {
             target.selection.filter == filter && target.selection.sport == sport && load == .ready ? target : nil
         }
         if #available(iOS 18, *) {
-            content.modifier(FeedResumeScroll(intent: intent, record: recordPosition, consume: { resume?.restoredFeed($0) },
+            content.modifier(FeedResumeScroll(intent: intent, posts: posts.map(\.id),
+                record: { recordPosition($0, anchor: $1) }, consume: { resume?.restoredFeed($0) },
+                findPost: { anchor in posts.first(where: { $0.postID == anchor })?.id },
                 loadMore: {
                     guard let cursor else { return false }
                     await nextPage(cursor)
@@ -178,9 +180,9 @@ struct FeedView: View {
         }
     }
 
-    private func recordPosition(_ scroll: Int) {
+    private func recordPosition(_ scroll: Int, anchor: UUID? = nil) {
         guard resumeActive, api.userID != nil else { return }
-        resume?.record(.feed(filter: filter, sport: sport, scroll: scroll), account: api.account, interaction: true)
+        resume?.record(.feed(filter: filter, sport: sport, scroll: scroll, anchor: anchor), account: api.account, interaction: true)
     }
 
     @ViewBuilder
@@ -201,6 +203,7 @@ struct FeedView: View {
             .padding(.horizontal, 13).padding(.vertical, 7)
             .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 19))
             .disabled(pending.contains(post.postID))
+            .id(post.id)
         }
         if let cursor {
             Button(paginationError ? "Retry loading more" : "Load more") {
@@ -284,25 +287,40 @@ struct FeedView: View {
 
 @available(iOS 18, *)
 private struct FeedResumeScroll: ViewModifier {
+    private struct Geometry: Equatable {
+        var offset = 0
+        var limit = 0
+        var topInset: CGFloat = 0
+    }
+
     let intent: NativeResumeStore.FeedRestore?
-    let record: (Int) -> Void
+    let posts: [FeedPost.ID]
+    let record: (Int, UUID?) -> Void
     let consume: (NativeResumeStore.FeedRestore) -> Void
+    let findPost: (UUID) -> FeedPost.ID?
     let loadMore: () async -> Bool
-    @State private var position = ScrollPosition()
-    @State private var scrollLimit = 0
+    @State private var position = ScrollPosition(idType: FeedPost.ID.self)
+    @State private var geometry = Geometry()
+    @State private var visible = Set<FeedPost.ID>()
 
     func body(content: Content) -> some View {
         content
             .scrollPosition($position)
-            .onScrollGeometryChange(for: Int.self, of: { geometry in
-                max(0, Int(geometry.contentSize.height - geometry.containerSize.height))
-            }) { _, value in scrollLimit = value }
+            .onScrollGeometryChange(for: Geometry.self, of: { value in
+                let maxOffset = value.contentSize.height + value.contentInsets.top + value.contentInsets.bottom - value.containerSize.height
+                return Geometry(offset: max(0, Int((value.contentOffset.y + value.contentInsets.top).rounded())),
+                    limit: max(0, Int(maxOffset.rounded())), topInset: value.contentInsets.top)
+            }) { _, value in
+                if intent != nil { geometry = value }
+            }
             .onScrollPhaseChange { old, next, context in
                 if next == .idle, old == .interacting || old == .decelerating {
                     let point = context.geometry.contentOffset.y + context.geometry.contentInsets.top
-                    record(min(10_000_000, max(0, Int(point.rounded()))))
+                    let offset = min(10_000_000, max(0, Int(point.rounded())))
+                    record(offset, offset > 0 ? posts.first(where: visible.contains)?.post : nil)
                 }
             }
+            .onScrollTargetVisibilityChange(idType: FeedPost.ID.self, threshold: 0.25) { visible = Set($0) }
             .task(id: intent?.id) {
                 if let intent {
                     await restore(intent)
@@ -312,13 +330,38 @@ private struct FeedResumeScroll: ViewModifier {
 
     private func restore(_ target: NativeResumeStore.FeedRestore) async {
         do {
+            if target.offset == 0 {
+                position.scrollTo(edge: .top)
+                consume(target)
+                return
+            }
             try await Task.sleep(for: .milliseconds(150))
             for _ in 0..<4 {
-                guard scrollLimit < target.offset, await loadMore() else { break }
+                if let id = target.anchor.flatMap(findPost) {
+                    position.scrollTo(id: id, anchor: .top)
+                    consume(target)
+                    return
+                }
+                guard target.anchor != nil || geometry.limit < target.offset, await loadMore() else { break }
                 try await Task.sleep(for: .milliseconds(150))
             }
             try Task.checkCancellation()
-            position.scrollTo(y: CGFloat(target.offset))
+            if let id = target.anchor.flatMap(findPost) {
+                position.scrollTo(id: id, anchor: .top)
+                consume(target)
+                return
+            }
+            let desired = min(target.offset, geometry.limit > 0 ? geometry.limit : target.offset)
+            var point = CGFloat(desired) - geometry.topInset
+            position.scrollTo(y: point)
+            // Lazy rows can update the layout after the first jump.
+            for _ in 0..<2 {
+                try await Task.sleep(for: .milliseconds(200))
+                let correction = desired - geometry.offset
+                guard abs(correction) > 3, geometry.limit > 0 else { break }
+                point += CGFloat(correction)
+                position.scrollTo(y: point)
+            }
             consume(target)
         } catch {}
     }

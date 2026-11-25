@@ -1866,6 +1866,29 @@ physical-device push are still open.
   Picks filter, but the list left it at the top. Before/after live position
   checks belong to this checkpoint.
 - Signed Simulator compilation, Hub TypeScript, all 134 production source
-  checks and four focused public-link and resume checks passed. Production
-  signed reads for the two admin screens and public profile changes follow
-  the narrow API deployment. No production admin writes or sessions ran.
+  checks and four focused public-link and resume checks passed. Task
+  `d1688d3f96e4c50a98a7f574a8056b04eab12f4b` is pushed. PR #69 merged as
+  `bc426f45d8da72c52960914046c60d5a7373a8b3`. Preview
+  `dpl_Eft6wJGFUKyPCjcDF6hyAYmurYUq` and production
+  `dpl_27Gk6sRiaaGSc3QDRwaNaEcjQi32` were READY. Signed live Browserbase
+  showed the actual spending thresholds, cost summary, extractors and
+  sessions tabs. Guest requests to both admin routes and Edit Profile
+  returned 401. Public Feed returned 200. No admin writes or sessions ran.
+
+## Native email operations and Feed resume anchors · 25 November 2026
+
+- Email Operations shows the existing Resend readiness indicators, seven-day
+  delivery counts, recent delivery states and four branded template previews.
+  Signed admin access uses the existing account assurance checks. Test send
+  is confirmed for the administrator's own account. A retry uses the same
+  request identifier. The browser's email controls and recipient flow remain
+  in use. Email send checks exercised a fixture transport.
+- The signed Simulator restored the same live Picks post after relaunch.
+  The pixel-only attempt landed approximately one-sixth of a screen lower
+  within that post. Native saves now include the first reliably visible
+  post plus the browser-compatible offset. The native loader uses the post
+  anchor when present. Older saves and missing posts use the scroll offset.
+- The signed iPhone 18 Pro Simulator build passed. Five targeted email and
+  resume tests passed, including provider idempotency, account scoping and
+  the stored post anchor. Signed verification of the revised anchor and
+  rendered email preview follows this checkpoint.
