@@ -22,8 +22,19 @@ const stubs: Record<string, string> = {
   '@/app/the-paint/schedule/route': 'export async function GET(request) { return Response.json({ reader: "schedule", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
   '@/app/the-paint/odds-board/route': 'export async function GET(request) { return Response.json({ reader: "oddsBoard", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
   '@/app/the-sideline/market/route': 'export async function GET(request) { return Response.json({ reader: "sidelineMarket", query: new URL(request.url).search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
+  '@/app/the-paint/first-basket/route': 'export async function GET(request) { return Response.json({ reader: "firstBasket", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
+  '@/app/the-paint/first-basket/odds/route': 'export async function GET(request) { return Response.json({ reader: "firstBasketOdds", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
+  '@/app/the-paint/slate/route': 'export async function GET(request) { return Response.json({ reader: "courtSlateEdge", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
+  '@/app/api/the-sideline/slate-edge/route': 'export async function GET(request) { return Response.json({ reader: "sidelineSlateEdge", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
+  '@/lib/nativeCourtCheatsheets': 'export async function getNativeCourtCheatsheets(request) { return Response.json({ reader: "courtCheatsheets", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
+  '@/lib/nflPregameResearchData': 'export function nflPregameOpen() { return Boolean(globalThis.nativeCourtFixture.phases?.shift()) }',
+  '@/lib/nativeNflResearch': 'export function nativeNflCheatsheets() { return {rows: []} } export function nativeNflMismatch(game, window, board) { return {rows: [window, board.capturedAt]} }',
   '@/lib/nflAccess': 'export async function requireNflAccess() { return globalThis.nativeCourtFixture.readerStatus === 403 ? { error: new Response(null, {status: 403}) } : {} }',
-  '@/app/the-sideline/data': 'export async function getSidelineGames() { const fixture = globalThis.nativeCourtFixture; if (!fixture.schedule) throw new Error("Schedule unavailable"); return fixture.schedule }',
+  '@/app/the-sideline/data': `export async function getSidelineGames() { const fixture = globalThis.nativeCourtFixture; if (!fixture.schedule) throw new Error("Schedule unavailable"); return fixture.schedule }
+    export async function getSidelineOddsBundle() { const fixture = globalThis.nativeCourtFixture; return { odds: { players: [], capturedAt: fixture.captures?.shift() } } }
+    export async function getCachedSidelineBoardLens() { return { status: "calculated", windows: { season: "season", l5: "l5" } } }
+    export async function getCachedSidelineCheatsheetLens() { return { status: "calculated" } }
+  `,
 }
 const bundle = await build({
   stdin: {
@@ -32,6 +43,8 @@ const bundle = await build({
       export { GET as schedule } from './src/app/api/mobile/court/schedule/route'
       export { GET as oddsBoard } from './src/app/api/mobile/court/odds-board/route'
       export { GET as sidelineMarket } from './src/app/api/mobile/sideline/market/route'
+      export { GET as courtTools } from './src/app/api/mobile/court/tools/route'
+      export { GET as sidelineResearch } from './src/app/api/mobile/sideline/research/route'
       export { GET as sidelineSchedule } from './src/app/api/mobile/sideline/schedule/route'
     `,
     resolveDir: process.cwd(), loader: 'ts',
@@ -44,7 +57,7 @@ const bundle = await build({
   } }],
 })
 type Handler = typeof import('../src/app/api/mobile/court/board/route').GET
-const moduleFixture = { exports: {} as Record<'board' | 'schedule' | 'oddsBoard' | 'sidelineMarket' | 'sidelineSchedule', Handler> }
+const moduleFixture = { exports: {} as Record<'board' | 'schedule' | 'oddsBoard' | 'sidelineMarket' | 'sidelineSchedule' | 'courtTools' | 'sidelineResearch', Handler> }
 new Function('require', 'module', 'exports', bundle.outputFiles[0].text)(require, moduleFixture, moduleFixture.exports)
 const { NextRequest } = require('next/server')
 
@@ -114,4 +127,40 @@ test('native Sideline schedule keeps its exact date and requires entitlement bef
   assert.deepEqual(await (await request(date)).json(), slate)
   set({ schedule: null })
   assert.equal((await request(date)).status, 503)
+})
+
+test('research tools keep native auth, canonical readers, date scope and kickoff revalidation', async () => {
+  const date = '2026-11-26'
+  const fixture = {
+    userId: 'member', assurance: { currentLevel: 'aal2', nextLevel: 'aal2' }, onboarded: true, readerStatus: 200,
+    schedule: { date, games: [{ id: 'nfl-match', season: 2026, week: 12, gameType: 'REG', gameday: date }] },
+  }
+  const set = (changes: object = {}) => Object.assign(globalThis, { nativeCourtFixture: { ...fixture, ...changes } })
+  const request = (key: 'courtTools' | 'sidelineResearch', query: string, bearer = true) =>
+    moduleFixture.exports[key](new NextRequest('https://slipsurge.invalid/api/mobile/' + key + '?' + query,
+      { headers: bearer ? { authorization: 'Bearer fixture-token' } : {} }))
+
+  const court = { 'first-basket': 'firstBasket', 'first-basket-odds': 'firstBasketOdds', 'slate-edge': 'courtSlateEdge', cheatsheets: 'courtCheatsheets' }
+  for (const [tool, reader] of Object.entries(court)) {
+    const query = 'tool=' + tool + '&date=' + date + '&game=310'
+    set()
+    assert.equal((await request('courtTools', query, false)).status, 401)
+    set({ readerStatus: 403 })
+    assert.equal((await request('courtTools', query)).status, 403)
+    set()
+    assert.deepEqual(await (await request('courtTools', query)).json(), { reader, query: '?' + query, token: 'Bearer fixture-token' })
+  }
+  assert.equal((await request('courtTools', 'tool=unscoped')).status, 400)
+  assert.equal((await request('sidelineResearch', 'tool=slate-edge&date=2026-02-30')).status, 400)
+  const slate = 'tool=slate-edge&date=' + date
+  assert.equal((await request('sidelineResearch', slate, false)).status, 401)
+  assert.equal((await (await request('sidelineResearch', slate)).json()).reader, 'sidelineSlateEdge')
+  const mm = 'tool=mm&game=nfl-match&window=l5&date='
+  assert.equal((await request('sidelineResearch', mm + '2026-11-25')).status, 404)
+  set({ readerStatus: 403 })
+  assert.equal((await request('sidelineResearch', mm + date)).status, 403)
+  set({ phases: [true, false], captures: ['in-flight', 'frozen'] })
+  const response = await request('sidelineResearch', mm + date)
+  assert.equal(response.headers.get('cache-control'), 'private, no-store')
+  assert.deepEqual((await response.json()).rows, ['l5', 'frozen'])
 })

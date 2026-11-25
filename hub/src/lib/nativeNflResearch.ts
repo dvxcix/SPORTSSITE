@@ -1,0 +1,109 @@
+import type { SidelineGame, SidelineWindowData } from '@/app/the-sideline/types'
+import type { SidelineLens as CheatsheetLens } from '@/app/the-sideline/SidelineClient'
+import { nflAvailability, nflHasCurrentMarket, nflMarketExclusion, nflMarketPlayerKey } from './nflAvailability'
+import { contextualNflScore, nflScoreContext } from './nflContextScore'
+import { americanImpliedProbability } from './nflMarketMath'
+import { nflMatchupTeam } from './nflMatchupBoard'
+import { normalizeNflPlayerName } from './nflPlayerName'
+import { addNflMmRanks } from './nflMmRanks'
+import { nflPrimaryMarket } from './nflPrimaryMarket'
+import { nflUnverifiedScoreInputs } from './nflScoreIntegrity'
+import { PROP_FIELDS, hitSummary, modelProbability, projectedValue } from './nflCheatsheetMetrics'
+import type { NflOddsPlayer, SidelineOddsBoard } from './nflOddsTypes'
+
+const key = (name: string, team: string) => `${nflMatchupTeam(team)}:${normalizeNflPlayerName(name)}`
+const identity = (player: NflOddsPlayer) => ({
+  id: player.id, name: player.name, team: player.team, position: player.position,
+  headshot: player.headshot ?? null, headshotFallbacks: player.headshotFallbacks ?? [],
+})
+
+export function nativeNflMismatch(game: SidelineGame, window: SidelineWindowData, board: SidelineOddsBoard, prop: string) {
+  const gameLine = board.gameLines.find(line => normalizeNflPlayerName(line.vendor) === 'fanduel') ?? board.gameLines[0]
+  const teams = new Set([game.away.abbr, game.home.abbr].map(nflMatchupTeam))
+  const marketPlayers = [...new Map([...(board.availabilityPlayers ?? []), ...board.players]
+    .filter(player => teams.has(nflMatchupTeam(player.team))).map(player => [nflMarketPlayerKey(player), player])).values()]
+  const lookup = new Map(window.players.map(player => [key(player.name, player.team), player]))
+  const byId = new Map(window.players.map(player => [player.id, player]))
+  const profiles = new Map(window.teams.map(profile => [nflMatchupTeam(profile.team.abbr), profile]))
+  const { environment, markets } = nflUnverifiedScoreInputs(board)
+  const candidates = marketPlayers.map(market => {
+    const tracked = (market.gsisId ? byId.get(market.gsisId) : null) ?? lookup.get(key(market.name, market.team))
+    const team = nflMatchupTeam(market.team)
+    const home = team === nflMatchupTeam(game.home.abbr)
+    const win = americanImpliedProbability((home ? gameLine?.moneylineHome : gameLine?.moneylineAway) ?? null)
+    const position = market.position || tracked?.position || ''
+    const score = tracked ? contextualNflScore({
+      ...tracked, position, teamProfile: profiles.get(team), opponentProfile: profiles.get(nflMatchupTeam(home ? game.away.abbr : game.home.abbr)),
+    }, prop, win, gameLine?.total ?? null) : null
+    const contextProp = score?.context.propType ?? nflScoreContext(prop, position).propType
+    const available = nflAvailability({ availability: market.availability, rosterStatus: market.rosterStatus ?? tracked?.rosterStatus }, game.gameday)
+    const marketAvailable = nflHasCurrentMarket(market, contextProp)
+    return {
+      id: market.gsisId ?? tracked?.id ?? `bdl-${market.id}`, name: market.name, market,
+      index: score?.score ?? 0, eligible: available.eligible && marketAvailable, hasTracking: tracked != null,
+      contextProp, status: available.label ?? (marketAvailable ? null : 'Unlisted'),
+    }
+  })
+  const ranked = addNflMmRanks([...new Map(candidates.map(row => [row.id, row])).values()])
+  const rows = ranked.map(row => {
+    const safe = !board.availabilityStale && !environment && !markets.has(row.contextProp)
+    return {
+      player: identity(row.market), status: row.status,
+      score: row.hasTracking && !board.availabilityStale && !environment ? row.index : null,
+      mm: safe ? row.mm : null,
+      sportsbookRank: safe && row.mm != null ? row.sportsbookRank : null,
+      performanceRank: safe && row.mm != null ? row.performanceRank : null,
+    }
+  })
+  return { rows }
+}
+
+export function nativeNflCheatsheets(lens: CheatsheetLens, board: SidelineOddsBoard, prop: string, book: string) {
+  const byId = new Map(lens.players.map(player => [player.id, player]))
+  const byName = new Map(lens.players.map(player => [key(player.name, player.team), player]))
+  const byLoose = Map.groupBy(lens.players, player => normalizeNflPlayerName(player.name))
+  const field = PROP_FIELDS[prop]
+  const active = board.availabilityStale ? [] : board.players.filter(player =>
+    !nflMarketExclusion(player, lens.season) && nflHasCurrentMarket(player))
+  const paired = active.map(player => {
+    const matches = byLoose.get(normalizeNflPlayerName(player.name))
+    const stats = (player.gsisId ? byId.get(player.gsisId) : null) ??
+      byName.get(key(player.name, player.team)) ?? (matches?.length === 1 ? matches[0] : undefined)
+    return { player, stats }
+  })
+  const rows = paired.flatMap(({player, stats}) => {
+    const market = nflPrimaryMarket(player, prop, book)
+    const offer = market?.offers.find(item => item.vendor === book && !item.isOpeningOnly)
+    if (!field || !market || !offer) return []
+    const odds = offer.current.over ?? offer.current.odds ?? null
+    const opening = offer.opening?.over ?? offer.opening?.odds ?? null
+    const probability = americanImpliedProbability(odds), openingProbability = americanImpliedProbability(opening)
+    const line = offer.line ?? market.line ?? (prop.includes('td') ? 1 : null)
+    const milestone = offer.type === 'milestone' || prop.includes('td')
+    const modeled = stats && line != null ? modelProbability(stats, prop, line, milestone) : null
+    const picks = (player.publicPicks ?? []).filter(pick => pick.propType === prop && (line == null || pick.line == null || pick.line === line)).map(pick => pick.picks)
+    const hits = stats && line != null ? [null, 10, 5, 3, 1].map(window => hitSummary(stats.gameLog, field, line, window, milestone)) : []
+    const gameLog = stats?.gameLog.slice(0, 20).flatMap(game => {
+      const value = game[field]
+      return value != null && Number.isFinite(value) ? [{ id: game.gameId, value }] : []
+    }) ?? []
+    return [{
+      player: identity(player), line, milestone, odds, opening,
+      movement: probability != null && openingProbability != null ? (probability - openingProbability) * 100 : null,
+      picks: picks.length ? Math.max(...picks) : null, projection: stats ? projectedValue(stats, prop) : null,
+      modeled, edge: probability != null && modeled != null ? modeled - probability * 100 : null, hits, gameLog,
+    }]
+  })
+  const explosives = paired.flatMap(({player, stats}) => stats ? [{
+    player: identity(player), games: stats.games, deepTargets: stats.deepTargets,
+    receiving20: stats.receiving20, receiving30: stats.receiving30, receiving40: stats.receiving40,
+    rushing10: stats.rushing10, rushing20: stats.rushing20, rushing30: stats.rushing30, rushing40: stats.rushing40,
+  }] : [])
+  const books = [...new Set(active.flatMap(player => player.markets.flatMap(market => market.offers.map(offer => offer.vendor))))].sort()
+  const markets = [...new Set(active.flatMap(player => player.markets.map(market => market.propType)).filter(market => PROP_FIELDS[market]))].sort()
+  const teams = new Set(lens.teams.map(item => nflMatchupTeam(item.team.abbr)))
+  return { rows, explosives, books, markets,
+    runGaps: lens.runGaps.filter(row => row.gap !== 'unspecified' && teams.has(nflMatchupTeam(row.team))),
+    defense: lens.dvp.filter(row => teams.has(nflMatchupTeam(row.defense))),
+  }
+}

@@ -11,10 +11,15 @@ export const maxDuration=120
 export async function GET(request:NextRequest){
   const gate=await requirePaintAccess();if(gate.error)return gate.error
   const mode = nbaOddsMode(request.nextUrl.searchParams.get('mode'))
-  const date=request.nextUrl.searchParams.get('date')
+  const date=request.nextUrl.searchParams.get('date'), selected=request.nextUrl.searchParams.get('game')
   if(!date||nbaDate(date)!==date)return NextResponse.json({error:'Choose a valid NBA slate date'},{status:400})
+  if(selected!=null&&!/^[1-9]\d{0,9}$/.test(selected))return NextResponse.json({error:'Choose a valid NBA matchup'},{status:400})
   try{
-    const fullSchedule=await getPaintSchedule(date,true),schedule={...fullSchedule,games:publicWorkspaceGames(fullSchedule.games,'nba')},games=schedule.games.slice(0,16)
+    const fullSchedule=await getPaintSchedule(date,true)
+    const scopedGames=publicWorkspaceGames(fullSchedule.games,'nba')
+    const schedule={...fullSchedule,games:selected==null?scopedGames:scopedGames.filter(game=>String(game.id)===selected)}
+    if(selected!=null&&!schedule.games.length)return NextResponse.json({error:'Matchup not found'},{status:404})
+    const games=schedule.games.slice(0,16)
     const results=[]
     for(let offset=0;offset<games.length;offset+=4)results.push(...await Promise.allSettled(games.slice(offset,offset+4).map(async game=>{
       const result=await getNbaFirstOddsForMode(game, mode)
