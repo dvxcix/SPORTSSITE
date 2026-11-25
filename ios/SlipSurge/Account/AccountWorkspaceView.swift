@@ -359,6 +359,9 @@ struct AccountWorkspaceView: View {
                 NavigationLink { AdminNflAccessView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("NFL early access", systemImage: "football") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink { AdminRecentSignInsView(api: .init(account: account, userID: userID)) } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Recent sign-ins", systemImage: "clock.badge.checkmark") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
             } else if adminTab == .settings {
                 ForEach(AdminPlatformSettingsView.Page.allCases) { page in
                     NavigationLink { AdminPlatformSettingsView(api: .init(account: account, userID: userID), page: page) } label: {

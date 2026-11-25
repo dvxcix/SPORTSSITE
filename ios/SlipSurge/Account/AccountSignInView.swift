@@ -68,12 +68,9 @@ struct AccountSignInView: View {
 
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 11) {
-            HStack(spacing: 9) {
-                Image("brand")
-                    .resizable().scaledToFit().frame(width: 34, height: 34)
-                    .clipShape(.rect(cornerRadius: 9))
-                    .accessibilityHidden(true)
-                Text("SlipSurge").font(.headline.weight(.heavy))
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) { logo; Spacer(minLength: 0); registration }
+                VStack(alignment: .leading, spacing: 6) { logo; registration }
             }
             Text("Welcome back")
                 .font(.largeTitle.weight(.bold))
@@ -85,11 +82,21 @@ struct AccountSignInView: View {
         .offset(y: appeared || reduceMotion ? 0 : 8)
     }
 
+    private var logo: some View {
+        HStack(spacing: 9) {
+            Image("brand")
+                .resizable().scaledToFit().frame(width: 34, height: 34)
+                .clipShape(.rect(cornerRadius: 9))
+                .accessibilityHidden(true)
+            Text("SlipSurge").font(.headline.weight(.heavy))
+        }
+    }
+
     private var credentials: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 9) {
                 Rectangle().fill(.secondary.opacity(0.22)).frame(height: 1)
-                Text("Sign in with email").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                Text("Sign in with email").font(.footnote.weight(.semibold)).foregroundStyle(.secondary).layoutPriority(1)
                 Rectangle().fill(.secondary.opacity(0.22)).frame(height: 1)
             }
             field("Email", icon: "envelope") {
@@ -145,10 +152,7 @@ struct AccountSignInView: View {
 
     private var help: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ViewThatFits(in: .horizontal) {
-                HStack { recovery; Spacer(minLength: 8); registration }
-                VStack(alignment: .leading) { recovery; registration }
-            }
+            recovery
             HStack(spacing: 12) {
                 InformationLink(page: .terms, account: account, label: "Terms")
                 InformationLink(page: .privacy, account: account, label: "Privacy")
@@ -165,7 +169,8 @@ struct AccountSignInView: View {
 
     private var registration: some View {
         Button("Create account") { emailFlow = .registration }
-            .font(.footnote.weight(.semibold)).frame(minHeight: 44)
+            .font(.footnote.weight(.semibold)).padding(.horizontal, 8).frame(minHeight: 44)
+            .buttonStyle(.bordered)
     }
 
     private func submit() {

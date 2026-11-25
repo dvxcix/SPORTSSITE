@@ -28,7 +28,7 @@ enum NativeSiteLink: Hashable {
     enum Preview: String { case nba, nfl }
 
     enum AdminSection: Hashable {
-        case reports, deletions, members, banned, badges, nflAccess, audit, notifications
+        case reports, deletions, members, banned, recentSignIns, badges, nflAccess, audit, notifications
         case groups, events, forum, posts, stories, articles, pages, emoji, rollouts, banner, changelog
     }
 
@@ -158,6 +158,7 @@ enum NativeSiteLink: Hashable {
         case ["admin", "users", "deletions"]: self = .adminSection(.deletions)
         case ["admin", "users"], ["admin", "users", "verify"]: self = .adminSection(.members)
         case ["admin", "users", "banned"]: self = .adminSection(.banned)
+        case ["admin", "users", "online"]: self = .adminSection(.recentSignIns)
         case ["admin", "badges"]: self = .adminSection(.badges)
         case ["admin", "nfl-access"]: self = .adminSection(.nflAccess)
         case ["admin", "audit"]: self = .adminSection(.audit)

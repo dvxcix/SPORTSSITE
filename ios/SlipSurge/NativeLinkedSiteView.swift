@@ -117,6 +117,7 @@ struct NativeLinkedSiteView: View {
             AdminQueueView(account: account, userID: userID, queue: section == .reports ? .reports : .deletions)
         case .members, .banned:
             AdminMembersView(api: .init(account: account, userID: userID), banned: section == .banned)
+        case .recentSignIns: AdminRecentSignInsView(api: viewer)
         case .badges: AdminBadgeStudio(viewer: viewer)
         case .nflAccess: AdminNflAccessView(api: viewer)
         case .audit: AdminOperationsView(viewer: viewer, mode: .audit)

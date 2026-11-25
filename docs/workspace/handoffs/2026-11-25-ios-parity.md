@@ -2018,3 +2018,25 @@ physical-device push are still open.
   regular/Ultimate role denial, MFA, and the preserved user role. No live
   grant or revocation ran. Signed live directory and route checks follow
   the narrow Hub release.
+- Task `40d9ffdb7ec538b57dffdb69f96633da06e89bb6` is pushed. PR #74 merged
+  as `2eb5d0c83cb5c210129c59966488cced767cd913`. Preview
+  `dpl_7kVNVJhAXHY7Y4GFF3zhmzJBerJu` and production
+  `dpl_9Re22S8He6i5MY4geDcAgFoaoJ5z` were READY. The live signed app loaded
+  the approved tester list and handled an unmatched member search. The
+  guest endpoint returned 401. No access grant was changed.
+
+## Compact registration and recent sign-ins · 25 November 2026
+
+- Create Account is accessible above the fold on the compact phone sign-in
+  screen. The iPhone 17e Simulator opened the two-step flow, showed the three
+  branded social providers and Apple's strong-password suggestion, and let
+  QA select NBA alongside NFL in the native sports grid. The draft used a
+  fixture address and was closed before account creation. Fresh provider
+  consent and email confirmation remain separate checks.
+- Added Recent Sign-ins to the admin Members area. It shows the same bounded
+  sign-in sample as the website, newest first, with member photos, timestamps
+  and the 15-minute indicator. The native route reuses the admin role check
+  and returns the directory projection. The browser route was untouched.
+- Signed Simulator, Hub TypeScript and 144 checks passed. The admin fixture
+  verifies permissions, sorting, the 15-minute distinction, and omission of
+  unrelated account fields. Signed live directory QA follows the Hub release.
