@@ -65,6 +65,7 @@ struct SidelineBoard: Decodable {
         let price: Int
         let observedAt: Date
         let previousPrice: Int?
+        let previousObservedAt: Date?
         let openingPrice: Int?
         let openingConflict: Bool
 
@@ -84,9 +85,48 @@ struct SidelineBoard: Decodable {
             observedAt = date
             let prior = row.isAtEnd ? nil : try row.decodeIfPresent(Int.self)
             let priorDate = row.isAtEnd ? nil : try row.decodeIfPresent(String.self)
-            previousPrice = priorDate.flatMap(SidelineBoard.timestamp).map { $0 < date } == true ? prior : nil
+            previousObservedAt = priorDate.flatMap(SidelineBoard.timestamp).flatMap { $0 < date ? $0 : nil }
+            previousPrice = previousObservedAt == nil ? nil : prior
             openingPrice = row.isAtEnd ? nil : try row.decodeIfPresent(Int.self)
             openingConflict = row.isAtEnd ? false : try row.decode(Bool.self)
+        }
+    }
+
+    struct Final: Decodable {
+        let game: String
+        let playerID: Int
+        let team: String
+        let value: Double
+
+        init(from decoder: Decoder) throws {
+            var row = try decoder.unkeyedContainer()
+            game = try row.decode(String.self)
+            playerID = try row.decode(Int.self)
+            team = try row.decode(String.self)
+            value = try row.decode(Double.self)
+        }
+    }
+
+    struct Picks: Decodable {
+        let game: String
+        let playerID: Int
+        let team: String
+        let market: String
+        let book: String
+        let line: Double
+        let count: Int
+        let estimated: Bool
+
+        init(from decoder: Decoder) throws {
+            var row = try decoder.unkeyedContainer()
+            game = try row.decode(String.self)
+            playerID = try row.decode(Int.self)
+            team = try row.decode(String.self)
+            market = try row.decode(String.self)
+            book = try row.decode(String.self)
+            line = try row.decode(Double.self)
+            count = try row.decode(Int.self)
+            estimated = try row.decode(Bool.self)
         }
     }
 
@@ -104,6 +144,9 @@ struct SidelineBoard: Decodable {
     let identities: [Portrait]
     let teams: [Team]
     let availabilityUnavailable: [String]
+    let finals: [Final]?
+    let picks: [Picks]?
+    let resultsPending: Bool?
 
     func refreshDeadline() throws -> Date? {
         guard phaseToken.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
@@ -188,23 +231,26 @@ struct SidelineAPI {
             }
             let odds: Odds
         }
-        let query: [URLQueryItem] = [
-            .init(name: "game", value: gameID), .init(name: "date", value: date),
-            .init(name: "summary", value: "1")
-        ]
-        let payload: Payload
+        let data = try await marketData(gameID: gameID, date: date)
+        let payload = try JSONDecoder().decode(Payload.self, from: data)
+        return MarketObservation(offers: payload.odds.gameLines, cutoff: payload.odds.availabilityCutoffAt.flatMap(SidelineBoard.timestamp))
+    }
+
+    func marketData(gameID: String, date: String) async throws -> Data {
+        var query: [URLQueryItem] = [.init(name: "game", value: gameID), .init(name: "date", value: date), .init(name: "summary", value: "1")]
+        let data: Data
         switch scope {
         case .featured:
-            payload = try await SlipSurgeHTTP.get("/preview/nfl/data", query: [
-                .init(name: "resource", value: "/the-sideline/market")
-            ] + query)
+            query.append(.init(name: "resource", value: "/the-sideline/market"))
+            let request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: "/preview/nfl/data", query: query, timeout: 120)
+            data = try await SlipSurgeHTTP.send(request)
         case .member(let account, let userID):
-            let data = try await SlipSurgeHTTP.memberData(
+            data = try await SlipSurgeHTTP.memberData(
                 "/api/mobile/sideline/market", query: query, account: account, userID: userID
             )
-            payload = try JSONDecoder().decode(Payload.self, from: data)
         }
-        return MarketObservation(offers: payload.odds.gameLines, cutoff: payload.odds.availabilityCutoffAt.flatMap(SidelineBoard.timestamp))
+        guard data.count <= 4_194_304 else { throw URLError(.cannotParseResponse) }
+        return data
     }
 
     func board(for selection: OddsSelection, date: String) async throws -> SidelineBoard {
@@ -228,10 +274,11 @@ struct SidelineAPI {
         let gameIDs = Set(board.games.map(\.id))
         guard board.market == selection.market, board.book == selection.book,
               (isFeatured ? board.games.count <= 1 : board.date == date && board.games.count <= 24),
-              gameIDs.count == board.games.count,
+              gameIDs.count == board.games.count, board.quotes.count <= 5_000,
               board.quotes.allSatisfy({ quote in
                   gameIDs.contains(quote.id.player.game) &&
-                  quote.id.market == selection.market && quote.id.book == selection.book
+                  quote.id.market == selection.market && quote.id.book == selection.book &&
+                  quote.id.line.isFinite && quote.id.line >= 0 && abs(Double(quote.price)) >= 100
               }),
               Set(board.quotes.map(\.id)).count == board.quotes.count else {
             throw URLError(.cannotParseResponse)

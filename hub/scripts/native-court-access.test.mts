@@ -20,6 +20,7 @@ const stubs: Record<string, string> = {
   './ownOnboarding': 'export async function ownOnboardingComplete() { return globalThis.nativeCourtFixture.onboarded }',
   '@/app/the-paint/board/route': 'export async function GET(request) { return Response.json({ reader: "board", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
   '@/app/the-paint/schedule/route': 'export async function GET(request) { return Response.json({ reader: "schedule", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
+  '@/app/the-paint/odds-board/route': 'export async function GET(request) { return Response.json({ reader: "oddsBoard", query: request.nextUrl.search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
   '@/app/the-sideline/market/route': 'export async function GET(request) { return Response.json({ reader: "sidelineMarket", query: new URL(request.url).search, token: request.headers.get("authorization") }, { status: globalThis.nativeCourtFixture.readerStatus }) }',
   '@/lib/nflAccess': 'export async function requireNflAccess() { return globalThis.nativeCourtFixture.readerStatus === 403 ? { error: new Response(null, {status: 403}) } : {} }',
   '@/app/the-sideline/data': 'export async function getSidelineGames() { const fixture = globalThis.nativeCourtFixture; if (!fixture.schedule) throw new Error("Schedule unavailable"); return fixture.schedule }',
@@ -29,6 +30,7 @@ const bundle = await build({
     contents: `
       export { GET as board } from './src/app/api/mobile/court/board/route'
       export { GET as schedule } from './src/app/api/mobile/court/schedule/route'
+      export { GET as oddsBoard } from './src/app/api/mobile/court/odds-board/route'
       export { GET as sidelineMarket } from './src/app/api/mobile/sideline/market/route'
       export { GET as sidelineSchedule } from './src/app/api/mobile/sideline/schedule/route'
     `,
@@ -42,13 +44,13 @@ const bundle = await build({
   } }],
 })
 type Handler = typeof import('../src/app/api/mobile/court/board/route').GET
-const moduleFixture = { exports: {} as Record<'board' | 'schedule' | 'sidelineMarket' | 'sidelineSchedule', Handler> }
+const moduleFixture = { exports: {} as Record<'board' | 'schedule' | 'oddsBoard' | 'sidelineMarket' | 'sidelineSchedule', Handler> }
 new Function('require', 'module', 'exports', bundle.outputFiles[0].text)(require, moduleFixture, moduleFixture.exports)
 const { NextRequest } = require('next/server')
 
-test('native Court reads require a verified account, current MFA and onboarding before delegating to the protected reader', async () => {
+test('native research reads require a verified account, current MFA and onboarding before delegating to the protected reader', async () => {
   const ready = { userId: 'member', assurance: { currentLevel: 'aal2', nextLevel: 'aal2' }, onboarded: true, readerStatus: 200 }
-  for (const resource of ['board', 'schedule', 'sidelineMarket'] as const) {
+  for (const resource of ['board', 'schedule', 'oddsBoard', 'sidelineMarket'] as const) {
     const set = (fixture: object) => Object.assign(globalThis, { nativeCourtFixture: { ...ready, ...fixture } })
     const request = (bearer = true) => moduleFixture.exports[resource](new NextRequest(
       'https://slipsurge.invalid/api/mobile/court/' + resource + '?game=310&date=2026-11-24',

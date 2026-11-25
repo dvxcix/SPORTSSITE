@@ -280,3 +280,42 @@ is unsuitable for verifying member reads from this branch. This Mac session had
 no existing CLI or short-lived Vercel credential for testing the protected
 preview over HTTP. The standard build remains open on the real Court public
 preview in Device Hub. The Cloud continuity chat received the code checkpoint.
+
+## Released member backend and native research tools · 25 November 2026
+
+- The owner authorized the narrow live backend release and enabling Discord, X,
+  and Whop. PR #9 landed on main as `020603d73f474e82a869265a448e03b18fd4cff7`.
+  Vercel Preview `dpl_5suz3GbuhRcVYZJ7LePu8rEVmEMt` and production
+  `dpl_61D1VtYf5tRqXzCrg35c63TtTL7g` reported READY. The dedicated native OAuth
+  handoff secret is configured as production-sensitive in Vercel.
+- Live native account, NBA schedule/board/Odds Board, and NFL schedule/market
+  returned 401 for an intentionally invalid bearer instead of 404. OAuth status
+  reported available, rejected an invalid exchange with 401, and sent each
+  provider's native start to the real Discord, X, or Whop site. The App Account
+  screen showed all three options and opened each provider in iOS's web
+  authentication session in a temporary fresh build. The temporary build was
+  removed. No test account was used to finish the provider authorization steps.
+- Public Home, web sign-in, Feed, Pricing, health, and both web previews kept
+  their baseline responses. Signed-out protected research still redirected
+  to login. Hub TypeScript and 146 auth, MM, public scope and web source tests
+  passed. This release contained no client web UI, database, payment or job changes.
+- The updated Xcode build on the iPhone 18 Pro restored the existing member
+  session. NBA switched from the three-game 24 November slate to the nine-game
+  25 November slate. The NFL calendar loaded the 8 November archive and selected
+  TB at CHI from 13 games, and the default schedule loaded GB at LA. The NBA and
+  NFL Odds Boards displayed real lines, opening comparisons, movement and team
+  artwork. The NBA price-history sheet displayed saved observations.
+- Court MM reused the existing ranking engine for the exact scoped game,
+  observation, market and sportsbook. Device Hub showed John Collins at MM +2
+  with book rank 9 and production rank 7 for points. NBA Matchup Lab and
+  Availability, and NFL The Public and Sportsbooks, were exercised against the
+  real saved team analytics, injury listings, public counts and source prices.
+  The app remains open on the signed-in Court Odds Board.
+
+Remaining parity includes the rest of the proprietary tools, including
+Cheatsheets, NFL MM and Matchup Lab, NBA First Basket, Slate Edge, Cross-market,
+and the complete pick and publishing flows. The Court Availability screen
+currently supports all players, injury listings and draft class. The NFL Public
+screen displays captured counts and shares; its full outcomes and ladders still
+need porting. Real-account OAuth callbacks, role-by-role tests, payments and
+physical-device push are still open.

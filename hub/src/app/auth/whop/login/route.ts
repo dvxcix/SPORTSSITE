@@ -49,7 +49,7 @@ export async function GET(request: Request) {
   const authorizeUrl = buildAuthorizeUrl({ redirectUri, state, codeChallenge, nonce })
 
   const cookieStore = await cookies()
-  cookieStore.set(STATE_COOKIE, JSON.stringify({ state, codeVerifier, nonce, next, mode, linkUserId, desktopState, nativeState }), {
+  cookieStore.set(STATE_COOKIE, JSON.stringify({ state, codeVerifier, nonce, next, mode, linkUserId, desktopState, ...(nativeState ? { nativeState } : {}) }), {
     httpOnly: true,
     secure: new URL(origin).protocol === 'https:',
     sameSite: 'lax',

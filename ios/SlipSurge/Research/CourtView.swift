@@ -7,7 +7,7 @@ struct CourtView: View {
     }
 
     private enum BoardSection: String, CaseIterable {
-        case players = "Player Board", markets = "Game Markets"
+        case players = "Player Board", odds = "Odds Board", markets = "Game Markets"
     }
 
     private enum Slate {
@@ -35,6 +35,14 @@ struct CourtView: View {
         let mode: CourtResearchMode
     }
 
+    private struct RankRequest: Equatable {
+        let id: Int
+        let observation: String
+        let mode: CourtResearchMode
+        let market: CourtPlayerMarket
+        let sportsbook: String?
+    }
+
     let scope: Scope
     private let api = CourtAPI()
     @Environment(\.colorScheme) private var scheme
@@ -44,12 +52,14 @@ struct CourtView: View {
     @State private var selectedGameID: Int?
     @State private var mode = CourtResearchMode.pregame
     @State private var section = BoardSection.players
+    @State private var tool: CourtMatchupTool?
     @State private var market = CourtPlayerMarket.points
     @State private var sportsbook: String?
     @State private var side = CourtPlayerMarket.Side.over
     @State private var playerSearch = ""
     @State private var slate = Slate.loading
     @State private var state = LoadState.loading
+    @State private var rankResult: (RankRequest, [Int: CourtAPI.Rank])?
 
     private var isPreview: Bool {
         if case .preview = scope { return true }
@@ -83,8 +93,17 @@ struct CourtView: View {
             .padding(.top, 8)
             .padding(.bottom, 20)
         }
-        .navigationTitle("The Court")
+        .navigationTitle(tool?.rawValue ?? "The Court")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu("Research tools", systemImage: "square.grid.2x2") {
+                    Button("The Court", systemImage: "basketball") { tool = nil }
+                    Button("Matchup Lab", systemImage: "chart.xyaxis.line") { tool = .matchup }
+                    Button("Availability", systemImage: "heart.text.square") { tool = .availability }
+                }
+            }
+        }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))
@@ -141,10 +160,12 @@ struct CourtView: View {
                 Text("Live").tag(CourtResearchMode.live)
             }
             .pickerStyle(.segmented)
-            Picker("Board", selection: $section) {
-                ForEach(BoardSection.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            if tool == nil {
+                Picker("Board", selection: $section) {
+                    ForEach(BoardSection.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
             }
-            .pickerStyle(.segmented)
         }
     }
 
@@ -154,6 +175,15 @@ struct CourtView: View {
             matchup(board.game, subtitle: SlateDate.fromKey(board.game.date).map { SlateDate.label($0) }, selected: false)
         }
         selectors
+        if tool == nil, section == .odds {
+            CourtOddsBoardView(scope: scope, date: slateRequest.date, gameID: selectedGame?.id, mode: mode, reload: revision)
+        } else {
+            playerOrMarketContent()
+        }
+    }
+
+    @ViewBuilder
+    private func playerOrMarketContent() -> some View {
         switch state {
         case .loading:
             loading("Loading board")
@@ -188,26 +218,46 @@ struct CourtView: View {
             if !board.issues.isEmpty {
                 Text("Some research is unavailable for this matchup.").font(.caption).foregroundStyle(.secondary)
             }
-            switch section {
-            case .players:
-                playerFilters(board)
-                ForEach([board.game.visitorTeam, board.game.homeTeam], id: \.id) { team in
-                    CourtPlayerBoard(
-                        team: team, board: board, observedAt: observedAt,
-                        market: market, sportsbook: sportsbook, side: side, search: playerSearch
+            if let tool {
+                switch tool {
+                case .matchup: CourtMatchupLab(board: board, observedAt: observedAt)
+                case .availability: CourtAvailability(board: board, observedAt: observedAt)
+                }
+            } else {
+                switch section {
+                case .players:
+                    playerContent(board, at: observedAt)
+                case .odds:
+                    EmptyView()
+                case .markets:
+                    GameMarkets(
+                        away: board.game.visitorTeam.abbreviation, home: board.game.homeTeam.abbreviation,
+                        offers: board.gameOdds?.map(\.book) ?? []
                     )
                 }
-            case .markets:
-                GameMarkets(
-                    away: board.game.visitorTeam.abbreviation, home: board.game.homeTeam.abbreviation,
-                    offers: board.gameOdds?.map(\.book) ?? []
-                )
             }
         } else {
             ContentUnavailableView(
                 board.oddsMode == .live ? "Live research unavailable" : "Pregame snapshot unavailable",
                 systemImage: board.oddsMode == .live ? "waveform" : "clock"
             )
+        }
+    }
+
+    private func playerContent(_ board: CourtBoard, at observedAt: Date) -> some View {
+        let request = RankRequest(id: board.game.id, observation: board.observationID ?? "", mode: board.oddsMode,
+                                  market: market, sportsbook: sportsbook)
+        let ranks = rankResult.flatMap { $0.0 == request ? $0.1 : nil }
+        return VStack(alignment: .leading, spacing: 12) {
+            playerFilters(board)
+            ForEach([board.game.visitorTeam, board.game.homeTeam], id: \.id) { team in
+                CourtPlayerBoard(team: team, board: board, observedAt: observedAt, market: market,
+                    sportsbook: sportsbook, side: side, search: playerSearch, ranks: ranks ?? [:])
+            }
+        }
+        .task(id: request) {
+            let rows = try? await api.ranks(board: board, market: request.market, book: request.sportsbook, scope: scope)
+            if !Task.isCancelled { rankResult = (request, rows ?? [:]) }
         }
     }
 
@@ -276,7 +326,8 @@ struct CourtView: View {
     }
 
     private func matchupTeam(_ team: CourtBoard.Team) -> ResearchMatchup.Team {
-        .init(name: team.abbreviation, logo: team.logo, color: CourtTeamColors.colors(for: team.abbreviation).primary)
+        let palette = CourtTeamColors.colors(for: team.abbreviation)
+        return .init(name: team.abbreviation, logo: team.logo, color: palette.primary, secondary: palette.secondary)
     }
 
     private func gameTime(_ game: CourtBoard.Game) -> String? {

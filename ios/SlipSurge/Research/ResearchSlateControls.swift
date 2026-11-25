@@ -75,6 +75,7 @@ struct ResearchMatchup: View {
         let name: String
         let logo: URL?
         let color: Color
+        var secondary: Color?
     }
 
     let away: Team
@@ -85,7 +86,7 @@ struct ResearchMatchup: View {
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: fullWidth ? 9 : 6) {
             HStack(spacing: 9) {
                 team(away).frame(maxWidth: fullWidth ? .infinity : nil)
                 Text("at").font(.caption2).foregroundStyle(.secondary)
@@ -97,19 +98,25 @@ struct ResearchMatchup: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, 13)
-        .padding(.vertical, 11)
+        .padding(.horizontal, fullWidth ? 19 : 13)
+        .padding(.vertical, fullWidth ? 16 : 11)
         .frame(minWidth: 132, maxWidth: fullWidth ? .infinity : nil)
         .background {
-            LinearGradient(
-                colors: [away.color.opacity(0.19), home.color.opacity(0.13)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
-            .background(Brand.surface(for: scheme))
+            ZStack {
+                Brand.surface(for: scheme)
+                LinearGradient(
+                    stops: [
+                        .init(color: away.color.opacity(scheme == .dark ? 0.37 : 0.20), location: 0),
+                        .init(color: (away.secondary ?? away.color).opacity(0.12), location: 0.37),
+                        .init(color: (home.secondary ?? home.color).opacity(0.12), location: 0.63),
+                        .init(color: home.color.opacity(scheme == .dark ? 0.42 : 0.21), location: 1)
+                    ], startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+            }
         }
-        .clipShape(.rect(cornerRadius: 12))
+        .clipShape(.rect(cornerRadius: fullWidth ? 18 : 13))
         .overlay {
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: fullWidth ? 18 : 13)
                 .strokeBorder(selected ? Brand.accent(for: scheme) : .secondary.opacity(0.22), lineWidth: selected ? 1.5 : 1)
         }
         .accessibilityElement(children: .combine)
@@ -119,8 +126,8 @@ struct ResearchMatchup: View {
     private func team(_ team: Team) -> some View {
         VStack(spacing: 5) {
             ResearchArtwork(urls: team.logo.map { [$0] } ?? [], fallback: "shield")
-                .frame(width: 29, height: 29)
-            Text(team.name).font(.caption.weight(.semibold))
+                .frame(width: fullWidth ? 42 : 29, height: fullWidth ? 42 : 29)
+            Text(team.name).font(fullWidth ? .subheadline.bold() : .caption.weight(.semibold))
         }
     }
 }

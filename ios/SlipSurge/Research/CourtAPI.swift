@@ -22,6 +22,7 @@ struct CourtBoard: Decodable {
         let id: Int
         let date: String
         let datetime: String?
+        let season: Int?
         let status: String
         let statusState: String?
         let period: Int?
@@ -64,6 +65,12 @@ struct CourtBoard: Decodable {
     }
 
     struct Player: Decodable, Identifiable {
+        struct Injury: Decodable {
+            let status: String
+            let description: String?
+            let returnDate: String?
+        }
+
         let id: Int
         let firstName: String
         let lastName: String
@@ -73,7 +80,12 @@ struct CourtBoard: Decodable {
         let average: [String: Double?]?
         let logs: [PlayerLog]?
         let periodLogs: [PlayerLog]?
+        let injury: Injury?
+        let draftYear: Int?
+        let draftNumber: Int?
         let props: [Prop]
+
+        var seasonMinutes: Double? { average?["min"] ?? nil }
     }
 
     struct PlayerLog: Decodable {
@@ -129,6 +141,11 @@ struct CourtBoard: Decodable {
         let updatedAt: String
     }
 
+    struct TeamStats: Decodable {
+        let team: Team
+        let stats: [String: Double?]
+    }
+
     let game: Game
     let players: [Player]
     let gameOdds: [GameOdds]?
@@ -136,9 +153,14 @@ struct CourtBoard: Decodable {
     let oddsMode: CourtResearchMode
     let historical: Bool
     let sampleSeason: Int?
+    let teamStats: [TeamStats]?
+    let teamStatsSeason: Int?
+    let starters: [Int]?
+    let fetchedAt: String?
     let researchSnapshot: Snapshot?
 
     var isFrozen: Bool { researchSnapshot?.frozen == true }
+    var observationID: String? { researchSnapshot?.observedAt ?? fetchedAt }
     var tip: Date? { game.datetime.flatMap(SidelineBoard.timestamp) }
 
     var hasUsableResearch: Bool {
@@ -150,6 +172,23 @@ struct CourtBoard: Decodable {
 }
 
 struct CourtAPI {
+    struct Rank: Decodable {
+        let playerId: Int
+        let mm: Int
+        let marketRank: Int
+        let statRank: Int
+    }
+
+    private struct Ranking: Decodable {
+        let gameId: Int
+        let date: String
+        let mode: CourtResearchMode
+        let market: String
+        let book: String
+        let snapshotAt: String
+        let rows: [Rank]
+    }
+
     private struct Schedule: Decodable {
         let date: String
         let games: [CourtBoard.Game]
@@ -185,6 +224,34 @@ struct CourtAPI {
             account: account, userID: userID
         )
         return try Self.validatedBoard(data, matching: game, mode: mode)
+    }
+
+    func ranks(board: CourtBoard, market: CourtPlayerMarket, book: String?, scope: CourtView.Scope) async throws -> [Int: Rank] {
+        guard let snapshot = board.observationID else { return [:] }
+        var query = [
+            URLQueryItem(name: "game", value: String(board.game.id)), .init(name: "slate_date", value: board.game.date),
+            .init(name: "mode", value: board.oddsMode.rawValue), .init(name: "native_mm", value: market.rawValue),
+            .init(name: "book", value: book ?? "all")
+        ]
+        let data: Data
+        switch scope {
+        case .preview:
+            query.append(.init(name: "resource", value: "/the-paint/board"))
+            let request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: "/preview/nba/data", query: query, timeout: 120)
+            data = try await SlipSurgeHTTP.send(request)
+        case .member(let account, let userID):
+            data = try await SlipSurgeHTTP.memberData("/api/mobile/court/board", query: query, account: account, userID: userID)
+        }
+        let rank = try Self.decode(Ranking.self, from: data)
+        let players = Set(board.players.map(\.id))
+        guard rank.gameId == board.game.id, rank.date == board.game.date, rank.mode == board.oddsMode,
+              rank.market == market.rawValue, rank.book == (book ?? "all"), rank.snapshotAt == snapshot,
+              rank.rows.count <= players.count, Set(rank.rows.map(\.playerId)).count == rank.rows.count,
+              rank.rows.allSatisfy({ players.contains($0.playerId) && (1...players.count).contains($0.marketRank) &&
+                  (1...players.count).contains($0.statRank) && $0.mm == $0.marketRank - $0.statRank }) else {
+            throw URLError(.cannotParseResponse)
+        }
+        return Dictionary(uniqueKeysWithValues: rank.rows.map { ($0.playerId, $0) })
     }
 
     private static func validatedBoard(_ data: Data, matching game: CourtBoard.Game?, mode: CourtResearchMode) throws -> CourtBoard {

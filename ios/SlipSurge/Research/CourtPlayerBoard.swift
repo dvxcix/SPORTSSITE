@@ -8,6 +8,7 @@ struct CourtPlayerBoard: View {
     let sportsbook: String?
     let side: CourtPlayerMarket.Side
     let search: String
+    let ranks: [Int: CourtAPI.Rank]
 
     @Environment(\.colorScheme) private var scheme
 
@@ -63,7 +64,9 @@ struct CourtPlayerBoard: View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 9) {
                 CourtPlayerIdentity(player: player)
+                    .layoutPriority(1)
                 Spacer(minLength: 3)
+                if let rank = ranks[player.id] { mismatch(rank) }
                 Image(systemName: "chevron.right").font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .accessibilityHidden(true)
@@ -88,6 +91,19 @@ struct CourtPlayerBoard: View {
         .padding(.vertical, 9)
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
+    }
+
+    private func mismatch(_ rank: CourtAPI.Rank) -> some View {
+        let color = rank.mm > 0 ? Brand.accent(for: scheme) : rank.mm < 0 ?
+            (scheme == .dark ? Color(rgb: 0xFCA5A5) : Color(rgb: 0xB91C1C)) : .secondary
+        return VStack(alignment: .trailing, spacing: 3) {
+            Text("MM \(rank.mm > 0 ? "+" : "")\(rank.mm)")
+                .font(.subheadline.weight(.bold)).monospacedDigit().foregroundStyle(color)
+            Text("Book #\(rank.marketRank) · Stats #\(rank.statRank)")
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Market Mismatch \(rank.mm). Sportsbook rank \(rank.marketRank), production rank \(rank.statRank)")
     }
 
     private func lineValue(_ quote: CourtPlayerMarket.Reference?) -> some View {

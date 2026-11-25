@@ -30,6 +30,7 @@ struct SidelineView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var date = Date.now
     @State private var section = Section.gameDay
+    @State private var tool: SidelineMarketTools.Tool?
     @State private var selection = OddsSelection()
     @State private var selectedGameID: String?
     @State private var revision = 0
@@ -41,7 +42,7 @@ struct SidelineView: View {
     private var dayRequest: DayRequest { .init(date: SlateDate.key(date), revision: revision) }
 
     private var requestKey: RequestKey {
-        RequestKey(date: dayRequest.date, selection: selection, revision: revision, fetchQuotes: api.isFeatured || section != .gameDay)
+        RequestKey(date: dayRequest.date, selection: selection, revision: revision, fetchQuotes: api.isFeatured || tool == nil && section != .gameDay)
     }
 
     private var dateSelection: Binding<Date> {
@@ -52,11 +53,20 @@ struct SidelineView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 if api.isFeatured {
-                    if let slate = lastBoard, !slate.games.isEmpty {
+                    if let slate = lastBoard, let game = slate.games.first {
                         previewMatchup(slate)
-                        boardPicker
+                        if let tool {
+                            let teams = [game.away, game.home].map { nickname in
+                                let team = matchupTeam(nickname, game, slate)
+                                return SidelineMarketTools.Visual(code: nickname, logo: team.logo, primary: team.color, secondary: team.secondary)
+                            }
+                            SidelineMarketTools(api: api, tool: tool, date: slate.date, gameID: game.id, teams: teams)
+                                .id("\(game.id):\(tool.rawValue)")
+                        } else {
+                            boardPicker
+                        }
                     }
-                    oddsContent()
+                    if tool == nil || lastBoard?.games.isEmpty != false { oddsContent() }
                 } else {
                     ResearchSlateControls(date: dateSelection)
                     memberSlate()
@@ -69,8 +79,17 @@ struct SidelineView: View {
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))
-        .navigationTitle("The Sideline")
+        .navigationTitle(tool?.rawValue ?? "The Sideline")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu("Research tools", systemImage: "square.grid.2x2") {
+                    Button("The Sideline", systemImage: "football") { tool = nil }
+                    Button("The Public", systemImage: "person.2") { tool = .publicActivity }
+                    Button("Sportsbooks", systemImage: "chart.bar.xaxis") { tool = .sportsbooks }
+                }
+            }
+        }
         .task(id: dayRequest) { await loadSchedule() }
         .task(id: requestKey) { await load() }
         .refreshable { revision += 1 }
@@ -100,12 +119,21 @@ struct SidelineView: View {
                 loading("Loading slate")
             } else if let game = slate.games.first(where: { $0.id == selectedGameID }) ?? slate.games.first {
                 matchupPicker(slate, selected: game.id)
-                boardPicker
-                if section == .gameDay {
-                    SidelineGameDay(api: api, gameID: game.id, away: game.away.abbreviation, home: game.home.abbreviation, date: slate.date)
-                        .id(game.id)
+                if let tool {
+                    let teams = [game.away, game.home].map { team in
+                        let visual = matchupTeam(team)
+                        return SidelineMarketTools.Visual(code: team.abbreviation, logo: visual.logo, primary: visual.color, secondary: visual.secondary)
+                    }
+                    SidelineMarketTools(api: api, tool: tool, date: slate.date, gameID: game.id, teams: teams)
+                        .id("\(game.id):\(tool.rawValue)")
                 } else {
-                    oddsContent()
+                    boardPicker
+                    if section == .gameDay {
+                        SidelineGameDay(api: api, gameID: game.id, away: game.away.abbreviation, home: game.home.abbreviation, date: slate.date)
+                            .id(game.id)
+                    } else {
+                        oddsContent()
+                    }
                 }
             } else {
                 ContentUnavailableView("No games on this date", systemImage: "calendar")
@@ -151,7 +179,8 @@ struct SidelineView: View {
 
     private func matchupTeam(_ name: String, _ game: SidelineBoard.Game, _ board: SidelineBoard) -> ResearchMatchup.Team {
         let team = board.teams.first { $0.game == game.id && $0.abbreviation == name }
-        return .init(name: name, logo: team?.logo, color: Color(hex: team?.primary) ?? Brand.surface(for: scheme))
+        return .init(name: name, logo: team?.logo, color: Color(hex: team?.primary) ?? Brand.surface(for: scheme),
+            secondary: Color(hex: team?.secondary))
     }
 
     @ViewBuilder
@@ -182,7 +211,8 @@ struct SidelineView: View {
                         Text("Odds unavailable for this matchup.").font(.subheadline).foregroundStyle(.secondary)
                     }
                 } else {
-                    ForEach(board.games) { quoteBoard(board, game: $0) }
+                    ResearchOddsBoard(slate: board.oddsSlate, selectedGame: selectedGameID,
+                        scorerLabel: board.scorerLabel, defaultSort: .shortened)
                 }
             } else {
                 loading("Loading board")
@@ -218,7 +248,7 @@ struct SidelineView: View {
     private func quoteFilters(_ board: SidelineBoard) -> some View {
         VStack(spacing: 5) {
             Picker("Market", selection: $selection.market) {
-                ForEach(Array(Set(board.markets + [selection.market])).sorted(), id: \.self) {
+                ForEach(Array(Set(board.markets + [selection.market, "anytime_td", "first_td"])).sorted(), id: \.self) {
                     Text(marketName($0)).tag($0)
                 }
             }
@@ -301,6 +331,9 @@ struct SidelineView: View {
             state = .loaded(board)
             if let deadline {
                 try await Task.sleep(for: .seconds(max(0, deadline.timeIntervalSinceNow)))
+                revision += 1
+            } else if board.resultsPending == true {
+                try await Task.sleep(for: .seconds(30))
                 revision += 1
             }
         } catch let error as SlipSurgeHTTP.Status where error.code == 403 && !api.isFeatured {
