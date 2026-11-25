@@ -20,6 +20,7 @@ import { supportsMlbPick } from '@/lib/pickGrading'
 import { supportsNflPick } from '@/lib/nflPickGrading'
 import { mlbCaptureOpen } from '@/lib/mlbCaptureWindow'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
+import { findNativeMlbPick, nativeMlbPickSlate } from '@/lib/nativeMlbPickMarkets'
 import { nativeCommunityPublishing } from '@/lib/nativeCommunityPublishing'
 
 export const revalidate = 0
@@ -88,6 +89,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Malformed pick leg' }, { status: 400 })
     }
     if (l.sport && l.sport !== sport) return NextResponse.json({ error: 'A parlay cannot mix sports.' }, { status: 400 })
+    if (native && sport === 'MLB' && (typeof l.game_date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(l.game_date) ||
+      !Number.isFinite(Date.parse(l.game_date)) || new Date(l.game_date).toISOString().slice(0, 10) !== l.game_date)) {
+      return NextResponse.json({ error: 'Choose a valid MLB slate date.' }, { status: 400 })
+    }
     const contract = { pick_type: sport === 'MLB' ? (PROP_META[l.prop_key]?.pickType ?? l.prop_key) : l.prop_key, numeric_line: l.numeric_line, market_side: l.market_side ?? 'milestone' }
     if ((sport === 'MLB' && !supportsMlbPick(contract)) || (sport === 'NFL' && !supportsNflPick({ ...contract, numeric_line: contract.numeric_line ?? null }))) {
       return NextResponse.json({ error: 'This market needs a supported exact line before it can be tracked.' }, { status: 400 })
@@ -156,6 +161,15 @@ export async function POST(req: Request) {
           candidateDates, gamesSearched, foundGame: !!game, gameStatus: game?.status ?? null,
         })
         return NextResponse.json({ error: `${l.player_name}'s game has already started or is no longer available — pick not posted.` }, { status: 409 })
+      }
+    }
+    if (native) {
+      const selectedDates = [...new Set(legs.map(leg => leg.game_date).filter((day): day is string => Boolean(day)))]
+      const openSlates = new Map(await Promise.all(selectedDates.map(async day => [day, await nativeMlbPickSlate(day)] as const)))
+      for (const leg of legs) {
+        const verified = findNativeMlbPick(openSlates.get(leg.game_date ?? '') ?? [], leg)
+        if (!verified) return NextResponse.json({ error: 'That MLB price or line changed. Refresh the market and try again.' }, { status: 409 })
+        pickCutoff = Math.min(pickCutoff, Date.parse(verified.game.gameTime))
       }
     }
   } else if (sport === 'NBA') {

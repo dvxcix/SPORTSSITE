@@ -2,6 +2,7 @@ import * as firstMarkets from '../src/lib/nbaFirstBasketMarkets.ts'
 import * as oddsMode from '../src/lib/nbaOddsMode.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import * as crypto from 'node:crypto'
 import {readFile} from 'node:fs/promises'
 import ts from 'typescript'
 import * as pure from '../src/lib/nbaPaint.ts'
@@ -26,6 +27,8 @@ async function harness(options:{offer?:pure.PaintProp;started?:boolean;gate?:num
     getPaintProps:async()=>[options.offer??quote],getPaintMarketRoster:async()=>options.ruledOut?[]:[{id:434,first_name:'Canonical',last_name:'Player',team:{id:2,abbreviation:'BOS'}}],
   }})
   const route=await compiled('../src/app/api/posts/pick/route.ts',{
+    'node:crypto':crypto,'@/lib/blocks':{},'@/lib/supabase/nativeAccount':{},'@/lib/nativeMedia':{},'@/lib/nativeCommunityPublishing':{},
+    '@/lib/nativeMlbPickMarkets':{nativeMlbPickSlate:()=>assert.fail('NBA must never load MLB markets')},
     '@/lib/pickGrading':{},'@/lib/nflPickGrading':{},'@/lib/mlbCaptureWindow':{},'@/lib/mlbOffseason':{MLB_HIBERNATING:true},
     'next/server':{NextResponse:{json:Response.json}},'@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:options.user===false?null:{id:'owner'}}})}})},
     '@/lib/supabase/admin':{createAdminClient:()=>({rpc:async(name:string,args:CapturedPost)=>{assert.equal(name,'create_tracked_pick_post');writes.push(args);return options.failed?{data:null,error:{message:'transaction failed'}}:{data:{id:'post',picksTracked:true},error:null}}})},
