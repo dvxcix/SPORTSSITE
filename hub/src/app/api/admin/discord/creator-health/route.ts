@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { creatorDiscordConfigured, creatorDiscordRequest } from '@/lib/creatorDiscord'
 import { CREATOR_DISCORD_COMMANDS } from '@/lib/creatorDiscordCommands'
 import { safeApiError } from '@/lib/safeApiError'
+import { discordAdminActor } from '@/lib/discordAdminActor'
 
-export async function GET(){
- const client=await createClient(),{data:{user}}=await client.auth.getUser()
- if(!user)return NextResponse.json({error:'Sign in first.'},{status:401})
- const {data:profile}=await client.from('users').select('account_type').eq('id',user.id).single()
- if(profile?.account_type!=='admin')return NextResponse.json({error:'Administrator access required.'},{status:403})
+export async function GET(request: Request){
+ const actor=await discordAdminActor(request)
+ if(actor.error)return actor.error
  const headers={'Cache-Control':'private, no-store'}
  if(!creatorDiscordConfigured())return NextResponse.json({configured:false,connected:false},{headers})
  try{

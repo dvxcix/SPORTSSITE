@@ -1,19 +1,11 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { backfillDiscordIdentitiesAndListLinkedUserIds, syncDiscordRoleForUser } from '@/lib/discord'
 import { asyncPool } from '@/lib/matrixMatch'
+import { discordAdminActor } from '@/lib/discordAdminActor'
+import { writeAdminAudit } from '@/lib/adminAudit'
 
 export const maxDuration = 300
-
-async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) }
-  const { data: profile } = await supabase.from('users').select('account_type').eq('id', user.id).single()
-  if (profile?.account_type !== 'admin') return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  return {}
-}
 
 // One-time (or run-whenever-roles-drift) backfill for members who linked
 // Discord and/or bought a tier BEFORE the bot's role sync went live —
@@ -22,9 +14,9 @@ async function requireAdmin() {
 // so anyone whose Discord was linked before this existed just never got
 // their role assigned. This walks every already-linked account once and
 // syncs them all against their current real tier.
-export async function POST() {
-  const { error } = await requireAdmin()
-  if (error) return error
+export async function POST(request: Request) {
+  const actor = await discordAdminActor(request)
+  if (actor.error) return actor.error
 
   const admin = createAdminClient()
   const userIds = await backfillDiscordIdentitiesAndListLinkedUserIds(admin)
@@ -43,5 +35,7 @@ export async function POST() {
     else failed++
   })
 
+  if (actor.native) await writeAdminAudit(admin, { actorUserId: actor.id, action: 'discord_sync_roles',
+    targetType: 'discord', details: { total: userIds.length, synced, failed }, request })
   return NextResponse.json({ ok: true, total: userIds.length, synced, failed })
 }
