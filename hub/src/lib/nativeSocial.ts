@@ -5,6 +5,7 @@ import { MLB_TEAM_COLORS, MLB_TEAM_SECONDARY_COLORS, getTeamLogoPngUrl } from '@
 import type { FeedPost } from './feedQuery'
 import { nbaPortraitFallback } from './nbaPlayerPortraits'
 import { sportTeamColors, sportTeamLogoUrl } from './sportTeamArtwork'
+import { pickSlipBook } from './sportsbookSlip'
 
 export function nativeAnonymousClient() {
   // Guest reads never inherit the browser's session or a service credential.
@@ -76,7 +77,7 @@ export function mobilePost(post: FeedPost) {
     reposts: post.repost_count,
     pick: post.pick_data ? {
       ...displayPick(post.pick_data, post.sport),
-      book: post.pick_data.book ?? post.book ?? null,
+      book: pickSlipBook(post.pick_data.book, post.book),
       combinedOdds: (post.pick_data.combined_odds ?? post.combined_odds) == null ? null
         : String(post.pick_data.combined_odds ?? post.combined_odds),
       legs: (post.pick_data.legs ?? []).map(leg => displayPick(leg, post.sport)),

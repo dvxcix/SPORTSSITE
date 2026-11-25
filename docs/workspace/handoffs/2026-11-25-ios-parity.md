@@ -2284,3 +2284,16 @@ physical-device push are still open.
 - Left the signed iPhone 18 Pro on The Court's November 24 Odds Board with
   the latest app installed. The Xcode scheme and project remain ready to
   open on the Mac.
+
+## Sportsbook-branded social slips · 25 November 2026
+
+- The live website card and generated share PNG use one sportsbook palette
+  catalog. Feed, profile and post-detail cards use the saved book on the pick,
+  falling back to the legacy post's book. Original leg prices, outcome labels
+  and visibility rules remain in force. The website and native cards adjust
+  tint for light and dark mode. Public share PNGs use their existing dark base.
+- Hub TypeScript and the native plus production suite passed 287 checks. A
+  real `ImageResponse` render produced red for Fanatics and blue for FanDuel.
+  The local iOS build also showed Geeejpg's live Fanatics slip with its
+  two legs in light mode and Guan's FanDuel slip with three legs in dark mode.
+  The narrow Hub release is tracked separately from the native profile work.

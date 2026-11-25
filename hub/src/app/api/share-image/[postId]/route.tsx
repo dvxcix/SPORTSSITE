@@ -5,21 +5,7 @@ import { sportLogoUrl } from '@/lib/sportLogos'
 import { sportTeamLogoUrl } from '@/lib/sportTeamArtwork'
 import { nbaPortraitFallback } from '@/lib/nbaPlayerPortraits'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
-
-// BookLogo.tsx's normalizeVendor isn't importable here — it's a 'use client'
-// module, and every export of a client module becomes an opaque client
-// reference when imported from a server Route Handler, even a plain sync
-// function. Small enough to just duplicate rather than extract a shared file.
-function normalizeVendor(v: string): string {
-  const k = (v || '').toLowerCase().replace(/[^a-z]/g, '')
-  if (k === 'fanduel' || k === 'fd') return 'fanduel'
-  if (k === 'draftkings' || k === 'dk') return 'draftkings'
-  if (k === 'betmgm' || k === 'mgm') return 'betmgm'
-  if (k === 'caesars' || k === 'cz' || k === 'williamhillus' || k === 'williamhill') return 'caesars'
-  if (k === 'fanatics' || k === 'fan') return 'fanatics'
-  if (k === 'betrivers' || k === 'br') return 'betrivers'
-  return k
-}
+import { darkSportsbookSlipGradient, normalizeVendor, pickSlipBook } from '@/lib/sportsbookSlip'
 
 export const revalidate = 0
 
@@ -39,7 +25,8 @@ const BOOKS: Record<string, { favicon: string; initials: string; bg: string; col
   draftkings: { favicon: '/sportsbooks/draftkings.png', initials: 'DK',  bg: '#53A318', color: '#fff' },
   betmgm:     { favicon: '/sportsbooks/betmgm.png',     initials: 'MGM', bg: '#B8960C', color: '#000' },
   caesars:    { favicon: '/sportsbooks/caesars.png',    initials: 'CZ',  bg: '#0B4032', color: '#B8960C' },
-  betrivers:  { favicon: '', initials: 'BR', bg: '#003087', color: '#fff' },
+  betrivers:  { favicon: '/sportsbooks/betrivers.ico', initials: 'BR', bg: '#003087', color: '#fff' },
+  fanatics:   { favicon: '/sportsbooks/fanatics.svg', initials: 'FAN', bg: '#DA1927', color: '#fff' },
   pinnacle:   { favicon: '/sportsbooks/pinnacle.ico',   initials: 'PIN', bg: '#003087', color: '#fff' },
   williamhill_us: { favicon: '/sportsbooks/caesars.png', initials: 'CZ', bg: '#0B4032', color: '#B8960C' },
 }
@@ -109,7 +96,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
 
   const supabase = await createClient()
   const { data: post } = await supabase.from('posts')
-    .select('id, sport, pick_data, author:users!posts_author_id_fkey(username, display_name, avatar_url, is_verified)')
+    .select('id, sport, book, pick_data, author:users!posts_author_id_fkey(username, display_name, avatar_url, is_verified)')
     .eq('id', postId).eq('visibility', 'public').single()
 
   const author = Array.isArray(post?.author) ? post?.author[0] : post?.author
@@ -124,6 +111,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
   }
 
   const legs: any[] | null = Array.isArray(pd.legs) ? pd.legs : null
+  const book = pickSlipBook(pd.book, post.book)
   const result: string | undefined = pd.result
   const width = 720
   const PAD = 28
@@ -152,7 +140,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
     (
       <div style={{ width, height, display: 'flex', flexDirection: 'column', background: C.bg, fontFamily: 'sans-serif' }}>
         {/* Pick card */}
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, background: C.surface, padding: PAD, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, background: darkSportsbookSlipGradient(book, C.surface), padding: PAD, borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', alignItems: 'center', height: HEADER_H }}>
             <span style={{ fontSize: 15, fontWeight: 800, color: C.gold, letterSpacing: 2 }}>PICK</span>
             {sportLogo && <img src={sportLogo} alt="" width={18} height={18} style={{ marginLeft: 10, objectFit: 'contain' }} />}
@@ -179,7 +167,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
                 </div>
               ))}
               <div style={{ display: 'flex', alignItems: 'center', width: '100%', paddingTop: 14, marginTop: 4, borderTop: `1px solid ${C.border}`, height: 34 }}>
-                <BookMark book={pd.book} origin={origin} />
+                <BookMark book={book} origin={origin} />
                 <span style={{ marginLeft: 'auto', fontSize: 20, fontWeight: 900, color: C.accent, fontFamily: 'monospace' }}>{fmtOdds(pd.combined_odds)}</span>
               </div>
             </div>
@@ -191,7 +179,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
                 <TeamLine sport={post.sport} team={pd.team} detail={pd.prop_label ?? pd.line} fontSize={15} color={C.text2} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
                   <span style={{ fontSize: 18, fontWeight: 800, color: C.text1, fontFamily: 'monospace' }}>{fmtOdds(pd.odds)}</span>
-                  <BookMark book={pd.book} origin={origin} />
+                  <BookMark book={book} origin={origin} />
                 </div>
               </div>
             </div>
