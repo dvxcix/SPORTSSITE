@@ -1,3 +1,5 @@
+import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
+import { effectiveTier, hasFullAccessOverride, type Tier } from '@slipsurge/core/tiers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { DISCORD_ULTIMATE_ADDON_PLAN_ID, isOfferedWhopPlan, checkoutApiKeyEnvFor } from '@slipsurge/core/tiers'
@@ -17,8 +19,9 @@ export const revalidate = 0
 // Elements on /pricing renders against the returned checkoutConfigurationId rather than a
 // bare planId. See plan doc "Account linking" for why this exists.
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const native = req.headers.has('authorization') ? await requireNativeAccount(req) : null
+  if (native?.error) return native.error
+  const user = native ? { id: native.userId } : (await (await createClient()).auth.getUser()).data.user
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
 
   const body = await req.json().catch(() => null)
@@ -26,6 +29,22 @@ export async function POST(req: Request) {
   const preview = body?.preview && typeof body.preview === 'object' ? readPreviewContext(body.preview) : null
   if (typeof planId !== 'string' || !isOfferedWhopPlan(planId)) {
     return NextResponse.json({ error: 'Unknown plan' }, { status: 400 })
+  }
+
+  let nativeReturn: string | null = null
+  if (native) {
+    if (typeof body?.state !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(body.state)) {
+      return NextResponse.json({ error: 'Invalid checkout session' }, { status: 400 })
+    }
+    const account = await createAdminClient().from('users').select('tier,account_type,beta_access_active,discord_advanced_claimed,admin_granted_tier')
+      .eq('id', user.id).maybeSingle()
+    if (account.error || !account.data) return NextResponse.json({ error: 'Membership could not be checked' }, { status: 503 })
+    const profile = account.data
+    if ((profile.tier ?? 'free') !== 'free' || hasFullAccessOverride(profile.account_type, profile.beta_access_active)
+      || effectiveTier((profile.tier ?? 'free') as Tier, profile.discord_advanced_claimed, profile.admin_granted_tier as Tier | null) === 'ultimate') {
+      return NextResponse.json({ error: 'This account already has a membership to manage' }, { status: 409 })
+    }
+    nativeReturn = `${PLATFORM_URL}/auth/native/checkout?state=${encodeURIComponent(body.state)}`
   }
 
   const apiKeyEnv = checkoutApiKeyEnvFor(planId)
@@ -68,7 +87,7 @@ export async function POST(req: Request) {
       plan_id: planId,
       metadata: { internal_user_id: user.id },
       // No ?status= of our own — Whop appends the real outcome itself.
-      redirect_url: PLATFORM_URL + previewPricingPath(preview),
+      redirect_url: nativeReturn ?? (PLATFORM_URL + previewPricingPath(preview)),
       }),
       signal: AbortSignal.timeout(20_000),
     })

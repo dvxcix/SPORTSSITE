@@ -26,6 +26,7 @@ export async function GET(request: Request) {
     role: data.account_type,
     accessTier: hasFullAccessOverride(data.account_type, data.beta_access_active) ? 'ultimate' : tier,
     membership: {
+      discordClaim: data.discord_advanced_claimed === true,
       purchasedTier: data.tier ?? 'free',
       status: data.tier_status,
       currentPeriodEnd: data.tier_current_period_end,
