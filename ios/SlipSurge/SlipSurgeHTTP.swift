@@ -65,6 +65,17 @@ enum SlipSurgeHTTP {
         guard (200..<300).contains(http.statusCode) else { throw Status(code: http.statusCode, data: data) }
         return data
     }
+
+    static func download(_ request: URLRequest) async throws -> (URL, HTTPURLResponse) {
+        let session = URLSession(configuration: .ephemeral, delegate: NoRedirects(), delegateQueue: nil)
+        defer { session.finishTasksAndInvalidate() }
+        let (file, response) = try await session.download(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            try? FileManager.default.removeItem(at: file)
+            throw URLError(.badServerResponse)
+        }
+        return (file, http)
+    }
 }
 
 private final class NoRedirects: NSObject, URLSessionTaskDelegate {

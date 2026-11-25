@@ -133,6 +133,7 @@ struct NativeLinkedSiteView: View {
         case .experienceAudit: AdminExperienceAuditView(api: viewer)
         case .matrixBacktest: AdminMatrixBacktestView(api: viewer)
         case .hrIntelligence: AdminHrIntelligenceView(api: viewer)
+        case .contactRecap: AdminContactRecapView(api: viewer)
         case .designSystem:
             NativeLinkLookup(title: "Design system", load: {
                 try await SlipSurgeHTTP.memberData("/api/mobile/workspaces", query: [.init(name: "workspace", value: "admin")],

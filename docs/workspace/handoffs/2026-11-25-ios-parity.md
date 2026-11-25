@@ -2212,9 +2212,28 @@ physical-device push are still open.
 - Signed Simulator Debug passed. The existing administrator account opened
   the live-gated screen and used the Liquid Glass Preview button to open the
   native sheet. Earlier supported iOS versions use a bordered action.
+- Task `2447b0418722e15ba27e8cc03f09af03af2bb0ba` is pushed. The previous
+  profile and archive verification was sent to the shared Cloud chat.
 - Primary database inspection found the canonical Market DNA archive and
   Contact Recap job table. The existing Market DNA player analogs, older
   game fallback and Contact Recap near-home-run input call the separate
   legacy MLB project, which workspace instructions place outside this task.
   Complete native versions of those reads still depend on equivalent
   approved primary sources. No legacy connection or job replay was used.
+
+## Native Contact Recap export history · 25 November 2026
+
+- Admin → System health and the existing Daily Contact Recap link open the
+  native export history. It shows the active stages, progress, failure state
+  and actual export format. Completed files use a short private link and
+  the native share and save panel. The download expires no later than the
+  original job and cannot follow redirects to another server.
+- The native server reader uses the primary export queue, checks the same
+  signed-in admin and enrolled-MFA requirements, and gives the app no direct
+  read access to the private storage bucket. Signed Debug, Hub TypeScript
+  and 141 checks passed. Fixtures cover non-admin access, running and expired
+  jobs, and the download lifetime.
+- The primary queue had no current jobs during read-only inspection. The
+  off-season export history can be verified against production after release.
+  Live export download and the original preview, capture and retry paths
+  remain open. This checkpoint queues or replays no export.

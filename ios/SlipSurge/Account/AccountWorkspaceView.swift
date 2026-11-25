@@ -418,6 +418,9 @@ struct AccountWorkspaceView: View {
                 NavigationLink { AdminHrIntelligenceView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("HR Intelligence", systemImage: "scope") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink { AdminContactRecapView(api: .init(account: account, userID: userID)) } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Daily Contact Recap", systemImage: "film.stack") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminBrowserAutomationView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Browser automation", systemImage: "cloud") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
