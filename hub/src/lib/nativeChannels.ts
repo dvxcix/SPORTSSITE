@@ -1,7 +1,7 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isAccountId } from './blocks'
-import { loadChannelHistory } from './channelHistory'
+import { loadChannelHistory, type ChannelHistoryCursor } from './channelHistory'
 import { isOwnedNativeMedia } from './nativeMedia'
 import { canViewMlb } from './mlbViewerAccess'
 import { requireTier } from './requireTier'
@@ -59,15 +59,19 @@ export async function openNativeChannel(client: SupabaseClient, userId: string, 
   return !channel.group_id || permission.view ? { room: { channel, permission } } : { status: 404 as const }
 }
 
-export async function loadNativeChannel(client: SupabaseClient, userId: string, room: Room) {
-  const messages = await loadChannelHistory(client, room.channel.id, 80, AbortSignal.timeout(12_000))
+export async function loadNativeChannel(client: SupabaseClient, userId: string, room: Room, before?: ChannelHistoryCursor) {
+  const history = await loadChannelHistory(client, room.channel.id, 81, AbortSignal.timeout(12_000), before)
+  const hasMore = history.length === 81
+  const messages = hasMore ? history.slice(1) : history
   const ids = messages.map(message => message.id)
   const { data: reactions, error } = ids.length
     ? await client.from('reactions').select('target_id,user_id,emoji').eq('target_type', 'message').in('target_id', ids)
     : { data: [], error: null }
   if (error) throw Error('Channel reactions unavailable')
+  const first = messages[0]
   return { title: room.channel.name, channelId: room.channel.id, partner: null, members: [], pins: [], owner: false, muted: false,
     canSend: room.permission.send === true, canModerate: room.permission.moderate === true, messages,
+    nextCursor: hasMore && first ? `${first.created_at}|${first.id}` : null,
     reactions: (reactions ?? []).map(row => ({ messageId: row.target_id, emoji: row.emoji, mine: row.user_id === userId })) }
 }
 

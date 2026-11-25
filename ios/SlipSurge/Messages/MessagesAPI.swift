@@ -89,6 +89,7 @@ struct MessageThread: Decodable {
     let canSend: Bool
     let canModerate: Bool?
     let channelId: UUID?
+    let nextCursor: String?
     let muted: Bool
     let owner: Bool
 }
@@ -137,8 +138,13 @@ struct MessagesAPI {
         return try await read(Catalog.self, query: query).channels
     }
 
-    func thread(_ destination: MessageDestination) async throws -> MessageThread {
-        let thread = try await read(MessageThread.self, query: [.init(name: "view", value: "thread")] + destination.query)
+    func thread(_ destination: MessageDestination, before: String? = nil) async throws -> MessageThread {
+        var query = [URLQueryItem(name: "view", value: "thread")] + destination.query
+        if let before {
+            guard destination.kind == .channel else { throw URLError(.badURL) }
+            query.append(.init(name: "before", value: before))
+        }
+        let thread = try await read(MessageThread.self, query: query)
         guard thread.messages.count <= 200, thread.partner?.id == (destination.kind == .direct ? destination.id : nil),
               destination.kind != .group || thread.members.contains(where: { $0.id == userID }),
               destination.kind != .channel || thread.channelId == destination.id else {

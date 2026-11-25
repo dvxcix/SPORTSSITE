@@ -5,6 +5,7 @@ import { searchMessageRecipients } from '@/lib/messageRecipients'
 import { loadNativeThread, messageContext, openMessageRoom, updateNativeThread } from '@/lib/nativeMessageThread'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 import { changeNativeChannel, listNativeChannels, loadNativeChannel, openNativeChannel } from '@/lib/nativeChannels'
+import { readChannelHistoryCursor } from '@/lib/channelHistory'
 
 const headers = { 'Cache-Control': 'private, no-store' }
 const respond = (data: unknown, status = 200) => NextResponse.json(data, { status, headers })
@@ -26,8 +27,11 @@ export async function GET(request: Request) {
         if (query.get('kind') === 'channel') {
           const id = query.get('id')
           if (!id || !isAccountId(id)) return respond({ error: 'Invalid channel' }, 400)
+          const cursor = query.get('before')
+          const before = cursor !== null && cursor.length <= 80 ? readChannelHistoryCursor(cursor) : null
+          if (cursor !== null && !before) return respond({ error: 'Invalid message cursor' }, 400)
           const result = await openNativeChannel(supabase, userId, id)
-          return result.room ? respond(await loadNativeChannel(supabase, userId, result.room)) : respond({ error: 'Channel unavailable' }, result.status)
+          return result.room ? respond(await loadNativeChannel(supabase, userId, result.room, before ?? undefined)) : respond({ error: 'Channel unavailable' }, result.status)
         }
         const context = messageContext(query)
         if (!context) return respond({ error: 'Invalid conversation' }, 400)

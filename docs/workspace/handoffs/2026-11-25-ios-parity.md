@@ -827,6 +827,12 @@ physical-device push are still open.
   `dpl_3UxeGASE4mRqoa2zxZkqc8y1eZEk` and production
   `dpl_7UbHsEXbtRvmsXwrfh1X5Jk5A6K7` reported READY. Invalid access,
   Pregame, and Live requests returned 401. Guest Feed returned 200.
+- The signed iPhone 18 Pro Simulator opened the gated board. The November
+  25 slate correctly showed no games. The date picker loaded the September
+  25 slate with team marks and confirmed Cubs and Red Sox lineups. Pete
+  Crow-Armstrong’s detail showed real results and archived book prices,
+  alongside an explicit missing pregame research state. Doubleheader game
+  numbers now distinguish the two matchup cards.
 
 ## Native community Discord · 25 November 2026
 
@@ -846,3 +852,22 @@ physical-device push are still open.
   creator’s community remains unavailable. Discord consent, bot installation,
   role delivery and access-panel publishing still require a suitable
   dedicated Discord server and authorized provider interaction to verify.
+- Task checkpoint `f02645548544994307ba835a4b83195b73f7e602` is pushed.
+  PR #32 merged as `ae23dc156e8745dea14844de5fcd4d6c5b3a54bc`. Preview
+  `dpl_5U54miuwzp3jgoTbw4Q6jfH5YKEt` and production
+  `dpl_HweevYW3KsLkuvPJT9VCUyyiK6Yz` reported READY. Five invalid
+  native Discord read and write requests returned 401. Guest Feed returned 200.
+
+## Native channel history · 25 November 2026
+
+- Live Rooms and community chat can load earlier messages in chronological
+  order without jumping the current reading position. Replies and reactions
+  stay scoped to the same room. The cursor carries the original microsecond
+  timestamp and message UUID, so simultaneous messages do not repeat or
+  disappear at page boundaries. Room authorization is checked for each page.
+- Signed Xcode Debug, Hub TypeScript and 145 focused native message, channel,
+  MLB visibility, and production checks passed. The same-timestamp fixture
+  loaded all 85 entries without duplication and returned 404 after access
+  was removed. The separate Channels directory browser fixture failed to
+  bundle its existing CSS module and was excluded from the 145. A live room
+  with more than 80 messages still needs a Simulator walkthrough.

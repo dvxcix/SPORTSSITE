@@ -28,6 +28,17 @@ struct MessageThreadView: View {
     @State private var lastRead: UUID?
     @State private var atBottom = true
     @State private var fetchVersion = 0
+    @State private var history: [HistoryPage] = []
+    @State private var agedMessages: [MessageThread.Note] = []
+    @State private var agedReactions: [MessageThread.Reaction] = []
+    @State private var loadingHistory = false
+    @State private var historyFailed = false
+    @State private var historyEpoch = 0
+
+    private struct HistoryPage {
+        let cursor: String
+        var result: MessageThread
+    }
 
     private struct SendAttempt {
         let id: UUID
@@ -115,10 +126,29 @@ struct MessageThreadView: View {
 
     private func chat(_ thread: MessageThread) -> some View {
         let term = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        let visible = term.isEmpty ? thread.messages : thread.messages.filter { $0.content.localizedStandardContains(term) }
+        let recentIDs = Set(thread.messages.map(\.id))
+        let archived = history.reversed().flatMap { $0.result.messages } + agedMessages
+        var seen = recentIDs
+        let notes = archived.filter { seen.insert($0.id).inserted } + thread.messages
+        let visible = term.isEmpty ? notes : notes.filter { $0.content.localizedStandardContains(term) }
+        let older = history.isEmpty ? thread.nextCursor : history.last?.result.nextCursor
+        let reactions = archivedReactions(excluding: recentIDs) + thread.reactions
+        let byMessage = Dictionary(grouping: reactions, by: \.messageId)
         return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 10) {
+                    if let older {
+                        Button(historyFailed ? "Retry older messages" : "Load older messages", systemImage: "clock.arrow.circlepath") {
+                            let anchor = visible.first?.id
+                            Task {
+                                if await loadHistory(before: older), let anchor { proxy.scrollTo(anchor, anchor: .top) }
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(loadingHistory)
+                        .padding(.vertical, 6)
+                        if loadingHistory { ProgressView("Loading older messages").font(.caption) }
+                    }
                     if visible.isEmpty {
                         ContentUnavailableView(term.isEmpty ? "No messages yet" : "No matching messages", systemImage: term.isEmpty ? "bubble.left" : "magnifyingglass")
                             .padding(.vertical, 32)
@@ -128,7 +158,7 @@ struct MessageThreadView: View {
                             Text(date.formatted(.dateTime.weekday(.abbreviated).month().day()))
                                 .font(.caption.weight(.semibold)).foregroundStyle(.secondary).padding(.vertical, 4)
                         }
-                        bubble(message, in: thread).id(message.id)
+                        bubble(message, in: thread, reactions: byMessage[message.id] ?? []).id(message.id)
                     }
                     Color.clear.frame(height: 2).id("latest-message")
                         .onAppear { atBottom = true; read(thread.messages.last?.id) }
@@ -160,10 +190,9 @@ struct MessageThreadView: View {
         return !Calendar.current.isDate(previous, inSameDayAs: current)
     }
 
-    private func bubble(_ message: MessageThread.Note, in thread: MessageThread) -> some View {
+    private func bubble(_ message: MessageThread.Note, in thread: MessageThread, reactions: [MessageThread.Reaction]) -> some View {
         let mine = message.senderId == api.userID
         let pinned = thread.pins.contains(message.id)
-        let reactions = thread.reactions.filter { $0.messageId == message.id }
         let counts = Dictionary(grouping: reactions, by: \.emoji)
         let messageID = message.id.uuidString.lowercased()
         return HStack(alignment: .bottom, spacing: 7) {
@@ -324,6 +353,7 @@ struct MessageThreadView: View {
         do {
             let value = try await api.thread(destination)
             if !Task.isCancelled, version == fetchVersion {
+                preserveVisibleHistory(next: value)
                 thread = value
                 error = nil
                 if atBottom { read(value.messages.last?.id) }
@@ -331,7 +361,10 @@ struct MessageThreadView: View {
         } catch {
             if !Task.isCancelled, version == fetchVersion {
                 self.error = error
-                if let response = error as? SlipSurgeHTTP.Status, [401, 403, 404].contains(response.code) { thread = nil }
+                if accessLost(error) {
+                    thread = nil
+                    clearHistory()
+                }
             }
         }
     }
@@ -342,7 +375,9 @@ struct MessageThreadView: View {
     }
 
     private func mutate(_ change: MessagesAPI.Change) async {
-        _ = await perform(change)
+        if await perform(change), let id = change.message.flatMap(UUID.init(uuidString:)) {
+            await refreshOlderMessage(id, deleted: change.action == "delete")
+        }
         await refresh()
     }
 
@@ -364,6 +399,7 @@ struct MessageThreadView: View {
         let change = MessagesAPI.Change(action: editing == nil ? "send" : "edit", message: note.uuidString.lowercased(),
             text: submitted, reply: reply?.uuidString.lowercased(), image: image)
         if await perform(change) {
+            if change.action == "edit" { await refreshOlderMessage(note, deleted: false) }
             if draft == submitted { draft = "" }
             if picture == image { picture = nil }
             editing = nil
@@ -371,5 +407,102 @@ struct MessageThreadView: View {
             lastSendAttempt = nil
         }
         await refresh()
+    }
+
+    private func archivedReactions(excluding recentIDs: Set<UUID>) -> [MessageThread.Reaction] {
+        let byPage = history.map { Dictionary(grouping: $0.result.reactions, by: \.messageId) } +
+            [Dictionary(grouping: agedReactions, by: \.messageId)]
+        var seen = recentIDs
+        return byPage.flatMap { page in
+            page.filter { seen.insert($0.key).inserted }.values.flatMap { $0 }
+        }
+    }
+
+    private func loadHistory(before cursor: String) async -> Bool {
+        guard !loadingHistory, destination.kind == .channel else { return false }
+        loadingHistory = true
+        historyFailed = false
+        let epoch = historyEpoch
+        defer { loadingHistory = false }
+        do {
+            let page = try await api.thread(destination, before: cursor)
+            guard !Task.isCancelled, epoch == historyEpoch, thread != nil else { return false }
+            history.append(.init(cursor: cursor, result: page))
+            return true
+        } catch {
+            if !Task.isCancelled, epoch == historyEpoch {
+                if accessLost(error) {
+                    thread = nil
+                    self.error = error
+                    fetchVersion += 1
+                    clearHistory()
+                } else {
+                    historyFailed = true
+                }
+            }
+            return false
+        }
+    }
+
+    private func preserveVisibleHistory(next: MessageThread) {
+        guard destination.kind == .channel, loadingHistory || !history.isEmpty,
+              let previous = thread, let first = next.messages.first else { return }
+        if let overlap = previous.messages.firstIndex(where: { $0.id == first.id }), overlap > 0 {
+            let aged = previous.messages.prefix(upTo: overlap)
+            let ids = Set(aged.map(\.id))
+            agedMessages.append(contentsOf: aged)
+            agedReactions.append(contentsOf: previous.reactions.filter { ids.contains($0.messageId) })
+        } else if !previous.messages.isEmpty, Set(previous.messages.map(\.id)).isDisjoint(with: next.messages.map(\.id)) {
+            clearHistory()
+        }
+    }
+
+    private func refreshOlderMessage(_ id: UUID, deleted: Bool) async {
+        guard destination.kind == .channel else { return }
+        let page = history.first { $0.result.messages.contains { $0.id == id } }
+        let aged = agedMessages.contains { $0.id == id }
+        guard page != nil || aged else { return }
+        if deleted && aged {
+            agedMessages.removeAll { $0.id == id }
+            agedReactions.removeAll { $0.messageId == id }
+        }
+        let edge = thread?.messages.first.map { "\($0.createdAt)|\($0.id.uuidString.lowercased())" }
+        guard let cursor = page?.cursor ?? edge else { return }
+        let epoch = historyEpoch
+        do {
+            let updated = try await api.thread(destination, before: cursor)
+            guard !Task.isCancelled, epoch == historyEpoch else { return }
+            if let position = history.firstIndex(where: { $0.cursor == cursor }) {
+                history[position].result = updated
+            } else if let note = updated.messages.first(where: { $0.id == id }),
+                      let position = agedMessages.firstIndex(where: { $0.id == id }) {
+                agedMessages[position] = note
+                agedReactions.removeAll { $0.messageId == id }
+                agedReactions.append(contentsOf: updated.reactions.filter { $0.messageId == id })
+            }
+        } catch {
+            guard !Task.isCancelled, epoch == historyEpoch else { return }
+            if accessLost(error) {
+                thread = nil
+                self.error = error
+                fetchVersion += 1
+                clearHistory()
+            } else {
+                historyFailed = true
+            }
+        }
+    }
+
+    private func clearHistory() {
+        historyEpoch += 1
+        history = []
+        agedMessages = []
+        agedReactions = []
+        historyFailed = false
+    }
+
+    private func accessLost(_ error: any Error) -> Bool {
+        guard let response = error as? SlipSurgeHTTP.Status else { return false }
+        return [401, 403, 404].contains(response.code)
     }
 }

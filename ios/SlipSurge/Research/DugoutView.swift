@@ -90,25 +90,28 @@ struct DugoutView: View {
     @ViewBuilder
     private func slate(_ games: [DugoutBoard.Game]) -> some View {
         if let game = games.first(where: { $0.id == selectedGameID }) ?? games.first {
+            let matchupCounts = Dictionary(grouping: games) { [$0.away.code, $0.home.code] }.mapValues(\.count)
             ScrollView(.horizontal) {
                 HStack(spacing: 9) {
                     ForEach(games) { candidate in
+                        let doubleheader = (matchupCounts[[candidate.away.code, candidate.home.code]] ?? 0) > 1
+                        let status = candidate.statusLabel(doubleheader: doubleheader)
                         Button {
                             withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) { selectGame(candidate.id) }
                         } label: {
                             ResearchMatchup(away: candidate.away.matchup, home: candidate.home.matchup,
-                                subtitle: candidate.statusLabel, selected: candidate.id == game.id)
+                                subtitle: status, selected: candidate.id == game.id)
                         }
                         .buttonStyle(SlipSurgePressStyle())
                         .accessibilityLabel("\(candidate.away.name) at \(candidate.home.name)")
-                        .accessibilityValue(candidate.statusLabel ?? "")
+                        .accessibilityValue(status)
                     }
                 }
             }
             .scrollIndicators(.hidden)
             .sensoryFeedback(.selection, trigger: game.id)
 
-            gameHeader(game)
+            gameHeader(game, doubleheader: (matchupCounts[[game.away.code, game.home.code]] ?? 0) > 1)
             if game.locked {
                 NavigationLink {
                     NativeMembershipOverview(account: api.account)
@@ -142,12 +145,12 @@ struct DugoutView: View {
         }
     }
 
-    private func gameHeader(_ game: DugoutBoard.Game) -> some View {
+    private func gameHeader(_ game: DugoutBoard.Game, doubleheader: Bool) -> some View {
         ResearchToolCard(color: game.home.color) {
             HStack(alignment: .center, spacing: 12) {
                 headlineTeam(game.away)
                 VStack(spacing: 4) {
-                    Text(game.statusLabel ?? "First pitch").font(.caption.weight(.semibold))
+                    Text(game.statusLabel(doubleheader: doubleheader)).font(.caption.weight(.semibold))
                     if !game.venue.isEmpty { Text(game.venue).font(.caption2).foregroundStyle(.secondary) }
                 }
                 .multilineTextAlignment(.center)

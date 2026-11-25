@@ -121,13 +121,16 @@ struct DugoutBoard: Decodable {
 
         var batters: [Batter] { awayLineup + homeLineup }
 
-        var statusLabel: String? {
-            guard status == "Preview", !isVoid else { return detailedStatus.isEmpty ? status : detailedStatus }
-            guard let date = Self.timestamp(startsAt) else { return nil }
-            var style = Date.FormatStyle().hour().minute()
-            style.timeZone = SlateDate.zone
-            let firstPitch = date.formatted(style)
-            return number > 1 ? "Game \(number) · \(firstPitch) ET" : "\(firstPitch) ET"
+        func statusLabel(doubleheader: Bool = false) -> String {
+            let label: String
+            if status == "Preview", !isVoid, let date = Self.timestamp(startsAt) {
+                var style = Date.FormatStyle().hour().minute()
+                style.timeZone = SlateDate.zone
+                label = "\(date.formatted(style)) ET"
+            } else {
+                label = detailedStatus.isEmpty ? status : detailedStatus
+            }
+            return doubleheader || number > 1 ? "Game \(number) · \(label)" : label
         }
 
         func team(for batter: Batter) -> Team { batter.team == home.code ? home : away }
