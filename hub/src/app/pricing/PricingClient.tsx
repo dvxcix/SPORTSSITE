@@ -9,19 +9,7 @@ import { PricingCheckoutButton } from './PricingCheckoutButton'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import styles from './PricingClient.module.css'
-
-const FEATURES = [
-  { label: 'Free NBA & NFL research previews', free: true },
-  { label: 'Browse the NFL & NBA community feed', free: true },
-  { label: 'View and manage your profile', free: true },
-  { label: 'Choose favorite teams and players', free: true },
-  { label: 'Community leaderboard', free: true },
-  { label: 'Posts, messages, groups and channels', free: false },
-  { label: 'Player research and search', free: false },
-  { label: 'NFL & NBA live scores, box scores and play-by-play', free: false },
-  { label: 'The Sideline · NFL research', free: false },
-  { label: 'The Court · NBA research, odds and ladders', free: false },
-]
+import { publicMembershipBilling, publicMembershipFeatures } from '@/lib/publicMembershipComparison'
 
 export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discordAdvancedClaimed = false, fullAccessReason = null, checkoutStatus, preview }: {
   loggedIn: boolean
@@ -72,7 +60,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
           return <div key={tier} id={`plan-${tier}`} className={styles.cardAnchor}>
             <div className={`${styles.card} ${paid ? styles.cardPremium : ''} ${current ? styles.cardCurrent : ''}`}>
               <div className={styles.cardHeader}><div className={styles.cardName}><h2>{paid ? 'Ultimate' : 'Free'}</h2></div>{current && <span className={styles.coverageNote}>Current</span>}</div>
-              <div className={styles.price}><span>{paid ? (interval === 'annual' ? '$199.99' : '$19.99') : '$0'}</span><small>{paid ? (interval === 'annual' ? '/365 days' : '/30 days') : ''}</small></div>
+              <div className={styles.price}><span>{paid ? publicMembershipBilling[interval].price : '$0'}</span><small>{paid ? `/${publicMembershipBilling[interval].days} days` : ''}</small></div>
               {paid && <p className={styles.billingDetail}>{interval === 'annual' ? 'Annual' : 'Monthly'} price for new memberships</p>}
               {paid && interval === 'monthly' && <p className={styles.billingDetail}>3-day free trial, then $19.99 every 30 days</p>}
               <p className={styles.tagline}>{paid ? 'NFL and NBA research, odds and community tools.' : 'Browse the community and manage your profile.'}</p>
@@ -80,7 +68,7 @@ export function PricingClient({ loggedIn, currentTier, rawTier = 'free', discord
               {paid && hasExistingPaidPlan && <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>Manage membership</Link>}
               {paid && eligibleDiscordOffer && <Link href="/settings/membership" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full')}>View Discord member offer</Link>}
               {paid && !hasUltimate && !hasExistingPaidPlan && (!eligibleDiscordOffer || interval === 'annual') && <PricingCheckoutButton planId={interval === 'annual' ? ULTIMATE_ANNUAL_CHECKOUT_PLAN_ID : ULTIMATE_CHECKOUT_PLAN_ID} label={interval === 'annual' ? 'Get Ultimate' : 'Start 3-day free trial'} loggedIn={loggedIn} preview={preview} highlight />}
-              <ul className={styles.featureList}>{FEATURES.map(feature => {
+              <ul className={styles.featureList}>{publicMembershipFeatures.map(feature => {
                 const included = paid || feature.free
                 return <li key={feature.label} className={included ? '' : styles.featureUnavailable}>{included ? <Check size={14} /> : <X size={14} />}<span>{feature.label}</span></li>
               })}</ul>
