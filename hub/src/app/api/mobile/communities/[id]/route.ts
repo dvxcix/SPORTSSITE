@@ -26,10 +26,15 @@ export async function GET(request: Request, context: Context) {
     const canView = Boolean(member.data || group.data.is_public && group.data.access_type !== 'paid')
     const query = new URL(request.url).searchParams
     if ((query.get('cursor')?.length ?? 0) > 2048) return response({ error: 'Invalid page cursor' }, 400)
-    const feed = canView ? await groupFeedPage(supabase, id, {
-      picks: query.get('view') === 'picks', userId, hideMlb: !showMlb, cursor: query.get('cursor'), native: true,
-    }) : { posts: [], nextCursor: null, hasMore: false }
+    const [feed, capabilities] = await Promise.all([
+      canView ? groupFeedPage(supabase, id, { picks: query.get('view') === 'picks', userId, hideMlb: !showMlb, cursor: query.get('cursor'), native: true }) :
+        { posts: [], nextCursor: null, hasMore: false },
+      member.data ? supabase.rpc('get_my_community_permissions', { p_group_id: id }) : { data: null },
+    ])
+    const flags = (capabilities.data ?? {}) as Record<string, boolean>
     return response({ ...feed, posts: feed.posts.map(mobilePost), canView, role: member.data?.role ?? null,
+      canManage: Boolean(member.data && (['owner', 'admin', 'moderator'].includes(member.data.role) ||
+        ['manage_channels', 'manage_roles', 'manage_members', 'create_invites'].some(flag => flags[flag] === true))),
       canJoin: !member.data && group.data.is_public && group.data.access_type !== 'paid',
       canLeave: Boolean(member.data) && group.data.owner_id !== userId })
   } catch (error) {
