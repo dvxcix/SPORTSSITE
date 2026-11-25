@@ -12,6 +12,8 @@ struct FeedView: View {
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.nativeResume) private var resume
+    @Environment(\.nativeResumeActive) private var resumeActive
     @State private var filter = FeedFilter.latest
     @State private var sport = ""
     @State private var posts: [FeedPost] = []
@@ -47,44 +49,7 @@ struct FeedView: View {
     }
 
     var body: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    StoriesRail(api: .init(account: api.account, userID: api.userID), sports: availableSports, revision: revision) { member = $0 }
-                    ResearchToolRail(title: "Feed", choices: FeedFilter.allCases.filter { $0 != .following || api.userID != nil },
-                        selection: $filter, label: { $0.rawValue.capitalized }) {
-                        switch $0 {
-                        case .latest: "clock"
-                        case .top: "flame"
-                        case .picks: "bolt"
-                        case .following: "person.2"
-                        }
-                    }
-                    if !availableSports.isEmpty {
-                        ResearchArtworkPicker(title: "Sport", options: [.init(id: "", title: "All sports", icon: "sportscourt")]
-                            + availableSports.map { .init(id: $0, title: LeagueArtwork.label($0), url: LeagueArtwork.logo($0), icon: "sportscourt") },
-                            selection: $sport)
-                    }
-                }
-                .listRowInsets(.init(top: 4, leading: 0, bottom: 4, trailing: 0))
-                .listRowBackground(Color.clear)
-            }
-
-            switch load {
-            case .loading:
-                ProgressView("Loading feed")
-                    .listRowBackground(Brand.surface(for: scheme))
-            case .unavailable:
-                ContentUnavailableView {
-                    Label("Feed unavailable", systemImage: "bubble.left")
-                } actions: {
-                    Button("Retry") { revision += 1 }
-                }
-                .listRowBackground(Brand.surface(for: scheme))
-            case .ready:
-                feedRows
-            }
-        }
+        feedScroll(list)
         .navigationTitle("Feed")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $member) { name in
@@ -131,9 +96,6 @@ struct FeedView: View {
                 }
             }
         }
-        .scrollContentBackground(.hidden)
-        .listSectionSpacing(12)
-        .contentMargins(.top, 8, for: .scrollContent)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))
@@ -146,6 +108,81 @@ struct FeedView: View {
         }
         .task(id: selection) { await firstPage() }
         .refreshable { await firstPage() }
+    }
+
+    private var list: some View {
+        List {
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    StoriesRail(api: .init(account: api.account, userID: api.userID), sports: availableSports, revision: revision) { member = $0 }
+                    ResearchToolRail(title: "Feed", choices: FeedFilter.allCases.filter { $0 != .following || api.userID != nil },
+                        selection: Binding(get: { filter }, set: { value in
+                            guard filter != value else { return }
+                            filter = value
+                            recordPosition(0)
+                        }), label: { $0.rawValue.capitalized }) {
+                        switch $0 {
+                        case .latest: "clock"
+                        case .top: "flame"
+                        case .picks: "bolt"
+                        case .following: "person.2"
+                        }
+                    }
+                    if !availableSports.isEmpty {
+                        ResearchArtworkPicker(title: "Sport", options: [.init(id: "", title: "All sports", icon: "sportscourt")]
+                            + availableSports.map { .init(id: $0, title: LeagueArtwork.label($0), url: LeagueArtwork.logo($0), icon: "sportscourt") },
+                            selection: Binding(get: { sport }, set: { value in
+                                guard sport != value else { return }
+                                sport = value
+                                recordPosition(0)
+                            }))
+                    }
+                }
+                .listRowInsets(.init(top: 4, leading: 0, bottom: 4, trailing: 0))
+                .listRowBackground(Color.clear)
+            }
+
+            switch load {
+            case .loading:
+                ProgressView("Loading feed")
+                    .listRowBackground(Brand.surface(for: scheme))
+            case .unavailable:
+                ContentUnavailableView {
+                    Label("Feed unavailable", systemImage: "bubble.left")
+                } actions: {
+                    Button("Retry") { revision += 1 }
+                }
+                .listRowBackground(Brand.surface(for: scheme))
+            case .ready:
+                feedRows
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .listSectionSpacing(12)
+        .contentMargins(.top, 8, for: .scrollContent)
+    }
+
+    @ViewBuilder private func feedScroll(_ content: some View) -> some View {
+        let intent = resume?.feedRestore.flatMap { target in
+            target.selection.filter == filter && target.selection.sport == sport && load == .ready ? target : nil
+        }
+        if #available(iOS 18, *) {
+            content.modifier(FeedResumeScroll(intent: intent, record: recordPosition, consume: { resume?.restoredFeed($0) },
+                loadMore: {
+                    guard let cursor else { return false }
+                    await nextPage(cursor)
+                    return !paginationError
+                }))
+        } else {
+            content.onChange(of: intent) { _, target in
+                if let target { resume?.restoredFeed(target) }
+            }
+        }
+    }
+
+    private func recordPosition(_ scroll: Int) {
+        guard resumeActive, api.userID != nil else { return }
+        resume?.record(.feed(filter: filter, sport: sport, scroll: scroll), account: api.account, interaction: true)
     }
 
     @ViewBuilder
@@ -243,5 +280,47 @@ struct FeedView: View {
         } catch {
             if !Task.isCancelled, requested == selection, current == generation, cursor == expectedCursor { paginationError = true }
         }
+    }
+}
+
+@available(iOS 18, *)
+private struct FeedResumeScroll: ViewModifier {
+    let intent: NativeResumeStore.FeedRestore?
+    let record: (Int) -> Void
+    let consume: (NativeResumeStore.FeedRestore) -> Void
+    let loadMore: () async -> Bool
+    @State private var position = ScrollPosition()
+    @State private var scrollLimit = 0
+
+    func body(content: Content) -> some View {
+        content
+            .scrollPosition($position)
+            .onScrollGeometryChange(for: Int.self, of: { geometry in
+                max(0, Int(geometry.contentSize.height - geometry.containerSize.height))
+            }) { _, value in scrollLimit = value }
+            .onScrollPhaseChange { old, next, context in
+                if next == .idle, old == .interacting || old == .decelerating {
+                    let point = context.geometry.contentOffset.y + context.geometry.contentInsets.top
+                    record(min(10_000_000, max(0, Int(point.rounded()))))
+                }
+            }
+            .task(id: intent?.id) {
+                if let intent {
+                    await restore(intent)
+                }
+            }
+    }
+
+    private func restore(_ target: NativeResumeStore.FeedRestore) async {
+        do {
+            try await Task.sleep(for: .milliseconds(150))
+            for _ in 0..<4 {
+                guard scrollLimit < target.offset, await loadMore() else { break }
+                try await Task.sleep(for: .milliseconds(150))
+            }
+            try Task.checkCancellation()
+            position.scrollTo(y: CGFloat(target.offset))
+            consume(target)
+        } catch {}
     }
 }

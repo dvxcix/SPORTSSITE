@@ -20,6 +20,7 @@ struct SlipSurgeTabs: View {
     @State private var feedSelection: NativeFeedSelection?
     @State private var emojiLibrary = NativeEmojiLibrary()
     @State private var researchPreferences = MemberResearchPreferenceStore()
+    @State private var resume = NativeResumeStore()
     @State private var choseDestination = false
 
     private struct SitePresentation: Identifiable {
@@ -40,9 +41,15 @@ struct SlipSurgeTabs: View {
         TabView(selection: Binding(get: { selected }, set: { tab in
             choseDestination = true
             selected = tab
+            switch tab {
+            case .discover: resume.record(.init(path: "/community", title: "Communities"), account: account, interaction: true)
+            case .account: resume.record(.init(path: "/settings", title: "Account"), account: account, interaction: true)
+            case .feed, .research: break
+            }
         })) {
             NavigationStack {
                 FeedView(api: FeedAPI(account: account, userID: account.memberID), opensSelection: $feedSelection)
+                    .environment(\.nativeResumeActive, selected == .feed && sitePresentation == nil)
             }
             .id(account.memberID)
             .tabItem { Label("Feed", systemImage: "bubble.left.and.bubble.right") }
@@ -57,6 +64,7 @@ struct SlipSurgeTabs: View {
                     }
             }
             .id(account.memberID)
+            .environment(\.nativeResumeActive, selected == .research && sitePresentation == nil)
             .tabItem { Label("Research", systemImage: "chart.bar.xaxis") }
             .tag(Destination.research)
 
@@ -77,14 +85,23 @@ struct SlipSurgeTabs: View {
         .tint(Brand.accent(for: scheme))
         .environment(\.nativeEmojiLibrary, emojiLibrary)
         .environment(\.memberResearchPreferences, researchPreferences)
+        .environment(\.nativeResume, resume)
         .environment(\.openURL, OpenURLAction(handler: openLink))
         .task { await emojiLibrary.refresh() }
         .onChange(of: phase) { _, current in if current == .active { Task { await emojiLibrary.refresh() } } }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if let banner = announcements?.banner, banner.isActive, !banner.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-               dismissedBannerVersion != banner.updatedAt {
-                SiteAnnouncementBanner(banner: banner) { dismissedBannerVersion = banner.updatedAt }
-                    .environment(\.openURL, OpenURLAction(handler: openLink))
+            VStack(spacing: 5) {
+                if let banner = announcements?.banner, banner.isActive, !banner.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   dismissedBannerVersion != banner.updatedAt {
+                    SiteAnnouncementBanner(banner: banner) { dismissedBannerVersion = banner.updatedAt }
+                        .environment(\.openURL, OpenURLAction(handler: openLink))
+                }
+                if release == nil, sitePresentation == nil, let offer = resume.offer {
+                    NativeResumeOffer(offer: offer, open: {
+                        resume.select(offer)
+                        _ = routeLink(offer.url, track: false)
+                    }, dismiss: resume.dismiss)
+                }
             }
         }
         .sheet(item: $release, onDismiss: presentNextRelease) { current in
@@ -107,6 +124,7 @@ struct SlipSurgeTabs: View {
         }
         .sheet(item: appSheet, onDismiss: presentNextRelease) { site in siteSheet(site) }
         .task { await account.restore() }
+        .task(id: account.memberID) { await resume.refresh(account: account, userID: account.memberID) }
         .task(id: account.memberID) { await applyLaunchPreference() }
         .task(id: account.memberID) {
             let userID = account.memberID
@@ -133,7 +151,10 @@ struct SlipSurgeTabs: View {
                 Task {
                     await account.restore()
                     await refreshAnnouncements(for: account.memberID)
+                    await resume.refresh(account: account, userID: account.memberID)
                 }
+            } else if phase == .background {
+                Task { await resume.flush(account: account) }
             }
         }
     }
@@ -183,20 +204,26 @@ struct SlipSurgeTabs: View {
         guard researchPreferences.read(for: userID) == nil else { return }
         researchPreferences.apply(options, for: userID)
         if !choseDestination, selected == .feed, sitePresentation == nil, let url = options.launch {
-            _ = openLink(url)
+            _ = routeLink(url, track: false)
         }
     }
 
     private func openLink(_ url: URL) -> OpenURLAction.Result {
+        routeLink(url, track: true)
+    }
+
+    private func routeLink(_ url: URL, track: Bool) -> OpenURLAction.Result {
         if let link = ResearchDeepLink(url) {
             choseDestination = true
             sitePresentation = nil
             researchPath = [ResearchPresentation(link: link)]
             selected = .research
+            if track, let target = NativeResumeLocation.destination(url) { resume.record(target, account: account, interaction: true) }
             return .handled
         }
         guard let link = NativeSiteLink(url) else { return .systemAction }
         choseDestination = true
+        if track, let target = NativeResumeLocation.destination(url) { resume.record(target, account: account, interaction: true) }
         switch link {
         case .feed(let feed):
             sitePresentation = nil
@@ -207,7 +234,7 @@ struct SlipSurgeTabs: View {
             selected = .account
         case .launch:
             if let target = researchPreferences.read(for: account.memberID)?.launch {
-                return openLink(target)
+                return routeLink(target, track: track)
             }
             sitePresentation = nil
             selected = .feed
@@ -240,6 +267,41 @@ struct SlipSurgeTabs: View {
         }
     }
 
+}
+
+private struct NativeResumeOffer: View {
+    let offer: NativeResumeStore.Offer
+    let open: () -> Void
+    let dismiss: () -> Void
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        let content = HStack(spacing: 4) {
+            Button(action: open) {
+                HStack(spacing: 9) {
+                    Image(systemName: "clock.arrow.circlepath").font(.title3)
+                        .foregroundStyle(Brand.accent(for: scheme))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Continue where you left off").font(.caption).foregroundStyle(.secondary)
+                        Text(offer.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                    }
+                    Spacer(minLength: 2)
+                    Image(systemName: "arrow.right").font(.caption.weight(.semibold)).accessibilityHidden(true)
+                }
+                .frame(minHeight: 45)
+                .contentShape(.rect)
+            }
+            .buttonStyle(SlipSurgePressStyle())
+            Button("Dismiss resume offer", systemImage: "xmark", action: dismiss)
+                .labelStyle(.iconOnly).font(.caption.weight(.semibold))
+                .buttonStyle(.borderless).frame(minWidth: 44, minHeight: 44)
+        }
+        .foregroundStyle(Brand.text(for: scheme)).padding(.leading, 12).padding(.vertical, 3)
+        Group {
+            if #available(iOS 26, *) { content.glassEffect(.regular, in: .rect(cornerRadius: 18)) }
+            else { content.background(.regularMaterial, in: .rect(cornerRadius: 18)) }
+        }.padding(.horizontal, 14).padding(.vertical, 5)
+    }
 }
 
 private struct ResearchHome: View {

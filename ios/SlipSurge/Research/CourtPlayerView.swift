@@ -39,6 +39,8 @@ struct CourtPlayerView: View {
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.nativeResume) private var resume
+    @Environment(\.nativeResumeActive) private var resumeActive
     @State private var sportsbook = ""
     @State private var market = ""
     @State private var expired = false
@@ -122,6 +124,12 @@ struct CourtPlayerView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { expired = expiry.map { $0 <= .now } ?? false }
+        }
+        .onChange(of: shareURL) { old, url in
+            if resumeActive, let url, let researchScope, case .member(let account, _) = researchScope,
+               let next = NativeResumeLocation.destination(url, title: "\(player.firstName) \(player.lastName)") {
+                resume?.record(next, account: account, interaction: old != nil || linkedPanel == nil)
+            }
         }
         .task {
             if let expiry {

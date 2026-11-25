@@ -61,6 +61,8 @@ struct SidelineView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.nativeResume) private var resume
+    @Environment(\.nativeResumeActive) private var resumeActive
     @State private var date = Date.now
     @State private var section = Section.gameDay
     @State private var tool = Workspace.matchup
@@ -184,6 +186,47 @@ struct SidelineView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { revision += 1 }
         }
+        .onChange(of: resumeLocation, initial: true) { old, location in
+            if let location, case .member(let account, _) = api.scope {
+                resume?.record(location, account: account, interaction: old != nil && old != location)
+            }
+        }
+    }
+
+    private var resumeLocation: NativeResumeLocation? {
+        guard resumeActive, let selectedGameID, !api.isFeatured, link.capture == nil, link.player == nil, link.line == nil else { return nil }
+        let view: String = switch tool {
+        case .matchup:
+            switch section {
+            case .gameDay: "core"
+            case .touchdowns: "touchdowns"
+            case .props: "props"
+            case .oddsBoard: "odds-board"
+            case .capture: "movement"
+            case .usage: "usage"
+            case .tracking: "tracking"
+            case .team: "team"
+            case .all: "all"
+            case .custom: "custom"
+            }
+        case .matchupLab: "research"
+        case .mismatch: "mm"
+        case .cheatsheets: "cheatsheets"
+        case .slateEdge: "slate-edge"
+        case .publicActivity: "public"
+        case .sportsbooks: "markets"
+        case .ladders: "ladders"
+        }
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = SlipSurgeHTTP.site
+        components.path = "/the-sideline"
+        let mode = tool == .matchupLab || tool == .publicActivity || tool == .sportsbooks || tool == .cheatsheets
+        var query: [URLQueryItem] = [.init(name: "date", value: dayRequest.date), .init(name: "game", value: selectedGameID),
+            .init(name: mode ? "mode" : "view", value: view), .init(name: "book", value: selection.book)]
+        if link.sample != .automatic { query.append(.init(name: "sample", value: link.sample.rawValue)) }
+        components.queryItems = query
+        return components.url.flatMap { NativeResumeLocation.destination($0, title: tool.rawValue) }
     }
 
     private var boardPicker: some View {

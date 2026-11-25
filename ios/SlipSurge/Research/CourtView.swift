@@ -112,6 +112,8 @@ struct CourtView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.nativeResume) private var resume
+    @Environment(\.nativeResumeActive) private var resumeActive
     @State private var date = Date.now
     @State private var revision = 0
     @State private var selectedGameID: Int?
@@ -241,6 +243,11 @@ struct CourtView: View {
             comparing = []
             teamFilter = ""
         }
+        .onChange(of: resumeLocation, initial: true) { old, location in
+            if let location, case .member(let account, _) = scope {
+                resume?.record(location, account: account, interaction: old != nil && old != location)
+            }
+        }
         .sheet(isPresented: $matrices) {
             if case .member(let account, let userID) = scope {
                 NavigationStack {
@@ -251,6 +258,49 @@ struct CourtView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { revision += 1 }
         }
+    }
+
+    private var resumeLocation: NativeResumeLocation? {
+        guard resumeActive, !isPreview, let game = selectedGame, link.player == nil else { return nil }
+        let view: String
+        if let tool {
+            view = switch tool {
+            case .firstBasket: "first-basket"
+            case .cheatsheets: "cheatsheets"
+            case .slateEdge: "slate"
+            case .score: "score"
+            case .defense: "dvp"
+            case .matchup, .lineups: "matchup"
+            case .availability: "availability"
+            case .scouting: "usage"
+            case .tracking: "tracking"
+            case .publicActivity: "public"
+            case .crossMarket: "divergence"
+            }
+        } else {
+            view = switch section {
+            case .players: "research"
+            case .odds: "odds-board"
+            case .comparison: "odds"
+            case .ladders: "ladders"
+            case .movement: "movement"
+            case .markets: "game-markets"
+            }
+        }
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = SlipSurgeHTTP.site
+        components.path = "/the-paint"
+        var query: [URLQueryItem] = [
+            .init(name: "date", value: game.date), .init(name: "game", value: String(game.id)), .init(name: "mode", value: mode.rawValue),
+            .init(name: "view", value: view), .init(name: "market", value: market.rawValue),
+            .init(name: "book", value: sportsbook ?? "all"), .init(name: "side", value: side.rawValue.lowercased()),
+            .init(name: "sort", value: sort.rawValue), .init(name: "order", value: ascending ? "asc" : "desc"),
+        ]
+        if let contract { query.append(.init(name: "contract", value: contract.rawValue)) }
+        if let target { query.append(.init(name: "target", value: String(target))) }
+        components.queryItems = query
+        return components.url.flatMap { NativeResumeLocation.destination($0, title: tool?.rawValue ?? "The Court") }
     }
 
     @ViewBuilder

@@ -1783,3 +1783,30 @@ physical-device push are still open.
   the 134 production source checks passed. Write QA used a fixture channel
   and modeled configuration versions, with no real Discord posts, role
   synchronization, command changes or delivery canary requests.
+  Task `b970578267b4c41dff7395c51140367f5f091c27` is pushed. PR #66
+  merged as `1c20cd615399124de6384192a436d43816e7da34`. Preview
+  `dpl_5cXC5SEPohzvoDMRA4Ym72Rr9zzG` and production
+  `dpl_2huytk3AduvqV5f3asWN1QLEK9Ch` were READY. The signed Simulator
+  displayed configuration-presence indicators for the server credentials
+  and opened the true channel picker, embed fields and Photos controls
+  in the composer. No credential value was returned or viewed.
+
+## Native cross-device session resume · 25 November 2026
+
+- The app reads the signed member's existing `member_context_handoff` row
+  and surfaces supported saved destinations on launch or foreground.
+  Resume retains safe canonical URLs, Feed filters, and eligible research
+  date, game and board context.
+- Native Feed captures deliberate scroll activity. On current iOS it
+  restores the saved offset after content loads and can request a bounded
+  number of older posts to reach the position. Other compatible iOS
+  versions restore the destination and filter.
+- The mobile save uses the observed server timestamp as a concurrency
+  check and brings up the new destination on a conflict. The existing
+  Windows and web session writers, service, and schema remain in use.
+  Auth callbacks, private query secrets and administrator paths are
+  excluded from resume.
+- Signed Simulator build, Hub TypeScript, all 134 production source
+  checks and four focused Discord and session-route fixtures passed.
+  Testing will continue with the already saved account destination after
+  the mobile adapter is live.
