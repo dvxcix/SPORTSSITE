@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { mlbHeadshot, PITCH_COLORS, pitchLabel } from '@slipsurge/core/mlb-api'
 import { fetchTeamPitcherIds, getTodaysMatchups, type TodayGame } from '@slipsurge/core/mlbSchedule'
 import { getTeamLogoPngUrl, MLB_TEAM_COLORS, MLB_TEAM_SECONDARY_COLORS } from '@slipsurge/core/mlbTeamColors'
+import { MLB_PARK_SHAPES } from '@slipsurge/core/mlbParkShapes'
 import { hasTierAccess } from '@slipsurge/core/tiers'
 import { getMlbResearchGame, loadDugoutData } from '@/lib/dugoutData'
 import { getFeaturedGameKey } from '@/lib/featuredGame'
@@ -71,12 +72,13 @@ const loadLog = unstable_cache(async (id: number, role: 'batter' | 'pitcher', da
     inning: row.inning, balls: row.balls, strikes: row.strikes, events: row.events, description: row.description,
     is_in_play: row.is_in_play, is_swing: row.is_swing, is_whiff: row.is_whiff, is_home_run: row.is_home_run,
     launch_speed: row.launch_speed, launch_angle: row.launch_angle, hit_distance: row.hit_distance,
+    hc_x: row.hc_x, hc_y: row.hc_y,
     xwoba: row.xwoba, run_value: row.run_value, stand: row.stand, p_throws: row.p_throws,
     bat_speed: row.bat_speed, velocity: row.velocity, spin_rate: row.spin_rate, attack_angle: row.attack_angle,
     swing_length: row.swing_length, swing_path_tilt: row.swing_path_tilt, attack_direction: row.attack_direction,
     launch_speed_angle: row.launch_speed_angle,
   }))
-}, ['native-mlb-slate-pitch-log-v1'], { revalidate: 86400, tags: ['player-pitch-log'] })
+}, ['native-mlb-slate-pitch-log-v2'], { revalidate: 86400, tags: ['player-pitch-log'] })
 
 function parseOptions(query: URLSearchParams) {
   const date = query.get('date') ?? ''
@@ -121,7 +123,8 @@ export async function GET(request: Request) {
     const board = live ? null : await matchupRoster(exactGame, date, game.gamePk, view === 'matchup' && !MLB_HIBERNATING)
     const roster = live ? game : board?.value
     if (view === 'matchup') {
-      return reply({ game: slateCard(game, false), archive: archiveInfo(board, live), pitches: pitchKinds, roster: roster ? {
+      return reply({ game: slateCard(game, false), archive: archiveInfo(board, live), pitches: pitchKinds,
+        parkShape: MLB_PARK_SHAPES[game.homeAbbr] ?? null, roster: roster ? {
         awayStarter: formatStarter(roster.awayPitcher), homeStarter: formatStarter(roster.homePitcher),
         awayLineupConfirmed: roster.awayLineupConfirmed, homeLineupConfirmed: roster.homeLineupConfirmed,
         awayLineup: roster.awayLineup.map(formatBatter), homeLineup: roster.homeLineup.map(formatBatter),

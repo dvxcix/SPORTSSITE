@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DugoutView: View {
-    private enum Tool: Hashable { case weather, spray, pitcher, publicPicks, batterCost, oddsMovement, synergy, matrices, slateBreakdown }
+    private enum Tool: Hashable { case weather, spray, pitcher, publicPicks, batterCost, oddsMovement, synergy, matrices, slateBreakdown, workspace }
     private enum Board: String, CaseIterable {
         case lineup = "Lineups", mismatch = "MM", odds = "Odds Board", matrices = "Matrix Matches"
 
@@ -78,6 +78,7 @@ struct DugoutView: View {
                 Menu("Dugout tools", systemImage: mode == .live ? "dot.radiowaves.left.and.right" : "square.grid.2x2") {
                     Button("Pitcher Report", systemImage: "gauge") { tool = .pitcher }
                     Button("Slate Breakdown", systemImage: "chart.bar.xaxis") { tool = .slateBreakdown }
+                    Button("Research Workspace", systemImage: "scope") { tool = .workspace }
                     Button("The Public", systemImage: "person.2") { tool = .publicPicks }
                     Button("Batter Cost", systemImage: "chart.line.uptrend.xyaxis") { tool = .batterCost }
                     Button("Weather Lab", systemImage: "cloud.sun") { tool = .weather }
@@ -101,6 +102,8 @@ struct DugoutView: View {
             case .pitcher: DugoutPitcherReport(api: api, date: date)
             case .slateBreakdown:
                 DugoutSlateBreakdown(api: .init(account: api.account, userID: api.userID), date: date, selectedGame: selectedGameID)
+            case .workspace:
+                DugoutWorkspaceView(api: api, initialGameID: selectedGameID, initialGameKey: nil, initialPanel: nil, initialPlayer: nil, date: date)
             case .publicPicks: DugoutMarketSlateView(api: api, date: date, mode: .publicPicks)
             case .batterCost: DugoutMarketSlateView(api: api, date: date, mode: .cost)
             case .oddsMovement: DugoutOddsTerminal(api: api, date: date, selectedGame: selectedGameID)

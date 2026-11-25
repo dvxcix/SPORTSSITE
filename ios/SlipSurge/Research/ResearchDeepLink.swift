@@ -12,6 +12,7 @@ struct ResearchDeepLink: Hashable {
         case synergy
         case mlbPlayer = "mlb-player"
         case slateBreakdown = "slate-breakdown"
+        case workspace = "research"
         case sideline = "the-sideline"
         case court = "the-paint"
     }
@@ -31,6 +32,9 @@ struct ResearchDeepLink: Hashable {
     let courtMode: CourtResearchMode?
     let sidelineEntry: SidelineView.Entry?
     let book: String?
+    let workspaceGame: String?
+    let workspacePanel: DugoutWorkspaceGame.Panel?
+    let workspacePlayer: Int?
 
     init?(_ url: URL) {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
@@ -64,6 +68,7 @@ struct ResearchDeepLink: Hashable {
         case .spray: allowed = ["date", "game", "players", "result", "view"]
         case .pitcher: allowed = ["date", "pitcherId"]
         case .weather, .dugout, .oddsMovement, .slateBreakdown: allowed = ["date", "game"]
+        case .workspace: allowed = ["date", "game", "view", "detail"]
         case .court, .sideline: allowed = ["date", "game", "view", "mode", "book"]
         case .synergy: allowed = ["game", "sort"]
         case .publicPicks, .costs: allowed = ["date"]
@@ -76,12 +81,15 @@ struct ResearchDeepLink: Hashable {
         let gameID = tool == .sideline || tool == .synergy ? nil : rawGame.flatMap(Self.positiveID)
         let nflGameID = tool == .sideline ? rawGame : nil
         let synergyGame = tool == .synergy ? rawGame : nil
+        let workspaceGame = tool == .workspace && gameID == nil ? rawGame : nil
         let synergyRank = values["sort"].flatMap(DugoutSynergy.Ranking.init(rawValue:))
         if values["sort"] != nil, synergyRank == nil { return nil }
         if let nflGameID {
             guard nflGameID.range(of: #"^[0-9]{4}_[0-9]{2}_[A-Z]{2,3}_[A-Z]{2,3}$"#, options: .regularExpression) != nil else { return nil }
         } else if let synergyGame {
             guard synergyGame.range(of: #"^[A-Z0-9]{2,3}@[A-Z0-9]{2,3}(-G[1-9])?$"#, options: .regularExpression) != nil else { return nil }
+        } else if let workspaceGame {
+            guard workspaceGame.range(of: #"^[A-Z0-9]{2,3}@[A-Z0-9]{2,3}(-G[1-9])?$"#, options: .regularExpression) != nil else { return nil }
         } else if rawGame != nil, gameID == nil { return nil }
         let pitcherID = values["pitcherId"].flatMap(Self.positiveID)
         if values["pitcherId"] != nil, pitcherID == nil { return nil }
@@ -131,6 +139,9 @@ struct ResearchDeepLink: Hashable {
         self.courtMode = courtMode
         self.sidelineEntry = sidelineEntry
         self.book = book
+        self.workspaceGame = workspaceGame
+        workspacePanel = tool == .workspace ? rawView.flatMap(DugoutWorkspaceGame.Panel.init(rawValue:)) : nil
+        workspacePlayer = tool == .workspace ? values["detail"].flatMap(Self.positiveID) : nil
     }
 
     init?(sitePath: String) {
@@ -196,6 +207,9 @@ struct LinkedResearchView: View {
             if let id = link.playerID { DugoutPlayerProfileView(api: .init(account: account, userID: userID), playerID: id) }
         case .slateBreakdown:
             DugoutSlateBreakdown(api: .init(account: account, userID: userID), date: date, selectedGame: link.gameID)
+        case .workspace:
+            DugoutWorkspaceView(api: api, initialGameID: link.gameID, initialGameKey: link.workspaceGame,
+                initialPanel: link.workspacePanel, initialPlayer: link.workspacePlayer, date: date)
         case .sideline, .court: EmptyView()
         }
     }

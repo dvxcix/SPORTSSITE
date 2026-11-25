@@ -101,13 +101,15 @@ struct DugoutSlateBreakdown: View {
     }
 }
 
-private struct DugoutSlateMatchup: View {
+struct DugoutSlateMatchup: View {
     typealias Slate = DugoutSlateBreakdownData
 
     let api: DugoutSlateBreakdownAPI
     let date: String
     let mode: DugoutMode
     let game: Slate.Game
+    var workspaceBatter: Binding<Int?>? = nil
+    var workspaceWindow: Int? = nil
     @State private var matchup: Slate.Matchup?
     @State private var side = Slate.Side.away
     @State private var failure: (any Error)?
@@ -122,7 +124,8 @@ private struct DugoutSlateMatchup: View {
                     sides(roster)
                     if let starter = roster.starter(side) {
                         DugoutSlateMatchupResearch(api: api, date: date, mode: mode, matchup: matchup, side: side,
-                            starter: starter, batters: roster.opponents(side)).id(side)
+                            starter: starter, batters: roster.opponents(side), workspaceBatter: workspaceBatter,
+                            workspaceWindow: workspaceWindow).id(side)
                     }
                 } else {
                     ContentUnavailableView("No pregame matchup archive", systemImage: "clock.badge.exclamationmark")
@@ -138,6 +141,9 @@ private struct DugoutSlateMatchup: View {
                 guard result.game.id == game.id else { throw URLError(.badServerResponse) }
                 matchup = result
                 if result.roster?.awayStarter == nil && result.roster?.homeStarter != nil { side = .home }
+                if let roster = result.roster, let selected = workspaceBatter?.wrappedValue,
+                   let opponent = Slate.Side.allCases.first(where: { roster.opponents($0).contains { $0.id == selected } }),
+                   roster.starter(opponent) != nil { side = opponent }
             } catch {
                 if !Task.isCancelled { failure = error }
             }

@@ -12,6 +12,7 @@ struct DugoutSlateBreakdownData: Decodable {
         let key: String
         let startsAt: String
         let status: String
+        var venue: String? = nil
         let locked: Bool
         let away: DugoutBoard.Team
         let home: DugoutBoard.Team
@@ -70,6 +71,7 @@ struct DugoutSlateBreakdownData: Decodable {
         let game: Game
         let archive: Archive
         let pitches: [String: DugoutProfile.PitchKind]
+        let parkShape: DugoutParkShape?
         let roster: Roster?
         func pitch(_ code: String) -> DugoutProfile.PitchKind { pitches[code] ?? .init(label: code, color: "#95A5A6") }
     }

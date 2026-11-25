@@ -24,6 +24,8 @@ struct DugoutSlateMatchupResearch: View {
     let side: Slate.Side
     let starter: Slate.Starter
     let batters: [Slate.Batter]
+    var workspaceBatter: Binding<Int?>? = nil
+    var workspaceWindow: Int? = nil
     @Environment(\.colorScheme) private var scheme
     @State private var selectedWindow = 0
     @State private var scope = Scope.season
@@ -70,6 +72,10 @@ struct DugoutSlateMatchupResearch: View {
             } else {
                 ProgressView().frame(maxWidth: .infinity).padding(18).accessibilityLabel("Loading starter sample")
             }
+        }
+        .onAppear {
+            if let workspaceWindow, let initial = Scope.allCases.first(where: { $0.days == workspaceWindow }) { scope = initial }
+            if let person = workspaceBatter?.wrappedValue, batters.contains(where: { $0.id == person }) { viewingBatter = person }
         }
         .task(id: revision) { await loadSamples() }
         .task(id: scope) {
@@ -227,7 +233,10 @@ struct DugoutSlateMatchupResearch: View {
                 else { ProgressView().accessibilityLabel("Loading pitching staff") }
             }
             ForEach(ordered) { batter in
-                DisclosureGroup(isExpanded: Binding(get: { viewingBatter == batter.id }, set: { viewingBatter = $0 ? batter.id : nil })) {
+                DisclosureGroup(isExpanded: Binding(get: { viewingBatter == batter.id }, set: { expanded in
+                    viewingBatter = expanded ? batter.id : nil
+                    if expanded { workspaceBatter?.wrappedValue = batter.id }
+                })) {
                     if scope == .team && staff?.sample?.pitcherIds == nil {
                         Text("The pitching staff is required for this view.").font(.caption).foregroundStyle(.secondary)
                     } else if let line = lines[batter.id], let rows = scoped[batter.id], !rows.isEmpty {
@@ -239,6 +248,9 @@ struct DugoutSlateMatchupResearch: View {
                             }
                         }
                         pitchDetails(rows)
+                        if workspaceBatter != nil {
+                            DugoutWorkspaceSpray(name: batter.name, matchup: matchup, rows: rows).id(batter.id)
+                        }
                     } else if failedBatters.contains(batter.id) {
                         Button("Retry pitch sample", systemImage: "arrow.clockwise") {
                             failedBatters.remove(batter.id)
@@ -343,8 +355,13 @@ struct DugoutSlateMatchupResearch: View {
 
     private func windowRows(_ rows: [Pitch], games: Int?) -> [Pitch] {
         guard let games else { return rows }
-        let days = Set(Set(rows.map(\.gameDate)).sorted().suffix(games))
-        return rows.filter { days.contains($0.gameDate) }
+        let gameKeys = rows.sorted { left, right in
+            if left.gameDate != right.gameDate { return left.gameDate > right.gameDate }
+            return (left.gamePk.text ?? "") > (right.gamePk.text ?? "")
+        }.compactMap(\.gamePk.text)
+        var seen = Set<String>()
+        let selected = Set(gameKeys.filter { seen.insert($0).inserted }.prefix(games))
+        return rows.filter { $0.gamePk.text.map(selected.contains) == true }
     }
 
     private func loadSamples() async {

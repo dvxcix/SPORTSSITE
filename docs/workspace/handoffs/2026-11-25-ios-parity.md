@@ -1504,8 +1504,14 @@ physical-device push are still open.
   names the existing channel-to-group FK. Native Community Settings sorts
   by the production `joined_at` field with a stable member tie-break.
   Focused tests cover both query contracts.
-- Verify the released exact game link in the signed Simulator and continue
-  Matrix Marketplace, the unified research destination, and admin parity.
+- Task checkpoint `70635957b6ed51ec2e6c8d81dc4ae0d57475fb1d` is pushed.
+  PR #56 merged as `fceffc83d73567057ae3c9a17ddb5a13f478849c`. Preview
+  `dpl_24UYxQWeXWdH817L5Aw12mTn8VqY` and production
+  `dpl_5xocWko9bUFHGxxWG1e6iurbYQuh` were READY. The signed Simulator used
+  the released resolver to open Miami at Philadelphia (ESPN `401909317`)
+  and All Search returned the live Lakers roster. Guest mobile Search and
+  Score Resolve returned 401. Desktop Feed returned 200. Community Settings
+  membership sorting is verified by fixture; no member roles were edited.
 
 ## Native Matrix Marketplace links · 25 November 2026
 
@@ -1519,5 +1525,33 @@ physical-device push are still open.
 - Hub TypeScript, 134 production source checks, 11 focused tests across
   this and the preceding score/discovery checkpoint, and signed Xcode
   Simulator build passed. The signed app opened NFL Community Matrices from
-  a direct link. Live MLB read verification follows deployment. No live
-  listing was published, copied or removed for QA.
+  a direct link and the live MLB directory displayed its published listings.
+  Task checkpoint `2c14b90ae78feba4c40635ce5f8634f7ef235980` is pushed. PR
+  #57 merged as `c2607be083611b7585969ee052565b507b0c2afb`; preview
+  `dpl_4TpZm3Hfi4sqsrK1tCQMSVzQmT8i` and production
+  `dpl_7GNGJxv9iYRsNSewmjaTfVhj8jcB` were READY. The signed app opened a
+  published listing detail and guest exact lookup returned 401. No live
+  listing was published, imported or removed for QA.
+
+## Native MLB Research Workspace · 25 November 2026
+
+- The native `/research` destination uses the requested Eastern date and
+  exact game key, and offers the team-artwork game picker. A shared
+  L1/L3/L5/L10 window drives Mechanics and MM. HR Contact Shape leaders,
+  lineup and candidate filters, team artwork and player headshots, price
+  movement, market-vs-season comparisons, ranks and community picks use the
+  canonical captured data.
+- Matchup Lab reuses the native starter usage, lineup, zones and pitch
+  filters and shares the selected batter with the field and market receipt.
+  The spray chart shows original Statcast coordinates and uses the
+  available ballpark outline. Samples without archived coordinates stay
+  unavailable. Market receipt covers captured books and specialty MLB
+  markets using the current and opening prices when recorded.
+- The new Mechanics read uses the archived board’s earliest qualifying
+  cutoff, exact date/game/window, Ultimate and existing MLB access. It
+  never rebuilds a past mechanic snapshot or reads current data in its
+  place. No database change or historical replay was needed.
+- Hub TypeScript, 134 production source checks, nine focused Research,
+  Slate Breakdown and Odds History tests, and signed Xcode Simulator build
+  passed. Signed Simulator validation of a released historical date is
+  next, along with exact native creator storefront, offer and access links.
