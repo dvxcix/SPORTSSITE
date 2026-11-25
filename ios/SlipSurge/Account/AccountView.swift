@@ -75,12 +75,9 @@ struct AccountView: View {
                             .disabled(account.isBusy)
                     }
                     Button("Sign out", role: .destructive) {
-                        Task {
-                            if let id = account.memberID { await push.disconnect(account: account, userID: id) }
-                            await account.signOut()
-                        }
+                        Task { await push.signOut(account: account) }
                     }
-                    .disabled(account.isBusy)
+                    .disabled(account.isBusy || push.signingOut)
                 }
                 .listRowBackground(Brand.surface(for: scheme))
                 if account.memberID != nil, PushNotifications.environment != nil {

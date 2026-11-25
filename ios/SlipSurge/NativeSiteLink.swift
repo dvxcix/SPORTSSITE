@@ -29,7 +29,7 @@ enum NativeSiteLink: Hashable {
 
     enum AdminSection: Hashable {
         case reports, deletions, members, banned, recentSignIns, badges, nflAccess, audit, notifications
-        case groups, events, forum, posts, stories, articles, pages, emoji, rollouts, banner, changelog
+        case groups, events, forum, posts, stories, articles, pages, emoji, rollouts, banner, changelog, experienceAudit
     }
 
     enum Settings: String {
@@ -174,6 +174,7 @@ enum NativeSiteLink: Hashable {
         case ["admin", "settings", "features"]: self = .adminSection(.rollouts)
         case ["admin", "site-banner"]: self = .adminSection(.banner)
         case ["admin", "changelog"]: self = .adminSection(.changelog)
+        case ["admin", "product-audit"]: self = .adminSection(.experienceAudit)
         default:
             if segments.count == 2 {
                 let name = segments[1]

@@ -129,6 +129,7 @@ struct NativeLinkedSiteView: View {
         case .articles, .pages: AdminPublicationsView(viewer: viewer, kind: section == .articles ? .articles : .pages)
         case .emoji: AdminEmojiStudio(viewer: viewer)
         case .rollouts: AdminFeatureRollouts(account: account, userID: userID)
+        case .experienceAudit: AdminExperienceAuditView(api: viewer)
         case .banner, .changelog:
             AdminAnnouncementsView(account: account, userID: userID, page: section == .banner ? .banner : .changelog)
         }

@@ -403,6 +403,9 @@ struct AccountWorkspaceView: View {
                 NavigationLink { AdminPipelineHealthView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Pipeline health", systemImage: "waveform.path") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
+                NavigationLink { AdminExperienceAuditView(api: .init(account: account, userID: userID)) } label: {
+                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Experience audit", systemImage: "checklist") } content: {}
+                }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminBrowserAutomationView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Browser automation", systemImage: "cloud") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())

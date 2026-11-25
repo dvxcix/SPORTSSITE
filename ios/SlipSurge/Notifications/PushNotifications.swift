@@ -8,6 +8,7 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
     private(set) var deviceToken: String?
     private var account: AccountStore?
     private var registered: Registration?
+    private var pendingRegistration: (registration: Registration, task: Task<Void, Error>)?
     private var attempt = 0
     private var lastContact: Date?
     var onOpen: ((UUID) -> Void)? {
@@ -66,6 +67,7 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
     }
 
     @Published private(set) var state = State.unknown
+    @Published private(set) var signingOut = false
 
     func updateAccount(_ account: AccountStore) async {
         let previous = self.account
@@ -88,15 +90,15 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
     }
 
     func sync() async {
-        guard let account, let userID = account.memberID else { return }
+        guard !signingOut, let account, let userID = account.memberID else { return }
         let authorization = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
-        guard account.memberID == userID else { return }
+        guard !signingOut, account.memberID == userID else { return }
         guard Self.environment != nil else { state = .unavailable; return }
         switch authorization {
         case .notDetermined: state = .available
         case .denied:
             await disconnect(account: account, userID: userID)
-            state = .off
+            if account.memberID == userID { state = .off }
         case .authorized, .provisional, .ephemeral:
             if let deviceToken {
                 await connect(account: account, current: Registration(userID: userID, deviceToken: deviceToken))
@@ -109,14 +111,18 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
     }
 
     private func connect(account: AccountStore, current: Registration) async {
+        guard pendingRegistration == nil, !signingOut else { return }
         if current == registered, let lastContact, Date.now.timeIntervalSince(lastContact) < 21_600 {
             state = .connected
         } else {
             attempt += 1
             let generation = attempt
             state = .connecting
+            let task = Task { try await send("POST", account: account, registration: current) }
+            pendingRegistration = (current, task)
+            defer { pendingRegistration = nil }
             do {
-                try await send("POST", account: account, registration: current)
+                try await task.value
                 if generation == attempt, account.memberID == current.userID {
                     registered = current
                     lastContact = .now
@@ -128,12 +134,30 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
         }
     }
 
-    func disconnect(account: AccountStore, userID: UUID) async {
+    func signOut(account: AccountStore) async {
+        guard !signingOut, !account.isBusy else { return }
+        signingOut = true
+        if let userID = account.memberID { await disconnect(account: account, userID: userID) }
+        await account.signOut()
+        signingOut = false
+        if account.memberID != nil { await sync() }
+    }
+
+    private func disconnect(account: AccountStore, userID: UUID) async {
         attempt += 1
-        guard let token = deviceToken else { return }
-        try? await send("DELETE", account: account, registration: Registration(userID: userID, deviceToken: token))
-        registered = nil
-        lastContact = nil
+        var tokens = Set([deviceToken].compactMap { $0 })
+        if let registered, registered.userID == userID { tokens.insert(registered.deviceToken) }
+        if let pendingRegistration, pendingRegistration.registration.userID == userID {
+            tokens.insert(pendingRegistration.registration.deviceToken)
+            _ = await pendingRegistration.task.result
+        }
+        for token in tokens {
+            try? await send("DELETE", account: account, registration: Registration(userID: userID, deviceToken: token))
+        }
+        if registered?.userID == userID {
+            registered = nil
+            lastContact = nil
+        }
     }
 
     private func send(_ method: String, account: AccountStore, registration: Registration) async throws {

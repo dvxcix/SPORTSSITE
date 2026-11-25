@@ -2040,3 +2040,26 @@ physical-device push are still open.
 - Signed Simulator, Hub TypeScript and 144 checks passed. The admin fixture
   verifies permissions, sorting, the 15-minute distinction, and omission of
   unrelated account fields. Signed live directory QA follows the Hub release.
+- Task `bfb143afc6801bf82e5fc19e320b20c812e6a83b` is pushed. PR #75 merged
+  as `10c4730d3334951c8fe1b9b41da3d2058e1dd3c3` with preview
+  `dpl_J2AmQ4Y3h1E4euLQg8h7he1BoMp5` and production
+  `dpl_5M1QaDfzSeRgob6HvDdFPKMJtUa2` READY. The signed Simulator displayed
+  the live sign-in directory. The anonymous endpoint returned 401.
+
+## Website experience audit and local device alerts · 25 November 2026
+
+- Native Admin → System health → Experience audit uses the same website
+  telemetry calculations and roadmap as the browser. It includes recent
+  route health, inspected route dimensions, family and priority filters,
+  sorting, and the roadmap details. The data here describes the website.
+  Signed live QA follows the Hub release.
+- Sign-out holds device alert registration while removing the device. The
+  app waits for an in-flight registration request before it removes that
+  token and ends the session. The already-released Supabase device and
+  delivery tables were confirmed present by read-only inspection.
+- Signed local Debug, Hub TypeScript and 146 checks passed. An isolated build
+  with the temporary development-alert setting showed Apple's permission
+  prompt and a locally injected foreground banner in iPhone 18 Pro Simulator.
+  Injected alerts used a fixture ID and did not contact APNs. The Simulator
+  did not establish a server device registration. Opening a production alert
+  and physical Apple delivery remain unverified.
