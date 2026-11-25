@@ -44,6 +44,7 @@ struct SidelineResearchView: View {
     @State private var book = "fanduel"
     @State private var team = ""
     @State private var search = ""
+    @State private var matrixID: String?
     @State private var result: (Filters, SidelineResearchPayload)?
     @State private var error: (any Error)?
     @State private var retry = 0
@@ -149,6 +150,12 @@ struct SidelineResearchView: View {
         if data.availabilityStale || data.status != "calculated" {
             Text("Some research inputs are unavailable for this matchup and sample.").font(.caption).foregroundStyle(.secondary)
         }
+        if mismatch {
+            if data.matricesUnavailable == true {
+                Text("Saved Matrices couldn’t load.").font(.caption).foregroundStyle(.secondary)
+            }
+            matrixFilters(data.rows)
+        }
         if mismatch || page == .market || page == .exact {
             playerRows(data.rows)
         } else if page == .explosive {
@@ -162,7 +169,11 @@ struct SidelineResearchView: View {
 
     @ViewBuilder
     private func playerRows(_ rows: [SidelineResearchPayload.Row]) -> some View {
-        let visible = rows.filter { includes($0.player.team, name: $0.player.name) && (page != .exact || mismatch || $0.hits?.contains { $0 != nil } == true) }
+        let visible = rows.filter { row in
+            includes(row.player.team, name: row.player.name)
+                && (page != .exact || mismatch || row.hits?.contains { $0 != nil } == true)
+                && (matrixID == nil || row.matrices?.contains { $0.id == matrixID } == true)
+        }
             .sorted { a, b in rank(a) == rank(b) ? a.player.name < b.player.name : rank(a) > rank(b) }
         if visible.isEmpty {
             empty
@@ -195,6 +206,42 @@ struct SidelineResearchView: View {
         }
     }
 
+    @ViewBuilder
+    private func matrixFilters(_ rows: [SidelineResearchPayload.Row]) -> some View {
+        let grouped = Dictionary(grouping: rows.flatMap { $0.matrices ?? [] }, by: \.id)
+        let matches = grouped.values.compactMap { $0.first }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        if !matches.isEmpty || matrixID != nil {
+            ScrollView(.horizontal) {
+                HStack(spacing: 6) {
+                    matrixFilter("All players", id: nil, tint: nil)
+                    ForEach(matches) { matrix in
+                        matrixFilter("\(matrix.name) · \(grouped[matrix.id]?.count ?? 0)", id: matrix.id, tint: Color(hex: matrix.color))
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .scrollIndicators(.hidden)
+            .accessibilityLabel("Filter by saved Matrix")
+            .sensoryFeedback(.selection, trigger: matrixID)
+        }
+    }
+
+    private func matrixFilter(_ title: String, id: String?, tint: Color?) -> some View {
+        Button {
+            withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { matrixID = id }
+        } label: {
+            HStack(spacing: 5) {
+                if let tint { Circle().fill(tint).frame(width: 8, height: 8).accessibilityHidden(true) }
+                Text(title).font(.caption.weight(.semibold))
+            }
+            .padding(.horizontal, 11)
+            .frame(minHeight: 40)
+            .background(matrixID == id ? Brand.accent(for: scheme).opacity(0.18) : Color.secondary.opacity(0.10), in: Capsule())
+        }
+        .buttonStyle(SlipSurgePressStyle())
+        .accessibilityAddTraits(matrixID == id ? .isSelected : [])
+    }
+
     private func mismatchValues(_ row: SidelineResearchPayload.Row) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             if let status = row.status {
@@ -206,6 +253,24 @@ struct SidelineResearchView: View {
                 .init(label: "Market rank", text: rankText(row.sportsbookRank)),
                 .init(label: "Performance rank", text: rankText(row.performanceRank))
             ])
+            if let matrices = row.matrices, !matrices.isEmpty {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 5) {
+                        ForEach(matrices) { matrix in
+                            Label {
+                                Text(matrix.name).foregroundStyle(.primary)
+                            } icon: {
+                                Image(systemName: "square.grid.3x3.fill").foregroundStyle(Color(hex: matrix.color) ?? .secondary)
+                            }
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 8).padding(.vertical, 5)
+                            .background(Color.secondary.opacity(0.11), in: Capsule())
+                        }
+                    }
+                }
+                .scrollIndicators(.hidden)
+                .accessibilityLabel("Matching Matrices")
+            }
         }
     }
 

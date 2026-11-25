@@ -626,8 +626,10 @@ physical-device push are still open.
   were preserved. Unknown pages returned 404. Signed Xcode Debug, TypeScript
   and 203 focused checks passed. PR #23 merged as
   `b0636692bb4bbecbda4e23971205a025439b48d6` after preview
-  `dpl_GKyqY2tXP6BiGxYrGbjfedVs6NHt` reported READY. Production response and
-  Simulator walkthrough checks follow.
+  `dpl_GKyqY2tXP6BiGxYrGbjfedVs6NHt` and production
+  `dpl_7swDB4k7xP8dFjz65ZYNHXTdSJ3E` reported READY. All seven production
+  responses matched the local content counts. Unknown keys returned 404.
+  Pricing, login, Feed, and both previews returned 200.
 
 ## Native Live Rooms and community settings · 25 November 2026
 
@@ -644,4 +646,25 @@ physical-device push are still open.
 - Signed Xcode Debug and TypeScript passed. Native group and Live Rooms
   production walkthroughs, chat typing, channel mentions and older message
   pagination remain to verify or implement. No member or community changes
-  were submitted in QA.
+  were submitted in QA. Task checkpoint `c174278662dc533b0dd83c79c6a8e5e41d6c6fa1`
+  is pushed. PR #24 is the isolated backend release.
+
+## NFL Matrices and live Simulator research · 25 November 2026
+
+- The Sideline tools include native NFL classic and pipeline Matrices, with
+  sportsbook marks, colors, imports by code or marketplace, publishing, editing,
+  activation and deletion. Version-aware edits and deletion protect against
+  stale writes. Existing website callers keep the same behavior when no
+  version is supplied.
+- Native NFL MM tags and filters matching players. Website and iOS apply the
+  same rule evaluation to eligible players, frozen sample windows, posted
+  offers, public picks and TD baselines. Personal Matrix queries remain bound
+  to the verified member. Native evaluation is withheld if player availability
+  is stale. NBA Matrices and NFL ladder board highlights remain in progress.
+- Signed iPhone 18 Pro opened an actual NFL Cheatsheets board, with market
+  edge, projections and public-pick counts. Slate Edge opened and showed
+  a FanDuel +170 price and public-pick data. No real Matrix writes were made.
+- Signed Xcode Debug and Hub TypeScript passed. The broader NFL subset passed
+  76 of 93 checks, including the new Matrix match test. All 17 pregame suite
+  failures reproduced with the same test names on the parent checkpoint,
+  where 75 of 92 passed.

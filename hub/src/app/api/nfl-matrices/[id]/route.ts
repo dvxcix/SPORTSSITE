@@ -29,17 +29,27 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!definition) return NextResponse.json({ error: 'The NFL Matrix contains an incomplete condition.' }, { status: 400 })
     updates.definition = definition
   }
-  const { error } = await admin.from('nfl_matrices').update(updates).eq('id', id).eq('user_id', gate.userId!)
+  const expected = typeof body?.expected_updated_at === 'string' ? body.expected_updated_at : null
+  if (expected && !Number.isFinite(Date.parse(expected))) return NextResponse.json({ error: 'Invalid Matrix version.' }, { status: 400 })
+  let query = admin.from('nfl_matrices').update(updates).eq('id', id).eq('user_id', gate.userId!)
+  if (expected) query = query.eq('updated_at', expected)
+  const { data, error } = await query.select('id').maybeSingle()
   if (error) return safeApiError('nfl-matrix-update', error, 'Could not update the NFL Matrix.')
+  if (!data && expected) return NextResponse.json({ error: 'The NFL Matrix changed. Refresh and try again.' }, { status: 409 })
   return NextResponse.json({ ok: true })
 }
 
-export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const gate = await requireNflAccess()
   if (gate.error) return gate.error
   const { id } = await params
   const admin = createAdminClient()
-  const { error } = await admin.from('nfl_matrices').delete().eq('id', id).eq('user_id', gate.userId!)
+  const expected = new URL(req.url).searchParams.get('version')
+  if (expected != null && !Number.isFinite(Date.parse(expected))) return NextResponse.json({ error: 'Invalid Matrix version.' }, { status: 400 })
+  let query = admin.from('nfl_matrices').delete().eq('id', id).eq('user_id', gate.userId!)
+  if (expected) query = query.eq('updated_at', expected)
+  const { data, error } = await query.select('id').maybeSingle()
   if (error) return safeApiError('nfl-matrix-delete', error, 'Could not delete the NFL Matrix.')
+  if (!data && expected) return NextResponse.json({ error: 'The NFL Matrix changed. Refresh and try again.' }, { status: 409 })
   return NextResponse.json({ ok: true })
 }

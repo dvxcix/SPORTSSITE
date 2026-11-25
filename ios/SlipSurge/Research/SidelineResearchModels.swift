@@ -51,6 +51,12 @@ struct SidelineResearchPayload: Decodable {
     }
 
     struct Row: Decodable, Identifiable {
+        struct Matrix: Decodable, Identifiable {
+            let id: String
+            let name: String
+            let color: String
+        }
+
         struct Game: Decodable {
             let id: String
             let value: Double
@@ -73,6 +79,7 @@ struct SidelineResearchPayload: Decodable {
         let edge: Double?
         let hits: [Hit?]?
         let gameLog: [Game]?
+        let matrices: [Matrix]?
 
         var id: Int { player.id }
     }
@@ -128,6 +135,7 @@ struct SidelineResearchPayload: Decodable {
     let availabilityStale: Bool
     let cutoffAt: String?
     let rows: [Row]
+    let matricesUnavailable: Bool?
     let books: [String]?
     let markets: [String]?
     let explosives: [Explosive]?

@@ -9,8 +9,9 @@ or replace its research with invented data.
 Source baseline: `99d15a53d4a8da23dadb8c1c0e4bfcb93a9d74e8` on GitHub main.
 Read [shared context](../workspace/CONTEXT.md), [root instructions](../../AGENTS.md)
 and the [existing page/tool ledger](../../hub/docs/design/page-by-page-checklist.txt).
-This document is an implementation contract and source audit, not a claim of
-native feature completion. No iOS project has been built or run yet.
+This document records the implementation contract and original source audit.
+The Mac build checkpoint and acceptance table below describe the current
+SwiftUI implementation. The iOS handoff tracks verified behavior and open work.
 
 ## Product and backend continuity
 
@@ -82,7 +83,11 @@ It does not fully enumerate query-driven tools, drawers, server actions, direct
 Supabase/RPC operations, subscriptions or permissions; those must be traced for
 each row of the existing page/tool ledger before marking a feature complete.
 
-## Confirmed integration gaps
+## Integration gaps found in the Cloud audit
+
+The following observations describe the original audit. The Mac build, native
+APNs source, and sign-in integration now have separate implementation and
+verification records in the handoff.
 
 1. **Native authentication is not covered by every endpoint.**
    `hub/src/lib/requireTier.ts` supports bearer sessions, and the Expo prototype
@@ -143,7 +148,7 @@ loading/empty/error/offline behavior, access/privacy checks, simulator evidence
 and any necessary physical-device evidence. Fixtures must stay labeled and
 isolated; production views must use the actual authorized site data.
 
-## Immediate Mac handoff
+## Original Mac handoff
 
 This chat is attached to Linux Cloud. The owner reports downloading/opening
 Xcode; its version, Simulator setup and local checkout are not yet observed.
@@ -188,8 +193,8 @@ Track implementation and live verification independently in the handoff.
 | --- | --- | --- |
 | Visitor and discovery | Public Feed, scores, profiles, communities, creators, records, NBA and NFL previews, native information reader and membership comparison | Remaining public content and interactions, guest flows on compact screens, production checks on newly staged information routes |
 | Identity | Email/password, OAuth, Keychain, registration and recovery screens, onboarding, account security, connected providers, export and deletion request | Complete Discord, X and Whop using consenting accounts. Verify email redirects and delivery, signed-device setup and all role gates |
-| Research | NFL and NBA slate dates and matchups, Odds Boards, player trends, frozen pregame policies, explicit Live mode, MM, Cheatsheets, First Basket, Slate Edge, My Picks, Watchlist, notes and collaboration | Full board coverage, Matrix editing, shared item provenance, other leagues, resume and verification across each role and date |
-| Social | Feed, post details and interactions, polls, comments, picks, images, messages, notifications, bookmarks, moderation controls and discussion | Live write QA with test accounts, additional community workflows and creation, complete media formats and physical APNs |
+| Research | NFL and NBA slate dates and matchups, Odds Boards, player trends, frozen pregame policies, explicit Live mode, MM, Cheatsheets, First Basket, Slate Edge, NFL Matrix editing and MM matches, My Picks, Watchlist, notes and collaboration | Full board coverage, NBA and MLB Matrices, shared item provenance, other leagues, resume and verification across each role and date |
+| Social | Feed, post details and interactions, polls, comments, picks, images, messages, Live Rooms, role-based community settings, notifications, bookmarks and moderation controls | Live write QA with test accounts, community creation, complete media formats, older channel history and physical APNs |
 | Membership, creators and admins | Whop checkout for eligible storefronts, existing-plan management, Creator Studio, scheduled posts and member lists, admin previews and review queues | Real checkout and restore, StoreKit and Apple signing, detailed creator and admin operations, full role and write-path verification |
 
 ### Local account configuration

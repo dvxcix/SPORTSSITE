@@ -55,6 +55,7 @@ struct SidelineView: View {
     @State private var lastBoard: SidelineBoard?
     @State private var schedule = ScheduleState.loading
     @State private var useDefaultDate = true
+    @State private var matrices = false
 
     private var dayRequest: DayRequest { .init(date: SlateDate.key(date), revision: revision) }
 
@@ -104,12 +105,20 @@ struct SidelineView: View {
                     ForEach(Workspace.allCases, id: \.self) { destination in
                         Button(destination.rawValue, systemImage: destination.glyph) { tool = destination }
                     }
+                    if !api.isFeatured {
+                        Button("NFL Matrices", systemImage: "square.grid.3x3") { matrices = true }
+                    }
                 }
             }
         }
         .task(id: dayRequest) { await loadSchedule() }
         .task(id: requestKey) { await load() }
         .refreshable { revision += 1 }
+        .sheet(isPresented: $matrices) {
+            if case .member(let account, let userID) = api.scope {
+                NavigationStack { NflMatricesView(api: .init(account: account, userID: userID)) { revision += 1 } }
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { revision += 1 }
         }

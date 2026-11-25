@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { evaluateNflMatrix, validateNflMatrixDefinition, type NflMatrix, type NflMatrixCandidate } from '../src/lib/nflMatrix.ts'
+import { nflMatrixMatches } from '../src/lib/nflMatrixMatches.ts'
+import type { SidelineLens, SidelinePlayer } from '../src/app/the-sideline/types.ts'
+import type { SidelineOddsBoard } from '../src/lib/nflOddsTypes.ts'
 
 const candidates: NflMatrixCandidate[] = [
   { id: 'a', team: 'BUF', values: factor => ({ index: 72, targets: 8, current: 130 }[factor.field] ?? null) },
@@ -47,4 +50,25 @@ test('NFL matrices validate Pikkit pick-count criteria separately from sportsboo
   }] })
   assert.equal(definition?.factors?.[0].category, 'picks')
   assert.equal(definition?.factors?.[0].propType, 'anytime_td')
+})
+
+test('board matches use the selected condition window and exclude inactive or unavailable inputs', () => {
+  const recent = [
+    { name: 'Eligible Runner', team: 'LA', targets: 4 },
+    { name: 'Unavailable Runner', team: 'LAR', targets: 12, unavailableMetrics: ['targets'] },
+    { name: 'Inactive Runner', team: 'LAR', targets: 11 },
+  ] as SidelinePlayer[]
+  const season = [{ name: 'Eligible Runner', team: 'LAR', targets: 0 }] as SidelinePlayer[]
+  const windows: SidelineLens['windows'] = {
+    season: { players: season, teams: [], plays: 0, weeks: [] },
+    l1: { players: [], teams: [], plays: 0, weeks: [] },
+    l3: { players: recent, teams: [], plays: 0, weeks: [] },
+    l5: { players: [], teams: [], plays: 0, weeks: [] },
+    l10: { players: [], teams: [], plays: 0, weeks: [] },
+  }
+  const rows = recent.map((player, id) => ({ name: player.name, team: 'LAR', id: String(id), market: null, eligible: id !== 2 }))
+  const matrixDefinition = matrix({ definition: { factors: [{ id: 'targets', category: 'usage', field: 'targets',
+    operator: 'gte', value: 4, window: 'l3', vendor: null, propType: null, marketValue: null }] } })
+  const matches = nflMatrixMatches({ players: [] } as unknown as SidelineOddsBoard, windows, [matrixDefinition], rows, 'LAR', 'BUF')
+  assert.deepEqual([...matches.keys()], ['0'])
 })

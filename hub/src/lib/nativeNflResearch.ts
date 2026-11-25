@@ -1,4 +1,4 @@
-import type { SidelineGame, SidelineWindowData } from '@/app/the-sideline/types'
+import type { SidelineGame, SidelineLens, SidelineWindow } from '@/app/the-sideline/types'
 import type { SidelineLens as CheatsheetLens } from '@/app/the-sideline/SidelineClient'
 import { nflAvailability, nflHasCurrentMarket, nflMarketExclusion, nflMarketPlayerKey } from './nflAvailability'
 import { contextualNflScore, nflScoreContext } from './nflContextScore'
@@ -6,6 +6,8 @@ import { americanImpliedProbability } from './nflMarketMath'
 import { nflMatchupTeam } from './nflMatchupBoard'
 import { normalizeNflPlayerName } from './nflPlayerName'
 import { addNflMmRanks } from './nflMmRanks'
+import type { NflMatrix } from './nflMatrix'
+import { nflMatrixMatches } from './nflMatrixMatches'
 import { nflPrimaryMarket } from './nflPrimaryMarket'
 import { nflUnverifiedScoreInputs } from './nflScoreIntegrity'
 import { PROP_FIELDS, hitSummary, modelProbability, projectedValue } from './nflCheatsheetMetrics'
@@ -17,7 +19,10 @@ const identity = (player: NflOddsPlayer) => ({
   headshot: player.headshot ?? null, headshotFallbacks: player.headshotFallbacks ?? [],
 })
 
-export function nativeNflMismatch(game: SidelineGame, window: SidelineWindowData, board: SidelineOddsBoard, prop: string) {
+export function nativeNflMismatch(game: SidelineGame, lens: SidelineLens, windowId: SidelineWindow,
+  board: SidelineOddsBoard, prop: string, matrices: NflMatrix[],
+) {
+  const window = lens.windows[windowId]
   const gameLine = board.gameLines.find(line => normalizeNflPlayerName(line.vendor) === 'fanduel') ?? board.gameLines[0]
   const teams = new Set([game.away.abbr, game.home.abbr].map(nflMatchupTeam))
   const marketPlayers = [...new Map([...(board.availabilityPlayers ?? []), ...board.players]
@@ -39,12 +44,13 @@ export function nativeNflMismatch(game: SidelineGame, window: SidelineWindowData
     const available = nflAvailability({ availability: market.availability, rosterStatus: market.rosterStatus ?? tracked?.rosterStatus }, game.gameday)
     const marketAvailable = nflHasCurrentMarket(market, contextProp)
     return {
-      id: market.gsisId ?? tracked?.id ?? `bdl-${market.id}`, name: market.name, market,
+      id: market.gsisId ?? tracked?.id ?? `bdl-${market.id}`, name: market.name, team: market.team, market,
       index: score?.score ?? 0, eligible: available.eligible && marketAvailable, hasTracking: tracked != null,
       contextProp, status: available.label ?? (marketAvailable ? null : 'Unlisted'),
     }
   })
   const ranked = addNflMmRanks([...new Map(candidates.map(row => [row.id, row])).values()])
+  const matches = nflMatrixMatches(board, lens.windows, board.availabilityStale ? [] : matrices, ranked, game.away.abbr, game.home.abbr)
   const rows = ranked.map(row => {
     const safe = !board.availabilityStale && !environment && !markets.has(row.contextProp)
     return {
@@ -53,6 +59,7 @@ export function nativeNflMismatch(game: SidelineGame, window: SidelineWindowData
       mm: safe ? row.mm : null,
       sportsbookRank: safe && row.mm != null ? row.sportsbookRank : null,
       performanceRank: safe && row.mm != null ? row.performanceRank : null,
+      matrices: matches.get(row.id)?.map(({ id, name, color }) => ({ id, name, color })),
     }
   })
   return { rows }

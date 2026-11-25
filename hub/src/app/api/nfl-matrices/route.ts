@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireNflAccess } from '@/lib/nflAccess'
 import { safeApiError } from '@/lib/safeApiError'
 import { validateNflMatrixDefinition } from '@/lib/nflMatrix'
+import { loadNflMatrices } from '@/lib/nflMatrixData'
 
 export const revalidate = 0
 
@@ -14,10 +15,7 @@ function elementCode() {
 export async function GET() {
   const gate = await requireNflAccess()
   if (gate.error) return gate.error
-  const admin = createAdminClient()
-  const { data, error } = await admin.from('nfl_matrices')
-    .select('id, name, color, priority, enabled, matrix_type, match_mode, match_any_count, pipeline_scope, definition, element_code, created_at, updated_at')
-    .eq('user_id', gate.userId!).order('priority').order('created_at')
+  const { data, error } = await loadNflMatrices(gate.userId!)
   if (error) return safeApiError('nfl-matrices-list', error, 'Could not load NFL Matrices.')
   return NextResponse.json({ matrices: data ?? [] })
 }
