@@ -2918,8 +2918,9 @@ physical-device push are still open.
   accessibility-medium text. iPhone 18 Pro Simulator retained single-column
   Scores and its regular bottom tabs. All 288 native source checks passed;
   the final Simulator and physical iPad Debug builds succeeded.
-- The final signed build installed on Devin’s iPad. It locked before the
-  Xcode relaunch, so open it after unlocking to continue device verification.
+- The final signed build installed on Devin’s iPad. The first relaunch
+  encountered the lock screen. Xcode subsequently reopened the updated
+  build and the physical capture confirmed Feed and Games today.
   Signed-in iPad chat, account-specific research, widgets, and a freely
   resized iPad window still need a live pass. Apple enrollment is with
   Apple Support and does not block these local development builds.
