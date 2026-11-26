@@ -316,18 +316,6 @@ struct AccountWorkspaceView: View {
                     ForEach([("webhooks", "Webhook failures"), ("delivery", "Delivery failures")], id: \.0) { key, label in
                         LabeledContent(label, value: count(admin.queues[key] ?? nil))
                     }
-                    NavigationLink {
-                        AdminCommunityEventsView(api: .init(viewer: .init(account: account, userID: userID)))
-                    } label: { Label("Manage events", systemImage: "calendar.badge.clock") }
-                    NavigationLink {
-                        AdminForumView(api: .init(viewer: .init(account: account, userID: userID)))
-                    } label: { Label("Manage discussions", systemImage: "bubble.left.and.bubble.right") }
-                    NavigationLink {
-                        AdminPublicationsView(viewer: .init(account: account, userID: userID), kind: .articles)
-                    } label: { Label("Manage articles", systemImage: "book") }
-                    NavigationLink {
-                        AdminPublicationsView(viewer: .init(account: account, userID: userID), kind: .pages)
-                    } label: { Label("Manage pages", systemImage: "rectangle.grid.2x2") }
                     NavigationLink { AdminEmojiStudio(viewer: .init(account: account, userID: userID)) } label: {
                         Label("Custom emoji", systemImage: "face.smiling")
                     }

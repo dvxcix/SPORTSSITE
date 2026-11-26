@@ -187,7 +187,7 @@ struct ResearchToolPortrait: View {
                         startPoint: .topLeading, endPoint: .bottomTrailing))
                 ResearchArtwork(urls: teamLogo.map { [$0] } ?? [], fallback: "shield")
                     .frame(width: 36, height: 36).opacity(0.35).offset(x: 9, y: -13)
-                ResearchArtwork(urls: portraits, fallback: "person.crop.circle.fill")
+                ResearchArtwork(urls: portraits, fallback: "person.crop.circle.fill", pointSize: 68, playerPortrait: true)
                     .frame(width: 48, height: 44)
             }
             .frame(width: 56, height: 48)

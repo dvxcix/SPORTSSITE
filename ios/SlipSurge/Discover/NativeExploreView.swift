@@ -19,7 +19,6 @@ struct NativeExploreView: View {
         let trendingPicks: [FeedPost]
         let trendingPosts: [FeedPost]
         let groups: [NativeSearchAPI.Community]
-        let pages: [NativeSearchAPI.Community]
         let creators: [Spotlight]
         let members: [Spotlight]
     }
@@ -50,7 +49,6 @@ struct NativeExploreView: View {
                     postRail("Picks gaining attention", posts: data.trendingPicks, filter: .picks)
                     postRail("Trending posts", posts: data.trendingPosts, filter: .top)
                     research
-                    communities("Pages to follow", path: "/pages", rows: data.pages, icon: "star")
                     communities("Groups to discover", path: "/groups", rows: data.groups, icon: "person.2")
                     people("Creators to watch", rows: data.creators)
                     people("Community standouts", rows: data.members)

@@ -65,8 +65,6 @@ struct NativeLinkedSiteView: View {
         case .groupMessage(let id): MessageThreadView(api: messages, destination: .init(kind: .group, id: id))
         case .channels: ChannelDirectoryView(api: messages)
         case .channel(let slug): LinkedPublicRoomView(api: messages, slug: slug)
-        case .eventCreate: CommunityEventsView(api: .init(viewer: viewer), opensComposer: true)
-        case .threadCreate(let category): ForumIndexView(api: .init(viewer: viewer), opensComposer: true, composerCategory: category)
         case .storyCreate:
             let stories = StoriesAPI(account: account, userID: userID)
             NativeLinkLookup(title: "Add to story", load: { try await stories.load() }) { page in
@@ -124,10 +122,7 @@ struct NativeLinkedSiteView: View {
         case .audit: AdminOperationsView(viewer: viewer, mode: .audit)
         case .notifications: AdminOperationsView(viewer: viewer, mode: .notifications)
         case .groups: AdminOperationsView(viewer: viewer, mode: .groups)
-        case .events: AdminCommunityEventsView(api: .init(viewer: viewer))
-        case .forum: AdminForumView(api: .init(viewer: viewer))
         case .posts, .stories: AdminSocialContent(viewer: viewer, kind: section == .posts ? .posts : .stories)
-        case .articles, .pages: AdminPublicationsView(viewer: viewer, kind: section == .articles ? .articles : .pages)
         case .emoji: AdminEmojiStudio(viewer: viewer)
         case .rollouts: AdminFeatureRollouts(account: account, userID: userID)
         case .experienceAudit: AdminExperienceAuditView(api: viewer)

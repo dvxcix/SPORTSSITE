@@ -96,9 +96,7 @@ struct NativeSearchView: View {
                 }
                 members(output.social.users)
                 communities("Groups", output.social.groups, symbol: "person.2")
-                communities("Pages", output.social.pages, symbol: "star")
                 communities("Live rooms", output.social.rooms, symbol: "number")
-                communities("Events", output.social.events, symbol: "calendar")
                 posts(output.social.posts)
             }
         } else if let error {

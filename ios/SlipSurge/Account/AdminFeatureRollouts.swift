@@ -42,12 +42,8 @@ struct AdminFeatureRollouts: View {
     }
     private struct Feature: Identifiable { let id: String; let title: String; let icon: String }
     private static let features: [Feature] = [
-        .init(id: "feature_blog", title: "Blog and articles", icon: "newspaper"),
-        .init(id: "feature_forum", title: "Forum", icon: "text.bubble"),
         .init(id: "feature_marketplace", title: "Marketplace", icon: "storefront"),
-        .init(id: "feature_pages", title: "Pages", icon: "doc.text"),
         .init(id: "feature_stories", title: "Stories", icon: "rectangle.stack"),
-        .init(id: "feature_events", title: "Events", icon: "calendar"),
         .init(id: "feature_groups", title: "Groups", icon: "person.3"),
         .init(id: "feature_polls", title: "Polls", icon: "chart.bar.xaxis"),
         .init(id: "feature_watchlist", title: "Dugout Watchlist", icon: "star"),

@@ -20,7 +20,7 @@ enum NativeSiteLink: Hashable {
     case adminPlatformSettings(AdminPlatformSettingsView.Page)
     case adminSection(AdminSection)
     case adminMlbArchive(AdminMlbArchiveView.Selection)
-    case eventCreate, threadCreate(String?), storyCreate
+    case storyCreate
 
     enum CommunitySection: Hashable {
         case posts, picks, settings, channels(String?)
@@ -30,7 +30,7 @@ enum NativeSiteLink: Hashable {
 
     enum AdminSection: Hashable {
         case reports, deletions, members, banned, recentSignIns, badges, nflAccess, audit, notifications
-        case groups, events, forum, posts, stories, articles, pages, emoji, rollouts, banner, changelog, experienceAudit, matrixBacktest, hrIntelligence
+        case groups, posts, stories, emoji, rollouts, banner, changelog, experienceAudit, matrixBacktest, hrIntelligence
         case contactRecap, designSystem
     }
 
@@ -54,7 +54,11 @@ enum NativeSiteLink: Hashable {
         let segments = path.split(separator: "/").map(String.init)
         let query = parts.queryItems ?? []
         guard query.count <= 16 else { return nil }
-        let category = Self.queryValue(query, named: "category", pattern: #"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$"#)
+        let retired = ["events", "forum", "blog", "articles", "pages"]
+        if let section = segments.first, retired.contains(section) {
+            self = .discover(.communities)
+            return
+        }
         let groupView = Self.queryValue(query, named: "view", pattern: #"^(chat|picks|posts)$"#)
         let groupChannel = Self.queryValue(query, named: "channel", pattern: Self.slugPattern)
 
@@ -85,17 +89,7 @@ enum NativeSiteLink: Hashable {
             let league = parts.fragment?.split(separator: "-")
             let filter = league?.count == 2 && league?.first == "scores" ? String(league?[1] ?? "") : ""
             self = .discover(.scores(date: date, league: Self.scoreLeagues.contains(filter) ? filter : ""))
-        case ["events"]: self = .discover(.events(nil))
-        case ["events", "create"]: self = .eventCreate
-        case ["forum"]: self = .discover(.discussions)
-        case ["forum", "new"]: self = .threadCreate(Self.queryValue(query, named: "category", pattern: Self.slugPattern))
         case ["stories", "create"]: self = .storyCreate
-        case ["blog"]: self = .discover(.articles(false))
-        case ["blog", "my"]: self = .discover(.articles(true))
-        case ["blog", "create"]: self = .discover(.articleEditor(nil, assistant: false))
-        case ["blog", "create", "ai"]: self = .discover(.articleEditor(nil, assistant: true))
-        case ["pages"]: self = .discover(.pages(category ?? "", create: false))
-        case ["pages", "create"]: self = .discover(.pages(category ?? "", create: true))
         case ["notifications"]: self = .notifications
         case ["search"]:
             let values = query.filter { $0.name == "q" }
@@ -166,12 +160,8 @@ enum NativeSiteLink: Hashable {
         case ["admin", "audit"]: self = .adminSection(.audit)
         case ["admin", "notifications"]: self = .adminSection(.notifications)
         case ["admin", "groups"], ["admin", "live"]: self = .adminSection(.groups)
-        case ["admin", "events"]: self = .adminSection(.events)
-        case ["admin", "forum"]: self = .adminSection(.forum)
         case ["admin", "content", "posts"]: self = .adminSection(.posts)
         case ["admin", "content", "stories"]: self = .adminSection(.stories)
-        case ["admin", "content", "blogs"]: self = .adminSection(.articles)
-        case ["admin", "pages"]: self = .adminSection(.pages)
         case ["admin", "emojis"]: self = .adminSection(.emoji)
         case ["admin", "settings", "features"]: self = .adminSection(.rollouts)
         case ["admin", "site-banner"]: self = .adminSection(.banner)
@@ -215,33 +205,17 @@ enum NativeSiteLink: Hashable {
                 case "preview":
                     guard let league = Preview(rawValue: name) else { return nil }
                     self = .preview(league)
-                case "events":
-                    guard let id = UUID(uuidString: name) else { return nil }
-                    self = .discover(.events(id))
                 case "hashtag":
                     guard Self.matches(name, #"^[a-zA-Z0-9_-]{1,50}$"#) else { return nil }
                     self = .topic(name)
-                case "forum":
-                    guard name != "thread", Self.matches(name, #"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$"#) else { return nil }
-                    self = .discover(.discussionCategory(name))
-                case "blog":
-                    guard name != "edit", Self.matches(name, #"^[a-z0-9-]{1,180}$"#) else { return nil }
-                    self = .discover(.article(name))
-                case "pages":
-                    guard Self.matches(name, #"^[a-z0-9-]{1,80}$"#) else { return nil }
-                    self = .discover(.page(name, manage: false))
                 default: return nil
                 }
             } else if segments.count == 3 {
                 let name = segments[2]
                 switch Array(segments.prefix(2)) {
-                case ["messages", "group"], ["forum", "thread"], ["blog", "edit"]:
+                case ["messages", "group"]:
                     guard let id = UUID(uuidString: name) else { return nil }
-                    switch segments[0] {
-                    case "messages": self = .groupMessage(id)
-                    case "forum": self = .discover(.discussion(id))
-                    default: self = .discover(.articleEditor(id, assistant: false))
-                    }
+                    self = .groupMessage(id)
                 case ["creators", "offers"]:
                     guard let id = UUID(uuidString: name) else { return nil }
                     self = .creatorOffer(id)
@@ -282,7 +256,6 @@ enum NativeSiteLink: Hashable {
                     guard name == "settings" else { return nil }
                     let slug = segments[1]
                     if segments[0] == "groups", Self.matches(slug, Self.slugPattern) { self = .community(slug, .settings) }
-                    else if segments[0] == "pages", Self.matches(slug, #"^[a-z0-9-]{1,80}$"#) { self = .discover(.page(slug, manage: true)) }
                     else { return nil }
                 }
             } else { return nil }
@@ -295,7 +268,7 @@ enum NativeSiteLink: Hashable {
             .channels, .channel, .settings, .creatorStudio, .creatorPayouts, .creatorStoreSetup, .communityCreator, .researchWorkspace, .admin,
             .marketplace, .nbaEntity, .nflEntity, .mlbTeam, .creatorAccess, .adminMarketplace, .adminCreatorBusiness, .adminPipelineHealth,
             .adminBrowserAutomation, .adminSocialPlatforms, .adminEmail, .adminDiscord, .adminDiscordComposer, .adminWhop, .adminPlatformSettings, .adminSection, .adminMlbArchive,
-            .eventCreate, .threadCreate, .storyCreate,
+            .storyCreate,
             .community(_, .settings), .community(_, .channels): true
         default: false
         }

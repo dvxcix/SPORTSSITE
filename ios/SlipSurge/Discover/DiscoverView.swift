@@ -1,10 +1,7 @@
 import SwiftUI
 
 enum DiscoverDestination: Hashable {
-    case communities, creators, leaderboard, scores(date: Date?, league: String), events(UUID?)
-    case discussions, discussionCategory(String), discussion(UUID)
-    case articles(Bool), article(String), articleEditor(UUID?, assistant: Bool)
-    case pages(String, create: Bool), page(String, manage: Bool)
+    case communities, creators, leaderboard, scores(date: Date?, league: String)
     case community(String, NativeSiteLink.CommunitySection)
     case liveRooms, liveRoom(String)
 }
@@ -30,10 +27,6 @@ struct DiscoverView: View {
     @State private var revision = 0
     @State private var routedCommunity: UUID?
     @State private var routed = false
-    @State private var eventsAvailable = false
-    @State private var forumAvailable = false
-    @State private var articlesAvailable = false
-    @State private var pagesAvailable = false
     @State private var destination: DiscoverDestination?
 
     init(api: DiscoverAPI, opensCommunity: UUID? = nil, opensDestination: Binding<DiscoverDestination?> = .constant(nil),
@@ -80,7 +73,6 @@ struct DiscoverView: View {
         .navigationTitle(opensJoined ? "Community" : "Discover")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) { VoltTeaser() }
             if api.userID != nil {
                 ToolbarItem(placement: .primaryAction) {
                     NavigationLink {
@@ -97,20 +89,6 @@ struct DiscoverView: View {
         .navigationDestination(item: $destination) { opening in
             switch opening {
             case .scores(let date, let league): ScoresView(api: api, date: date ?? .now, league: league)
-            case .events(let id):
-                if let id { CommunityEventDetail(api: .init(viewer: api), id: id, refreshList: {}) }
-                else { CommunityEventsView(api: .init(viewer: api)) }
-            case .discussions: ForumIndexView(api: .init(viewer: api))
-            case .discussionCategory(let category): ForumCategoryView(api: .init(viewer: api), slug: category)
-            case .discussion(let id): ForumThreadView(api: .init(viewer: api), id: id)
-            case .articles(let mine): ArticlesView(api: .init(viewer: api), mine: mine)
-            case .article(let slug): ArticleReader(api: .init(viewer: api), slug: slug)
-            case .pages(let category, let create): CommunityPagesView(api: .init(viewer: api), initialCategory: category, startsCreating: create)
-            case .page(let slug, let manage): CommunityPageDetail(api: .init(viewer: api), slug: slug, startsManaging: manage)
-            case .articleEditor(let id, let assistant):
-                if let id { ArticleEditorLoader(api: .init(viewer: api), id: id, saved: articleSaved) }
-                else if articlesAvailable { ArticleEditor(api: .init(viewer: api), draft: .init(), opensAssistant: assistant, saved: articleSaved) }
-                else { ArticlesView(api: .init(viewer: api)) }
             case .community(let slug, let section):
                 LinkedCommunityView(viewer: api, slug: slug, section: section, onMembershipChange: reloadGroups)
                     .id(opening)
@@ -141,7 +119,7 @@ struct DiscoverView: View {
                 destination = nil
                 if opensJoined { yours = false }
                 section = .records
-            case .scores, .events, .discussions, .discussionCategory, .discussion, .articles, .article, .articleEditor, .pages, .page, .community, .liveRooms, .liveRoom:
+            case .scores, .community, .liveRooms, .liveRoom:
                 destination = opening
             }
             opensDestination = nil
@@ -168,30 +146,12 @@ struct DiscoverView: View {
             sport = ""
         }
         .refreshable { await load(section) }
-        .task(id: api.userID) {
-            async let events = CommunityEventsAPI(viewer: api).available()
-            async let forum = ForumAPI(viewer: api).available()
-            async let articles = ArticlesAPI(viewer: api).available()
-            async let pages = CommunityPagesAPI(viewer: api).available()
-            (eventsAvailable, forumAvailable, articlesAvailable, pagesAvailable) = await (events, forum, articles, pages)
-        }
         .task(id: request) { await load(section) }
-    }
-
-    private func articleSaved(_ receipt: ArticlesAPI.Receipt) {
-        opensDestination = receipt.status == "published" ? .article(receipt.slug) : .articles(true)
     }
 
     private func reloadGroups() { revision += 1 }
 
-    private var communityShortcuts: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) { shortcutLinks }
-            VStack(spacing: 6) { shortcutLinks }
-        }
-    }
-
-    @ViewBuilder private var shortcutLinks: some View {
+    @ViewBuilder private var communityShortcuts: some View {
         if let userID = api.userID {
             NavigationLink {
                 ChannelDirectoryView(api: .init(account: api.account, userID: userID))
@@ -200,10 +160,6 @@ struct DiscoverView: View {
             }
             .buttonStyle(SlipSurgePressStyle())
         }
-        NavigationLink { ScoresView(api: api) } label: {
-            shortcut("Live Scores", symbol: "waveform.path")
-        }
-        .buttonStyle(SlipSurgePressStyle())
     }
 
     private func shortcut(_ title: String, symbol: String) -> some View {
@@ -233,7 +189,7 @@ struct DiscoverView: View {
             }
             .buttonStyle(SlipSurgePressStyle())
         }
-        communityDestinations
+        if !opensJoined { communityShortcuts }
         ResearchToolRail(title: opensJoined ? "Browse" : "Discover", choices: Section.allCases, selection: $section,
             label: \.rawValue, glyph: {
                 switch $0 {
@@ -242,34 +198,6 @@ struct DiscoverView: View {
                 case .records: "trophy"
                 }
             }, compact: true)
-    }
-
-    @ViewBuilder private var communityDestinations: some View {
-        if let userID = api.userID {
-            ScrollView(.horizontal) {
-                HStack(spacing: 7) {
-                    if !opensJoined {
-                        NavigationLink {
-                            ChannelDirectoryView(api: .init(account: api.account, userID: userID))
-                        } label: { Label("Live Rooms", systemImage: "dot.radiowaves.left.and.right") }
-                    }
-                    if eventsAvailable {
-                        NavigationLink { CommunityEventsView(api: .init(viewer: api)) } label: { Label("Events", systemImage: "calendar") }
-                    }
-                    if forumAvailable {
-                        NavigationLink { ForumIndexView(api: .init(viewer: api)) } label: { Label("Discussions", systemImage: "bubble.left.and.bubble.right") }
-                    }
-                    if articlesAvailable {
-                        NavigationLink { ArticlesView(api: .init(viewer: api)) } label: { Label("Articles", systemImage: "book") }
-                    }
-                    if pagesAvailable {
-                        NavigationLink { CommunityPagesView(api: .init(viewer: api)) } label: { Label("Pages", systemImage: "rectangle.grid.2x2") }
-                    }
-                }
-                .buttonStyle(.bordered)
-            }
-            .scrollIndicators(.hidden)
-        }
     }
 
     private var scoresEntry: some View {

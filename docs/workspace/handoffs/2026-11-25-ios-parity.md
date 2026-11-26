@@ -2774,3 +2774,24 @@ physical-device push are still open.
   new build was installed on Miranda’s iPhone 16 Plus and opened on Feed.
   All 288 native and production checks passed. This checkpoint carries only
   native branding. Store artwork uploads remain with the owner.
+
+## Feed navigation, Community, and portraits · 26 November 2026
+
+- Continued `codex/ios-parity-20261125` from `0f397330`. Removed the
+  VOLT Coming Soon launcher across native toolbars. Feed keeps its wordmark
+  and a compact Search control. All scores opens the full scoreboard from
+  the game rail, with a visible Scores row even without slate data.
+- Community opens on Joined and retains Browse, groups and Live Rooms.
+  Native discovery, search and admin controls omit Events, Articles,
+  Discussions and Pages. Old native links for those sections open Community.
+  The paired web work is tracked in PR #88 and
+  `docs/workspace/handoffs/2026-11-26-community-simplification.md`.
+- NBA and NFL player cards frame the foreground from the top and crop
+  transparent provider padding before fitting the portrait. Existing team
+  gradients and badges are retained. The MLB path keeps its original fit.
+  Checked actual ESPN NBA and NFL images, an official NFL image and an MLB
+  image, plus the native NBA and NFL Odds Boards.
+- Verified All scores navigation and an old Events link on iPhone 18 Pro
+  Simulator. Both signed Xcode Debug builds passed, and the final build
+  was installed on Miranda’s iPhone 16 Plus. The phone opened Feed with
+  Scores in the rail. All 288 native and production source checks passed.

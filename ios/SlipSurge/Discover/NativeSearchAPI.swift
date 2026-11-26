@@ -53,11 +53,9 @@ struct NativeSearchAPI {
         let users: [Member]
         let posts: [FeedPost]
         let groups: [Community]
-        let pages: [Community]
         let rooms: [Community]
-        let events: [Community]
 
-        var isEmpty: Bool { users.isEmpty && posts.isEmpty && groups.isEmpty && pages.isEmpty && rooms.isEmpty && events.isEmpty }
+        var isEmpty: Bool { users.isEmpty && posts.isEmpty && groups.isEmpty && rooms.isEmpty }
     }
 
     struct Saved: Decodable, Identifiable {

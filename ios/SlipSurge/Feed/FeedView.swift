@@ -113,7 +113,6 @@ struct FeedView: View {
             MemberProfileView(api: DiscoverAPI(account: api.account, userID: api.userID), target: name)
         }
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) { VoltTeaser() }
             ToolbarItem(placement: .principal) {
                 Image(.brand)
                     .resizable().scaledToFit()
@@ -121,16 +120,11 @@ struct FeedView: View {
                     .accessibilityLabel("SlipSurge")
                     .accessibilityAddTraits(.isHeader)
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink {
-                    ScoresView(api: scoresAPI)
-                } label: { Label("Live Games", systemImage: "scoreboard") }
-            }
             if api.userID != nil {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
                         NativeSearchView(api: .init(viewer: .init(account: api.account, userID: api.userID)))
-                    } label: { Label("Search", systemImage: "magnifyingglass") }
+                    } label: { Label("Search", systemImage: "magnifyingglass").labelStyle(.iconOnly) }
                 }
             }
         }

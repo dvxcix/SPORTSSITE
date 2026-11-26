@@ -123,7 +123,7 @@ struct ScoresView: View {
             }
             .refreshable { await liveBoard.refresh(day: day) }
         }
-        .navigationTitle("Live Games")
+        .navigationTitle("Scores")
         .navigationBarTitleDisplayMode(.inline)
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
@@ -226,24 +226,36 @@ struct LiveGamesStrip: View {
         let completed = games.filter { $0.state == "post" }.reversed()
         let slate = live + upcoming + completed
         VStack(spacing: 0) {
-            if let board, !slate.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    if !slate.isEmpty {
                         Label(live.isEmpty ? "Games today" : "Live now", systemImage: live.isEmpty ? "scoreboard" : "dot.radiowaves.left.and.right")
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(Brand.text(for: scheme))
                             .accessibilityAddTraits(.isHeader)
                         Spacer()
-                        NavigationLink {
-                            ScoresView(api: api)
-                        } label: {
-                            Label("All scores", systemImage: "chevron.right").font(.footnote.weight(.semibold))
-                                .frame(minHeight: 44)
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Brand.accent(for: scheme))
                     }
-                    .padding(.horizontal, 14)
+                    NavigationLink {
+                        ScoresView(api: api)
+                    } label: {
+                        HStack(spacing: 5) {
+                            if slate.isEmpty {
+                                Image(systemName: "scoreboard").accessibilityHidden(true)
+                                Text("Scores").font(.subheadline.weight(.semibold))
+                                Spacer()
+                            } else {
+                                Text("All scores").font(.footnote.weight(.semibold))
+                            }
+                            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).accessibilityHidden(true)
+                        }
+                        .frame(minHeight: 44)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Brand.accent(for: scheme))
+                }
+                .padding(.horizontal, 14)
+                if let board, !slate.isEmpty {
                     ScrollView(.horizontal) {
                         LazyHStack(spacing: 8) {
                             ForEach(slate, id: \.scoreIdentity) { match in

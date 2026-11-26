@@ -7,15 +7,26 @@ struct ResearchArtwork: View {
     var contentMode: ContentMode = .fit
     var fallbackText: String?
     var pointSize: CGFloat?
+    var playerPortrait = false
     @Environment(\.displayScale) private var displayScale
-    @State private var artwork: (requests: [ArtworkRequest], image: CGImage)?
+    @State private var artwork: (requests: [ArtworkRequest], selected: ArtworkRequest, image: CGImage)?
 
     var body: some View {
-        let requests = urls.map { ArtworkRequest(url: $0, pointSize: pointSize, scale: displayScale) }
-        let image = artwork?.requests == requests ? artwork?.image : requests.lazy.compactMap(ResearchArtworkCache.cachedImage).first
+        let requests = urls.map { ArtworkRequest(url: $0, pointSize: pointSize, scale: displayScale, playerPortrait: playerPortrait) }
+        let current = artwork?.requests == requests ? artwork : requests.lazy.compactMap { request in
+            ResearchArtworkCache.cachedImage(for: request).map { (requests, request, $0) }
+        }.first
         Group {
-            if let image {
-                Image(decorative: image, scale: 1).resizable().aspectRatio(contentMode: contentMode)
+            if let current {
+                if current.selected.fitsPlayerPortrait {
+                    GeometryReader { geometry in
+                        Image(decorative: current.image, scale: 1).resizable().scaledToFill()
+                            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+                            .clipped()
+                    }
+                } else {
+                    Image(decorative: current.image, scale: 1).resizable().aspectRatio(contentMode: contentMode)
+                }
             } else if let fallbackText {
                 Text(fallbackText)
             } else if let fallback {
@@ -27,7 +38,7 @@ struct ResearchArtwork: View {
         .task(id: requests) {
             for request in requests {
                 if let image = await ResearchArtworkCache.shared.image(for: request) {
-                    if !Task.isCancelled { artwork = (requests, image) }
+                    if !Task.isCancelled { artwork = (requests, request, image) }
                     return
                 }
                 if Task.isCancelled { return }
@@ -79,9 +90,11 @@ private struct ArtworkRequest: Hashable, Sendable {
     private static let sizes = [96, 144, 192, 256, 384, 512, 768, 1024, 1280, 1536]
     let url: URL
     let pixels: Int
+    let fitsPlayerPortrait: Bool
 
-    init(url: URL, pointSize: CGFloat?, scale: CGFloat) {
+    init(url: URL, pointSize: CGFloat?, scale: CGFloat, playerPortrait: Bool = false) {
         self.url = url
+        fitsPlayerPortrait = playerPortrait && Self.usesFramedPortrait(url)
         if let pointSize {
             let requested = pointSize * scale
             pixels = Self.sizes.first { CGFloat($0) >= requested } ?? 1536
@@ -90,7 +103,18 @@ private struct ArtworkRequest: Hashable, Sendable {
         }
     }
 
-    var key: NSString { "\(pixels):\(url.absoluteString)" as NSString }
+    var key: NSString { "\(fitsPlayerPortrait):\(pixels):\(url.absoluteString)" as NSString }
+
+    private static func usesFramedPortrait(_ url: URL) -> Bool {
+        let path = url.path.lowercased()
+        switch url.host?.lowercased() {
+        case "a.espncdn.com", "a1.espncdn.com": return path.contains("/headshots/nba/") || path.contains("/headshots/nfl/")
+        case "cdn.nba.com": return path.hasPrefix("/headshots/nba/")
+        case "static.www.nfl.com": return path.hasPrefix("/image/upload/")
+        case "i.nflcdn.com": return path.contains("/players/")
+        default: return false
+        }
+    }
 }
 
 private actor ResearchArtworkCache {
@@ -159,7 +183,8 @@ private actor ResearchArtworkCache {
             kCGImageSourceThumbnailMaxPixelSize: request.pixels,
             kCGImageSourceShouldCacheImmediately: true,
         ] as CFDictionary
-        return CGImageSourceCreateThumbnailAtIndex(source, 0, options)
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options) else { return nil }
+        return request.fitsPlayerPortrait ? PlayerPortraitCrop.trim(image) : image
     }
 }
 
@@ -170,7 +195,7 @@ struct PlayerArtwork: View {
     let secondary: Color
 
     var body: some View {
-        ResearchArtwork(urls: portraits, fallback: "person.fill", pointSize: 48)
+        ResearchArtwork(urls: portraits, fallback: "person.fill", pointSize: 68, playerPortrait: true)
             .foregroundStyle(.white)
             .frame(width: 48, height: 48)
             .background {
