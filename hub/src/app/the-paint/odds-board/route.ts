@@ -44,12 +44,12 @@ export async function GET(request:NextRequest) {
     // Complete slates share one small phase proof instead of one clock-cache
     // lookup per game per viewer. An incomplete pregame slate retains its
     // existing per-game resolution and partial reporting.
-    const readPhase=async()=>{
-      const token=await getNbaOddsBoardPhase(date),now=Date.now(),phase=nbaReadOddsBoardPhase(token.header,date,now)
+    const readPhase=async(exactSchedule?:typeof fullSchedule)=>{
+      const token=await getNbaOddsBoardPhase(date,exactSchedule),now=Date.now(),phase=nbaReadOddsBoardPhase(token.header,date,now)
       if(!phase||!Number.isSafeInteger(token.expiresAt)||token.expiresAt<=now)throw new Error('NBA phase unavailable')
       return publicWorkspacePhase(phase)
     }
-    const games=schedule.complete?nbaBoardPhaseGames(schedule.games,await readPhase()):await Promise.all(schedule.games.map(game=>getNbaOddsGame(game)))
+    const games=schedule.complete?nbaBoardPhaseGames(schedule.games,await readPhase(fullSchedule)):await Promise.all(schedule.games.map(game=>getNbaOddsGame(game)))
     const {boundary,key}=phaseKeys(games,mode)
     // Earlier cached boards predate the player availability check.
     const version='v7'
@@ -154,9 +154,12 @@ async function loadSlate(date:string,market:string,mode:NbaOddsMode,games:PaintG
     const latest=fallback??tape, previousAt=latest?nbaBeforeCapture(latest.captured_at):null
     if(!roster.length)throw new Error('NBA roster unavailable')
     // An unavailable comparison must not hide otherwise valid current prices.
-    const prior=previousAt&&!fallback?await getNbaPhaseFrames(game,mode,'props',{market,selection:'latest',asOf:previousAt}).catch(()=>[]):[]
     const eligibleRoster=liveEligible?roster.filter(player=>liveEligible.has(player.id)):roster
-    const players=(await nbaFullBoardPlayers(game,eligibleRoster,open,!!latest?.quotes.length,artwork)).map(player=>({...player,publicPicks:null}))
+    const [prior,rosterPlayers]=await Promise.all([
+      previousAt&&!fallback?getNbaPhaseFrames(game,mode,'props',{market,selection:'latest',asOf:previousAt}).catch(()=>[]):[],
+      nbaFullBoardPlayers(game,eligibleRoster,open,!!latest?.quotes.length,artwork),
+    ])
+    const players=rosterPlayers.map(player=>({...player,publicPicks:null}))
     const known=new Set(players.map(player=>player.id))
     const lastPrior=prior.at(-1), currentAt=latest?nbaTimestampNanoseconds(latest.captured_at):null,priorAt=lastPrior?nbaTimestampNanoseconds(lastPrior.captured_at):null,limitAt=previousAt?nbaTimestampNanoseconds(previousAt):null
     if((latest&&currentAt==null)||(lastPrior&&(priorAt==null||limitAt==null||priorAt>limitAt)))throw new Error('Invalid NBA observation time')

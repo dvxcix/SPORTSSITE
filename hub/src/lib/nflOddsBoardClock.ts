@@ -16,13 +16,15 @@ export function nflOddsBoardClockToken(clocks:NflOddsBoardClock[],now=Date.now()
  * independently reconciled game feed as their durable kickoff evidence. */
 export async function readNflOddsBoardClocks(date:string,games:SidelineGame[]):Promise<NflOddsBoardClock[]> {
   const admin=createAdminClient(),ids=games.map(game=>game.id)
-  const schedule=await admin.from('nfl_schedule').select('game_id,gameday,gametime,away_team,home_team,away_score,home_score',{count:'exact'}).eq('gameday',date).limit(25).abortSignal(AbortSignal.timeout(10000))
+  const [schedule,records]=await Promise.all([
+    admin.from('nfl_schedule').select('game_id,gameday,gametime,away_team,home_team,away_score,home_score',{count:'exact'}).eq('gameday',date).limit(25).abortSignal(AbortSignal.timeout(10000)),
+    ids.length ? admin.from('nfl_pregame_research').select('game_id,kickoff_at',{count:'exact'}).in('game_id',ids).limit(1000).abortSignal(AbortSignal.timeout(10000)) : null,
+  ])
   if(schedule.error||schedule.count==null||schedule.data?.length!==schedule.count||schedule.count>24)throw new Error('Schedule unavailable')
   const scope=publicWorkspaceScope('nfl')
   const rows=scope?schedule.data.filter(row=>row.game_id===scope.game):schedule.data
   if(rows.length!==games.length)throw new Error('Schedule unavailable')
-  if(!ids.length)return []
-  const records=await admin.from('nfl_pregame_research').select('game_id,kickoff_at',{count:'exact'}).in('game_id',ids).limit(1000).abortSignal(AbortSignal.timeout(10000))
+  if(!records)return []
   if(records.error||records.count==null||records.data?.length!==records.count||records.count>1000)throw new Error('Clock unavailable')
   const archivedIds = new Set(records.data.map(row => row.game_id))
   const oldFinals = rows.filter(row => !archivedIds.has(row.game_id) && row.away_score != null && row.home_score != null)
