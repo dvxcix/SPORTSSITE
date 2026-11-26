@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { exploreSpotlightMembers } from '@/lib/exploreActiveMembers'
-import { FEATURE_FLAGS } from '@/lib/featureFlags'
-import { isFeatureEnabledServer } from '@/lib/featureFlags.server'
 import { POST_WITH_AUTHOR } from '@/lib/feedQuery'
 import { MLB_HIBERNATING } from '@/lib/mlbOffseason'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
@@ -24,26 +22,23 @@ export async function GET(request: Request) {
   if (tier.error) return tier.error
 
   try {
-    const [showMlb, blocked, publications] = await Promise.all([
+    const [showMlb, blocked] = await Promise.all([
       canViewMlb(supabase, userId),
       getBlockedEitherWayIds(supabase, userId),
-      isFeatureEnabledServer(FEATURE_FLAGS.pages, false, actor),
     ])
     const dayAgo = new Date(Date.now() - 86_400_000).toISOString()
     const postRail = () => supabase.from('posts').select(POST_WITH_AUTHOR).eq('visibility', 'public')
       .gte('created_at', dayAgo)
       .order('reaction_count', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(3)
-    const [rawPicks, rawPosts, groups, pages, leaders, members] = await Promise.all([
+    const [rawPicks, rawPosts, groups, leaders, members] = await Promise.all([
       postRail().eq('post_type', 'pick'),
       postRail(),
       supabase.from('groups').select('id,slug,name,description,avatar_url,emoji,sport,member_count').eq('is_public', true)
         .order('member_count', { ascending: false }).limit(4),
-      publications ? supabase.from('pages').select('id,slug,name,description,avatar_url,emoji,category,sport,follower_count')
-        .eq('is_published', true).order('follower_count', { ascending: false }).limit(4) : { data: [], error: null },
       exploreSpotlightMembers(supabase, true),
       exploreSpotlightMembers(supabase, false),
     ])
-    if ([rawPicks, rawPosts, groups, pages].some(result => result.error)) throw Error()
+    if ([rawPicks, rawPosts, groups].some(result => result.error)) throw Error()
     const excluded = new Set(blocked)
     const sportVisible = (sport: string | null | undefined) => showMlb || sport?.trim().toUpperCase() !== 'MLB'
     const visible = (rows: NonNullable<typeof rawPicks.data>) =>
@@ -70,9 +65,7 @@ export async function GET(request: Request) {
       groups: (groups.data ?? []).filter(row => sportVisible(row.sport)).map(row => ({
         ...row, path: `/groups/${encodeURIComponent(row.slug)}`, count: row.member_count,
       })),
-      pages: (pages.data ?? []).filter(row => sportVisible(row.sport) && sportVisible(row.category)).map(row => ({
-        ...row, path: `/pages/${encodeURIComponent(row.slug)}`, count: row.follower_count,
-      })),
+      pages: [],
       creators: spotlight(leaders),
       members: spotlight(members),
     })

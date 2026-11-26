@@ -31,7 +31,6 @@ type MlbTeamResult = { id: number; abbr: string; name: string; shortName: string
 type NflPlayerResult = { gsis_id: string; display_name: string; position: string | null; latest_team: string | null; headshot: string | null; team_logo_espn: string | null }
 type NflTeamResult = { team_abbr: string; team_name: string; team_nick: string | null; team_logo_espn: string | null }
 type CommunityResult = { id: string; slug: string; name: string; description: string | null; avatar_url: string | null; emoji: string | null; count: number }
-type EventResult = { id: string; title: string; description: string | null; cover_image: string | null; start_date: string; going_count: number | null }
 type SavedSearch = { id: string; query: string; result_tab: SearchTab; last_used_at: string }
 
 export function SearchClient() {
@@ -58,9 +57,7 @@ export function SearchClient() {
   const [nbaAllowed, setNbaAllowed] = useState(false)
   const [nbaError, setNbaError] = useState('')
   const [groups, setGroups] = useState<CommunityResult[]>([])
-  const [pages, setPages] = useState<CommunityResult[]>([])
   const [channels, setChannels] = useState<CommunityResult[]>([])
-  const [events, setEvents] = useState<EventResult[]>([])
   const [loading, setLoading] = useState(false)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
@@ -119,12 +116,12 @@ export function SearchClient() {
 
   const doSearch = useCallback(async (query: string) => {
     const runId = ++searchRunRef.current
-    if (!query.trim()) { setUsers([]); setPosts([]); setPlayers([]); setTeams([]); setNflPlayers([]); setNflTeams([]); setNbaPlayers([]); setNbaTeams([]); setNbaError(''); setGroups([]); setPages([]); setChannels([]); setEvents([]); setLoading(false); return }
+    if (!query.trim()) { setUsers([]); setPosts([]); setPlayers([]); setTeams([]); setNflPlayers([]); setNflTeams([]); setNbaPlayers([]); setNbaTeams([]); setNbaError(''); setGroups([]); setChannels([]); setLoading(false); return }
     setLoading(true)
     const filterQuery = query.replace(/[,%()]/g, ' ').trim().slice(0, 64)
 
     const postCols = 'id, content, post_type, pick_data, sport, created_at, author_id, author:users!posts_author_id_fkey(username, display_name, avatar_url,avatar_ring_style,avatar_ring_color)'
-    const [{ data: u }, { data: byContent }, { data: recentPicks }, { data: groupRows }, { data: pageRows }, { data: channelRows }, { data: eventRows }, sportsData, nflData, nbaData] = await Promise.all([
+    const [{ data: u }, { data: byContent }, { data: recentPicks }, { data: groupRows }, { data: channelRows }, sportsData, nflData, nbaData] = await Promise.all([
       currentBlockIds !== null ? supabase.from('users')
         .select('id, username, display_name, avatar_url, avatar_ring_style, avatar_ring_color, is_verified, account_type, follower_count')
         .or(`username.ilike.%${filterQuery}%,display_name.ilike.%${filterQuery}%`)
@@ -154,9 +151,7 @@ export function SearchClient() {
         .order('created_at', { ascending: false })
         .limit(150) : Promise.resolve({ data: [] }),
       supabase.from('groups').select('id,slug,name,description,avatar_url,emoji,member_count').eq('is_public', true).or(`name.ilike.%${filterQuery}%,description.ilike.%${filterQuery}%`).order('member_count', { ascending: false }).limit(8),
-      supabase.from('pages').select('id,slug,name,description,avatar_url,emoji,follower_count').eq('is_published', true).or(`name.ilike.%${filterQuery}%,description.ilike.%${filterQuery}%`).order('follower_count', { ascending: false }).limit(8),
       supabase.from('channels').select('id,slug,name,description,icon,member_count').or(`name.ilike.%${filterQuery}%,description.ilike.%${filterQuery}%`).order('member_count', { ascending: false }).limit(8),
-      supabase.from('events').select('id,title,description,cover_image,start_date,going_count').or(`title.ilike.%${filterQuery}%,description.ilike.%${filterQuery}%`).order('start_date', { ascending: true }).limit(8),
       mlbAccess ? fetch(`/api/search/sports?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })) : Promise.resolve({ players: [], teams: [] }),
       fetch(`/api/search/nfl?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [] }).catch(() => ({ players: [], teams: [] })),
       nbaAllowed ? fetch(`/api/search/nba?q=${encodeURIComponent(query)}`).then(r => r.ok ? r.json() : { players: [], teams: [], error: 'NBA search is temporarily unavailable.' }).catch(() => ({ players: [], teams: [], error: 'NBA search is temporarily unavailable.' })) : Promise.resolve({ players: [], teams: [] }),
@@ -190,9 +185,7 @@ export function SearchClient() {
     setNbaTeams(nbaData.teams ?? [])
     setNbaError(nbaData.error ?? '')
     setGroups((groupRows ?? []).map(group => ({ ...group, count: group.member_count ?? 0 })))
-    setPages((pageRows ?? []).map(page => ({ ...page, count: page.follower_count ?? 0 })))
     setChannels((channelRows ?? []).map(channel => ({ id: channel.id, slug: channel.slug, name: channel.name, description: channel.description, avatar_url: null, emoji: channel.icon || '#', count: channel.member_count ?? 0 })))
-    setEvents(eventRows ?? [])
     setLoading(false)
   }, [supabase, nbaAllowed, mlbAccess, currentBlockIds, activeUserId, accountGeneration])
 
@@ -254,7 +247,7 @@ export function SearchClient() {
   const visibleUsers = canShowSocial ? users.filter(user => !activeBlocked.has(user.id)) : []
   const visiblePosts = canShowSocial ? posts.filter(post => !activeBlocked.has(post.author_id) && (mlbAccess || post.sport?.toUpperCase() !== 'MLB')) : []
   const picks = visiblePosts.filter(p => p.post_type === 'pick' || p.post_type === 'parlay')
-  const hasResults = visibleUsers.length > 0 || visiblePosts.length > 0 || mlbAccess && (players.length > 0 || teams.length > 0) || nflPlayers.length > 0 || nflTeams.length > 0 || nbaAllowed && (nbaPlayers.length > 0 || nbaTeams.length > 0) || groups.length > 0 || pages.length > 0 || channels.length > 0 || events.length > 0
+  const hasResults = visibleUsers.length > 0 || visiblePosts.length > 0 || mlbAccess && (players.length > 0 || teams.length > 0) || nflPlayers.length > 0 || nflTeams.length > 0 || nbaAllowed && (nbaPlayers.length > 0 || nbaTeams.length > 0) || groups.length > 0 || channels.length > 0
   const showUsers = tab === 'all' || tab === 'users'
   const showPosts = tab === 'all' || tab === 'posts'
   const showPicks = tab === 'picks'
@@ -404,14 +397,12 @@ export function SearchClient() {
             </div>
           )}
 
-          {showCommunity && (groups.length > 0 || pages.length > 0 || channels.length > 0 || events.length > 0) && (
+          {showCommunity && (groups.length > 0 || channels.length > 0) && (
             <div className="mb-6">
               <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-3)]"><LayoutGrid size={12}/> Community</h3>
               <div className="grid gap-2 sm:grid-cols-2">
                 {groups.map(group => <CommunitySearchResult key={`group-${group.id}`} href={`/groups/${group.slug}`} item={group} label={`${group.count} members`} />)}
-                {pages.map(page => <CommunitySearchResult key={`page-${page.id}`} href={`/pages/${page.slug}`} item={page} label={`${page.count} followers`} />)}
                 {channels.map(channel => <CommunitySearchResult key={`channel-${channel.id}`} href={`/channels/${channel.slug}`} item={channel} label={`${channel.count} members`} />)}
-                {events.map(event => <CommunitySearchResult key={`event-${event.id}`} href={`/events/${event.id}`} item={{ id:event.id, slug:event.id, name:event.title, description:event.description, avatar_url:event.cover_image, emoji:'◉', count:event.going_count ?? 0 }} label={`${event.going_count ?? 0} going · ${new Date(event.start_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`} />)}
               </div>
             </div>
           )}

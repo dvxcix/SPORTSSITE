@@ -2,7 +2,7 @@ import { unstable_cache } from 'next/cache'
 import Link from 'next/link'
 import {
   Activity, ArrowRight, Compass, Flame, Gauge, Hash,
-  Radar, Search, Sparkles, Star, TrendingUp, Users, Zap,
+  Radar, Search, Sparkles, TrendingUp, Users, Zap,
 } from 'lucide-react'
 import { fetchScheduleWithRetry } from '@slipsurge/core/mlbSchedule'
 import { createClient } from '@/lib/supabase/server'
@@ -91,15 +91,13 @@ export default async function ExplorePage() {
 
   const [
     [topCappers, topBettors], { data: rawTopPosts },
-    { data: rawTrendingPicks }, { data: pages }, { data: groups }, slateActivity, nflGames, nbaGames,
+    { data: rawTrendingPicks }, { data: groups }, slateActivity, nflGames, nbaGames,
   ] = await Promise.all([
     spotlightMembers,
     supabase.from('posts').select(POST_WITH_AUTHOR).eq('visibility', 'public')
       .gte('created_at', oneDayAgo).order('reaction_count', { ascending: false }).limit(3),
     supabase.from('posts').select(POST_WITH_AUTHOR).eq('post_type', 'pick').eq('visibility', 'public')
       .gte('created_at', oneDayAgo).order('reaction_count', { ascending: false }).limit(3),
-    supabase.from('pages').select('id, slug, name, description, avatar_url, emoji, category, follower_count, is_verified')
-      .eq('is_published', true).order('follower_count', { ascending: false }).limit(4),
     supabase.from('groups').select('id, slug, name, description, avatar_url, emoji, sport, member_count')
       .eq('is_public', true).order('member_count', { ascending: false }).limit(4),
     MLB_HIBERNATING ? Promise.resolve({ schedule: [], homeRuns: [], nearHomeRuns: [] }) : getSlateActivity(date).catch(() => ({ schedule: [], homeRuns: [], nearHomeRuns: [] })),
@@ -215,9 +213,6 @@ export default async function ExplorePage() {
 
           <aside className="ss-explore-rail">
             <ToolCard />
-            <Directory title="Pages to follow" icon={<Star size={15} />} href="/pages" rows={(pages ?? []).filter(page => showMlb || page.category?.toUpperCase() !== 'MLB').map((page: any) => ({
-              id: page.id, href: `/pages/${page.slug}`, name: page.name, detail: page.category || `${page.follower_count ?? 0} followers`, image: page.avatar_url, fallback: page.emoji || '★',
-            }))} />
             <Directory title="Groups to discover" icon={<Users size={15} />} href="/groups" rows={(groups ?? []).filter(group => showMlb || group.sport?.toUpperCase() !== 'MLB').map((group: any) => ({
               id: group.id, href: `/groups/${group.slug}`, name: group.name, detail: group.sport || `${group.member_count ?? 0} members`, image: group.avatar_url, fallback: group.emoji || 'G',
             }))} />

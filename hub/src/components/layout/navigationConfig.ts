@@ -1,8 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
 import {
-  Activity, AtSign, Award, Bell, Bookmark, BookOpen, ChartSpline, CloudSun, Coins,
-  Compass, Crosshair, Flame, FlaskConical, Hash, History, Home, Layers3,
-  LayoutGrid, Link2, ListOrdered, MessageCircle, MessagesSquare, Search, Settings2,
+  Activity, AtSign, Award, Bell, Bookmark, ChartSpline, CloudSun, Coins,
+  Compass, Crosshair, Flame, FlaskConical, History, Home, Layers3,
+  Link2, ListOrdered, MessageCircle, MessagesSquare, Search, Settings2,
   ShoppingBag, Table2, TrendingUp, Trophy, Users, Zap,
 } from 'lucide-react'
 
@@ -29,7 +29,7 @@ export const productAreaMeta: Record<ProductArea, { label: string; eyebrow: stri
 export const primaryNavigation: ProductNavItem[] = [
   { href: '/launch', label: 'Home', icon: Home, matches: ['/feed', '/explore', '/search', '/hashtag', '/post', '/profile', '/notifications'] },
   { href: '/dugout', label: 'Research', icon: FlaskConical, matches: ['/dugout', '/the-sideline', '/the-paint', '/nba', '/workspace', '/sports', '/batter-cost', '/odds-terminal', '/slate-breakdown', '/pitcher-report', '/weather-lab', '/synergy', '/daily-recap', '/spray-charts', '/the-public', '/nfl'] },
-  { href: '/groups', label: 'Communities', icon: MessagesSquare, badge: 'LIVE', matches: ['/community', '/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog'] },
+  { href: '/groups', label: 'Communities', icon: MessagesSquare, badge: 'LIVE', matches: ['/community', '/channels', '/messages', '/groups'] },
   { href: '/picks', label: 'Picks', icon: TrendingUp, matches: ['/picks', '/bookmarks', '/missions', '/activity'] },
 ]
 
@@ -86,14 +86,9 @@ export const areaNavigation: Record<ProductArea, ProductNavItem[]> = {
     { href: '/spray-charts', label: 'Spray Charts', icon: Crosshair, ultimateOnly: true },
   ],
   community: [
-    { href: '/community', label: 'Community Home', icon: LayoutGrid },
     { href: '/channels', label: 'Live Channels', icon: Zap, badge: 'LIVE' },
     { href: '/messages', label: 'Direct Messages', icon: MessageCircle },
     { href: '/groups', label: 'Communities', icon: Users },
-    { href: '/forum', label: 'Discussions', icon: Hash },
-    { href: '/pages', label: 'Pages', icon: LayoutGrid },
-    { href: '/events', label: 'Events', icon: Activity },
-    { href: '/blog', label: 'Articles', icon: BookOpen },
   ],
   account: [
     { href: '/notifications', label: 'Notifications', icon: Bell },
@@ -108,7 +103,7 @@ export const areaNavigation: Record<ProductArea, ProductNavItem[]> = {
 }
 
 const routeAreas: Array<{ area: ProductArea; prefixes: readonly string[] }> = [
-  { area: 'community', prefixes: ['/community', '/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog'] },
+  { area: 'community', prefixes: ['/community', '/channels', '/messages', '/groups'] },
   { area: 'commerce', prefixes: ['/marketplace', '/creator', '/pricing'] },
   { area: 'account', prefixes: ['/settings'] },
   { area: 'social', prefixes: ['/feed', '/explore', '/search', '/hashtag', '/post', '/profile', '/bookmarks', '/missions', '/activity', '/notifications', '/picks', '/leaderboard'] },

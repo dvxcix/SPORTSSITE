@@ -44,9 +44,8 @@ test('public discovery and authentication boundaries stay aligned', async () => 
   assert.ok(middleware.includes("'/creators/apply'"), 'creator acquisition page is not public')
   assert.ok(sitemap.includes("path: '/creators/apply'"), 'creator acquisition page is missing from discovery')
   assert.ok(middleware.includes("pathname === '/creators'"), 'creator marketplace is not public')
-  assert.ok(middleware.includes("pathname === '/blog'"), 'published editorial content is not public')
   assert.ok(sitemap.includes("path: '/creators'"), 'creator marketplace is missing from discovery')
-  assert.ok(sitemap.includes("path: '/blog'"), 'blog is missing from discovery')
+  assert.ok(!sitemap.includes("path: '/blog'"), 'retired articles should not be advertised')
   for (const privateRoute of ['/explore', '/sports', '/leaderboard']) {
     assert.ok(!sitemap.includes(`path: '${privateRoute}'`), `${privateRoute} should not be advertised while auth-gated`)
   }
@@ -701,14 +700,31 @@ test('health checks remain machine-readable when dependencies are unavailable', 
 
 test('community destinations share navigation and route transition states', async () => {
   const navigation = await read('src/components/community/CommunityNav.tsx')
-  for (const destination of ['/feed', '/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']) {
+  for (const destination of ['/feed', '/channels', '/messages', '/groups', '/notifications', '/bookmarks']) {
     assert.ok(navigation.includes(`href: '${destination}'`), `community navigation omits ${destination}`)
   }
 
-  for (const route of ['channels', 'messages', 'groups', 'forum', 'notifications', 'bookmarks', 'profile', 'search', 'events', 'pages', 'blog', 'creators']) {
+  for (const route of ['channels', 'messages', 'groups', 'notifications', 'bookmarks', 'profile', 'search', 'creators']) {
     const loading = await read(`src/app/${route}/loading.tsx`)
     assert.ok(loading.includes('DataRouteLoading'), `${route} lacks a shared transition state`)
   }
+})
+
+test('retired community features redirect to groups and stay out of discovery', async () => {
+  const config = await read('next.config.ts')
+  const featureFlags = await read('src/lib/featureFlags.server.ts')
+  const nav = await read('src/components/community/CommunityNav.tsx')
+  const dock = await read('src/components/layout/UtilityDock.tsx')
+  const search = await read('src/components/search/SearchClient.tsx')
+  for (const route of ['/forum', '/pages', '/events', '/blog']) {
+    assert.ok(config.includes(`'${route}'`))
+    assert.ok(!nav.includes(`href: '${route}'`))
+    assert.ok(!search.includes(route + '/'))
+  }
+  assert.ok(config.includes("destination: '/groups'"))
+  assert.ok(featureFlags.includes('requested.filter(isRetiredCommunityFeature)'))
+  assert.ok(!dock.includes('VoltTeaser'))
+  assert.ok(dock.includes('hidden inert'))
 })
 
 test('creator and story publishing avoid full-page reload handoffs', async () => {
@@ -828,7 +844,7 @@ test('account recovery associates its visible label with the email field', async
 test('mobile navigation keeps the community workspace active across every social route', async () => {
   const dock = await read('src/components/layout/MobileDock.tsx')
   const navigation = await read('src/components/layout/navigationConfig.ts')
-  for (const route of ['/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']) {
+  for (const route of ['/channels', '/messages', '/groups', '/notifications', '/bookmarks']) {
     assert.ok(navigation.includes(`'${route}'`), `shared mobile navigation state omits ${route}`)
   }
   assert.ok(dock.includes('primaryNavigation.map'))
@@ -838,7 +854,7 @@ test('mobile navigation keeps the community workspace active across every social
 test('desktop navigation classifies every social route as community', async () => {
   const desktop = await read('src/components/desktop/DesktopNavigation.tsx')
   const navigation = await read('src/components/layout/navigationConfig.ts')
-  for (const route of ['/channels', '/messages', '/groups', '/forum', '/pages', '/events', '/blog', '/notifications', '/bookmarks']) {
+  for (const route of ['/channels', '/messages', '/groups', '/notifications', '/bookmarks']) {
     assert.ok(navigation.includes(`'${route}'`), `shared desktop navigation omits ${route}`)
   }
   assert.ok(desktop.includes('getContextNavigation(pathname)'))

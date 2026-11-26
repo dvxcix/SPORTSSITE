@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminMemberOperator } from '@/lib/supabase/adminMemberOperator'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { FEATURE_FLAGS, type FeatureRolloutAudience } from '@/lib/featureFlags'
+import { FEATURE_FLAGS, isRetiredCommunityFeature, type FeatureRolloutAudience } from '@/lib/featureFlags'
 import { safeApiError } from '@/lib/safeApiError'
 
-const FEATURE_KEYS = new Set<string>(Object.values(FEATURE_FLAGS))
+const FEATURE_KEYS = new Set<string>(Object.values(FEATURE_FLAGS).filter(key => !isRetiredCommunityFeature(key)))
 const AUDIENCES = new Set<FeatureRolloutAudience>(['off', 'admins', 'members', 'percentage', 'everyone'])
 
 export async function GET(request: Request) {
