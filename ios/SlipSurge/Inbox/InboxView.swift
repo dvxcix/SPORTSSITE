@@ -15,9 +15,29 @@ enum InboxSection: String, CaseIterable {
 struct InboxView: View {
     let account: AccountStore
     @Binding var section: InboxSection
+    @Binding var notificationOpen: InboxNotificationOpen?
+    let active: Bool
     let unread: InboxUnread
     let signIn: () -> Void
     @Environment(\.colorScheme) private var scheme
+    @State private var openedDestination: ActivityNotification.Destination?
+    @State private var problem: NotificationProblem?
+
+    private enum NotificationProblem: String, Identifiable {
+        case unavailable = "This notification is no longer available."
+        case failed = "The notification couldn’t load."
+        var id: Self { self }
+    }
+
+    private struct OpenRequest: Equatable {
+        let notification: InboxNotificationOpen
+        let memberID: UUID
+    }
+
+    private var openRequest: OpenRequest? {
+        guard active, let notificationOpen, let memberID = account.memberID else { return nil }
+        return .init(notification: notificationOpen, memberID: memberID)
+    }
 
     var body: some View {
         content
@@ -25,6 +45,44 @@ struct InboxView: View {
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .top, spacing: 0) { sectionPicker }
             .background(Brand.background(for: scheme))
+            .navigationDestination(item: $openedDestination) { destination in
+                if let memberID = account.memberID {
+                    ActivityDestinationView(api: .init(account: account, userID: memberID), destination: destination)
+                }
+            }
+            .task(id: openRequest) { if let openRequest { await openNotification(openRequest) } }
+            .alert("Notification unavailable", item: $problem) { _ in
+                Button("OK", role: .cancel) {}
+            } message: { problem in
+                Text(problem.rawValue)
+            }
+    }
+
+    private func openNotification(_ request: OpenRequest) async {
+        let api = ActivityAPI(account: account, userID: request.memberID)
+        let id = request.notification.notificationID
+        do {
+            let notice = try await api.load(id: id).first
+            guard !Task.isCancelled, openRequest == request else { return }
+            if let notice, notice.id == id {
+                section = notice.type == "message" ? .messages : .activity
+                openedDestination = notice.destination
+                if !notice.read {
+                    Task {
+                        if (try? await api.markRead([id])) != nil {
+                            await unread.refreshActivity(account: account, memberID: request.memberID)
+                            NotificationCenter.default.post(name: .slipSurgeActivityChanged, object: nil)
+                        }
+                    }
+                }
+            } else {
+                problem = .unavailable
+            }
+        } catch {
+            guard !Task.isCancelled, openRequest == request else { return }
+            problem = .failed
+        }
+        notificationOpen = nil
     }
 
     @ViewBuilder private var content: some View {

@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ActivityView: View {
     let api: ActivityAPI
-    var opensNotification: UUID? = nil
     var inInbox = false
     var initialActivity: (() -> [ActivityNotification]?)? = nil
     var onUnreadChange: (Int) -> Void = { _ in }
@@ -16,7 +15,6 @@ struct ActivityView: View {
     @State private var mutationFailed = false
     @State private var refreshFailed = false
     @State private var revision = 0
-    @State private var opened = false
 
     private enum State {
         case loading, ready, unavailable, denied
@@ -72,15 +70,7 @@ struct ActivityView: View {
         }
         .navigationTitle(inInbox ? "Inbox" : "Notifications")
         .navigationDestination(item: $destination) { chosen in
-            switch chosen {
-            case .post(let id): FeedThreadView(api: FeedAPI(account: api.account, userID: api.userID), id: id)
-            case .conversation(let room): MessageThreadView(api: MessagesAPI(account: api.account, userID: api.userID), destination: room)
-            case .discovery: DiscoverView(api: DiscoverAPI(account: api.account, userID: api.userID))
-            case .community(let id): DiscoverView(api: DiscoverAPI(account: api.account, userID: api.userID), opensCommunity: id)
-            case .profile(let id): MemberProfileView(api: DiscoverAPI(account: api.account, userID: api.userID), target: id.uuidString.lowercased())
-            case .research(let link): LinkedResearchView(account: api.account, link: link)
-            case .game(let link): LinkedScoreView(viewer: .init(account: api.account, userID: api.userID), link: link)
-            }
+            ActivityDestinationView(api: api, destination: chosen)
         }
         .scrollContentBackground(.hidden)
         .background(Brand.background(for: scheme))
@@ -92,14 +82,6 @@ struct ActivityView: View {
                 state = .ready
             }
             await load()
-            if !opened, state == .ready, let id = opensNotification {
-                if let matching = rows.first(where: { $0.id == id }) {
-                    open(matching)
-                } else if let matching = try? await api.load(id: id).first, matching.id == id {
-                    open(matching)
-                }
-                opened = true
-            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .slipSurgeActivityChanged)) { _ in
             if !busy { revision += 1 }

@@ -58,6 +58,11 @@ final class InboxUnread {
         }
     }
 
+    func refreshActivity(account: AccountStore, memberID: UUID) async {
+        guard account.memberID == memberID, self.memberID == memberID else { return }
+        await refresh(.activity, account: account, memberID: memberID)
+    }
+
     private func setMember(_ memberID: UUID?) {
         guard self.memberID != memberID else { return }
         self.memberID = memberID

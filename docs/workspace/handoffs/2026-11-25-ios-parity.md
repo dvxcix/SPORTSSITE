@@ -2878,3 +2878,22 @@ physical-device push are still open.
   descending to ascending Opportunities and reordered the signed-in board
   while preserving the pregame cutoff. The Simulator's Lock Screen editor
   did not expose widget placement in this session.
+
+### 2026-11-26 · Notification taps use the dedicated Inbox
+
+- Continued `codex/ios-parity-20261125` from `6d6d2a78`. Tapping a
+  notification selects Inbox and opens its authenticated destination in that
+  tab’s navigation stack. Back returns to Activity, or to Messages for a
+  message notification. A missing row leaves Inbox open with a short error.
+  Another notification can open a new destination even when a prior detail
+  is still on screen.
+- An injected notification for an already-read follow opened the correct
+  member profile in iPhone 18 Pro Simulator. Native Back returned to Activity.
+  The Activity/Messages switch and missing-notification error worked. The
+  device build installed on Miranda’s iPhone 16 Plus and opened Inbox Messages
+  with its search and request controls. No private receipt IDs or captures
+  were added to Git. The 288 native and production source checks passed.
+- Retried App Store export from the existing Release archive. Apple again
+  reported the Personal Team cannot create App Store profiles and there is
+  no iOS Distribution certificate. Real APNs and App Store release still
+  require the app’s paid Apple Developer team.

@@ -4,6 +4,7 @@ struct SlipSurgeTabs: View {
     let account: AccountStore
     @Binding var appearance: Appearance
     @Binding var incomingURL: URL?
+    @Binding var notificationOpen: InboxNotificationOpen?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var phase
     @Environment(\.horizontalSizeClass) private var horizontalSize
@@ -33,6 +34,7 @@ struct SlipSurgeTabs: View {
     @State private var researchPath: [ResearchPresentation] = []
     @State private var discoverDestination: DiscoverDestination?
     @State private var inboxSection = InboxSection.activity
+    @State private var inboxNavigationRevision = 0
     @State private var opensAccountSettings = false
     @State private var inboxUnread = InboxUnread()
     @State private var feedSelection: NativeFeedSelection?
@@ -106,11 +108,13 @@ struct SlipSurgeTabs: View {
             .tag(Destination.community)
 
             NavigationStack {
-                InboxView(account: account, section: $inboxSection, unread: inboxUnread) { selectTab(.you) }
+                InboxView(account: account, section: $inboxSection, notificationOpen: $notificationOpen,
+                    active: selected == .inbox, unread: inboxUnread) { selectTab(.you) }
             }
             .environment(\.socialTab, .inbox)
             .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
             .id(account.memberID)
+            .id(inboxNavigationRevision)
             .tabItem { Label(Destination.inbox.rawValue, systemImage: Destination.inbox.symbol) }
             .badge(inboxUnread.total(for: account.memberID))
             .tag(Destination.inbox)
@@ -211,9 +215,16 @@ struct SlipSurgeTabs: View {
                 if phase == .active { await refreshAnnouncements(for: userID) }
             }
         }
+        .onChange(of: account.memberID) { _, memberID in
+            if memberID != nil, notificationOpen != nil { presentInbox(section: .activity) }
+        }
         .onChange(of: account.needsNewPassword) { _, ready in if ready { selected = .you } }
         .onChange(of: account.user?.id) { _, signedIn in
             if signedIn != nil, !account.onboardingComplete { selected = .you }
+        }
+        .onChange(of: notificationOpen, initial: true) { _, request in
+            guard request != nil else { return }
+            presentInbox(section: .activity)
         }
         .onChange(of: incomingURL, initial: true) {
             guard let url = incomingURL else { return }
@@ -341,10 +352,8 @@ struct SlipSurgeTabs: View {
             opensAccountSettings = account.memberID != nil && url.path.split(separator: "/").last == "settings"
             selected = .you
         case .notifications, .messages:
-            sitePresentation = nil
-            profilePresentation = nil
-            inboxSection = link == .notifications ? .activity : .messages
-            selected = .inbox
+            notificationOpen = nil
+            presentInbox(section: link == .notifications ? .activity : .messages)
         case .launch:
             if let target = researchPreferences.read(for: account.memberID)?.launch {
                 return routeLink(target, track: track)
@@ -378,6 +387,16 @@ struct SlipSurgeTabs: View {
             sitePresentation = SitePresentation(target: link)
         }
         return .handled
+    }
+
+    private func presentInbox(section: InboxSection) {
+        choseDestination = true
+        sitePresentation = nil
+        profilePresentation = nil
+        pendingProfilePresentation = nil
+        inboxNavigationRevision += 1
+        inboxSection = section
+        selected = .inbox
     }
 
     @ViewBuilder private func siteSheet(_ site: SitePresentation) -> some View {

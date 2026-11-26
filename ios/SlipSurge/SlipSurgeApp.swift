@@ -6,14 +6,12 @@ struct SlipSurgeApp: App {
     @UIApplicationDelegateAdaptor(PushNotifications.self) private var push
     @Environment(\.scenePhase) private var phase
     @State private var account = AccountStore()
-    @State private var incoming: Incoming?
+    @State private var notificationOpen: InboxNotificationOpen?
     @State private var incomingURL: URL?
-
-    private struct Incoming: Identifiable { let id: UUID }
 
     var body: some Scene {
         WindowGroup {
-            SlipSurgeTabs(account: account, appearance: $appearance, incomingURL: $incomingURL)
+            SlipSurgeTabs(account: account, appearance: $appearance, incomingURL: $incomingURL, notificationOpen: $notificationOpen)
                 .environmentObject(push)
                 .preferredColorScheme(appearance.scheme)
                 .onOpenURL { url in
@@ -24,25 +22,11 @@ struct SlipSurgeApp: App {
                     }
                 }
                 .task(id: account.memberID) {
-                    push.onOpen = { incoming = Incoming(id: $0) }
+                    push.onOpen = { notificationOpen = InboxNotificationOpen(notificationID: $0) }
                     await push.updateAccount(account)
                 }
                 .onChange(of: phase) { _, state in
                     if state == .active { Task { await push.sync() } }
-                }
-                .sheet(item: $incoming) { notice in
-                    NavigationStack {
-                        if let userID = account.memberID {
-                            ActivityView(api: ActivityAPI(account: account, userID: userID), opensNotification: notice.id)
-                                .toolbar {
-                                    ToolbarItem(placement: .cancellationAction) {
-                                        Button("Close", systemImage: "xmark") { incoming = nil }.labelStyle(.iconOnly)
-                                    }
-                                }
-                        } else {
-                            ContentUnavailableView("Sign in to view this notification", systemImage: "bell")
-                        }
-                    }
                 }
         }
     }
