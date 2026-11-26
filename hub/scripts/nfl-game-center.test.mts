@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { buildNflGameCenter, type NflCenterFeed, type NflCenterStat } from '../src/lib/nflGameCenter.ts'
+import { buildNflGameCenter, nflCenterPortraitNames, type NflCenterFeed, type NflCenterStat } from '../src/lib/nflGameCenter.ts'
 import type { ESPNGame } from '../packages/core/src/espn-api.ts'
 
 // Entirely synthetic: no provider calls, current games, or holdout results.
@@ -89,4 +89,15 @@ test('exact same-team directory portraits reach both play participants and box s
   const providerPortrait = 'https://images.test/provider.png'
   const providerFeed = { ...feed, stats: [{ ...stat, player: { ...stat.player, headshot_url: providerPortrait } }] }
   assert.equal(buildNflGameCenter(game, providerFeed, directory).summary.plays?.[1].athletes?.[0].athlete.headshot?.href, providerPortrait)
+})
+
+test('suffix variations map only to a unique same-team directory player', () => {
+  const suffixed = { ...stat, player: { ...stat.player, last_name: 'Receiver III' } }
+  const suffixFeed = { ...feed, stats: [suffixed] }
+  assert.deepEqual(nflCenterPortraitNames([suffixed]), ['Fixture Receiver III', 'Fixture Receiver'])
+  const photo = 'https://images.test/roster.png'
+  const player = { display_name: 'Fixture Receiver', latest_team: 'PHI', headshot: photo, espn_id: null }
+  assert.equal(buildNflGameCenter(game, suffixFeed, [player]).summary.plays?.[1].athletes?.[0].athlete.headshot?.href, photo)
+  const other = { ...player, display_name: 'Fixture Receiver Jr.', headshot: 'https://images.test/other.png' }
+  assert.equal(buildNflGameCenter(game, suffixFeed, [player, other]).summary.plays?.[1].athletes?.[0].athlete.headshot, undefined)
 })
