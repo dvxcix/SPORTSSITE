@@ -16,6 +16,7 @@ const state={game,player,latest,prior,tip,reads:0,keys:[] as string[],fail:false
 ;(globalThis as typeof globalThis&{captureWarningRoute:typeof state}).captureWarningRoute=state
 const built=await build({stdin:{contents:"export {GET} from './src/app/the-paint/odds-board/route'",resolveDir:resolve('.'),loader:'ts'},bundle:true,write:false,platform:'node',format:'cjs',tsconfig:'tsconfig.json',plugins:[{name:'capture-warning-route',setup(builder){
  const modules:Record<string,string>={
+  'server-only': '',
   'next/server':`export const NextResponse={json:(value,options)=>Response.json(value,options)}`,
   '@/lib/paintAccess':`export async function requirePaintAccess(){return {userId:'member'}}`,
   '@/lib/nbaPaintData':`export async function getPaintSchedule(date){return {date,complete:!globalThis.captureWarningRoute.incomplete,games:[globalThis.captureWarningRoute.game]}};export async function getPaintRoster(){return [globalThis.captureWarningRoute.player]};export async function getPaintMarketRoster(){return [globalThis.captureWarningRoute.player]};export async function getPaintMarketIds(){return new Set([globalThis.captureWarningRoute.player.id])};export async function artwork(){return {headshots:new Map(),logo:null}}`,

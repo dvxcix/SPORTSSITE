@@ -242,7 +242,21 @@ export async function GET(request:NextRequest){
       const current=await read(viewKey)
       if(current.error)throw new Error('Saved odds unavailable')
       let prior=current.data
-      for(const key of priorViewKeys)if(!prior){const legacy=await read(key);if(legacy.error)throw new Error('Saved odds unavailable');prior=legacy.data}
+      if(!prior){
+        // Look up the previous versions in one metadata read. Keep the same
+        // precedence and fetch the payload only for the newest available row.
+        const known=await admin.from('nba_source_cache').select('key').in('key',priorViewKeys)
+          .limit(priorViewKeys.length).abortSignal(AbortSignal.timeout(10000))
+        if(known.error||!Array.isArray(known.data))throw new Error('Saved odds unavailable')
+        const keys=new Set(known.data.map(row=>row.key))
+        for(const key of priorViewKeys){
+          if(!keys.has(key))continue
+          const legacy=await read(key)
+          if(legacy.error)throw new Error('Saved odds unavailable')
+          prior=legacy.data
+          if(prior)break
+        }
+      }
       const observed={...candidate.value,picks:unpackNflBoardPicks(candidate.value.quotes,candidate.value.pickCounts)}
       return packNflBoardPicks(mergePartial(observed,(prior?.payload??null) as Pool|null,clocks),MAX_POOL_BYTES)
     },110)
