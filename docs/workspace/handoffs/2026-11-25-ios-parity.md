@@ -3442,3 +3442,24 @@ The live fixture exposed that the two-minute NFL import can run after
 the one-minute notification scan. PR 94 at `a71b7162` gave eligible NFL
 events a five-minute window, retaining the subscription start and
 duplicate checks. The next production play will test the scheduled path.
+
+Xcode archived and exported 1.0 (4) from `0adf2027`. The App Store
+package contained the Scoreboard widget and matching signed and runtime
+production APNs environments. Apple processed the upload and build 4 is
+Testing in SlipSurge Internal QA. Xcode reported a missing third-party
+GiphyUISDK dSYM. The upload succeeded. The signed-in state survived the
+TestFlight update on Devin’s iPad. In a narrow window, the Feed wordmark
+cleared the system window buttons and the installed NBA/NFL/MLB navigation
+and tab bar kept their icons and avatar. Game Center showed a compact
+Halftime row instead of a full play card. The three Chicago–Detroit alert
+switches stayed on during the update.
+
+On the iPad Home Screen, the small Scoreboard widget showed team
+logos and the Chicago–Detroit halftime score (10–19). Its tap opened that
+matchup in Game Center. Resizing it to medium showed the same live score
+alongside the upcoming Philadelphia–Dallas start time. The temporary
+check widget was removed. The lock-screen widget was outside this check.
+
+The final iOS task-branch suite passed 304 tests. The follow-up NFL
+backend suite passed 152 checks. The scheduled live alert is tracked
+separately from the prior labeled canary.
