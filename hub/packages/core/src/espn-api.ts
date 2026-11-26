@@ -45,6 +45,7 @@ export interface ESPNPlay {
   scoreValue?: number
   period: { number: number; displayValue: string }
   clock: { displayValue: string }
+  wallclock?: string
   team?: { id: string }
   start?: { yardLine?: number; distance?: number; down?: number; downDistanceText?: string; isRedZone?: boolean }
   athletes?: {
@@ -131,13 +132,13 @@ const SPORT_PATHS: Record<SportKey, string> = {
   soccer: 'soccer/usa.1',
 }
 
-export async function getScoreboard(sport: SportKey, date?: string): Promise<ESPNGame[]> {
+export async function getScoreboard(sport: SportKey, date?: string, freshness: 'standard' | 'live' = 'standard'): Promise<ESPNGame[]> {
   try {
     // ESPN format: dates=YYYYMMDD
     const dateParam = date ? `?dates=${date.replace(/-/g, '')}` : ''
     const res = await fetch(`${BASE}/${SPORT_PATHS[sport]}/scoreboard${dateParam}`, {
-      next: { revalidate: 30 },
-      headers: { 'User-Agent': 'SlipSurge/1.0' },
+      next: { revalidate: freshness === 'live' ? 2 : 30 },
+      headers: { 'User-Agent': freshness === 'live' ? 'SlipSurge-iOS-Live/1.0' : 'SlipSurge/1.0' },
     })
     if (!res.ok) return []
     const data = await res.json()
@@ -147,11 +148,11 @@ export async function getScoreboard(sport: SportKey, date?: string): Promise<ESP
   }
 }
 
-export async function getGameSummary(sport: SportKey, gameId: string): Promise<ESPNSummary | null> {
+export async function getGameSummary(sport: SportKey, gameId: string, freshness: 'standard' | 'live' = 'standard'): Promise<ESPNSummary | null> {
   try {
     const res = await fetch(`${BASE}/${SPORT_PATHS[sport]}/summary?event=${gameId}`, {
-      next: { revalidate: 20 },
-      headers: { 'User-Agent': 'SlipSurge/1.0' },
+      next: { revalidate: freshness === 'live' ? 2 : 20 },
+      headers: { 'User-Agent': freshness === 'live' ? 'SlipSurge-iOS-Live/1.0' : 'SlipSurge/1.0' },
     })
     if (!res.ok) return null
     return await res.json()

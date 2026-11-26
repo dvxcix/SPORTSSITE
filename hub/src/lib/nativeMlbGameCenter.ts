@@ -45,6 +45,7 @@ function atBat(play: MLBPlay, awayId: number, homeId: number): ESPNPlay | null {
     scoringPlay: play.about.isScoringPlay || play.result.isScoringPlay === true,
     period: { number: play.about.inning, displayValue: `Inning ${play.about.inning}` },
     clock: { displayValue: play.about.isTopInning ? 'Top' : 'Bottom' },
+    wallclock: play.about.isComplete ? play.about.endTime : undefined,
     team: { id: String(play.about.isTopInning ? awayId : homeId) },
     athletes: [play.matchup.batter, play.matchup.pitcher].flatMap(person => person?.id && person.fullName ? [{
       athlete: { id: String(person.id), displayName: person.fullName, headshot: { href: mlbHeadshot(person.id) } },
