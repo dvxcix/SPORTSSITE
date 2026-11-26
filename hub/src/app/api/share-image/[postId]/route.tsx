@@ -210,10 +210,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
           display: 'flex', alignItems: 'center', height: STRIP_H, padding: '0 28px',
           background: `linear-gradient(100deg, ${C.accent} 0%, #9EEB2E 100%)`,
         }}>
-          <img src={origin + '/icon-512.png'} alt="" width={64} height={64} style={{ borderRadius: 14, flexShrink: 0 }} />
-          <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: 13, fontWeight: 800, color: C.accentFg, letterSpacing: 2, opacity: 0.75 }}>BUILT ON</span>
-            <span style={{ fontSize: 30, fontWeight: 900, color: C.accentFg, letterSpacing: -0.5, lineHeight: 1 }}>SLIPSURGE</span>
+            <img src={origin + '/brand/2027/logo-header-on-light.png'} alt="SlipSurge" width={174} height={51} style={{ objectFit: 'contain' }} />
           </div>
 
           <div style={{

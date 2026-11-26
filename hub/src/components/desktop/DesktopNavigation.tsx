@@ -1,5 +1,6 @@
 'use client'
 
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import Link from 'next/link'
 import { useNflAccess } from '@/lib/useNflAccess'
 import { isNflToolHref } from '@/lib/nflAccessPolicy'
@@ -11,7 +12,6 @@ import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed'
 import { effectiveTier, hasFullAccessOverride, hasTierAccess, type Tier } from '@slipsurge/core/tiers'
 import { ResearchNavGroup, researchToolGroup } from '@/components/layout/ResearchNavGroup'
 import { AccountMenu } from '@/components/layout/AccountMenu'
-import { SafeImage } from '@/components/ui/SafeImage'
 import { accountQuickNavigation, getContextNavigation, primaryNavigation, routeMatches } from '@/components/layout/navigationConfig'
 import { researchHome, researchSportForPath, resolveResearchSport, researchToolActive, researchNavigationHref } from '@/components/layout/researchNavigation'
 import { useResearchSport } from '@/components/layout/useResearchSport'
@@ -58,7 +58,7 @@ export function DesktopNavigation() {
     <aside className="ss-desktop-navigation" data-channel-workspace={channelsWorkspace} data-collapsed={contextCollapsed}>
       <div className="ss-desktop-app-rail">
         <Link className="ss-desktop-rail-logo" href="/feed" prefetch={false} aria-label="SlipSurge home">
-          <SafeImage src="/logo.png" alt="" />
+          <SlipSurgeLogo variant="symbol" width={32} decorative />
         </Link>
         <nav aria-label="Desktop workspaces">
           {primaryNavigation.map(item => {

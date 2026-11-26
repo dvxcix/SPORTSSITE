@@ -549,3 +549,5 @@
   .showcaseBody { animation: preview-change 160ms ease-out; }
 }
 @keyframes preview-change { from { opacity: .65; } to { opacity: 1; } }
+
+.footerBrand { display:grid; gap:8px; flex:0 0 auto; }

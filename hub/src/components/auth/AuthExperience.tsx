@@ -1,7 +1,7 @@
 'use client'
 
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import type { ReactNode } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import styles from './AuthExperience.module.css'
 
@@ -30,8 +30,7 @@ export function AuthExperience({
 export function AuthBrand({ mobile = false }: { mobile?: boolean }) {
   return (
     <Link href="/" className={`${styles.brand} ${mobile ? styles.mobileBrand : ''}`} aria-label="SlipSurge home">
-      <Image src="/logo.png" alt="" width={mobile ? 32 : 44} height={mobile ? 32 : 44} priority />
-      <strong>Slip<span>Surge</span></strong>
+      <SlipSurgeLogo width={mobile ? 153 : 187} decorative priority />
     </Link>
   )
 }

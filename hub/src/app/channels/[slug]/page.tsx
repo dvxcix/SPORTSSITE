@@ -1,3 +1,4 @@
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { getChannelMessages, getChannels } from '@/lib/queries'
@@ -5,7 +6,6 @@ import { TierGate } from '@/components/layout/TierGate'
 import { ChatRoom } from '@/components/chat/ChatRoom'
 import { CommunityNav } from '@/components/community/CommunityNav'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Hash, Menu, Users } from 'lucide-react'
 
 interface Props { params: Promise<{ slug: string }> }
@@ -41,7 +41,7 @@ export default async function ChannelPage({ params }: Props) {
   const room = (
     <div className="ss-community-room-layout">
       <aside className="ss-desktop-channel-rail">
-        <div className="ss-desktop-channel-brand"><Image src="/logo.png" alt="" width={30} height={30} priority /><div><strong>Community</strong><span>SLIPSURGE</span></div></div>
+        <div className="ss-desktop-channel-brand"><div><SlipSurgeLogo width={130} decorative priority/><strong>Community</strong></div></div>
         <CommunityNav />
         <nav>
           {channels.map(item => (

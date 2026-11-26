@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import { useMemo, useRef, useState, type CSSProperties, type WheelEvent } from 'react'
 import {
   Activity,
@@ -155,7 +155,7 @@ function ScoreMark({ value, compact = false }: { value: number | null; compact?:
 }
 
 function SlipSurgeMark({ size = 14, className }: { size?: number; className?: string }) {
-  return <Image src="/logo.png" alt="" aria-hidden="true" width={size} height={size} className={className} />
+  return <SlipSurgeLogo variant="symbol" width={Math.max(16, size)} className={className} decorative />
 }
 
 function EdgeMark({ value, compact = false }: { value: number; compact?: boolean }) {

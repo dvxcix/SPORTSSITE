@@ -202,10 +202,8 @@ export async function GET(req: Request) {
           display: 'flex', alignItems: 'center', height: STRIP_H, padding: '0 28px',
           background: `linear-gradient(100deg, ${C.accent} 0%, #9EEB2E 100%)`,
         }}>
-          <img src={origin + '/icon-512.png'} alt="" width={46} height={46} style={{ borderRadius: 12, flexShrink: 0 }} />
-          <span style={{ fontSize: 17, fontWeight: 900, color: C.accentFg, letterSpacing: -0.2, marginLeft: 12 }}>
-            Researched on SlipSurge
-          </span>
+          <span style={{ fontSize: 17, fontWeight: 900, color: C.accentFg, letterSpacing: -0.2 }}>Researched on</span>
+          <img src={origin + '/brand/2027/logo-header-on-light.png'} alt="SlipSurge" width={120} height={35} style={{ marginLeft: 10, objectFit: 'contain' }} />
 
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto',

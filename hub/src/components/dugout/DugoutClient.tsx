@@ -1,4 +1,5 @@
 'use client'
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import { PickBadge } from '@/components/shared/OddsBadges'
 import type { MlbPublicMovement } from '@/lib/mlbPublicMovement'
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react'
@@ -3357,11 +3358,7 @@ export function getDugoutHeaderCells(
       <TH data-col-key="player" label="Player / Order" title="Player and batting order" w={190} sticky sortKey="batting_order" {...sortInfo('batting_order')} onSort={toggleSort} />
       {H('HR / FHR', 'Current FanDuel prices compared with this player’s own norm', 168, 'market_baseline')}
       {H(
-        <SafeImage
-          src="/logo.png"
-          alt="SlipSurge Score"
-          style={{ display: 'inline-block', width: 14, height: 14, objectFit: 'contain', verticalAlign: 'middle' }}
-        />,
+        <SlipSurgeLogo variant="symbol" width={16} />,
         'SlipSurge Score for the selected Last 1/3/5/10 window',
         52,
         'mechanics_index',

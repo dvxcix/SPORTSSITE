@@ -1,5 +1,6 @@
 'use client'
 
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
@@ -11,7 +12,6 @@ import {
   BellRing, ChevronRight, DatabaseZap, FlaskConical,
   MessageCircle, Table2, X, Zap,
 } from 'lucide-react'
-import { SafeImage } from '@/components/ui/SafeImage'
 
 const TOUR_KEY = 'slipsurge.desktop.tour.v1'
 const NOTIFICATION_CURSOR_PREFIX = 'slipsurge.desktop.notifications.cursor.'
@@ -184,9 +184,9 @@ export function DesktopExperience() {
             >
               <button type="button" className="ss-desktop-tour-close" onClick={finishTour} aria-label="Close desktop guide"><X size={17} /></button>
               <div className="ss-desktop-tour-brand">
-                <motion.div animate={{ rotate: [0, -8, 8, 0], scale: [1, 1.08, 1] }} transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.4 }}>
-                  <SafeImage src="/logo.png" alt="" />
-                </motion.div>
+                <div>
+                  <SlipSurgeLogo variant="symbol" width={44} decorative />
+                </div>
                 <div>
                   <span>SLIPSURGE DESKTOP</span>
                   <h1 id="desktop-tour-title">Your command center is ready.</h1>

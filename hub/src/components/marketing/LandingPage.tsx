@@ -1,3 +1,4 @@
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Suspense, type ReactNode } from 'react'
@@ -171,7 +172,7 @@ export function LandingPage({ previews, showcase }: { previews?: Record<PreviewS
 
       </main>
       <footer className={styles.footer}>
-        <span>© {new Date().getFullYear()} SlipSurge</span>
+        <div className={styles.footerBrand}><Link href="/" aria-label="SlipSurge home"><SlipSurgeLogo width={120} decorative /></Link><span>© {new Date().getFullYear()} SlipSurge</span></div>
         <nav aria-label="Footer">
           <Link href="/about">About</Link>
           <Link href="/faq">FAQ</Link>

@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import styles from './SlipSurgeScoreLabel.module.css'
 
 export function SlipSurgeScoreLabel({
@@ -18,7 +18,7 @@ export function SlipSurgeScoreLabel({
       aria-label={label}
     >
       {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
-      <Image className={styles.logo} src="/logo.png" alt="" width={16} height={16} aria-hidden="true" />
+      <SlipSurgeLogo className={styles.logo} variant="symbol" width={16} decorative />
       <span className={styles.name}>SlipSurge</span>
       <span className={styles.score}>Score</span>
     </span>

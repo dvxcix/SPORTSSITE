@@ -358,9 +358,9 @@ test('public scoring surfaces use SlipSurge Score branding instead of Index', ()
   assert.equal(source.includes('TOP INDEX'), false)
   assert.equal(source.includes('>INDEX<'), false)
   assert.ok(scoreRingSource.includes("label = 'SlipSurge Score'"))
-  assert.ok(scoreRingSource.includes('src="/logo.png"'))
+  assert.ok(scoreRingSource.includes('SlipSurgeLogo'))
   assert.ok(scoreLabelSource.includes('SlipSurgeScoreLabel'))
-  assert.ok(scoreLabelSource.includes('src="/logo.png"'))
+  assert.ok(scoreLabelSource.includes('SlipSurgeLogo'))
 })
 
 test('every secondary Dugout overlay follows the same accessible modal contract', () => {

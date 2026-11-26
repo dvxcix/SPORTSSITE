@@ -11,8 +11,8 @@ export function pageMetadata({ title, description, path, index = true }: PageMet
     title,
     description,
     alternates: { canonical: path },
-    openGraph: { title, description, url: path, siteName: 'SlipSurge', images: ['/og.png'] },
-    twitter: { card: 'summary_large_image', title, description, images: ['/og.png'] },
+    openGraph: { title, description, url: path, siteName: 'SlipSurge', images: ['https://www.slipsurge.com/og-image-1200x630.png'] },
+    twitter: { card: 'summary_large_image', title, description, images: ['https://www.slipsurge.com/og-image-1200x630.png'] },
     robots: index ? { index: true, follow: true } : { index: false, follow: false },
   }
 }

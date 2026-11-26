@@ -1,7 +1,7 @@
 'use client'
 
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import Link from 'next/link'
-import Image from 'next/image'
 import { AccountMenu } from '@/components/layout/AccountMenu'
 import { usePathname } from 'next/navigation'
 import { ChevronDown, Search, X } from 'lucide-react'
@@ -45,7 +45,7 @@ function AdminNavigationBody({ onClose }: { onClose: () => void }) {
   return (
     <>
         <div className={styles.sidebarHeader}>
-          <Link href="/admin" aria-label="SlipSurge admin home" onClick={onClose}><Image src="/logo.png" alt="" width={28} height={28}/><span>SlipSurge<small>Administration</small></span></Link>
+          <Link href="/admin" aria-label="SlipSurge admin home" onClick={onClose}><span><SlipSurgeLogo width={136} decorative/><small>Administration</small></span></Link>
           <button type="button" aria-label="Close admin navigation" onClick={onClose} className={styles.toolButton}>
             <X size={17} aria-hidden="true" />
           </button>
