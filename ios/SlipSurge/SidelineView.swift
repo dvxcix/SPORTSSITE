@@ -70,6 +70,7 @@ struct SidelineView: View {
     @State private var selectedGameID: String?
     @State private var revision = 0
     @State private var state = LoadState.loading
+    @State private var oddsFilters = ResearchOddsFilters()
     @State private var lastBoard: SidelineBoard?
     @State private var schedule = ScheduleState.loading
     @State private var useDefaultDate = true
@@ -177,6 +178,8 @@ struct SidelineView: View {
         }
         .task(id: dayRequest) { await loadSchedule() }
         .task(id: requestKey) { await load() }
+        .onChange(of: dayRequest.date) { _, _ in oddsFilters = ResearchOddsFilters() }
+        .onChange(of: selection.market) { _, _ in oddsFilters.clearLineSelection() }
         .refreshable { revision += 1 }
         .sheet(isPresented: $matrices) {
             if case .member(let account, let userID) = api.scope {
@@ -404,7 +407,8 @@ struct SidelineView: View {
                     }
                 } else {
                     ResearchOddsBoard(slate: oddsSlate, selectedGame: selectedGameID,
-                        marketLabel: marketName(board.market), scorerLabel: board.scorerLabel, defaultSort: .shortened)
+                        marketLabel: marketName(board.market), scorerLabel: board.scorerLabel, sportsbook: board.book,
+                        readBook: comparisonReader(date: board.date, market: board.market), filter: oddsFilters, defaultSort: .shortened)
                 }
             } else {
                 loading("Loading board")
@@ -414,6 +418,21 @@ struct SidelineView: View {
 
     private func loading(_ title: String) -> some View {
         ProgressView(title).frame(maxWidth: .infinity).padding()
+    }
+
+    private func comparisonReader(date: String, market: String) -> ResearchBookRead {
+        { [api] book, target in
+            let board = try await api.board(for: .init(market: market, book: book), date: date)
+            let expiry = try board.refreshDeadline()
+            guard !board.availabilityUnavailable.contains(target.gameID) else { return nil }
+            let matches = board.quotes.filter {
+                $0.id.player.game == target.gameID && $0.id.player.id == target.playerID &&
+                $0.id.player.team == target.team && $0.id.line == target.line
+            }
+            guard matches.count == 1, let quote = matches.first, quote.observedAt <= .now else { return nil }
+            return .init(price: .init(line: quote.id.line, current: quote.price, opening: nil, earlier: nil,
+                observedAt: quote.observedAt), expiry: expiry)
+        }
     }
 
     private var accessRequired: some View {
@@ -532,7 +551,9 @@ struct SidelineView: View {
             guard requested == requestKey else { return }
             let deadline = try board.refreshDeadline()
             lastBoard = board
-            state = .loaded(board, board.oddsSlate)
+            var slate = board.oddsSlate
+            slate.expiry = deadline
+            state = .loaded(board, slate)
             if let deadline {
                 try await Task.sleep(for: .seconds(max(0, deadline.timeIntervalSinceNow)))
                 revision += 1

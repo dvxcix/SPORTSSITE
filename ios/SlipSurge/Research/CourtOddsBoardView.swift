@@ -40,6 +40,7 @@ struct CourtOddsBoardView: View {
     @State private var books: [String] = []
     @State private var state = State.loading
     @State private var attempt = 0
+    @State private var filters = ResearchOddsFilters()
 
     init(scope: CourtView.Scope, date: String, gameID: Int?, mode: CourtResearchMode, reload: Int,
         showsContent: Bool, initialBook: String? = nil, initialMarket: String? = nil) {
@@ -71,6 +72,8 @@ struct CourtOddsBoardView: View {
             if showsContent { content }
         }
         .task(id: request) { await load(request) }
+        .onChange(of: date) { _, _ in filters = ResearchOddsFilters() }
+        .onChange(of: market) { _, _ in filters.clearLineSelection() }
     }
 
     private var content: some View {
@@ -87,7 +90,9 @@ struct CourtOddsBoardView: View {
             case .loaded(let selection, let slate):
                 if selection == request.selection {
                     ResearchOddsBoard(slate: slate, selectedGame: gameID.map(String.init),
-                        marketLabel: markets.first { $0.id == market }?.name ?? market, scorerLabel: nil, live: mode == .live)
+                        marketLabel: markets.first { $0.id == market }?.name ?? market, scorerLabel: nil,
+                        sportsbook: selection.book, readBook: comparisonReader(for: selection), filter: filters,
+                        live: mode == .live)
                 } else {
                     loading
                 }
@@ -119,6 +124,14 @@ struct CourtOddsBoardView: View {
         SportsbookPicker(books: Array(Set(books + [book])).sorted(), selection: $book)
             .fixedSize(horizontal: true, vertical: false)
             .frame(minHeight: 44)
+    }
+
+    private func comparisonReader(for selection: Selection) -> ResearchBookRead {
+        { [scope] book, target in
+            let slate = try await CourtOddsAPI().fetch(date: selection.date, market: selection.market, book: book,
+                mode: selection.mode, scope: scope)
+            return target.price(in: slate).map { .init(price: $0, expiry: slate.expiry) }
+        }
     }
 
     private func load(_ wanted: Request) async {

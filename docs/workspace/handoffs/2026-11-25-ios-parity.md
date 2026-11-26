@@ -3036,3 +3036,25 @@ physical-device push are still open.
   cutoff, membership checks, and exact observations. Localize loading within
   the affected panel and keep the selected matchup and market visible during
   player or chart transitions.
+
+### 2026-11-26 · Persistent filters and exact-line sportsbook comparison
+
+- Board-owned filter state survives a table remount on the same slate.
+  The slate and selected market still govern valid game and milestone
+  selections. Verified the 25+ receiving-yards filter through an observed
+  timed loading cycle on Devin’s iPad mini.
+- Tapping an NBA or NFL Odds Board price opens a native comparison sheet
+  with a fixed player portrait, exact milestone, matchup logos and mode.
+  History keeps the same context and uses the existing interactive chart.
+  Other sportsbooks load through the existing permission-checked reads,
+  with bounded concurrency. Rows match the same game, player ID, team,
+  market and exact line, retain observation timestamps and show missing
+  lines explicitly. Expired evidence is withdrawn from the comparison.
+- Devin’s iPad showed Kalif Raymond’s Bears–Lions 25+ receiving-yards
+  prices at FanDuel and DraftKings and distinguished another player’s
+  unavailable line. The iPhone 18 Pro Simulator showed matching book
+  rows for Andrew Wiggins’s 10+ points in Miami–Philadelphia. Both
+  Debug builds and all 288 native and source checks passed.
+- Design references included HOF’s live comparison and Apple Sports
+  matchup context. Independent review flagged a missing Betway asset,
+  which uses the generic sportsbook icon pending an approved mark.

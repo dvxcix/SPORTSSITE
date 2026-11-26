@@ -14,7 +14,7 @@ struct ResearchOddsSlate {
         let name: String
     }
 
-    struct Price: Identifiable {
+    struct Price: Identifiable, Sendable {
         let line: Double
         let current: Int
         let opening: Int?
@@ -84,6 +84,37 @@ enum OddsSort: String, CaseIterable {
     case lengthened = "Most lengthened"
 }
 
+@Observable final class ResearchOddsFilters {
+    private(set) var slateGame: String?
+    private(set) var game: String?
+    var team: String?
+    var target: Double?
+    var search = ""
+    var sort: OddsSort?
+    var sortedPriceLine: Double?
+    var ascendingPrice = false
+    var ascendingName = true
+    var comparison = OddsComparison.opening
+
+    func followSlateGame(_ id: String?) {
+        guard slateGame != id else { return }
+        slateGame = id
+        selectGame(id)
+    }
+
+    func selectGame(_ id: String?) {
+        guard game != id else { return }
+        game = id
+        team = nil
+        clearLineSelection()
+    }
+
+    func clearLineSelection() {
+        target = nil
+        sortedPriceLine = nil
+    }
+}
+
 struct ResearchOddsBoard: View {
     private struct SelectedPrice: Identifiable {
         let player: ResearchOddsSlate.Player
@@ -105,44 +136,37 @@ struct ResearchOddsBoard: View {
     let selectedGame: String?
     let marketLabel: String
     let scorerLabel: String?
+    let sportsbook: String
+    let readBook: ResearchBookRead
+    @Bindable var filter: ResearchOddsFilters
     var live = false
     var defaultSort = OddsSort.alphabetical
 
     @Environment(\.colorScheme) private var scheme
     @ScaledMetric(relativeTo: .subheadline) private var identityWidth = 153.0
     @ScaledMetric(relativeTo: .subheadline) private var priceWidth = 88.0
-    @State private var game: String?
-    @State private var team: String?
-    @State private var target: Double?
-    @State private var search = ""
-    @State private var sort: OddsSort?
-    @State private var sortedPriceLine: Double?
-    @State private var ascendingPrice = false
-    @State private var ascendingName = true
-    @State private var comparison = OddsComparison.opening
     @State private var filtersOpen = false
     @State private var selectedPrice: SelectedPrice?
 
-    private var selectedSort: OddsSort { sort ?? defaultSort }
-    private var slateGame: String? { selectedGame.flatMap { id in slate.games.first { $0.id == id }?.id } }
+    private var selectedSort: OddsSort { filter.sort ?? defaultSort }
 
     private var teams: [ResearchOddsSlate.Team] {
-        Array(Set(slate.players.filter { game == nil || $0.gameID == game }.map(\.team)))
+        Array(Set(slate.players.filter { filter.game == nil || $0.gameID == filter.game }.map(\.team)))
             .sorted { $0.name < $1.name }
     }
 
     private var players: [ResearchOddsSlate.Player] {
-        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = filter.search.trimmingCharacters(in: .whitespacesAndNewlines)
         return slate.players.filter {
-            (game == nil || $0.gameID == game) && (team == nil || $0.team.code == team) &&
+            (filter.game == nil || $0.gameID == filter.game) && (filter.team == nil || $0.team.code == filter.team) &&
             (query.isEmpty || "\($0.name) \($0.team.code) \($0.team.name)".localizedStandardContains(query))
         }
     }
 
     private func rows(for players: [ResearchOddsSlate.Player], sortedLine line: Double?) -> [ResearchOddsSlate.Player] {
-        let nameAscending = line != nil || selectedSort != .alphabetical || ascendingName
-        let valueAscending = line != nil ? ascendingPrice : selectedSort == .lengthened
-        return players.filter { player in target == nil || player.prices.contains { $0.line == target } }
+        let nameAscending = line != nil || selectedSort != .alphabetical || filter.ascendingName
+        let valueAscending = line != nil ? filter.ascendingPrice : selectedSort == .lengthened
+        return players.filter { player in filter.target == nil || player.prices.contains { $0.line == filter.target } }
             .map { player in
                 let value: Double?
                 if let line {
@@ -165,14 +189,14 @@ struct ResearchOddsBoard: View {
     }
 
     private func movement(_ player: ResearchOddsSlate.Player) -> Double? {
-        let values = player.prices.filter { target == nil || $0.line == target }.compactMap { $0.movement(comparison) }
+        let values = player.prices.filter { filter.target == nil || $0.line == filter.target }.compactMap { $0.movement(filter.comparison) }
         return selectedSort == .shortened ? values.max() : values.min()
     }
 
     var body: some View {
         let players = players
         let milestones = Array(Set(players.lazy.flatMap(\.prices).map(\.line))).sorted()
-        let sortedLine = sortedPriceLine.flatMap { milestones.contains($0) && (target == nil || target == $0) ? $0 : nil }
+        let sortedLine = filter.sortedPriceLine.flatMap { milestones.contains($0) && (filter.target == nil || filter.target == $0) ? $0 : nil }
         let rows = rows(for: players, sortedLine: sortedLine)
         VStack(alignment: .leading, spacing: 12) {
             navigation
@@ -184,35 +208,25 @@ struct ResearchOddsBoard: View {
             if rows.isEmpty {
                 ContentUnavailableView("No prices for these filters", systemImage: "chart.bar.xaxis")
             } else {
-                table(rows, columns: target.map { [$0] } ?? milestones, sortedLine: sortedLine)
+                table(rows, columns: filter.target.map { [$0] } ?? milestones, sortedLine: sortedLine)
             }
         }
-        .onChange(of: slateGame, initial: true) { _, value in
-            selectGame(value)
-        }
-        .onChange(of: slate.games.map(\.id)) { _, ids in
-            if let game, !ids.contains(game) { selectGame(slateGame) }
+        .onChange(of: selectedGame, initial: true) { _, value in
+            filter.followSlateGame(value)
         }
         .sheet(isPresented: $filtersOpen) {
-            filters(milestones: Array(Set(milestones + (target.map { [$0] } ?? []))).sorted())
+            filters(milestones: Array(Set(milestones + (filter.target.map { [$0] } ?? []))).sorted())
         }
         .sheet(item: $selectedPrice) { selection in quoteDetail(selection) }
-    }
-
-    private func selectGame(_ id: String?) {
-        guard game != id else { return }
-        game = id
-        team = nil
-        target = nil
     }
 
     private var navigation: some View {
         HStack(spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").accessibilityHidden(true)
-                TextField("Player or team", text: $search).autocorrectionDisabled().submitLabel(.search)
-                if !search.isEmpty {
-                    Button { search = "" } label: {
+                TextField("Player or team", text: $filter.search).autocorrectionDisabled().submitLabel(.search)
+                if !filter.search.isEmpty {
+                    Button { filter.search = "" } label: {
                         Image(systemName: "xmark.circle.fill").frame(minWidth: 36, minHeight: 44)
                     }
                     .accessibilityLabel("Clear search")
@@ -240,33 +254,33 @@ struct ResearchOddsBoard: View {
 
     @ViewBuilder
     private func activeFilters(sortedLine: Double?) -> some View {
-        let hasScopeOverride = game != slateGame
+        let hasScopeOverride = filter.game != filter.slateGame
         let hasCustomSort = sortedLine == nil && selectedSort != defaultSort
-        if hasScopeOverride || team != nil || target != nil || comparison != .opening || hasCustomSort {
+        if hasScopeOverride || filter.team != nil || filter.target != nil || filter.comparison != .opening || hasCustomSort {
             ScrollView(.horizontal) {
                 HStack(spacing: 7) {
                     if hasScopeOverride {
-                        let matchup = slate.games.first { $0.id == game }
+                        let matchup = slate.games.first { $0.id == filter.game }
                         let logos = [matchup?.away?.logo, matchup?.home?.logo].compactMap { $0 }
                         let scope = matchup.map { "Odds for \($0.title)" } ?? "All games"
                         filterChip(scope, icon: "calendar", logos: logos) {
-                            selectGame(slateGame)
+                            filter.selectGame(filter.slateGame)
                         }
                     }
-                    if let team {
+                    if let team = filter.team {
                         let player = slate.players.first { $0.team.code == team }
                         filterChip(player?.team.name ?? team, icon: "shield", logos: player?.logo.map { [$0] } ?? []) {
-                            self.team = nil
+                            filter.team = nil
                         }
                     }
-                    if let target {
-                        filterChip("\(target.formatted())+", icon: "number") { self.target = nil }
+                    if let target = filter.target {
+                        filterChip("\(target.formatted())+", icon: "number") { filter.target = nil }
                     }
-                    if comparison != .opening {
-                        filterChip(comparison.label(live: live), icon: "clock.arrow.circlepath") { comparison = .opening }
+                    if filter.comparison != .opening {
+                        filterChip(filter.comparison.label(live: live), icon: "clock.arrow.circlepath") { filter.comparison = .opening }
                     }
                     if hasCustomSort {
-                        filterChip(selectedSort.rawValue, icon: "arrow.up.arrow.down") { sort = nil }
+                        filterChip(selectedSort.rawValue, icon: "arrow.up.arrow.down") { filter.sort = nil }
                     }
                 }
             }
@@ -311,19 +325,19 @@ struct ResearchOddsBoard: View {
                         + slate.games.map { matchup in
                             .init(id: matchup.id, title: matchup.title, url: matchup.away?.logo ?? matchup.home?.logo,
                                   secondaryLogo: matchup.away?.logo == nil ? nil : matchup.home?.logo, icon: "calendar")
-                        }, selection: Binding(get: { game ?? "" }, set: { selectGame($0.isEmpty ? nil : $0) }))
+                        }, selection: Binding(get: { filter.game ?? "" }, set: { filter.selectGame($0.isEmpty ? nil : $0) }))
                     ResearchArtworkPicker(title: "Team", options: [.init(id: "", title: "All teams", icon: "shield")]
                         + teams.map { item in
                             .team(id: item.code, title: item.name, logo: slate.players.first { $0.team.code == item.code }?.logo)
-                        }, selection: Binding(get: { team ?? "" }, set: { team = $0.isEmpty ? nil : $0 }))
-                    Picker("Compare with", selection: $comparison) {
+                        }, selection: Binding(get: { filter.team ?? "" }, set: { filter.team = $0.isEmpty ? nil : $0 }))
+                    Picker("Compare with", selection: $filter.comparison) {
                         ForEach(OddsComparison.allCases, id: \.self) { Text($0.label(live: live)).tag($0) }
                     }
-                    Picker("Sort", selection: Binding(get: { selectedSort }, set: { sort = $0; sortedPriceLine = nil; ascendingName = true })) {
+                    Picker("Sort", selection: Binding(get: { selectedSort }, set: { filter.sort = $0; filter.sortedPriceLine = nil; filter.ascendingName = true })) {
                         ForEach(OddsSort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }
                     if scorerLabel == nil {
-                        Picker("Milestone", selection: $target) {
+                        Picker("Milestone", selection: $filter.target) {
                             Text("All milestones").tag(nil as Double?)
                             ForEach(milestones, id: \.self) { Text("\($0.formatted())+").tag(Optional($0)) }
                         }
@@ -348,15 +362,15 @@ struct ResearchOddsBoard: View {
         ScrollView(.horizontal) {
             LazyVStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 2) {
-                    ResearchSortHeader(title: "Player", selected: sortedLine == nil && selectedSort == .alphabetical, ascending: ascendingName) {
-                        if sortedLine == nil && selectedSort == .alphabetical { ascendingName.toggle() }
-                        else { sort = .alphabetical; sortedPriceLine = nil; ascendingName = true }
+                    ResearchSortHeader(title: "Player", selected: sortedLine == nil && selectedSort == .alphabetical, ascending: filter.ascendingName) {
+                        if sortedLine == nil && selectedSort == .alphabetical { filter.ascendingName.toggle() }
+                        else { filter.sort = .alphabetical; filter.sortedPriceLine = nil; filter.ascendingName = true }
                     }
                     .frame(width: identityWidth, alignment: .leading).padding(.leading, 10)
                     ForEach(columns, id: \.self) { line in
-                        ResearchSortHeader(title: scorerLabel ?? "\(line.formatted())+", selected: sortedLine == line, ascending: ascendingPrice) {
-                            if sortedLine == line { ascendingPrice.toggle() }
-                            else { sortedPriceLine = line; ascendingPrice = false }
+                        ResearchSortHeader(title: scorerLabel ?? "\(line.formatted())+", selected: sortedLine == line, ascending: filter.ascendingPrice) {
+                            if sortedLine == line { filter.ascendingPrice.toggle() }
+                            else { filter.sortedPriceLine = line; filter.ascendingPrice = false }
                         }
                         .frame(width: priceWidth)
                     }
@@ -407,14 +421,14 @@ struct ResearchOddsBoard: View {
     @ViewBuilder
     private func priceCell(_ price: ResearchOddsSlate.Price?, player: ResearchOddsSlate.Player, milestone: String) -> some View {
         if let price {
-            let move = price.movement(comparison)
+            let move = price.movement(filter.comparison)
             let color = movementColor(move)
             Button {
                 selectedPrice = .init(player: player, price: price, target: milestone)
             } label: {
                 VStack(spacing: 3) {
                     Text(Self.price(price.current)).font(.subheadline.bold()).foregroundStyle(Brand.text(for: scheme))
-                    Text("\(comparison.label(live: live)) \(Self.price(price.baseline(comparison)))")
+                    Text("\(filter.comparison.label(live: live)) \(Self.price(price.baseline(filter.comparison)))")
                         .font(.caption2).foregroundStyle(.secondary)
                     if let move {
                         Label(moveLabel(move), systemImage: move > 0 ? "arrow.up.right" : move < 0 ? "arrow.down.right" : "minus")
@@ -433,8 +447,8 @@ struct ResearchOddsBoard: View {
                 .background(color.opacity(0.12), in: .rect(cornerRadius: 8))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(player.name), \(milestone), \(Self.price(price.current)), \(comparison.label(live: live)) \(Self.price(price.baseline(comparison)))")
-            .accessibilityHint("Observed \(price.observedAt.formatted(date: .abbreviated, time: .shortened))")
+            .accessibilityLabel("\(player.name), \(milestone), \(Self.price(price.current)), \(filter.comparison.label(live: live)) \(Self.price(price.baseline(filter.comparison)))")
+            .accessibilityHint("Compare sportsbooks or see price history. Observed \(price.observedAt.formatted(date: .abbreviated, time: .shortened))")
         } else {
             Text("—").foregroundStyle(.secondary)
                 .accessibilityLabel("\(milestone), price unavailable")
@@ -442,6 +456,15 @@ struct ResearchOddsBoard: View {
     }
 
     private func quoteDetail(_ selection: SelectedPrice) -> some View {
+        let subtitle = scorerLabel ?? "\(selection.target) \(marketLabel.lowercased())"
+        return ResearchBookComparison(player: selection.player,
+            matchup: slate.games.first { $0.id == selection.player.gameID }, subtitle: subtitle,
+            marketMode: live ? "Live" : "Pregame", sportsbook: sportsbook, books: slate.books,
+            original: .init(price: selection.price, expiry: slate.expiry), read: readBook,
+            history: quoteHistory(selection))
+    }
+
+    private func quoteHistory(_ selection: SelectedPrice) -> some View {
         let price = selection.price
         let observations = [
             PriceObservation(label: "Last observed", odds: price.current, date: price.observedAt),
@@ -454,30 +477,17 @@ struct ResearchOddsBoard: View {
         }
         let unique = Dictionary(samples, uniquingKeysWith: { latest, _ in latest })
         let timeline = unique.keys.sorted()
-        let detents: Set<PresentationDetent> = timeline.count > 1 ? [.fraction(0.62), .large] : [.medium, .large]
-        return NavigationStack {
-            List {
-                Section {
-                    identity(selection.player)
+        return List {
+            Section {
+                quoteObservation("Last observed", value: price.current, at: price.observedAt)
+                if timeline.count > 1 {
+                    PriceHistoryChart(timeline: timeline, prices: unique)
                 }
-                Section(selection.target) {
-                    quoteObservation("Last observed", value: price.current, at: price.observedAt)
-                    if timeline.count > 1 {
-                        PriceHistoryChart(timeline: timeline, prices: unique)
-                    }
-                    ForEach(observations.dropFirst()) { quoteObservation($0.label, value: $0.odds, at: $0.date) }
-                }
-            }
-            .navigationTitle("Price history")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { selectedPrice = nil }
-                }
+                ForEach(observations.dropFirst()) { quoteObservation($0.label, value: $0.odds, at: $0.date) }
             }
         }
-        .presentationDetents(detents)
-        .tint(Brand.accent(for: scheme))
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
     }
 
     private struct PriceHistoryChart: View {
@@ -614,7 +624,7 @@ struct ResearchOddsBoard: View {
         return "\(move > 0 ? "+" : "")\(move.formatted(.number.precision(.fractionLength(1)))) pp"
     }
 
-    private static func price(_ number: Int?) -> String {
+    static func price(_ number: Int?) -> String {
         number.map { $0 > 0 ? "+\($0)" : String($0) } ?? "—"
     }
 }
