@@ -10,6 +10,8 @@ Finished artwork supplied by the owner from `VOLT/brand/kit`. The SVG masters an
 
 The static root contains the supplied favicon set, Apple touch icon, PWA and maskable icons, and 1200 × 630 share image. Existing `/logo.png`, `/brand-bolt.png`, `/og.png` and review-asset URLs remain valid and contain the new artwork. The two square compatibility assets retain their old 1030 × 1030 dimensions.
 
+The three automatic Next.js metadata files in `hub/src/app/` (`favicon.ico`, `icon.png` and `apple-icon.png`) also use the supplied artwork. These routes can take precedence over public-root icons, so the HTTP verification compares the actual response bytes as well as checking availability.
+
 The existing generated `/manifest.webmanifest` remains the canonical install manifest, preserving its app ID, launch path, scope and sport-aware shortcuts. `/site.webmanifest` is a merged compatibility export. Both include the new icon set and maskable entry. Favicon links carry `?v=2027` to refresh hard-cached browser icons.
 
 To resync website and mobile source exports from this checked-in kit:

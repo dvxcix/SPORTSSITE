@@ -12,6 +12,9 @@ test('website exports preserve the finished artwork byte for byte', async () => 
   for (const file of ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'favicon-16.png', 'favicon-32.png', 'favicon-48.png', 'icon-192.png', 'icon-512.png', 'maskable-512.png', 'og-image-1200x630.png']) {
     assert.deepEqual(await bytes(`public/${file}`), await readFile(path.join(kit, 'upload/website', file)), file)
   }
+  for (const [route, source] of Object.entries({ 'favicon.ico': 'favicon.ico', 'icon.png': 'icon-512.png', 'apple-icon.png': 'apple-touch-icon.png' })) {
+    assert.deepEqual(await bytes(`src/app/${route}`), await readFile(path.join(kit, 'upload/website', source)), `automatic icon route: ${route}`)
+  }
   for (const surface of ['dark', 'light']) {
     assert.deepEqual(await bytes(`public/brand/2027/logo-header-on-${surface}.svg`), await readFile(path.join(kit, `upload/website/logo-header-on-${surface}.svg`)))
     for (const small of ['', '-small']) {
