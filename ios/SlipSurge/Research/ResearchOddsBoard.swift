@@ -407,10 +407,7 @@ struct ResearchOddsBoard: View {
                 Section(selection.target) {
                     quoteObservation("Last observed", value: price.current, at: price.observedAt)
                     if timeline.count > 1 {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Implied probability").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                            priceChart(timeline: timeline, prices: unique)
-                        }
+                        PriceHistoryChart(timeline: timeline, prices: unique)
                     }
                     ForEach(observations.dropFirst()) { quoteObservation($0.label, value: $0.odds, at: $0.date) }
                 }
@@ -427,46 +424,115 @@ struct ResearchOddsBoard: View {
         .tint(Brand.accent(for: scheme))
     }
 
-    private func priceChart(timeline: [Date], prices: [Date: Int]) -> some View {
-        let probabilities = prices.values.map(ResearchOddsSlate.Price.implied)
-        let lower = max(0, (probabilities.min() ?? 0) - 0.06)
-        let upper = min(1, (probabilities.max() ?? 1) + 0.06)
-        let dateFormat: Date.FormatStyle = if let first = timeline.first, let last = timeline.last,
-            Calendar.current.isDate(first, inSameDayAs: last) {
-            .dateTime.hour().minute()
-        } else {
-            .dateTime.month(.abbreviated).day()
+    private struct PriceHistoryChart: View {
+        let timeline: [Date]
+        let prices: [Date: Int]
+        @Environment(\.colorScheme) private var scheme
+        @State private var selectedCapture: Date?
+
+        private var chartSelection: Binding<Date?> {
+            Binding(get: { selectedCapture }, set: { date in
+                guard let date else { return }
+                selectedCapture = timeline.min { abs($0.timeIntervalSince(date)) < abs($1.timeIntervalSince(date)) }
+            })
         }
 
-        return Chart(timeline, id: \.self) { date in
-            if let price = prices[date] {
-                let probability = ResearchOddsSlate.Price.implied(price)
-                LineMark(x: .value("Observed at", date), y: .value("Implied probability", probability))
-                    .foregroundStyle(Brand.accent(for: scheme))
-                PointMark(x: .value("Observed at", date), y: .value("Implied probability", probability))
-                    .foregroundStyle(Brand.accent(for: scheme))
+        private var spansOneDay: Bool {
+            guard let first = timeline.first, let last = timeline.last else { return false }
+            return Calendar.current.isDate(first, inSameDayAs: last)
+        }
+
+        var body: some View {
+            let selected = selectedCapture
+            VStack(alignment: .leading, spacing: 8) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        chartTitle
+                        Spacer(minLength: 0)
+                        captureLabel(selected)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        chartTitle
+                        captureLabel(selected)
+                    }
+                }
+                chart(selected: selected)
+            }
+            .sensoryFeedback(.selection, trigger: selected) { _, date in date != nil }
+        }
+
+        private var chartTitle: some View {
+            Text("Implied probability").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+        }
+
+        @ViewBuilder
+        private func captureLabel(_ date: Date?) -> some View {
+            if let date, let odds = prices[date] {
+                let style: Date.FormatStyle = spansOneDay ? .dateTime.hour().minute() : .dateTime.month(.abbreviated).day().hour().minute()
+                Text("\(date.formatted(style)) · \(ResearchOddsBoard.price(odds))")
+                    .font(.caption.weight(.semibold)).monospacedDigit()
+                    .accessibilityHidden(true)
             }
         }
-        .chartYScale(domain: lower...upper)
-        .chartYAxis {
-            AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { value in
-                AxisGridLine()
-                AxisValueLabel {
-                    if let fraction = value.as(Double.self) { Text(fraction, format: .percent.precision(.fractionLength(0))) }
+
+        private func chart(selected: Date?) -> some View {
+            let probabilities = prices.values.map(ResearchOddsSlate.Price.implied)
+            let lower = max(0, (probabilities.min() ?? 0) - 0.06)
+            let upper = min(1, (probabilities.max() ?? 1) + 0.06)
+            let dateFormat: Date.FormatStyle = spansOneDay ? .dateTime.hour().minute() : .dateTime.month(.abbreviated).day()
+            let accent = Brand.accent(for: scheme)
+
+            return Chart {
+                if let selected {
+                    RuleMark(x: .value("Selected observation", selected))
+                        .foregroundStyle(.secondary.opacity(0.6))
+                        .lineStyle(.init(lineWidth: 1, dash: [3, 3]))
+                        .accessibilityHidden(true)
+                }
+                ForEach(timeline, id: \.self) { date in
+                    if let odds = prices[date] {
+                        let probability = ResearchOddsSlate.Price.implied(odds)
+                        LineMark(x: .value("Observed at", date), y: .value("Implied probability", probability))
+                            .interpolationMethod(.stepEnd)
+                            .foregroundStyle(accent)
+                            .accessibilityHidden(true)
+                        PointMark(x: .value("Observed at", date), y: .value("Implied probability", probability))
+                            .foregroundStyle(accent)
+                            .symbolSize(selected == date ? 64 : 28)
+                            .accessibilityLabel(date.formatted(date: .abbreviated, time: .shortened))
+                            .accessibilityValue("\(ResearchOddsBoard.price(odds)), \(probability.formatted(.percent.precision(.fractionLength(1)))) implied probability")
+                    }
                 }
             }
-        }
-        .chartXAxis {
-            AxisMarks(values: .automatic(desiredCount: 3)) { value in
-                AxisGridLine()
-                AxisValueLabel {
-                    if let date = value.as(Date.self) { Text(date, format: dateFormat) }
+            .chartXSelection(value: chartSelection)
+            .chartGesture { proxy in
+                SpatialTapGesture()
+                    .onEnded { proxy.selectXValue(at: $0.location.x) }
+                    .simultaneously(with: DragGesture(minimumDistance: 10).onChanged { drag in
+                        guard abs(drag.translation.width) > abs(drag.translation.height) else { return }
+                        proxy.selectXValue(at: drag.location.x)
+                    })
+            }
+            .chartYScale(domain: lower...upper)
+            .chartYAxis {
+                AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let fraction = value.as(Double.self) { Text(fraction, format: .percent.precision(.fractionLength(0))) }
+                    }
                 }
             }
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: 3)) { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let date = value.as(Date.self) { Text(date, format: dateFormat) }
+                    }
+                }
+            }
+            .frame(height: 108)
+            .padding(.vertical, 8)
         }
-        .frame(height: 108)
-        .padding(.vertical, 8)
-        .accessibilityHidden(true)
     }
 
     private func quoteObservation(_ label: String, value: Int?, at: Date?) -> some View {

@@ -2971,3 +2971,27 @@ physical-device push are still open.
   provided Real stats and Action odds references. UIZZE’s rendered critique
   improved the board control density and price history order and height.
   The competitor iPad apps were absent from the device inventory.
+
+### 2026-11-26 · Live Odds Board release and touch inspection
+
+- PR #92 merged as `8bdbe182a8cfea8b24e555cafa1ff4caee241104`. The matching
+  Vercel production deployment `dpl_9BQbJEVvg9XaeYnqLNRYsQ5ZoFAJ` reported
+  READY. Before merging, the preview and former production returned identical
+  quotes for the featured NBA and NFL games, 74 and 149 respectively.
+  The focused release run passed 313 checks and the Hub TypeScript check.
+- After release, public Home, Feed, health and both preview boards returned
+  200. The two member boards still returned 401 to a signed-out client.
+  Three signed-in opens per league in iPhone 18 Pro returned 4,653, 573
+  and 598 ms for the NBA slate, and 2,945, 3,354 and 1,142 ms for NFL.
+  These are HTTP timings for the same slate dates used in the prior pass.
+  A fresh NBA read can still take several seconds.
+- The native price chart now retains the exact recorded observation selected
+  with a tap or horizontal scrub. The selected sportsbook odds and timestamp
+  appear above the plot. Chart points expose both values and their implied
+  probability to accessibility. The first iPhone tap selected the earlier
+  NFL quote and a rightward scrub updated to the later capture.
+  Devin’s iPad selected the NBA opening and earlier quotes in its compact
+  portrait tile, with the corresponding price change visible.
+- Both native Debug builds succeeded, the signed build installed and opened
+  on Devin’s iPad, and all 288 native and source checks passed. Continue the
+  physical competitor review once the reference apps are installed.
