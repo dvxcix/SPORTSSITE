@@ -110,7 +110,8 @@ struct NflDirectoryEntityView: View {
     let api: DiscoverAPI
     let kind: Kind
     let id: String
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.openURL) private var openURL
     @State private var entity: Entity?
     @State private var error: (any Error)?
@@ -137,8 +138,8 @@ struct NflDirectoryEntityView: View {
         }
         .navigationTitle(entity?.player?.displayName ?? entity?.team?.teamName ?? "NFL")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: revision) { await load() }
         .refreshable { await load() }
     }
@@ -266,7 +267,7 @@ struct NflDirectoryEntityView: View {
         if !rows.isEmpty {
             Text(title).font(.title3.bold()).accessibilityAddTraits(.isHeader)
             ForEach(rows.prefix(10)) { row in
-                ResearchToolCard(color: Brand.accent(for: scheme)) {
+                ResearchToolCard(color: slipPalette.accent) {
                     Text("Week \(row.week) · \(String(row.season))").font(.headline)
                 } content: { ResearchToolValues(items: metrics(row)) }
             }
@@ -283,7 +284,7 @@ struct NflDirectoryEntityView: View {
         ]
         ForEach(rows, id: \.0) { title, value in
             if let value, !value.isEmpty {
-                LabeledContent(title, value: value).padding(12).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+                LabeledContent(title, value: value).padding(12).background(slipPalette.surface, in: .rect(cornerRadius: 12))
             }
         }
     }
@@ -299,7 +300,7 @@ struct NflDirectoryEntityView: View {
         TextField("Find a player", text: $rosterQuery)
             .textInputAutocapitalization(.never)
             .padding(.horizontal, 12).frame(minHeight: 44)
-            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+            .background(slipPalette.surface, in: .rect(cornerRadius: 12))
         let players = roster.filter { rosterQuery.isEmpty || $0.displayName.localizedStandardContains(rosterQuery) || $0.position?.localizedStandardContains(rosterQuery) == true }
         let groups = Dictionary(grouping: players) { $0.positionGroup ?? $0.position ?? "Players" }
         if players.isEmpty { ContentUnavailableView("No matching players", systemImage: "person.2") }
@@ -319,7 +320,7 @@ struct NflDirectoryEntityView: View {
                                 }
                                 Spacer(minLength: 0)
                                 Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                            }.padding(11).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+                            }.padding(11).background(slipPalette.surface, in: .rect(cornerRadius: 13))
                         }.buttonStyle(SlipSurgePressStyle())
                     }
                 }
@@ -347,7 +348,7 @@ struct NflDirectoryEntityView: View {
             guard let key else { return nil }
             return Color(hex: key.hasPrefix("#") ? key : "#" + key)
         }
-        return (color(team?.teamColor) ?? Brand.accent(for: scheme), color(team?.teamColor2) ?? Brand.surface(for: scheme))
+        return (color(team?.teamColor) ?? slipPalette.accent, color(team?.teamColor2) ?? slipPalette.surface)
     }
 
     private func nflLogo(_ code: String) -> URL? {

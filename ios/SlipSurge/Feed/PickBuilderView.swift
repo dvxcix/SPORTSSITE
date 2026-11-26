@@ -8,7 +8,7 @@ struct PickBuilderView: View {
     let onAdd: (TrackedPickAPI.Leg) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var selectedSport: String?
     @State private var date: Date?
     @State private var showDate = false
@@ -75,8 +75,8 @@ struct PickBuilderView: View {
             }
             .navigationTitle("Add a pick")
             .navigationBarTitleDisplayMode(.inline)
-            .background(Brand.background(for: scheme))
-            .foregroundStyle(Brand.text(for: scheme))
+            .background(slipPalette.background)
+            .foregroundStyle(slipPalette.text)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(.iconOnly) }
             }

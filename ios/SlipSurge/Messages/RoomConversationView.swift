@@ -4,7 +4,7 @@ struct RoomConversationView: View {
     let api: MessagesAPI
     let group: UUID?
     let groupName: String?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var room: MessageDestination
     @State private var catalog: [MessagesAPI.Channel]
@@ -71,7 +71,7 @@ struct RoomConversationView: View {
                 Text(groupName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
         }
-        .foregroundStyle(Brand.text(for: scheme))
+        .foregroundStyle(slipPalette.text)
         .accessibilityElement(children: .combine)
     }
 
@@ -89,8 +89,8 @@ struct RoomConversationView: View {
                                 .lineLimit(1)
                                 .padding(.horizontal, 12)
                                 .frame(minHeight: 44)
-                                .foregroundStyle(selected ? Brand.accent(for: scheme) : Brand.text(for: scheme))
-                                .background(selected ? Brand.accent(for: scheme).opacity(0.15) : Brand.surface(for: scheme), in: .capsule)
+                                .foregroundStyle(selected ? slipPalette.accent : slipPalette.text)
+                                .background(selected ? slipPalette.accent.opacity(0.15) : slipPalette.surface, in: .capsule)
                         }
                         .buttonStyle(SlipSurgePressStyle())
                         .disabled(busy)
@@ -108,7 +108,7 @@ struct RoomConversationView: View {
             }
         }
         .padding(.vertical, 4)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Switch rooms")
         .sensoryFeedback(.selection, trigger: room)

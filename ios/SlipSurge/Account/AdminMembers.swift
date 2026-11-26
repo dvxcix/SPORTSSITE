@@ -82,7 +82,7 @@ struct AdminMembersAPI {
 struct AdminMembersView: View {
     private struct Filter: Hashable { let q: String; let type: String; let tier: String; let banned: Bool }
     let api: AdminMembersAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var query = ""
     @State private var type = ""
     @State private var tier = ""
@@ -115,13 +115,13 @@ struct AdminMembersView: View {
                         ForEach(["free", "basic", "advanced", "ultimate"], id: \.self) { Text($0.capitalized).tag($0) }
                     }
                 }
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
             if let result {
                 ForEach(result) { member in
                     NavigationLink {
                         AdminMemberDetail(api: api, initial: member) { await load(filter, from: 0, preserve: true) }
                     } label: { memberRow(member) }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
                 }
                 if result.isEmpty { ContentUnavailableView(banned ? "No banned accounts on this page" : "No matching members", systemImage: "person.crop.circle") }
                 if hasMore {
@@ -133,8 +133,8 @@ struct AdminMembersView: View {
         }
         .searchable(text: $query, prompt: "Name, username, or email")
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Members")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: filter) {
@@ -196,7 +196,7 @@ private struct AdminMemberDetail: View {
     let api: AdminMembersAPI
     let initial: AdminMember
     let onChange: () async -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.dismiss) private var dismiss
     @State private var detail: AdminMembersAPI.Detail?
     @State private var planned: Change?
@@ -288,7 +288,7 @@ private struct AdminMemberDetail: View {
             if let notice { Text(notice).font(.subheadline).foregroundStyle(.secondary) }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Manage member")
         .navigationBarTitleDisplayMode(.inline)
         .disabled(busy)
@@ -314,7 +314,7 @@ private struct AdminMemberDetail: View {
         } label: {
             HStack(spacing: 8) {
                 Image("sign-in-" + asset).renderingMode(.template).resizable().scaledToFit().frame(width: 18, height: 18)
-                    .foregroundStyle(asset == "discord" ? Color(rgb: 0x5865F2) : asset == "whop" ? Color(rgb: 0xFF6243) : Brand.text(for: scheme))
+                    .foregroundStyle(asset == "discord" ? Color(rgb: 0x5865F2) : asset == "whop" ? Color(rgb: 0xFF6243) : slipPalette.text)
                     .accessibilityHidden(true)
                 Text(title)
             }

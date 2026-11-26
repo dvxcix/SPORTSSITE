@@ -4,7 +4,7 @@ struct AccountFavoritesView: View {
     let account: AccountStore
     let userID: UUID
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var data: AccountFavoritesData?
     @State private var league = "nfl"
     @State private var choice = Choice.teams
@@ -32,8 +32,8 @@ struct AccountFavoritesView: View {
             if let failure { Label(failure, systemImage: "exclamationmark.circle").foregroundStyle(.red) }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Favorites")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -66,7 +66,7 @@ struct AccountFavoritesView: View {
                 }.pickerStyle(.segmented)
             }
             TextField(choice == .teams ? "Find a team" : "Find a player", text: $filter).autocorrectionDisabled()
-        }.listRowBackground(Brand.surface(for: scheme))
+        }.listRowBackground(slipPalette.surface)
     }
 
     private func teams(_ data: AccountFavoritesData) -> some View {
@@ -79,7 +79,7 @@ struct AccountFavoritesView: View {
                 }
             }
             if matching.isEmpty { Text("No matching teams").foregroundStyle(.secondary) }
-        }.listRowBackground(Brand.surface(for: scheme))
+        }.listRowBackground(slipPalette.surface)
     }
 
     @ViewBuilder
@@ -88,7 +88,7 @@ struct AccountFavoritesView: View {
         Section("Saved players · \(selected.count) of 8") {
             ForEach(selected, id: \.favoriteKey) { playerButton($0, data: data, selected: true) }
             if selected.isEmpty { Text("No saved players").foregroundStyle(.secondary) }
-        }.listRowBackground(Brand.surface(for: scheme))
+        }.listRowBackground(slipPalette.surface)
 
         if filter.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 {
             Section("Results") {
@@ -101,7 +101,7 @@ struct AccountFavoritesView: View {
                         playerButton(player, data: data, selected: isSelected).disabled(selected.count >= 8 && !isSelected)
                     }
                 }
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
         }
     }
 
@@ -111,7 +111,7 @@ struct AccountFavoritesView: View {
         }?.logo
         return favoriteButton(name: player.name, subtitle: player.team, selected: selected, edit: .init(action: selected ? "remove" : "add", player: player)) {
             PlayerArtwork(portraits: player.favoritePortrait.map { [$0] } ?? [], logo: logo,
-                primary: Brand.accent(for: scheme).opacity(0.4), secondary: Brand.surface(for: scheme))
+                primary: slipPalette.accent.opacity(0.4), secondary: slipPalette.surface)
         }
     }
 
@@ -122,12 +122,12 @@ struct AccountFavoritesView: View {
             HStack(spacing: 12) {
                 art()
                 VStack(alignment: .leading) {
-                    Text(verbatim: name).foregroundStyle(Brand.text(for: scheme))
+                    Text(verbatim: name).foregroundStyle(slipPalette.text)
                     if let subtitle, !subtitle.isEmpty { Text(verbatim: subtitle).font(.footnote).foregroundStyle(.secondary) }
                 }
                 Spacer()
                 Image(systemName: selected ? "star.fill" : "star")
-                    .foregroundStyle(selected ? Brand.accent(for: scheme) : .secondary).accessibilityHidden(true)
+                    .foregroundStyle(selected ? slipPalette.accent : .secondary).accessibilityHidden(true)
             }
         }.accessibilityAddTraits(selected ? .isSelected : []).disabled(saving)
     }

@@ -18,7 +18,7 @@ struct AdminEmojiStudio: View {
     private struct Receipt: Decodable { let id: UUID }
 
     let viewer: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.nativeEmojiLibrary) private var library
     @State private var entries: [Emoji]?
     @State private var categories: [Category] = []
@@ -75,7 +75,7 @@ struct AdminEmojiStudio: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Custom emoji")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

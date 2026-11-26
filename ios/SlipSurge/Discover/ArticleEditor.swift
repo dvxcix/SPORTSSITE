@@ -33,7 +33,8 @@ struct ArticleEditor: View {
     var opensAssistant = false
     let saved: (ArticlesAPI.Receipt) -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var preview = false
     @State private var showingAI = false
     @State private var publishing = false
@@ -129,7 +130,7 @@ struct ArticleEditor: View {
             } header: { Text("Article") } footer: { Text("\(words.formatted()) words · \(draft.content.utf16.count.formatted()) / 50,000 characters") }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
     }
 
     private var review: some View {
@@ -143,7 +144,7 @@ struct ArticleEditor: View {
             }
             .padding(16).frame(maxWidth: 650).frame(maxWidth: .infinity)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
     }
 
     private func save(_ status: ArticlesAPI.Draft.Status) async {

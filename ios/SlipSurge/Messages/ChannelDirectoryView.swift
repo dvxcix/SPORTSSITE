@@ -4,7 +4,7 @@ struct ChannelDirectoryView: View {
     let api: MessagesAPI
     var group: UUID? = nil
     var groupName: String? = nil
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var revision = 0
 
     var body: some View {
@@ -12,7 +12,7 @@ struct ChannelDirectoryView: View {
             RoomDirectory(api: api, group: group, groupName: groupName, revision: revision, showsSearch: true)
                 .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle(groupName ?? "Live Rooms")
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { revision += 1 }
@@ -25,7 +25,7 @@ struct RoomDirectory: View {
     let groupName: String?
     var revision = 0
     var showsSearch = false
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @FocusState private var filterFocused: Bool
     @State private var rooms: [MessagesAPI.Channel]?
     @State private var filter = ""
@@ -47,7 +47,7 @@ struct RoomDirectory: View {
                 ResearchToolMessage(title: "Rooms couldn’t load", error: error) { Task { await load() } }
             }
         }
-        .foregroundStyle(Brand.text(for: scheme))
+        .foregroundStyle(slipPalette.text)
         .scrollDismissesKeyboard(.interactively)
         .keyboardDone { filterFocused = false }
         .task(id: revision) { await load() }
@@ -62,7 +62,7 @@ struct RoomDirectory: View {
                 .onSubmit { filterFocused = false }
         }
         .padding(.horizontal, 12).frame(minHeight: 44)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 12))
     }
 
     @ViewBuilder private func roomList(_ rooms: [MessagesAPI.Channel]) -> some View {
@@ -100,7 +100,7 @@ struct RoomDirectory: View {
                     if room.id != rooms.last?.id { Divider().padding(.leading, 54).accessibilityHidden(true) }
                 }
             }
-            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
+            .background(slipPalette.surface, in: .rect(cornerRadius: 16))
         }
     }
 
@@ -108,10 +108,10 @@ struct RoomDirectory: View {
         HStack(spacing: 12) {
             Group {
                 if let icon = room.icon, icon != "#", !icon.isEmpty { Text(String(icon.prefix(6))) }
-                else { Image(systemName: room.symbol).foregroundStyle(Brand.accent(for: scheme)) }
+                else { Image(systemName: room.symbol).foregroundStyle(slipPalette.accent) }
             }
             .frame(width: 36, height: 36)
-            .background(Brand.accent(for: scheme).opacity(0.13), in: .rect(cornerRadius: 10))
+            .background(slipPalette.accent.opacity(0.13), in: .rect(cornerRadius: 10))
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(verbatim: room.name).font(.headline)
@@ -121,7 +121,7 @@ struct RoomDirectory: View {
             }
             Spacer(minLength: 4)
             if room.preferred == true {
-                Image(systemName: "star.fill").font(.caption).foregroundStyle(Brand.accent(for: scheme))
+                Image(systemName: "star.fill").font(.caption).foregroundStyle(slipPalette.accent)
                     .accessibilityLabel("Favorite room")
             } else if room.isPinned == true {
                 Image(systemName: "pin.fill").font(.caption).accessibilityLabel("Pinned")

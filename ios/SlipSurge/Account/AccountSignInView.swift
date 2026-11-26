@@ -5,7 +5,8 @@ struct AccountSignInView: View {
     let account: AccountStore
     @Binding var appearance: Appearance
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var email = ""
     @State private var password = ""
@@ -44,9 +45,11 @@ struct AccountSignInView: View {
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Menu("Appearance", systemImage: "circle.lefthalf.filled") {
+                Menu("Appearance", systemImage: appearance.symbol) {
                     Picker("Appearance", selection: $appearance) {
-                        ForEach(Appearance.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        ForEach(Appearance.allCases, id: \.self) { option in
+                            Label(option.rawValue, systemImage: option.symbol).tag(option)
+                        }
                     }
                 }
             }
@@ -54,13 +57,13 @@ struct AccountSignInView: View {
         .navigationBarTitleDisplayMode(.inline)
         .background(alignment: .topLeading) {
             ZStack(alignment: .topLeading) {
-                Brand.background(for: scheme)
-                RadialGradient(colors: [Brand.accent(for: scheme).opacity(scheme == .dark ? 0.15 : 0.12), .clear],
+                SlipBackdrop(animatedFor: .you)
+                RadialGradient(colors: [slipPalette.accent.opacity(scheme == .dark ? 0.15 : 0.12), .clear],
                     center: .topLeading, startRadius: 16, endRadius: 310)
             }
             .ignoresSafeArea()
         }
-        .foregroundStyle(Brand.text(for: scheme))
+        .foregroundStyle(slipPalette.text)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.23), value: account.providersAvailable)
         .onAppear {
             withAnimation(reduceMotion ? nil : .smooth(duration: 0.32)) { appeared = true }
@@ -84,10 +87,7 @@ struct AccountSignInView: View {
     }
 
     private var logo: some View {
-        Image(.brand)
-            .resizable().scaledToFit()
-            .frame(width: 156, height: 46)
-            .accessibilityLabel("SlipSurge")
+        SlipBrandLockup(width: 156)
     }
 
     private var credentials: some View {
@@ -123,7 +123,7 @@ struct AccountSignInView: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 50)
                 .foregroundStyle(Color(rgb: 0x102000))
-                .background(Color(rgb: 0xB4FF4D), in: .rect(cornerRadius: 15))
+                .background(slipPalette.actionFill, in: .rect(cornerRadius: 15))
             }
             .buttonStyle(SlipSurgePressStyle())
             .disabled(!canSignIn)
@@ -143,7 +143,7 @@ struct AccountSignInView: View {
             }
             .padding(.horizontal, 12)
             .frame(minHeight: 46)
-            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+            .background(slipPalette.surface, in: .rect(cornerRadius: 13))
             .overlay { RoundedRectangle(cornerRadius: 13).strokeBorder(.secondary.opacity(0.22)) }
         }
     }
@@ -187,7 +187,8 @@ struct BrandedSignInProviders: View {
     var registering = false
     var onOpen: () -> Void = {}
     @Environment(\.webAuthenticationSession) private var browser
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     @ViewBuilder
     var body: some View {
@@ -226,7 +227,7 @@ struct BrandedSignInProviders: View {
             Text("Continue with \(provider.title)").font(.subheadline.weight(.bold))
             Spacer(minLength: 5)
             if opening == provider {
-                ProgressView().tint(provider == .whop ? Color(rgb: 0x150E0C) : Brand.text(for: scheme))
+                ProgressView().tint(provider == .whop ? Color(rgb: 0x150E0C) : slipPalette.text)
             } else {
                 Image(systemName: "arrow.up.right").font(.footnote.weight(.semibold)).accessibilityHidden(true)
             }
@@ -239,12 +240,12 @@ struct BrandedSignInProviders: View {
             content.foregroundStyle(Color(rgb: 0x150E0C))
                 .background(Color(rgb: 0xFA4616), in: .rect(cornerRadius: 15))
         } else if #available(iOS 26, *) {
-            content.foregroundStyle(Brand.text(for: scheme))
+            content.foregroundStyle(slipPalette.text)
                 .glassEffect(.regular.tint(provider == .discord ? Color(rgb: 0x5865F2).opacity(0.22) : .clear).interactive(),
                     in: .rect(cornerRadius: 15))
         } else {
-            content.foregroundStyle(Brand.text(for: scheme))
-                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
+            content.foregroundStyle(slipPalette.text)
+                .background(slipPalette.surface, in: .rect(cornerRadius: 15))
                 .overlay { RoundedRectangle(cornerRadius: 15).strokeBorder(.secondary.opacity(0.23)) }
         }
     }

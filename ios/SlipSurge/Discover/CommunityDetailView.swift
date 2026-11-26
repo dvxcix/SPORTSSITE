@@ -32,7 +32,7 @@ struct CommunityDetailView: View {
     let group: DiscoverAPI.Communities.Community
     let initialMember: Bool
     let onMembershipChange: () -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var page: Page?
     @State private var feed: Feed
@@ -110,12 +110,12 @@ struct CommunityDetailView: View {
             if let page, page.canView {
                 SocialSectionBar(title: "Community section", sections: Feed.allCases.filter { $0 != .rooms || page.role != nil },
                     selection: $feed) { section in
-                    Label(section.rawValue, glyph: section.glyph)
+                    Label(section.rawValue, glyph: section.glyph, filled: slipPalette == .color)
                 }
             }
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle(group.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -206,7 +206,7 @@ struct CommunityDetailView: View {
                     FeedPostCard(post: post, operation: { action in Task { await apply(action, post: post) } },
                         discussion: { selectedPost = post.postID }, showAuthor: post.author.map { author in { memberProfile = author.username } },
                         actionsAPI: feedAPI, postChanged: { _ in Task { await load(postFeed) } })
-                        .padding(13).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
+                        .padding(13).background(slipPalette.surface, in: .rect(cornerRadius: 15))
                         .disabled(pending.contains(post.postID))
                 }
             }

@@ -15,7 +15,7 @@ struct NativeSearchView: View {
 
     let api: NativeSearchAPI
     var initialQuery = ""
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.openURL) private var openURL
     @State private var text = ""
     @State private var tab = NativeSearchAPI.Tab.all
@@ -67,8 +67,8 @@ struct NativeSearchView: View {
         .onSubmit(of: .search) { remember(request.query) }
         .onChange(of: text) { _, current in if current.count > 64 { text = String(current.prefix(64)) } }
         .scrollDismissesKeyboard(.interactively)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task { await prepare() }
         .task(id: request) { await find(request) }
         .navigationDestination(item: $selectedPost) { id in
@@ -131,7 +131,7 @@ struct NativeSearchView: View {
                         Task { await change(entry.id, removing: true) }
                     }.labelStyle(.iconOnly).buttonStyle(.borderless).disabled(changeInProgress)
                 }
-                .padding(12).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+                .padding(12).background(slipPalette.surface, in: .rect(cornerRadius: 13))
             }
         }
         if !recent.isEmpty {
@@ -148,7 +148,7 @@ struct NativeSearchView: View {
                     Button("Remove recent search", systemImage: "xmark") {
                         updateRecent(recent.filter { $0 != query })
                     }.labelStyle(.iconOnly).buttonStyle(.borderless)
-                }.padding(12).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+                }.padding(12).background(slipPalette.surface, in: .rect(cornerRadius: 13))
             }
         }
         heading("Trending", symbol: "flame")
@@ -175,8 +175,8 @@ struct NativeSearchView: View {
                             if let headshot = hit.headshot {
                                 let colors = league == .nba ? CourtTeamColors.colors(for: hit.team ?? "") : nil
                                 PlayerArtwork(portraits: [headshot], logo: hit.logo,
-                                    primary: colors?.primary ?? Brand.accent(for: scheme),
-                                    secondary: colors?.secondary ?? Brand.surface(for: scheme))
+                                    primary: colors?.primary ?? slipPalette.accent,
+                                    secondary: colors?.secondary ?? slipPalette.surface)
                             } else {
                                 ResearchArtwork(urls: hit.logo.map { [$0] } ?? [], fallback: league.symbol)
                                     .frame(width: 46, height: 46)
@@ -195,7 +195,7 @@ struct NativeSearchView: View {
                             .buttonStyle(.bordered)
                     }
                 }
-                .padding(11).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+                .padding(11).background(slipPalette.surface, in: .rect(cornerRadius: 14))
             }
         }
     }
@@ -213,7 +213,7 @@ struct NativeSearchView: View {
                             HStack(spacing: 5) {
                                 Text(verbatim: member.displayName ?? member.username).font(.headline)
                                 if member.isVerified == true {
-                                    Image(systemName: "checkmark.seal.fill").foregroundStyle(Brand.accent(for: scheme))
+                                    Image(systemName: "checkmark.seal.fill").foregroundStyle(slipPalette.accent)
                                         .accessibilityLabel("Verified")
                                 }
                             }
@@ -225,7 +225,7 @@ struct NativeSearchView: View {
                         }
                         chevron
                     }
-                    .padding(11).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+                    .padding(11).background(slipPalette.surface, in: .rect(cornerRadius: 14))
                 }
             }
         }
@@ -247,7 +247,7 @@ struct NativeSearchView: View {
                         Spacer(minLength: 0)
                         chevron
                     }
-                    .padding(11).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+                    .padding(11).background(slipPalette.surface, in: .rect(cornerRadius: 14))
                 }
             }
         }
@@ -262,7 +262,7 @@ struct NativeSearchView: View {
                         discussion: { remember(request.query); selectedPost = post.postID },
                         showAuthor: post.author.flatMap { identity in link("/profile/" + identity.username).map { url in { remember(request.query); openURL(url) } } },
                         actionsAPI: feed, postChanged: { _ in revision += 1 })
-                        .padding(12).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+                        .padding(12).background(slipPalette.surface, in: .rect(cornerRadius: 14))
                         .disabled(pendingPosts.contains(post.postID))
                 }
             }

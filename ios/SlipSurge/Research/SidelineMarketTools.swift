@@ -92,7 +92,8 @@ struct SidelineMarketTools: View {
     let gameID: String
     let teams: [Visual]
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.scenePhase) private var scenePhase
     @State private var data: Payload.Odds?
     @State private var failed = false
@@ -228,11 +229,11 @@ struct SidelineMarketTools: View {
 
     private func card(_ row: Row, total: Int) -> some View {
         let team = teams.first { canonicalTeam($0.code) == canonicalTeam(row.player.team) }
-        let color = team?.primary ?? Brand.accent(for: scheme)
+        let color = team?.primary ?? slipPalette.accent
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 PlayerArtwork(portraits: (row.player.headshot.map { [$0] } ?? []) + (row.player.headshotFallbacks ?? []),
-                    logo: team?.logo, primary: color, secondary: team?.secondary ?? Brand.surface(for: scheme))
+                    logo: team?.logo, primary: color, secondary: team?.secondary ?? slipPalette.surface)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(row.player.name).font(.headline)
                     Text(row.title).font(.subheadline).foregroundStyle(.secondary)
@@ -249,7 +250,7 @@ struct SidelineMarketTools: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                if total > 0 { ProgressView(value: Double(picks), total: Double(total)).tint(Brand.accent(for: scheme)) }
+                if total > 0 { ProgressView(value: Double(picks), total: Double(total)).tint(slipPalette.accent) }
                 if let stamp = row.observedAt {
                     Text("Recorded \(stamp.formatted(date: .abbreviated, time: .shortened))")
                         .font(.caption2).foregroundStyle(.secondary)
@@ -276,9 +277,9 @@ struct SidelineMarketTools: View {
         }
         .padding(13)
         .background {
-            LinearGradient(colors: [color.opacity(scheme == .dark ? 0.24 : 0.13), Brand.surface(for: scheme)],
+            LinearGradient(colors: [color.opacity(scheme == .dark ? 0.24 : 0.13), slipPalette.surface],
                 startPoint: .topLeading, endPoint: .bottomTrailing)
-                .background(Brand.surface(for: scheme))
+                .background(slipPalette.surface)
         }
         .clipShape(.rect(cornerRadius: 14))
     }

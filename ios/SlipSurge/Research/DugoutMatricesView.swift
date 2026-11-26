@@ -8,7 +8,7 @@ struct DugoutMatricesView: View {
 
     let api: DugoutMatricesAPI
     var opensPublication: NativeMarketplaceTarget.Publication?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var matrices: [DugoutMatrix]?
     @State private var editor: Editing?
     @State private var deleting: DugoutMatrix?
@@ -46,8 +46,8 @@ struct DugoutMatricesView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("MLB Matrices")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
@@ -90,7 +90,7 @@ struct DugoutMatricesView: View {
     }
 
     private func card(_ matrix: DugoutMatrix) -> some View {
-        let tone = Color(hex: matrix.color) ?? Brand.accent(for: scheme)
+        let tone = Color(hex: matrix.color) ?? slipPalette.accent
         return ResearchToolCard(color: tone) {
             HStack(spacing: 8) {
                 Image(systemName: matrix.matrix_type == "pipeline" ? "point.3.connected.trianglepath.dotted" : "square.grid.3x3.fill")
@@ -186,7 +186,7 @@ struct DugoutMatrixMarketplace: View {
     var author: UUID? = nil
     var opensListing: UUID? = nil
     let onImport: () async -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var search = ""
     @State private var sort = "newest"
     @State private var type = ""
@@ -228,7 +228,7 @@ struct DugoutMatrixMarketplace: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Matrix Marketplace")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, prompt: "Find an MLB Matrix")
@@ -282,7 +282,7 @@ struct DugoutMatrixMarketplace: View {
     }
 
     private func listingCard(_ listing: DugoutMatrixListing) -> some View {
-        ResearchToolCard(color: Color(hex: listing.color) ?? Brand.accent(for: scheme)) {
+        ResearchToolCard(color: Color(hex: listing.color) ?? slipPalette.accent) {
             Text(listing.title).font(.headline)
         } content: {
             if let author = listing.author {

@@ -149,7 +149,8 @@ struct SidelineStatBoard: View {
     let mode: SidelineStatMode
     let revision: Int
     let initialPlayer: Int?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var sample: SidelineResearchSample
     @State private var book: String
@@ -261,7 +262,7 @@ struct SidelineStatBoard: View {
                 if !comparing.isEmpty {
                     Button("Compare (\(comparing.count))", systemImage: "rectangle.split.2x1") { comparisonOpen = true }
                         .buttonStyle(.borderedProminent)
-                        .tint(Brand.accent(for: scheme))
+                        .tint(slipPalette.accent)
                         .foregroundStyle(scheme == .dark ? Color(rgb: 0x0C1118) : .white)
                         .controlSize(.large)
                 }
@@ -370,7 +371,7 @@ struct SidelineStatBoard: View {
                 Button(selected ? "Remove \(row.player.name) from comparison" : "Compare \(row.player.name)",
                     systemImage: selected ? "checkmark.circle.fill" : "plus.circle") { toggleComparison(row.id) }
                     .labelStyle(.iconOnly).font(.title3)
-                    .foregroundStyle(selected ? Brand.accent(for: scheme) : .secondary)
+                    .foregroundStyle(selected ? slipPalette.accent : .secondary)
                     .frame(minWidth: 44, minHeight: 44)
                     .buttonStyle(.plain)
                     .disabled(!selected && comparing.count >= 4)
@@ -538,7 +539,7 @@ struct SidelineStatBoard: View {
 
     private func visual(_ code: String) -> SidelineMarketTools.Visual {
         teams.first { normalized($0.code) == normalized(code) } ??
-            .init(code: code, logo: nil, primary: Brand.accent(for: scheme), secondary: nil)
+            .init(code: code, logo: nil, primary: slipPalette.accent, secondary: nil)
     }
 
     private func load(_ wanted: Request) async {

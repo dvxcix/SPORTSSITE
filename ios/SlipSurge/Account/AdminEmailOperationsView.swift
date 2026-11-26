@@ -36,7 +36,8 @@ struct AdminEmailOperationsView: View {
     private struct TemplateBody: Decodable { let html: String }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var snapshot: Snapshot?
     @State private var issue: (any Error)?
     @State private var selected: Template?
@@ -59,7 +60,7 @@ struct AdminEmailOperationsView: View {
         .navigationTitle("Email operations")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Send me a test", systemImage: "paperplane") { confirmation = true }

@@ -116,7 +116,8 @@ struct CourtView: View {
     private let link: CourtLinkContext
     private let oddsMarket: String?
     private let api = CourtAPI()
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.nativeResume) private var resume
@@ -245,15 +246,15 @@ struct CourtView: View {
                 Menu("Research tools", systemImage: "square.grid.2x2") {
                     Button("The Court", systemImage: "basketball") { tool = nil }
                     ForEach(CourtMatchupTool.allCases, id: \.self) { destination in
-                        Button { tool = destination } label: { Label(destination.rawValue, glyph: destination.glyph) }
+                        Button { tool = destination } label: { Label(destination.rawValue, glyph: destination.glyph, filled: slipPalette == .color) }
                     }
                     if !isPreview { Button("NBA Matrices", systemImage: "square.grid.3x3") { matrices = true } }
                 }
             }
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background { SlipBackdrop() }
+        .foregroundStyle(slipPalette.text)
+        .tint(slipPalette.accent)
         .task(id: slateRequest) { await loadSlate() }
         .task(id: playerBoardRequest) {
             if let request = playerBoardRequest { await loadBoard(request) }
@@ -740,7 +741,7 @@ struct CourtView: View {
             }
             .padding(.horizontal, 10)
             .frame(minHeight: 44)
-            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 10))
+            .background(slipPalette.surface, in: .rect(cornerRadius: 10))
         }
     }
 

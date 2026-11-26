@@ -7,7 +7,7 @@ struct CommunityDiscordView: View {
     private var browser = CommunityDiscordBrowser()
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scene
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var membership: CommunityDiscordAPI.Membership?
     @State private var receipt: CommunityDiscordAPI.Receipt?
     @State private var loading = false
@@ -53,8 +53,8 @@ struct CommunityDiscordView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Discord access")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }

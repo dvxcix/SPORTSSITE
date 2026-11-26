@@ -5,7 +5,7 @@ struct ActivityView: View {
     var inInbox = false
     var initialActivity: (() -> [ActivityNotification]?)? = nil
     var onUnreadChange: (Int) -> Void = { _ in }
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var selection = Filter.all
     @State private var destination: ActivityNotification.Destination?
     @State private var rows: [ActivityNotification] = []
@@ -49,23 +49,23 @@ struct ActivityView: View {
             switch state {
             case .loading:
                 ProgressView("Loading notifications")
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             case .ready:
                 if refreshFailed {
                     Button("Couldn’t refresh activity. Retry", systemImage: "arrow.clockwise") { revision += 1 }
-                        .listRowBackground(Brand.surface(for: scheme))
+                        .listRowBackground(slipPalette.surface)
                 }
                 activityRows
             case .denied:
                 ContentUnavailableView("Notification access required", systemImage: "lock")
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             case .unavailable:
                 ContentUnavailableView {
                     Label("Notifications unavailable", systemImage: "bell.slash")
                 } actions: {
                     Button("Retry") { revision += 1 }
                 }
-                .listRowBackground(Brand.surface(for: scheme))
+                .listRowBackground(slipPalette.surface)
             }
         }
         .navigationTitle(inInbox ? "Inbox" : "Notifications")
@@ -73,9 +73,9 @@ struct ActivityView: View {
             ActivityDestinationView(api: api, destination: chosen)
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
+        .tint(slipPalette.accent)
         .task(id: revision) {
             if state == .loading, let initial = initialActivity?() {
                 rows = initial
@@ -122,11 +122,11 @@ struct ActivityView: View {
             ForEach(Filter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
         }
         .pickerStyle(.segmented)
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
 
         if filtered.isEmpty {
             ContentUnavailableView("No notifications", systemImage: "bell")
-                .listRowBackground(Brand.surface(for: scheme))
+                .listRowBackground(slipPalette.surface)
         }
         let grouped = Dictionary(grouping: filtered, by: period)
         ForEach(Period.allCases, id: \.self) { period in
@@ -139,13 +139,13 @@ struct ActivityView: View {
                             notification(row)
                         }
                         .disabled(busy)
-                        .listRowBackground(Brand.surface(for: scheme))
+                        .listRowBackground(slipPalette.surface)
                         .swipeActions(edge: .leading) {
                             if !row.read {
                                 Button("Mark as read", systemImage: "checkmark") {
                                     Task { await mutate { try await api.markRead([row.id]) } }
                                 }
-                                .tint(Brand.accent(for: scheme))
+                                .tint(slipPalette.accent)
                                 .disabled(busy)
                             }
                         }
@@ -175,17 +175,17 @@ struct ActivityView: View {
                 } else if let artwork {
                     ResearchArtwork(urls: [artwork], fallback: row.icon, pointSize: 40, playerPortrait: row.type == "pick_result")
                         .frame(width: 40, height: 40)
-                        .background(Brand.accent(for: scheme).opacity(0.12), in: .rect(cornerRadius: 12))
+                        .background(slipPalette.accent.opacity(0.12), in: .rect(cornerRadius: 12))
                         .clipShape(.rect(cornerRadius: 12))
                 } else {
-                    Circle().fill(Brand.accent(for: scheme).opacity(0.12))
+                    Circle().fill(slipPalette.accent.opacity(0.12))
                         .frame(width: 40, height: 40)
                 }
                 Image(systemName: row.icon)
                     .font((hasImage ? Font.caption2 : .body).weight(.semibold))
-                    .foregroundStyle(Brand.accent(for: scheme))
+                    .foregroundStyle(slipPalette.accent)
                     .frame(width: hasImage ? 21 : 40, height: hasImage ? 21 : 40)
-                    .background(hasImage ? Brand.surface(for: scheme) : .clear, in: .circle)
+                    .background(hasImage ? slipPalette.surface : .clear, in: .circle)
                     .offset(x: hasImage ? 5 : 0, y: hasImage ? 4 : 0)
                     .accessibilityHidden(true)
             }
@@ -208,9 +208,9 @@ struct ActivityView: View {
                 }
                 if let body = row.body { Text(verbatim: body).font(.subheadline).foregroundStyle(.secondary) }
             }
-            .foregroundStyle(Brand.text(for: scheme))
+            .foregroundStyle(slipPalette.text)
             if !row.read {
-                Circle().fill(Brand.accent(for: scheme))
+                Circle().fill(slipPalette.accent)
                     .frame(width: 7, height: 7)
                     .padding(.top, 4)
                     .accessibilityLabel("Unread")

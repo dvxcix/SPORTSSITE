@@ -18,7 +18,8 @@ struct FeedView: View {
 
     private let readingWidth: CGFloat = 680
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.nativeResume) private var resume
@@ -94,7 +95,7 @@ struct FeedView: View {
             scopes
                 .frame(maxWidth: readingWidth)
                 .frame(maxWidth: .infinity)
-                .background(Brand.background(for: scheme))
+                .background(slipPalette.background)
         }
         .safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) {
             if canCompose {
@@ -105,7 +106,7 @@ struct FeedView: View {
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(scheme == .dark ? .black : .white)
                         .frame(width: 52, height: 52)
-                        .background(Brand.accent(for: scheme), in: .circle)
+                        .background(slipPalette == .color ? slipPalette.actionFill : AnyShapeStyle(slipPalette.accent), in: .circle)
                         .contentShape(.circle)
                 }
                 .buttonStyle(SlipSurgePressStyle())
@@ -153,9 +154,9 @@ struct FeedView: View {
                 }
             }
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background { SlipBackdrop(animatedFor: .feed) }
+        .foregroundStyle(slipPalette.text)
+        .tint(slipPalette.accent)
         .onChange(of: opensSelection, initial: true) {
             guard let entry = opensSelection else { return }
             filter = entry.filter == .following && api.userID == nil ? .latest : entry.filter
@@ -182,10 +183,7 @@ struct FeedView: View {
     }
 
     private var wordmark: some View {
-        Image(.brand)
-            .resizable().scaledToFit()
-            .frame(width: 108, height: 32)
-            .accessibilityLabel("SlipSurge")
+        SlipBrandLockup(width: 108)
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -195,7 +193,7 @@ struct FeedView: View {
         } label: {
             Image(systemName: "magnifyingglass")
                 .font(.body.weight(.semibold))
-                .foregroundStyle(Brand.text(for: scheme))
+                .foregroundStyle(slipPalette.text)
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(.rect)
         }
@@ -233,10 +231,10 @@ struct FeedView: View {
             }
             .scrollTargetLayout()
             .frame(maxWidth: readingWidth)
-            .background(Brand.surface(for: scheme))
+            .background(slipPalette.surface)
             .frame(maxWidth: .infinity)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
     }
 
     private var scopes: some View {
@@ -248,8 +246,7 @@ struct FeedView: View {
                 recordPosition(0)
             })) { item in
             VStack(spacing: 3) {
-                Image(systemName: item.symbol).font(.caption.weight(.semibold))
-                    .accessibilityHidden(true)
+                SlipGlyph.view(item.symbol, size: 13)
                 Text(item.rawValue.capitalized).font(.caption)
             }
         }
@@ -274,8 +271,8 @@ struct FeedView: View {
                         }
                         .padding(.horizontal, 9)
                         .padding(.vertical, 7)
-                        .foregroundStyle(sport == league ? Brand.accent(for: scheme) : Brand.text(for: scheme))
-                        .background(sport == league ? Brand.accent(for: scheme).opacity(0.13) : .clear, in: .capsule)
+                        .foregroundStyle(sport == league ? slipPalette.accent : slipPalette.text)
+                        .background(sport == league ? slipPalette.accent.opacity(0.13) : .clear, in: .capsule)
                         .frame(minHeight: 44)
                         .contentShape(.rect)
                     }

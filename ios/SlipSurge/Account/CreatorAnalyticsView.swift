@@ -52,7 +52,8 @@ struct CreatorAnalyticsView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.dynamicTypeSize) private var textSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var snapshot: Analytics?
@@ -79,8 +80,8 @@ struct CreatorAnalyticsView: View {
         }
         .navigationTitle("Analytics")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: revision) { await load() }
         .refreshable { await load() }
     }
@@ -101,7 +102,7 @@ struct CreatorAnalyticsView: View {
     }
 
     private func metric(_ title: String, icon: String, value: String, detail: String, change: Double? = nil) -> some View {
-        ResearchToolCard(color: change.flatMap { dugoutTone($0, scheme: scheme) } ?? Brand.accent(for: scheme)) {
+        ResearchToolCard(color: change.flatMap { dugoutTone($0, scheme: scheme) } ?? slipPalette.accent) {
             Label(title, systemImage: icon).font(.subheadline.weight(.semibold))
         } content: {
             Text(value).font(.title3.weight(.bold).monospacedDigit())
@@ -118,12 +119,12 @@ struct CreatorAnalyticsView: View {
             .init(title: "Purchases", value: data.funnel.purchases, icon: "checkmark.seal"),
         ]
         let maximum = max(stages.map(\.value).max() ?? 0, 1)
-        return ResearchToolCard(color: Brand.accent(for: scheme)) {
+        return ResearchToolCard(color: slipPalette.accent) {
             ResearchSectionTitle(title: "From Discovery to Access")
         } content: {
             Chart(stages) { stage in
                 BarMark(x: .value("Count", stage.value), y: .value("Stage", stage.title))
-                    .foregroundStyle(Brand.accent(for: scheme).opacity(highlighted == nil || highlighted == stage.title ? 0.87 : 0.30))
+                    .foregroundStyle(slipPalette.accent.opacity(highlighted == nil || highlighted == stage.title ? 0.87 : 0.30))
                     .cornerRadius(5)
                     .annotation(position: .trailing) {
                         Text(stage.value.formatted()).font(.caption.weight(.semibold)).monospacedDigit().accessibilityHidden(true)
@@ -150,7 +151,7 @@ struct CreatorAnalyticsView: View {
     }
 
     private func audience(_ data: Analytics) -> some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             ResearchSectionTitle(title: "Audience Sources")
         } content: {
             if data.sources.isEmpty { Text("No visits recorded in this period.").font(.subheadline).foregroundStyle(.secondary) }
@@ -161,7 +162,7 @@ struct CreatorAnalyticsView: View {
     }
 
     private func offers(_ data: Analytics) -> some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             ResearchSectionTitle(title: "Membership Performance")
         } content: {
             if data.offers.isEmpty { Text("No membership offers yet.").font(.subheadline).foregroundStyle(.secondary) }

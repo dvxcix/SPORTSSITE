@@ -60,7 +60,8 @@ struct CourtMatchupLab: View {
     let observedAt: Date
     let scope: CourtView.Scope
     @State private var metric = Metric.pace
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     private var teams: [CourtBoard.Team] { [board.game.visitorTeam, board.game.homeTeam] }
 
@@ -102,9 +103,9 @@ struct CourtMatchupLab: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .padding(12)
         .background {
-            LinearGradient(colors: [palette.primary.opacity(scheme == .dark ? 0.36 : 0.17), palette.secondary.opacity(0.10), Brand.surface(for: scheme)],
+            LinearGradient(colors: [palette.primary.opacity(scheme == .dark ? 0.36 : 0.17), palette.secondary.opacity(0.10), slipPalette.surface],
                 startPoint: .topLeading, endPoint: .bottomTrailing)
-                .background(Brand.surface(for: scheme))
+                .background(slipPalette.surface)
         }
         .clipShape(.rect(cornerRadius: 16))
     }
@@ -131,7 +132,7 @@ struct CourtMatchupLab: View {
             }
         }
         .padding(12)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 16))
     }
 
     private func minutes(_ value: Double?) -> String {
@@ -149,7 +150,8 @@ struct CourtAvailability: View {
     let observedAt: Date
     let scope: CourtView.Scope
     @State private var filter = Filter.all
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     private func listed(_ player: CourtBoard.Player) -> Bool {
         switch filter {
@@ -208,7 +210,7 @@ struct CourtAvailability: View {
             }
             if board.starters?.contains(player.id) == true {
                 Label("Confirmed starter", systemImage: "checkmark.circle.fill")
-                    .font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                    .font(.caption.weight(.semibold)).foregroundStyle(slipPalette.accent)
             }
             if player.draftYear != nil, player.draftYear == board.game.season {
                 Text(player.draftNumber.map { "Draft class · Pick \($0)" } ?? "Draft class").font(.caption).foregroundStyle(.secondary)
@@ -216,9 +218,9 @@ struct CourtAvailability: View {
         }
         .padding(12)
         .background {
-            LinearGradient(colors: [color.opacity(scheme == .dark ? 0.23 : 0.14), Brand.surface(for: scheme)],
+            LinearGradient(colors: [color.opacity(scheme == .dark ? 0.23 : 0.14), slipPalette.surface],
                 startPoint: .topLeading, endPoint: .bottomTrailing)
-                .background(Brand.surface(for: scheme))
+                .background(slipPalette.surface)
         }
         .clipShape(.rect(cornerRadius: 14))
         .contentShape(.rect)

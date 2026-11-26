@@ -20,7 +20,8 @@ struct CourtSlateEdgeView: View {
     let mode: CourtResearchMode
     let games: [CourtBoard.Game]
     let reload: Int
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var market = CourtPlayerMarket.points
     @State private var book = "all"
@@ -152,7 +153,7 @@ struct CourtSlateEdgeView: View {
                 ResearchToolBook(book: row.offer.vendor, price: row.offer.price(side))
             }
             ResearchToolValues(items: [
-                .init(label: "SlipSurge Score", text: ResearchFormat.decimal(row.score), tone: Brand.accent(for: scheme)),
+                .init(label: "SlipSurge Score", text: ResearchFormat.decimal(row.score), tone: slipPalette.accent),
                 .init(label: "MM", text: ResearchFormat.signed(row.mm), tone: Brand.signal(row.mm.map(Double.init), for: scheme)),
                 .init(label: "L10 hit rate", text: "\(row.hit.label) · \(row.hit.sample)",
                     tone: Brand.signal(row.hit.rate.map { $0 - 50 }, for: scheme)),

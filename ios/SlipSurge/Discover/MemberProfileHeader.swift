@@ -6,9 +6,9 @@ struct MemberProfileHeader: View {
     let changing: Bool
     let details: () -> Void
     let follow: () -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
-    private var accent: Color { Brand.accent(for: scheme) }
+    private var accent: Color { slipPalette.accent }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -58,10 +58,10 @@ struct MemberProfileHeader: View {
     private var banner: some View {
         let colors = profile.teams.first?.colors?.compactMap { Color(hex: $0) } ?? []
         let primary = colors.first ?? accent
-        let secondary = colors.dropFirst().first ?? Brand.background(for: scheme)
+        let secondary = colors.dropFirst().first ?? slipPalette.background
         return GeometryReader { geometry in
             ZStack(alignment: .bottomLeading) {
-                LinearGradient(colors: [primary.opacity(0.55), secondary, Brand.surface(for: scheme)],
+                LinearGradient(colors: [primary.opacity(0.55), secondary, slipPalette.surface],
                     startPoint: .topLeading, endPoint: .bottomTrailing)
                 if let url = profile.bannerUrl, FeedPostCard.allowedMedia(url) {
                     ResearchArtwork(urls: [url], fallback: nil, contentMode: .fill, pointSize: 450)
@@ -77,7 +77,7 @@ struct MemberProfileHeader: View {
             .overlay(alignment: .bottomLeading) {
                 NativeMemberAvatar(url: profile.avatarUrl, name: profile.name, size: 67,
                     style: profile.avatarRingStyle, color: profile.avatarRingColor)
-                    .padding(6).background(Brand.background(for: scheme), in: .circle)
+                    .padding(6).background(slipPalette.background, in: .circle)
                     .padding(.leading, 12).offset(y: 32)
             }
         }
@@ -107,7 +107,7 @@ struct MemberProfileHeader: View {
 
     private func metric(_ value: String, _ label: String) -> some View {
         HStack(spacing: 4) {
-            Text(value).bold().monospacedDigit().foregroundStyle(Brand.text(for: scheme))
+            Text(value).bold().monospacedDigit().foregroundStyle(slipPalette.text)
             Text(label).foregroundStyle(.secondary)
         }
         .font(.footnote).fixedSize(horizontal: true, vertical: false).accessibilityElement(children: .combine)
@@ -135,12 +135,12 @@ struct MemberProfileHeader: View {
                     .font(.system(size: 17, weight: .medium)).frame(minWidth: 44, minHeight: 44)
                     .buttonStyle(SlipSurgePressStyle())
             }
-        }.scrollIndicators(.hidden).foregroundStyle(Brand.text(for: scheme))
+        }.scrollIndicators(.hidden).foregroundStyle(slipPalette.text)
     }
 
     private func linkIcon(_ link: MemberProfileLink) -> some View {
         link.artwork.frame(width: 19, height: 19)
-            .padding(8).background(Brand.surface(for: scheme), in: .circle)
+            .padding(8).background(slipPalette.surface, in: .circle)
             .frame(width: 44, height: 44).contentShape(.rect)
             .accessibilityLabel("\(link.name), \(link.handle)\(link.verified ? ", verified" : "")")
     }

@@ -15,7 +15,7 @@ struct CreatorDetailView: View {
     let api: DiscoverAPI
     let username: String
     var preview: DiscoverAPI.Creators.Creator?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var section: Section
     @State private var store: CreatorPublicStoreAPI.Storefront?
     @State private var following: Bool?
@@ -49,8 +49,8 @@ struct CreatorDetailView: View {
         }
         .navigationTitle(creator?.title ?? "Creator")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task { await load() }
         .refreshable { await load() }
         .navigationDestination(item: $selectedPost) { id in FeedThreadView(api: feed, id: id) }
@@ -75,7 +75,7 @@ struct CreatorDetailView: View {
                 avatar: creator.storefront?.logoUrl ?? creator.avatarUrl, banner: creator.storefront?.coverUrl ?? creator.bannerUrl,
                 symbol: "person.crop.circle", count: creator.followerCount.map { "\($0.formatted()) followers" })
             if creator.isVerified == true {
-                Label("Verified creator", systemImage: "checkmark.seal.fill").font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                Label("Verified creator", systemImage: "checkmark.seal.fill").font(.caption.weight(.semibold)).foregroundStyle(slipPalette.accent)
             }
             if !creator.sports.isEmpty {
                 ScrollView(.horizontal) {
@@ -137,14 +137,14 @@ struct CreatorDetailView: View {
             } else {
                 ForEach(store.posts) { post in
                     FeedPostCard(post: post, discussion: { selectedPost = post.postID }, actionsAPI: .init(account: api.account, userID: api.userID))
-                        .padding(12).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
+                        .padding(12).background(slipPalette.surface, in: .rect(cornerRadius: 16))
                 }
             }
         case .communities:
             if store.groups.isEmpty { ContentUnavailableView("No listed communities", systemImage: "person.2") }
             ForEach(store.groups) { group in community(group, member: store.joinedIds.contains(group.id)) }
         case .about:
-            ResearchToolCard(color: Brand.accent(for: scheme)) {
+            ResearchToolCard(color: slipPalette.accent) {
                 ResearchSectionTitle(title: "About creator access")
             } content: {
                 Text("Membership connects this creator’s content and included communities to your SlipSurge account. SlipSurge research plans are sold separately.")
@@ -156,13 +156,13 @@ struct CreatorDetailView: View {
     private func membershipCard(_ item: DiscoverAPI.Creators.Creator.Product, id: UUID, store: CreatorPublicStoreAPI.Storefront) -> some View {
         let related = store.groups.filter { $0.creatorProductId == id }
         let hasAccess = store.activeProductIds.contains(id) || api.userID == store.creator.id
-        return ResearchToolCard(color: Brand.accent(for: scheme)) {
+        return ResearchToolCard(color: slipPalette.accent) {
             ResearchSectionTitle(title: item.title)
         } content: {
             if let description = item.description { Text(description).font(.subheadline).foregroundStyle(.secondary) }
             ForEach(related) { group in Label(group.name, systemImage: "checkmark.circle").font(.caption) }
             if hasAccess {
-                Label("Access active", systemImage: "checkmark.seal.fill").font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                Label("Access active", systemImage: "checkmark.seal.fill").font(.caption.weight(.semibold)).foregroundStyle(slipPalette.accent)
             } else {
                 Text(item.price.formatted(.currency(code: item.currency ?? "USD"))).font(.headline)
                 if let days = item.billingPeriodDays {

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct FavoriteSportsEditor: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var selected: Set<String>
     @State private var issue = false
     @State private var saving = false
@@ -28,12 +28,12 @@ struct FavoriteSportsEditor: View {
                                 .frame(width: 25, height: 25)
                             Text(verbatim: sport)
                         }
-                    }.listRowBackground(Brand.surface(for: scheme))
+                    }.listRowBackground(slipPalette.surface)
                 }
                 if issue { Text("Sports couldn’t be saved. Try again.").foregroundStyle(.red) }
             }
             .scrollContentBackground(.hidden)
-            .background(Brand.background(for: scheme))
+            .background(slipPalette.background)
             .navigationTitle("Favorite sports")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -59,7 +59,7 @@ private struct BadgeStudioAPI {
 struct AdminBadgeStudio: View {
     let viewer: DiscoverAPI
     private struct Editor: Identifiable { let id = UUID(); var badge: BadgeStudioAPI.Badge? }
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var badges: [BadgeStudioAPI.Badge]?
     @State private var next: Int?
     @State private var issue: (any Error)?
@@ -102,7 +102,7 @@ struct AdminBadgeStudio: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Badge studio")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("New badge", systemImage: "plus") { edit = .init() } } }

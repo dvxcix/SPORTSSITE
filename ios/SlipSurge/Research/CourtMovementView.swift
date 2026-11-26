@@ -61,7 +61,8 @@ struct CourtMovementView: View {
     let mode: CourtResearchMode
     let players: [CourtBoard.Player]
     let playerID: Int?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var market: CourtPlayerMarket
     @State private var side: CourtPlayerMarket.Side
     @State private var book: String
@@ -173,7 +174,7 @@ struct CourtMovementView: View {
             .labelStyle(.iconOnly).buttonStyle(.borderless)
             .disabled(index >= captures.count - 1).frame(minWidth: 44, minHeight: 44)
         }
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 12))
         .accessibilityHint("Capture \(index + 1) of \(captures.count)")
     }
 
@@ -245,7 +246,7 @@ struct CourtMovementView: View {
                     if let date = SidelineBoard.timestamp(point.at),
                        let value = contract == .milestone ? point.price.map(probability) : point.line {
                         PointMark(x: .value("Capture", date), y: .value("Observed", value))
-                            .foregroundStyle(Brand.accent(for: scheme))
+                            .foregroundStyle(slipPalette.accent)
                             .accessibilityValue(value.formatted())
                     }
                 }

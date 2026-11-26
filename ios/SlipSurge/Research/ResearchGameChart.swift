@@ -11,12 +11,12 @@ struct ResearchGameChart: View {
             self = (milestone ? value >= line : under ? value < line : value > line) ? .hit : .miss
         }
 
-        func color(for scheme: ColorScheme) -> Color {
+        func color(in palette: SlipPalette) -> Color {
             switch self {
-            case .hit: Brand.signal(1, for: scheme)
-            case .miss: Brand.signal(-1, for: scheme)
+            case .hit: Brand.signal(1, for: palette.colorScheme)
+            case .miss: Brand.signal(-1, for: palette.colorScheme)
             case .push: .secondary
-            case .recorded: Brand.accent(for: scheme)
+            case .recorded: palette.accent
             }
         }
 
@@ -51,7 +51,7 @@ struct ResearchGameChart: View {
     let metric: String
     var showLog = true
     @State private var selected: Int?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -101,7 +101,7 @@ struct ResearchGameChart: View {
         ForEach([Result.hit, .miss, .push], id: \.self) { result in
             if let count = counts[result] {
                 Label("\(count) \(count == 1 ? result.rawValue.lowercased() : result.plural)", systemImage: result.icon)
-                    .foregroundStyle(result.color(for: scheme))
+                    .foregroundStyle(result.color(in: slipPalette))
                     .monospacedDigit()
             }
         }
@@ -118,13 +118,13 @@ struct ResearchGameChart: View {
             ForEach(Array(games.enumerated()), id: \.element.id) { index, game in
                 BarMark(x: .value("Game", index), y: .value(metric, game.value))
                     .cornerRadius(3)
-                    .foregroundStyle(game.result.color(for: scheme).gradient)
+                    .foregroundStyle(game.result.color(in: slipPalette).gradient)
                     .opacity(selected == nil || selected == index ? 1 : 0.42)
                     .accessibilityLabel(game.label)
                     .accessibilityValue("\(game.value.formatted()) \(metric), \(game.result.rawValue)")
                 if game.value == 0 {
                     PointMark(x: .value("Game", index), y: .value(metric, game.value))
-                        .foregroundStyle(game.result.color(for: scheme))
+                        .foregroundStyle(game.result.color(in: slipPalette))
                         .symbolSize(19)
                         .accessibilityHidden(true)
                 }
@@ -145,7 +145,7 @@ struct ResearchGameChart: View {
             Spacer(minLength: 6)
             Text(game.value.formatted()).font(.subheadline.weight(.bold)).monospacedDigit()
             Label(game.result.rawValue, systemImage: game.result.icon)
-                .font(.caption.weight(.semibold)).foregroundStyle(game.result.color(for: scheme))
+                .font(.caption.weight(.semibold)).foregroundStyle(game.result.color(in: slipPalette))
         }
         .accessibilityElement(children: .combine)
     }

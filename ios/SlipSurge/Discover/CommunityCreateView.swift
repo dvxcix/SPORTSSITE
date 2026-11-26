@@ -22,7 +22,7 @@ struct CommunityCreateView: View {
     let api: CreatorStoreAPI
     var initialOffer: UUID? = nil
     var completed: (() async -> Void)? = nil
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var page: CreatorStorePage?
     @State private var status: Receipt?
     @State private var problem: String?
@@ -65,14 +65,14 @@ struct CommunityCreateView: View {
         }
         .navigationTitle("New Community")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .interactiveDismissDisabled(saving)
         .task(id: revision) { await load() }
     }
 
     private var identity: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             DiscoverIdentityCard(title: name.isEmpty ? "Community name" : name, subtitle: sport.isEmpty ? "General" : LeagueArtwork.label(sport),
                 detail: description.isEmpty ? nil : description, avatar: avatar, banner: banner, symbol: "person.2", count: nil)
         } content: {
@@ -120,7 +120,7 @@ struct CommunityCreateView: View {
         let choices = [ResearchArtworkPicker.Option(id: "", title: "General", icon: "person.2")] + sports.map {
             .init(id: $0, title: LeagueArtwork.label($0), url: LeagueArtwork.logo($0), icon: $0 == "MMA" ? "figure.boxing" : "sportscourt")
         }
-        return ResearchToolCard(color: Brand.accent(for: scheme)) {
+        return ResearchToolCard(color: slipPalette.accent) {
             ResearchSectionTitle(title: "Audience")
         } content: {
             ResearchArtworkPicker(title: "Sport", options: choices, selection: $sport)

@@ -9,7 +9,7 @@ struct CreatorOfferEditor: View {
     let api: CreatorStoreAPI
     let created: (UUID) async -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var id = UUID()
     @State private var title = ""
     @State private var description = ""
@@ -43,8 +43,8 @@ struct CreatorOfferEditor: View {
             .navigationTitle("New paid offer")
             .navigationBarTitleDisplayMode(.inline)
             .scrollContentBackground(.hidden)
-            .background(Brand.background(for: scheme))
-            .foregroundStyle(Brand.text(for: scheme))
+            .background(slipPalette.background)
+            .foregroundStyle(slipPalette.text)
             .disabled(saving)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel", role: .cancel) { dismiss() }.disabled(saving) }

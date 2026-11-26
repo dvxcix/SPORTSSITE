@@ -2,16 +2,14 @@ import SwiftUI
 
 struct NativeWelcome: View {
     let choose: (SlipSurgeTabs.Destination) -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.dynamicTypeSize) private var textSize
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                Image(.brand)
-                    .resizable().scaledToFit()
-                    .frame(width: 150)
-                    .accessibilityLabel("SlipSurge")
+                SlipBrandLockup(width: 150)
                 Text("Get started")
                     .font(.largeTitle.weight(.bold))
                     .accessibilityAddTraits(.isHeader)
@@ -43,13 +41,13 @@ struct NativeWelcome: View {
             .frame(maxWidth: .infinity)
         }
         .background {
-            Brand.background(for: scheme)
-            LinearGradient(colors: [Brand.accent(for: scheme).opacity(0.13), .clear],
+            SlipBackdrop()
+            LinearGradient(colors: [slipPalette.accent.opacity(0.13), .clear],
                 startPoint: .topLeading, endPoint: .center)
                 .allowsHitTesting(false)
         }
-        .foregroundStyle(Brand.text(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .foregroundStyle(slipPalette.text)
+        .tint(slipPalette.accent)
         .presentationDetents(textSize.isAccessibilitySize ? [.large] : [.fraction(0.60), .large])
         .presentationDragIndicator(.visible)
     }

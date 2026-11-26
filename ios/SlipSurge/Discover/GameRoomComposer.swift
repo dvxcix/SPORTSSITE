@@ -35,14 +35,14 @@ struct GameRoomComposer: View {
     @State private var photo: PhotosPickerItem?
     @State private var uploading = false
     @FocusState private var messageFocused: Bool
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
         let message = draft.message(for: link)
         return VStack(alignment: .leading, spacing: 0) {
             if let play = draft.play {
                 HStack(spacing: 7) {
-                    Image(systemName: "arrow.turn.down.right").foregroundStyle(Brand.accent(for: scheme)).accessibilityHidden(true)
+                    Image(systemName: "arrow.turn.down.right").foregroundStyle(slipPalette.accent).accessibilityHidden(true)
                     Text(play.text.isEmpty ? play.title ?? "Play" : play.text)
                         .font(.caption.weight(.medium)).lineLimit(2)
                     Spacer(minLength: 0)
@@ -82,7 +82,7 @@ struct GameRoomComposer: View {
                     .font(.subheadline).lineLimit(1...4).focused($messageFocused)
                     .padding(.horizontal, 12).padding(.vertical, 9)
                     .frame(minHeight: 44, alignment: .leading)
-                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
+                    .background(slipPalette.surface, in: .rect(cornerRadius: 16))
                     .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(.secondary.opacity(0.19)) }
                 if messageFocused {
                     Button("Hide keyboard", systemImage: "keyboard.chevron.compact.down") { messageFocused = false }
@@ -91,7 +91,7 @@ struct GameRoomComposer: View {
                 }
                 Button("Send to Game Room", systemImage: "arrow.up.circle.fill", action: send)
                     .labelStyle(.iconOnly).font(.title).frame(width: 44, height: 44)
-                    .foregroundStyle(Brand.accent(for: scheme))
+                    .foregroundStyle(slipPalette.accent)
                     .disabled(sending || uploading || message.isEmpty || message.utf16.count > 800)
             }
             .buttonStyle(.plain)

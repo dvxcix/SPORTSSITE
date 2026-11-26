@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" data-style="filled" data-waive-small="The solid outer silhouette spans the normal keyline; the measured cutouts are deliberately inset" data-waive-angle="The narrow compass needle points in opposing directions">
+  <circle cx="12" cy="12" r="9.75" data-role="silhouette"/>
+  <path d="M10.5 10.5 15.5 8.5 13.5 13.5 8.5 15.5Z" data-role="detail"/>
+</svg>

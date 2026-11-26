@@ -12,7 +12,7 @@ struct CourtPlayerComparison: View {
     let market: CourtPlayerMarket
     let venue: CourtPlayerMarket.Venue
     let observedAt: Date
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var size
     @Environment(\.courtResults) private var results
@@ -60,7 +60,7 @@ struct CourtPlayerComparison: View {
                     comparisonGrid.padding(16)
                 }
             }
-            .background(Brand.background(for: scheme))
+            .background(slipPalette.background)
             .navigationTitle("Compare players")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -98,9 +98,9 @@ struct CourtPlayerComparison: View {
                             let value = metric.value(player)
                             let ahead = best != nil && value == best
                             Text(ResearchFormat.decimal(value)).font(.subheadline.weight(.bold))
-                                .foregroundStyle(ahead ? Brand.accent(for: scheme) : Brand.text(for: scheme))
+                                .foregroundStyle(ahead ? slipPalette.accent : slipPalette.text)
                                 .monospacedDigit().frame(minWidth: 95, minHeight: 37)
-                                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 9))
+                                .background(slipPalette.surface, in: .rect(cornerRadius: 9))
                                 .accessibilityLabel("\(player.firstName) \(player.lastName), \(metric.name)")
                                 .accessibilityValue(ResearchFormat.decimal(value))
                         }

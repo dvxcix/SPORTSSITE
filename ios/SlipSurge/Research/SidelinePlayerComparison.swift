@@ -89,7 +89,8 @@ struct SidelinePlayerComparison: View {
     let remove: (String) -> Void
     let clear: () -> Void
     @Binding var sample: SidelineStatWindow
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.dismiss) private var dismiss
     @ScaledMetric(relativeTo: .body) private var columnWidth = 120.0
     @State private var page = Page.matchup
@@ -146,7 +147,7 @@ struct SidelinePlayerComparison: View {
                     }
                 }.padding(16)
             }
-            .background(Brand.background(for: scheme))
+            .background(slipPalette.background)
             .navigationTitle("Player comparison")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
@@ -224,7 +225,7 @@ struct SidelinePlayerComparison: View {
                     .foregroundStyle(Brand.signal(signal(player), for: scheme))
                     .frame(width: columnWidth)
                     .frame(minHeight: 36)
-                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 8))
+                    .background(slipPalette.surface, in: .rect(cornerRadius: 8))
                     .accessibilityLabel("\(player.name), \(title)")
                     .accessibilityValue(amount)
             }
@@ -266,7 +267,7 @@ struct SidelinePlayerComparison: View {
                     }
                 }
                 .padding(6).frame(width: columnWidth, alignment: .leading)
-                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 8))
+                .background(slipPalette.surface, in: .rect(cornerRadius: 8))
                 .accessibilityElement(children: .combine)
             }
         }

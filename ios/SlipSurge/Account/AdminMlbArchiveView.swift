@@ -64,7 +64,7 @@ struct AdminMlbArchiveView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var selection: Selection
     @State private var archive: Archive?
     @State private var issue: (any Error)?
@@ -97,8 +97,8 @@ struct AdminMlbArchiveView: View {
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, prompt: "Player, market or sportsbook")
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background(slipPalette.background)
+        .tint(slipPalette.accent)
         .task(id: LoadKey(selection: selection, retry: revision)) { await load(selection) }
         .refreshable { await load(selection) }
     }

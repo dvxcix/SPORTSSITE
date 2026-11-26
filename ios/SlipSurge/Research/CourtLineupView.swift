@@ -28,7 +28,7 @@ struct CourtLineupView: View {
     let board: CourtBoard
     let observedAt: Date
     let revision: Int
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var value: Lineups?
     @State private var error: (any Error)?
     @State private var retry = 0
@@ -70,7 +70,7 @@ struct CourtLineupView: View {
                     teamLineup.status == "confirmed" ? "Confirmed pregame" : "Expected lineup"
                 Label(status, systemImage: teamLineup.status == "expected" ? "clock" : "checkmark.seal")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(teamLineup.status == "expected" ? .secondary : Brand.accent(for: scheme))
+                    .foregroundStyle(teamLineup.status == "expected" ? .secondary : slipPalette.accent)
                 if let date = SidelineBoard.timestamp(teamLineup.observedAt) {
                     Text(date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary)
                 }

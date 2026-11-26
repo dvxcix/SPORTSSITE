@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ResearchPreferencesView: View {
     let api: MemberResearchPreferencesAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.openURL) private var openURL
     @Environment(\.memberResearchPreferences) private var store
     @State private var options: MemberResearchOptions?
@@ -25,13 +25,13 @@ struct ResearchPreferencesView: View {
                 ProgressView("Loading your preferences")
             }
             if let problem { Text(problem).foregroundStyle(.red) }
-            if saved { Label("Preferences saved", systemImage: "checkmark.circle").foregroundStyle(Brand.accent(for: scheme)) }
+            if saved { Label("Preferences saved", systemImage: "checkmark.circle").foregroundStyle(slipPalette.accent) }
         }
         .navigationTitle("Research preferences")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task { await load() }
         .sensoryFeedback(.success, trigger: saved) { _, value in value }
     }
@@ -62,7 +62,7 @@ struct ResearchPreferencesView: View {
             }
             .disabled(saving || uncertain)
         } header: { Text("Launch page") }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
     }
 
     private func booksSection(_ options: MemberResearchOptions, draft: MemberResearchPreferences) -> some View {
@@ -88,7 +88,7 @@ struct ResearchPreferencesView: View {
                         Text(verbatim: book.label)
                         Spacer()
                         Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(selected ? Brand.accent(for: scheme) : Color.secondary)
+                            .foregroundStyle(selected ? slipPalette.accent : Color.secondary)
                             .accessibilityHidden(true)
                     }
                     .contentShape(.rect)
@@ -101,7 +101,7 @@ struct ResearchPreferencesView: View {
                     selection: Binding(get: { self.draft?.primaryBook ?? "" }, set: { value in edit { $0.primaryBook = value } }))
             }
         } header: { Text("Sportsbooks") }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
         .disabled(saving || uncertain)
     }
 
@@ -121,7 +121,7 @@ struct ResearchPreferencesView: View {
                     .disabled(saving)
             }
             if uncertain { Button("Reload settings") { Task { await load() } }.disabled(loading) }
-        }.listRowBackground(Brand.surface(for: scheme))
+        }.listRowBackground(slipPalette.surface)
     }
 
     private func edit(_ change: (inout MemberResearchPreferences) -> Void) {

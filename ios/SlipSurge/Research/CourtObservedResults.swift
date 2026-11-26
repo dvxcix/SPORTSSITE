@@ -50,7 +50,7 @@ struct CourtResultLine: View {
     let market: CourtPlayerMarket
     var quote: CourtPlayerMarket.Reference? = nil
     var side = CourtPlayerMarket.Side.over
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
         let player = results.player(playerID)
@@ -63,7 +63,7 @@ struct CourtResultLine: View {
                 Spacer(minLength: 4)
                 Text(ResearchFormat.decimal(actual)).monospacedDigit()
                 if let grade {
-                    Label(grade.rawValue, systemImage: grade.icon).foregroundStyle(grade.color(for: scheme))
+                    Label(grade.rawValue, systemImage: grade.icon).foregroundStyle(grade.color(in: slipPalette))
                 }
             }.font(.caption.weight(.semibold)).accessibilityElement(children: .combine)
         } else if results.isFinal && player?.played == false {

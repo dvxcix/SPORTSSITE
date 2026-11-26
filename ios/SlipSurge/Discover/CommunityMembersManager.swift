@@ -4,7 +4,7 @@ struct CommunityMembersManager: View {
     let api: CommunitySettingsAPI
     let initial: CommunitySettingsState
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var current: CommunitySettingsState?
     @State private var search = ""
     @State private var showInvites = false
@@ -22,18 +22,18 @@ struct CommunityMembersManager: View {
                     search.isEmpty || user.user?.name.localizedStandardContains(search) == true || user.user?.username.localizedStandardContains(search) == true
                 }) { user in
                     row(user)
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
             }
             if state.invite {
                 Button("Invite a member", systemImage: "person.badge.plus") { showInvites = true }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             }
             if let problem { Text(problem).foregroundStyle(.red) }
         }
         .searchable(text: $search, prompt: "Find a member")
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Members")
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await reload() }
@@ -97,7 +97,7 @@ private struct CommunityInviteView: View {
     let api: CommunitySettingsAPI
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var query = ""
     @State private var matches: [MessagePerson] = []
     @State private var pending: Set<UUID> = []
@@ -121,14 +121,14 @@ private struct CommunityInviteView: View {
                             Button("Invite") { Task { await invite(person) } }.buttonStyle(.bordered).disabled(sending.contains(person.id))
                         }
                     }
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
                 if searching { ProgressView("Searching members") }
                 if let problem { Text(problem).foregroundStyle(.red) }
             }
             .searchable(text: $query, prompt: "Name or username")
             .scrollContentBackground(.hidden)
-            .background(Brand.background(for: scheme))
-            .foregroundStyle(Brand.text(for: scheme))
+            .background(slipPalette.background)
+            .foregroundStyle(slipPalette.text)
             .navigationTitle("Invite members")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done", role: .cancel) { dismiss() } } }

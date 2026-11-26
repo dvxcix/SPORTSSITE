@@ -13,7 +13,8 @@ struct DiscoverView: View {
     private let opensJoined: Bool
     var opensCommunity: UUID? = nil
     @Binding var opensDestination: DiscoverDestination?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var section = Section.communities
     @State private var communities: DiscoverAPI.Communities?
     @State private var creators: DiscoverAPI.Creators?
@@ -131,8 +132,8 @@ struct DiscoverView: View {
                 routedCommunity = opensCommunity
             }
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background { SlipBackdrop() }
+        .foregroundStyle(slipPalette.text)
         .onChange(of: section) { _, _ in
             error = nil
             search = ""
@@ -164,13 +165,13 @@ struct DiscoverView: View {
 
     private func shortcut(_ title: String, symbol: String) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: symbol).foregroundStyle(Brand.accent(for: scheme)).accessibilityHidden(true)
+            Image(systemName: symbol).foregroundStyle(slipPalette.accent).accessibilityHidden(true)
             Text(title).fixedSize(horizontal: true, vertical: false)
         }
         .font(.subheadline.weight(.semibold))
         .padding(.horizontal, 11)
         .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 13))
         .contentShape(.rect)
     }
 
@@ -203,16 +204,16 @@ struct DiscoverView: View {
     private var scoresEntry: some View {
         HStack(spacing: 12) {
             Image(systemName: "waveform.path").font(.title2.weight(.heavy))
-                .foregroundStyle(Brand.accent(for: scheme))
+                .foregroundStyle(slipPalette.accent)
                 .frame(width: 45, height: 45)
-                .background(Brand.accent(for: scheme).opacity(0.15), in: .rect(cornerRadius: 12))
+                .background(slipPalette.accent.opacity(0.15), in: .rect(cornerRadius: 12))
             Text("Live Scores").font(.title3.weight(.bold))
             Spacer()
             Image(systemName: "chevron.right").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
         }
-        .foregroundStyle(Brand.text(for: scheme))
+        .foregroundStyle(slipPalette.text)
         .padding(13)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 17))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 17))
     }
 
     private var filters: some View {
@@ -226,7 +227,7 @@ struct DiscoverView: View {
                 if section == .communities, api.userID != nil, !opensJoined {
                     ResearchToolFilter(title: "Membership", symbol: "person.badge.checkmark", selection: yours ? "Yours" : "All communities") {
                         Picker("Membership", selection: $yours) {
-                            Label("All communities", glyph: SlipGlyph.community.rawValue).tag(false)
+                            Label("All communities", glyph: SlipGlyph.community.rawValue, filled: slipPalette == .color).tag(false)
                             Label("Yours", systemImage: "person.badge.checkmark").tag(true)
                         }
                     }
@@ -254,7 +255,7 @@ struct DiscoverView: View {
                     .onSubmit { searchFocused = false }
             }
             .padding(.horizontal, 12).frame(minHeight: 44)
-            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+            .background(slipPalette.surface, in: .rect(cornerRadius: 12))
         }
     }
 
@@ -335,7 +336,7 @@ struct DiscoverView: View {
                 .foregroundStyle(.tertiary).accessibilityHidden(true)
         }
         .padding(11)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 14))
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
     }
@@ -407,25 +408,25 @@ struct DiscoverIdentityCard: View {
     let banner: URL?
     let symbol: String
     let count: String?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let banner {
                 ResearchArtwork(urls: [banner], fallback: nil, contentMode: .fill, pointSize: 410)
                     .frame(height: 104)
-                    .background(Brand.accent(for: scheme).opacity(0.15))
+                    .background(slipPalette.accent.opacity(0.15))
                     .clipped()
             }
             VStack(alignment: .leading, spacing: 9) {
                 HStack(spacing: 10) {
                     ResearchArtwork(urls: avatar.map { [$0] } ?? [], fallback: symbol, pointSize: 43)
                         .frame(width: 43, height: 43)
-                        .background(Brand.accent(for: scheme).opacity(0.14), in: .rect(cornerRadius: 10))
+                        .background(slipPalette.accent.opacity(0.14), in: .rect(cornerRadius: 10))
                         .clipShape(.rect(cornerRadius: 10))
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title).font(.headline)
-                        Text(subtitle).font(.caption.weight(.medium)).foregroundStyle(Brand.accent(for: scheme))
+                        Text(subtitle).font(.caption.weight(.medium)).foregroundStyle(slipPalette.accent)
                     }
                     Spacer()
                 }
@@ -435,8 +436,8 @@ struct DiscoverIdentityCard: View {
             .padding(13)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .foregroundStyle(Brand.text(for: scheme))
-        .background(Brand.surface(for: scheme))
+        .foregroundStyle(slipPalette.text)
+        .background(slipPalette.surface)
         .clipShape(.rect(cornerRadius: 16))
         .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(.secondary.opacity(0.15)) }
     }

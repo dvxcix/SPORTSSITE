@@ -54,7 +54,8 @@ struct SidelineMarketStory: View {
     let game: String
     let teams: [SidelineMarketTools.Visual]
     let initialPlayer: Int?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var market = "receiving_yards"
     @State private var book: String
     @State private var kind = Kind.milestone
@@ -147,7 +148,7 @@ struct SidelineMarketStory: View {
                     if index < data.captures.count - 1 { capture = data.captures[index + 1] }
                 }.labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).disabled(index >= data.captures.count - 1)
             }
-            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+            .background(slipPalette.surface, in: .rect(cornerRadius: 12))
             .accessibilityHint("Capture \(index + 1) of \(data.captures.count)")
         }
     }
@@ -177,7 +178,7 @@ struct SidelineMarketStory: View {
 
     private func playerCard(_ row: Frame.Player) -> some View {
         let colors = teams.first { SidelineResearchMarket.normalizeTeam($0.code) == SidelineResearchMarket.normalizeTeam(row.team) }
-        let tint = colors?.primary ?? Brand.accent(for: scheme)
+        let tint = colors?.primary ?? slipPalette.accent
         return ResearchToolCard(color: tint) {
             ResearchToolPortrait(name: row.name, subtitle: [row.team, row.position].compactMap { $0 }.joined(separator: " · "),
                 portraits: row.portraits, teamLogo: colors?.logo, primary: tint, secondary: colors?.secondary ?? tint)

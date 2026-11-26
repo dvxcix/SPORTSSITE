@@ -9,10 +9,11 @@ struct ForumThreadView: View {
 
     let api: ForumAPI
     let id: UUID
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
-    @AppStorage("appearance") private var appearance = Appearance.system
+    @AppStorage("appearance") private var appearance = Appearance.color
     @State private var topic: ForumAPI.Topic?
     @State private var replies: [ForumAPI.Reply] = []
     @State private var reactions: [String: [ForumAPI.Reaction]] = [:]
@@ -52,7 +53,7 @@ struct ForumThreadView: View {
                 scrollTo = nil
             }
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Discussion")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $member) { target in MemberProfileView(api: api.viewer, target: target) }
@@ -93,7 +94,7 @@ struct ForumThreadView: View {
     @ViewBuilder
     private func discussion(_ topic: ForumAPI.Topic) -> some View {
         ForumTopicRow(topic: topic)
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             author(topic.author, created: topic.createdAt)
         } content: {
             if let content = topic.content, !content.isEmpty { discussionText(content) }
@@ -193,7 +194,7 @@ struct ForumThreadView: View {
                     }
                     if person.isVerified == true {
                         Image(systemName: "checkmark.seal.fill").font(.caption)
-                            .foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Verified")
+                            .foregroundStyle(slipPalette.accent).accessibilityLabel("Verified")
                     }
                 }
             }
@@ -238,10 +239,10 @@ struct ForumThreadView: View {
                     if let count = state?.count, count > 0 { Text(count.formatted()).font(.caption.monospacedDigit()) }
                 }
             }
-            .foregroundStyle(active ? Brand.accent(for: scheme) : Brand.text(for: scheme))
+            .foregroundStyle(active ? slipPalette.accent : slipPalette.text)
             .padding(.horizontal, 6)
             .frame(minWidth: 44, minHeight: 44)
-            .background(Brand.accent(for: scheme).opacity(active ? 0.15 : 0.03), in: .capsule)
+            .background(slipPalette.accent.opacity(active ? 0.15 : 0.03), in: .capsule)
         }
         .buttonStyle(SlipSurgePressStyle())
         .disabled(pending.contains(targetID))

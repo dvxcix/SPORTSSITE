@@ -69,7 +69,7 @@ struct Scoreboard: Decodable {
 
 struct ScoresView: View {
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.scenePhase) private var phase
     @Environment(\.dynamicTypeSize) private var textSize
     @State private var date: Date
@@ -133,8 +133,8 @@ struct ScoresView: View {
         .frame(maxWidth: .infinity)
         .navigationTitle("Scores")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: "\(day):\(revision):\(phase)") {
             guard phase == .active else { return }
             await liveBoard.follow(through: day)
@@ -151,11 +151,11 @@ struct ScoresView: View {
                     .labelsHidden()
                     .datePickerStyle(.compact)
                     .environment(\.timeZone, SlateDate.zone)
-                    .tint(Brand.accent(for: scheme))
+                    .tint(slipPalette.accent)
                 Spacer()
                 if !calendar.isDateInToday(date) {
                     Button("Today") { date = .now }.buttonStyle(.plain)
-                        .font(.footnote.weight(.bold)).foregroundStyle(Brand.accent(for: scheme))
+                        .font(.footnote.weight(.bold)).foregroundStyle(slipPalette.accent)
                         .padding(.horizontal, 9).frame(minHeight: 44)
                 }
             }
@@ -169,7 +169,7 @@ struct ScoresView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
-        .background(Brand.surface(for: scheme))
+        .background(slipPalette.surface)
         .sensoryFeedback(.selection, trigger: day)
     }
 
@@ -185,8 +185,8 @@ struct ScoresView: View {
             }
             .lineLimit(1)
             .frame(maxWidth: .infinity, minHeight: 46)
-            .foregroundStyle(selected ? Brand.accent(for: scheme) : Brand.text(for: scheme))
-            .background(selected ? Brand.accent(for: scheme).opacity(0.15) : Color.secondary.opacity(0.075), in: .rect(cornerRadius: 12))
+            .foregroundStyle(selected ? slipPalette.accent : slipPalette.text)
+            .background(selected ? slipPalette.accent.opacity(0.15) : Color.secondary.opacity(0.075), in: .rect(cornerRadius: 12))
             .contentShape(.rect)
         }
         .buttonStyle(SlipSurgePressStyle())
@@ -223,7 +223,7 @@ struct ScoresView: View {
 struct LiveGamesStrip: View {
     let api: DiscoverAPI
     let active: Bool
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.scenePhase) private var phase
     @State private var liveBoard = LiveScoreboard()
 
@@ -241,7 +241,7 @@ struct LiveGamesStrip: View {
                     if !slate.isEmpty {
                         Label(live.isEmpty ? "Games today" : "Live now", systemImage: live.isEmpty ? "list.number" : "dot.radiowaves.left.and.right")
                             .font(.subheadline.weight(.bold))
-                            .foregroundStyle(Brand.text(for: scheme))
+                            .foregroundStyle(slipPalette.text)
                             .accessibilityAddTraits(.isHeader)
                         Spacer()
                     }
@@ -262,7 +262,7 @@ struct LiveGamesStrip: View {
                         .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Brand.accent(for: scheme))
+                    .foregroundStyle(slipPalette.accent)
                 }
                 .padding(.horizontal, 14)
                 if let board, !slate.isEmpty {
@@ -302,7 +302,7 @@ private extension Scoreboard.Match {
 private struct MatchScoreTile: View {
     let match: Scoreboard.Match
     var compact = false
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -322,7 +322,7 @@ private struct MatchScoreTile: View {
         .padding(compact ? 9 : 11)
         .background {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Brand.surface(for: scheme))
+                .fill(slipPalette.surface)
                 .overlay {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(LinearGradient(colors: [
@@ -352,7 +352,7 @@ private struct MatchScoreTile: View {
                 Text(record).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
         }
-        .foregroundStyle(Brand.text(for: scheme))
+        .foregroundStyle(slipPalette.text)
     }
 }
 
@@ -377,7 +377,7 @@ struct MatchStatusLabel: View {
 
 struct GameLinkLabel: View {
     let link: GameLink
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
         HStack(spacing: 9) {
@@ -388,8 +388,8 @@ struct GameLinkLabel: View {
             Image(systemName: "chevron.right").font(.caption.weight(.semibold)).accessibilityHidden(true)
         }
         .padding(.horizontal, 10).frame(minHeight: 44)
-        .foregroundStyle(Brand.accent(for: scheme))
-        .background(Brand.accent(for: scheme).opacity(0.09), in: .rect(cornerRadius: 10))
+        .foregroundStyle(slipPalette.accent)
+        .background(slipPalette.accent.opacity(0.09), in: .rect(cornerRadius: 10))
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
     }

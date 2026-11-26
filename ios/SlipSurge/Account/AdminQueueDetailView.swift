@@ -7,7 +7,7 @@ struct AdminQueueDetailView: View {
     let entry: AdminQueueRecord
     let didChange: () -> Void
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var action: Decision?
     @State private var result: String?
 
@@ -53,7 +53,7 @@ struct AdminQueueDetailView: View {
                         MemberProfileView(api: .init(account: account, userID: userID), target: username)
                     } label: { Label("Open reported profile", systemImage: "person.crop.circle") }
                 }
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
             Section(queue == .reports ? "Reporter" : "Member") {
                 LabeledContent("Name", value: entry.name)
                 if let username = entry.person?.username { LabeledContent("Username", value: "@\(username)") }
@@ -63,13 +63,13 @@ struct AdminQueueDetailView: View {
                 if let commerce = entry.person?.creatorCommerceStatus {
                     LabeledContent("Creator payments", value: commerce.replacingOccurrences(of: "_", with: " ").capitalized)
                 }
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
             if let note = entry.resolutionNote ?? entry.rejectionReason {
-                Section("Resolution") { Text(verbatim: note) }.listRowBackground(Brand.surface(for: scheme))
+                Section("Resolution") { Text(verbatim: note) }.listRowBackground(slipPalette.surface)
             }
             if let planned = entry.scheduledFor.flatMap(SidelineBoard.timestamp) {
                 Section { LabeledContent("Scheduled", value: planned.formatted(date: .abbreviated, time: .shortened)) }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             }
             if !decisions.isEmpty {
                 Section {
@@ -78,12 +78,12 @@ struct AdminQueueDetailView: View {
                     }
                 } footer: {
                     if queue == .deletions { Text("Review active subscriptions, creator payouts and retained records before scheduling deletion.") }
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle(queue == .reports ? "Report" : entry.name)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $action) { decision in
@@ -123,7 +123,7 @@ private struct DecisionForm: View {
     let save: (String, Date) async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var note = ""
     @State private var date = Date.now.addingTimeInterval(86_400)
     @State private var confirm = false
@@ -136,11 +136,11 @@ private struct DecisionForm: View {
                 Section {
                     TextField("Resolution note", text: $note, axis: .vertical).lineLimit(5...10)
                     if schedulesDeletion { DatePicker("Schedule for", selection: $date, in: Date.now...) }
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
                 if let issue { Label(issue, systemImage: "exclamationmark.circle").foregroundStyle(.red) }
             }
             .scrollContentBackground(.hidden)
-            .background(Brand.background(for: scheme))
+            .background(slipPalette.background)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

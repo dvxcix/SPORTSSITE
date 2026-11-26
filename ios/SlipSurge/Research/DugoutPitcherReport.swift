@@ -74,7 +74,7 @@ struct DugoutPitcherReport: View {
     @State var date: Date
     var linkedStarter: String? = nil
     var linkedPitcher: Int? = nil
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var slate: DugoutBoard?
     @State private var selection = ""
     @State private var range = 3
@@ -105,8 +105,8 @@ struct DugoutPitcherReport: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Pitcher Report")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: "\(key):\(revision)") { await loadSlate(key) }
@@ -240,7 +240,7 @@ struct DugoutPitcherReport: View {
                     Spacer()
                     Text(ResearchFormat.decimal(pitch.usagePct, suffix: "%")).font(.subheadline.weight(.semibold))
                     Image(systemName: pinned ? "pin.fill" : "pin")
-                        .foregroundStyle(pinned ? Brand.accent(for: scheme) : .secondary)
+                        .foregroundStyle(pinned ? slipPalette.accent : .secondary)
                 }.frame(minHeight: 40)
             }
             .buttonStyle(SlipSurgePressStyle())
@@ -281,7 +281,7 @@ struct DugoutPitcherReport: View {
                         if let read {
                             Text(ResearchFormat.decimal(read.hardHitPct, suffix: "% hard hit"))
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle((read.hardHitPct ?? 0) >= 40 ? Brand.accent(for: scheme) : .secondary)
+                                .foregroundStyle((read.hardHitPct ?? 0) >= 40 ? slipPalette.accent : .secondary)
                         }
                     }
                 }

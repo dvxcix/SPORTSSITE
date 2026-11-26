@@ -18,7 +18,7 @@ struct AdminRecentSignInsView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var entries: [Directory.SignIn]?
     @State private var issue: (any Error)?
     @State private var revision = 0
@@ -44,7 +44,7 @@ struct AdminRecentSignInsView: View {
         .navigationTitle("Recent sign-ins")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .task(id: revision) { await load() }
         .refreshable { await load() }
     }
@@ -59,7 +59,7 @@ struct AdminRecentSignInsView: View {
                 }
                 if entry.recent {
                     Label("Recent", systemImage: "clock.badge.checkmark").font(.caption.weight(.semibold))
-                        .foregroundStyle(Brand.accent(for: scheme))
+                        .foregroundStyle(slipPalette.accent)
                 }
             }
         }

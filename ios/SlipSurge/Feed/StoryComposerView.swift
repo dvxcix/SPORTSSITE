@@ -11,7 +11,7 @@ struct StoryComposerView: View {
     var embedded = false
     let shared: () -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @FocusState private var textFocused: Bool
     @State private var submission = UUID()
     @State private var kind = Kind.text
@@ -62,8 +62,8 @@ struct StoryComposerView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .keyboardDone { textFocused = false }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Add to story")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

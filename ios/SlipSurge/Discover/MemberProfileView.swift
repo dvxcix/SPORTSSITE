@@ -125,7 +125,7 @@ struct MemberProfileView: View {
     let api: DiscoverAPI
     let target: String
     var isYouTab = false
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.dismiss) private var dismiss
     @State private var page: Page?
     @State private var error: (any Error)?
@@ -168,7 +168,7 @@ struct MemberProfileView: View {
                             let count = section == .all ? profile.postCount : section == .reposts ? profile.repostCount : nil
                             let name = section == .all ? "Posts" : section.rawValue
                             HStack(spacing: 4) {
-                                Label(name, glyph: section == .all ? SlipGlyph.feed.rawValue : section.glyph)
+                                Label(name, glyph: section == .all ? SlipGlyph.feed.rawValue : section.glyph, filled: slipPalette == .color)
                                 if let count { Text(count.formatted()).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
                             }
                             .accessibilityElement(children: .combine)
@@ -193,8 +193,8 @@ struct MemberProfileView: View {
         .navigationTitle(isYouTab ? "You" : page?.profile.username ?? "Profile")
         .navigationBarTitleDisplayMode(.inline)
         .socialDetail(!isYouTab)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background { SlipBackdrop() }
+        .foregroundStyle(slipPalette.text)
         .navigationDestination(item: $selectedPost) { id in FeedThreadView(api: feed, id: id) }
         .toolbar {
             if let profile = page?.profile {
@@ -238,7 +238,7 @@ struct MemberProfileView: View {
     }
 
     private func creatorPanel(_ profile: Page.Profile, _ creator: Page.Profile.Creator) -> some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             Label("Join \(profile.name)", systemImage: "storefront").font(.headline)
         } content: {
             VStack(alignment: .leading, spacing: 10) {
@@ -259,7 +259,7 @@ struct MemberProfileView: View {
                         LinkedCreatorOfferView(api: .init(client: api), id: offer.id)
                     } label: {
                         HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: "ticket").foregroundStyle(Brand.accent(for: scheme)).accessibilityHidden(true)
+                            Image(systemName: "ticket").foregroundStyle(slipPalette.accent).accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(offer.title).font(.subheadline.weight(.semibold))
                                 Text(offer.description ?? "Premium creator access on SlipSurge.")
@@ -267,11 +267,11 @@ struct MemberProfileView: View {
                             }.frame(maxWidth: .infinity, alignment: .leading)
                             if let price = offer.price {
                                 Text(price.formatted(.currency(code: (offer.currency ?? "USD").uppercased())))
-                                    .font(.subheadline.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                                    .font(.subheadline.weight(.semibold)).foregroundStyle(slipPalette.accent)
                             }
                         }
                         .padding(10).frame(minHeight: 44)
-                        .background(Brand.background(for: scheme), in: .rect(cornerRadius: 10))
+                        .background(slipPalette.background, in: .rect(cornerRadius: 10))
                     }.buttonStyle(SlipSurgePressStyle())
                 }
                 ForEach(creator.communities) { group in
@@ -291,7 +291,7 @@ struct MemberProfileView: View {
         if tab == .replies {
             ForEach(page.replies) { reply in
                 Button { selectedPost = reply.postId } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) {
+                    ResearchToolCard(color: slipPalette.accent) {
                         Label("Replied to \(reply.parentAuthor ?? "a post")", systemImage: "bubble.left.and.bubble.right")
                             .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     } content: {
@@ -301,7 +301,7 @@ struct MemberProfileView: View {
                                 NativeInlineEmojiText(source: excerpt, linkify: { AttributedString($0) })
                                     .font(.caption).foregroundStyle(.secondary).lineLimit(2)
                                     .padding(8).frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Brand.background(for: scheme), in: .rect(cornerRadius: 7))
+                                    .background(slipPalette.background, in: .rect(cornerRadius: 7))
                             }
                             if let date = SidelineBoard.timestamp(reply.createdAt) {
                                 Text(date, style: .relative).font(.caption).foregroundStyle(.secondary)
@@ -323,7 +323,7 @@ struct MemberProfileView: View {
                     if removed { posts.removeAll { $0.postID == post.postID } }
                     else { Task { await load() } }
                 })
-                    .padding(12).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
+                    .padding(12).background(slipPalette.surface, in: .rect(cornerRadius: 15))
             }
             if posts.isEmpty { ContentUnavailableView("No \(tab == .all ? "posts" : tab.rawValue.lowercased())", systemImage: tab.glyph) }
             if let cursor {

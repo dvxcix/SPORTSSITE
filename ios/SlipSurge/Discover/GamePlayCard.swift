@@ -12,7 +12,8 @@ struct GamePlayCard: View {
     let discussNote: (GameCenterData.Play) -> Void
     let reactToNote: (GameCenterData.Play) -> Void
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     private var play: GameCenterData.Play { entry.play }
     private var playTeam: Scoreboard.Match.Team? { team(id: play.teamId) }
@@ -21,8 +22,8 @@ struct GamePlayCard: View {
     }
     private var basket: Bool { game.sport == "nba" && play.scoring }
     private var highlighted: Bool { highlightedPlay == play.id || entry.notes.contains { $0.play.id == highlightedPlay } }
-    private var primary: Color { Color(hex: portraitTeam?.color) ?? Brand.accent(for: scheme) }
-    private var secondary: Color { Color(hex: portraitTeam?.secondary) ?? Brand.surface(for: scheme) }
+    private var primary: Color { Color(hex: portraitTeam?.color) ?? slipPalette.accent }
+    private var secondary: Color { Color(hex: portraitTeam?.secondary) ?? slipPalette.surface }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -77,7 +78,7 @@ struct GamePlayCard: View {
                         secondary.opacity(scheme == .dark ? 0.09 : 0.03),
                         Color.clear
                     ], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
+                    .background(slipPalette.surface, in: .rect(cornerRadius: 16))
             }
         }
         .overlay(alignment: .bottom) {
@@ -95,7 +96,7 @@ struct GamePlayCard: View {
             Text(entry.headline)
                 .font(.headline).fixedSize(horizontal: false, vertical: true)
         }
-        .foregroundStyle(outcome.map { Brand.signal($0 ? 1 : -1, for: scheme) } ?? Brand.text(for: scheme))
+        .foregroundStyle(outcome.map { Brand.signal($0 ? 1 : -1, for: scheme) } ?? slipPalette.text)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(entry.freeThrow != nil && outcome != nil
             ? "\(entry.headline), \(outcome == true ? "made" : "missed")" : entry.headline)
@@ -117,7 +118,7 @@ struct GamePlayCard: View {
                     .fontWeight(.semibold).accessibilityLabel("Free throw \(attempt.attempt) of \(attempt.total)")
             } else if basket {
                 Image(systemName: "basketball.fill")
-                    .foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Scoring play")
+                    .foregroundStyle(slipPalette.accent).accessibilityLabel("Scoring play")
             }
         }
         .font(.caption.monospacedDigit())
@@ -145,7 +146,7 @@ struct GamePlayCard: View {
         if let person = entry.person {
             let name = Text(game.sport == "nba" ? person.shortName : person.name)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Brand.text(for: scheme))
+                .foregroundStyle(slipPalette.text)
                 .accessibilityLabel(person.name)
             if entry.stats.isEmpty {
                 name
@@ -170,7 +171,7 @@ struct GamePlayCard: View {
     private var statLine: some View {
         Text(entry.stats.map { "\($0.value) \($0.label)" }.joined(separator: "  ·  "))
             .font(.caption.weight(.semibold)).monospacedDigit()
-            .foregroundStyle(Brand.text(for: scheme).opacity(0.84))
+            .foregroundStyle(slipPalette.text.opacity(0.84))
     }
 
     @ViewBuilder private func noteRow(_ note: BasketballPlayTimeline.Note) -> some View {
@@ -182,10 +183,10 @@ struct GamePlayCard: View {
                 .fixedSize(horizontal: false, vertical: true)
         } icon: {
             Image(systemName: note.glyph)
-                .foregroundStyle(Brand.accent(for: scheme))
+                .foregroundStyle(slipPalette.accent)
         }
         .font(.caption)
-        .foregroundStyle(Brand.text(for: scheme).opacity(0.87))
+        .foregroundStyle(slipPalette.text.opacity(0.87))
         .padding(.vertical, 3)
         .accessibilityLabel([note.title, note.person?.name ?? player, stat].compactMap { $0 }.joined(separator: ", "))
         if note.play.id == play.id {
@@ -207,7 +208,7 @@ struct GamePlayCard: View {
                 }
             }
                 .padding(.horizontal, 5)
-                .background(highlightedPlay == note.play.id ? Brand.accent(for: scheme).opacity(0.17) : .clear,
+                .background(highlightedPlay == note.play.id ? slipPalette.accent.opacity(0.17) : .clear,
                             in: .rect(cornerRadius: 6))
                 .contextMenu {
                     if let url = GameLink(sport: game.sport, id: game.id, play: note.play.id).url {

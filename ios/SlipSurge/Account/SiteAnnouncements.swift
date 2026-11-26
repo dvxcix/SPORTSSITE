@@ -100,7 +100,7 @@ struct ReleaseAnnouncementView: View {
     var action: () -> Void
     var problem: String?
     var loading = false
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var selected: Screenshot?
 
     private struct Screenshot: Identifiable {
@@ -114,7 +114,7 @@ struct ReleaseAnnouncementView: View {
                 HStack {
                     if release.audienceTier == "ultimate" {
                         Label("Ultimate release", systemImage: "bolt.fill")
-                            .font(.caption.weight(.heavy)).foregroundStyle(Brand.accent(for: scheme))
+                            .font(.caption.weight(.heavy)).foregroundStyle(slipPalette.accent)
                     }
                     if queueCount > 1 {
                         Spacer()
@@ -135,7 +135,7 @@ struct ReleaseAnnouncementView: View {
                                 Button { selected = .init(url: url) } label: {
                                     ResearchArtwork(urls: [url], fallback: "photo")
                                         .frame(width: 220, height: 134)
-                                        .background(Brand.background(for: scheme), in: .rect(cornerRadius: 13))
+                                        .background(slipPalette.background, in: .rect(cornerRadius: 13))
                                 }
                                 .buttonStyle(SlipSurgePressStyle())
                                 .accessibilityLabel("Enlarge screenshot \(index + 1)")
@@ -153,8 +153,8 @@ struct ReleaseAnnouncementView: View {
             .frame(maxWidth: 650, alignment: .leading)
             .padding(19)
         }
-        .foregroundStyle(Brand.text(for: scheme))
-        .background(Brand.surface(for: scheme))
+        .foregroundStyle(slipPalette.text)
+        .background(slipPalette.surface)
         .sheet(item: $selected) { screenshot in
             NavigationStack {
                 ResearchArtwork(urls: [screenshot.url], fallback: "photo")

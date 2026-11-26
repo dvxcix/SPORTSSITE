@@ -14,7 +14,8 @@ struct SidelineSlateEdgeView: View {
     let date: String
     let teams: [SidelineMarketTools.Visual]
     let revision: Int
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var sample = SidelineResearchSample.automatic
     @State private var market = "anytime_td"
@@ -120,7 +121,7 @@ struct SidelineSlateEdgeView: View {
 
     private func card(_ row: SidelineEdgePayload.Player, offer: SidelineEdgePayload.Market, savedAt: String?) -> some View {
         let visual = teams.first { SidelineResearchMarket.normalizeTeam($0.code) == SidelineResearchMarket.normalizeTeam(row.team) }
-        let primary = visual?.primary ?? Brand.surface(for: scheme)
+        let primary = visual?.primary ?? slipPalette.surface
         let mm = row.mm[market] ?? nil
         return ResearchToolCard(color: primary) {
             ResearchToolPortrait(name: row.name, subtitle: "\(row.team) · \(row.position) · \(row.gameLabel)",
@@ -133,7 +134,7 @@ struct SidelineSlateEdgeView: View {
                 if let vendor = offer.vendor { ResearchToolBook(book: vendor, price: offer.odds) }
             }
             ResearchToolValues(items: [
-                .init(label: "SlipSurge Score", text: ResearchFormat.decimal(row.score[market] ?? nil), tone: Brand.accent(for: scheme)),
+                .init(label: "SlipSurge Score", text: ResearchFormat.decimal(row.score[market] ?? nil), tone: slipPalette.accent),
                 .init(label: "MM", text: ResearchFormat.signed(mm), tone: Brand.signal(mm.map(Double.init), for: scheme)),
                 .init(label: "Public picks", text: offer.picks.map(String.init) ?? "—"),
                 .init(label: "Opening price", text: ResearchFormat.price(offer.openingOdds)),

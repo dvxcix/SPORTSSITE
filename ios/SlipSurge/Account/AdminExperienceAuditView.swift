@@ -94,7 +94,7 @@ struct AdminExperienceAuditView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var data: Snapshot?
     @State private var issue: (any Error)?
     @State private var revision = 0
@@ -142,8 +142,8 @@ struct AdminExperienceAuditView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background(slipPalette.background)
+        .tint(slipPalette.accent)
         .refreshable { await load() }
     }
 

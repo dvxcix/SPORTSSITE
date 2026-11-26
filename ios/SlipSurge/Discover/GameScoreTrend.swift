@@ -4,7 +4,7 @@ import SwiftUI
 struct GameScoreTrend: View {
     let game: Scoreboard.Match
     let plays: [GameCenterData.Play]
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var highlighted: Int?
 
     private struct Point: Identifiable {
@@ -46,7 +46,7 @@ struct GameScoreTrend: View {
                         let leading = play.margin >= 0 ? game.home.abbreviation : game.away.abbreviation
                         BarMark(x: .value("Score", index), y: .value("Margin", play.margin))
                             .cornerRadius(3)
-                            .foregroundStyle(play.margin >= 0 ? Brand.accent(for: scheme) : Color.blue)
+                            .foregroundStyle(play.margin >= 0 ? slipPalette.accent : Color.blue)
                             .opacity(highlighted == nil || highlighted == index ? 1 : 0.45)
                             .accessibilityLabel("\(play.period), \(play.clock)")
                             .accessibilityValue(play.margin == 0 ? "Tied" : "\(leading) leads by \(abs(play.margin))")
@@ -57,14 +57,14 @@ struct GameScoreTrend: View {
                 .chartXSelection(value: $highlighted)
                 .frame(height: 103)
                 HStack {
-                    Label(game.home.abbreviation + " lead", systemImage: "circle.fill").foregroundStyle(Brand.accent(for: scheme))
+                    Label(game.home.abbreviation + " lead", systemImage: "circle.fill").foregroundStyle(slipPalette.accent)
                     Spacer()
                     Label(game.away.abbreviation + " lead", systemImage: "circle.fill").foregroundStyle(.blue)
                 }
                 .font(.caption2.weight(.semibold))
             }
             .padding(12)
-            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+            .background(slipPalette.surface, in: .rect(cornerRadius: 14))
             .onChange(of: samples.map(\.id)) { _, _ in highlighted = nil }
         }
     }

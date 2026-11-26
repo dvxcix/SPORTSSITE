@@ -5,7 +5,7 @@ struct GamePlayReactions: View {
     let enabled: Bool
     let react: (String, Bool) async -> Void
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private struct Selection { let emoji: String; let enabled: Bool }
     @State private var pending: Selection?
@@ -47,7 +47,7 @@ struct GamePlayReactions: View {
                         NativeReactionArtwork(symbol: "🔥", size: 17)
                             .frame(width: 44, height: 44)
                             .background {
-                                Capsule().fill(Brand.accent(for: scheme).opacity(0.12))
+                                Capsule().fill(slipPalette.accent.opacity(0.12))
                                     .frame(width: 30, height: 24)
                             }
                     }
@@ -72,7 +72,7 @@ struct GamePlayReactions: View {
                         .padding(.horizontal, 5)
                         .frame(minHeight: 44)
                         .background {
-                            Capsule().fill(info.mine ? Brand.accent(for: scheme).opacity(0.18) : Color.secondary.opacity(0.08))
+                            Capsule().fill(info.mine ? slipPalette.accent.opacity(0.18) : Color.secondary.opacity(0.08))
                                 .frame(height: 24)
                         }
                     }

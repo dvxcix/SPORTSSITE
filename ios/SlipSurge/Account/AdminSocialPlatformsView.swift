@@ -60,7 +60,7 @@ struct AdminSocialPlatformsView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var platforms: [Platform]?
     @State private var editor: Editor?
     @State private var deletion: Platform?
@@ -99,7 +99,7 @@ struct AdminSocialPlatformsView: View {
         .navigationTitle("Social platforms")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .toolbar {
             if platforms != nil {
                 ToolbarItem(placement: .topBarTrailing) {

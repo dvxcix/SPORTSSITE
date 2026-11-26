@@ -24,7 +24,7 @@ struct ResearchArtworkPicker: View {
     let title: String
     let options: [Option]
     @Binding var selection: String
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var shown = false
     @State private var search = ""
@@ -62,7 +62,7 @@ struct ResearchArtworkPicker: View {
                                 Text(option.title).font(.body.weight(.medium))
                                 Spacer()
                                 if selection == option.id {
-                                    Image(systemName: "checkmark").font(.headline).foregroundStyle(Brand.accent(for: scheme))
+                                    Image(systemName: "checkmark").font(.headline).foregroundStyle(slipPalette.accent)
                                         .accessibilityHidden(true)
                                 }
                             }
@@ -71,12 +71,12 @@ struct ResearchArtworkPicker: View {
                         }
                         .buttonStyle(SlipSurgePressStyle())
                         .accessibilityAddTraits(selection == option.id ? .isSelected : [])
-                        .listRowBackground(Brand.surface(for: scheme))
+                        .listRowBackground(slipPalette.surface)
                     }
                 }
                 .scrollContentBackground(.hidden)
-                .background(Brand.background(for: scheme))
-                .foregroundStyle(Brand.text(for: scheme))
+                .background(slipPalette.background)
+                .foregroundStyle(slipPalette.text)
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {

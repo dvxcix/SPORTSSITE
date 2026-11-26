@@ -46,7 +46,7 @@ struct AdminPlatformSettingsView: View {
 
     let api: DiscoverAPI
     let page: Page
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var snapshot: Snapshot?
     @State private var issue: (any Error)?
     @State private var revision = 0
@@ -65,7 +65,7 @@ struct AdminPlatformSettingsView: View {
         .navigationTitle(page.title)
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .task(id: revision) { await load() }
         .refreshable { await load() }
         .sheet(item: $editing) { setting in
@@ -178,7 +178,7 @@ private struct PlatformSettingEditor: View {
     let setting: AdminPlatformSettingsView.Setting
     let onSave: (AdminPlatformSettingsView.Setting) -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var value: String
     @State private var confirmation = false
     @State private var saving = false
@@ -214,7 +214,7 @@ private struct PlatformSettingEditor: View {
             }
             if saving { ProgressView("Saving setting") }
         }
-        .tint(Brand.accent(for: scheme))
+        .tint(slipPalette.accent)
         .navigationTitle(setting.label)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

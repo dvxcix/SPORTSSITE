@@ -91,7 +91,8 @@ struct AdminBrowserAutomationView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var page = Page.overview
     @State private var snapshot: Snapshot?
     @State private var error: (any Error)?
@@ -118,7 +119,7 @@ struct AdminBrowserAutomationView: View {
         .navigationTitle("Browser automation")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .task(id: revision) { await load() }
         .refreshable { await load() }
     }
@@ -155,7 +156,7 @@ struct AdminBrowserAutomationView: View {
             Section("Proxy by day") {
                 Chart(usage.byDay) { day in
                     BarMark(x: .value("UTC day", day.date), y: .value("Gigabytes", day.proxyBytes / 1_000_000_000))
-                        .foregroundStyle(day.errors > 0 ? .orange : Brand.accent(for: scheme))
+                        .foregroundStyle(day.errors > 0 ? .orange : slipPalette.accent)
                         .accessibilityLabel(day.date)
                         .accessibilityValue("\(gigabytes(day.proxyBytes)), \(day.sessions) sessions, \(day.errors) failures")
                 }.chartXAxis(.hidden).frame(height: 120)
@@ -253,7 +254,7 @@ struct AdminBrowserAutomationView: View {
                 Text(detail).font(.caption).foregroundStyle(.secondary)
             }
         } icon: {
-            Image(systemName: glyph).foregroundStyle(Brand.accent(for: scheme))
+            Image(systemName: glyph).foregroundStyle(slipPalette.accent)
         }
     }
 

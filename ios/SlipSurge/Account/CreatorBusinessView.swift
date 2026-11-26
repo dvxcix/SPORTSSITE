@@ -5,7 +5,7 @@ struct CreatorBusinessView: View {
 
     let api: CreatorStoreAPI
     let section: Section
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var page: CreatorStorePage?
     @State private var error: (any Error)?
     @State private var revision = 0
@@ -24,8 +24,8 @@ struct CreatorBusinessView: View {
                 }
             }.padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle(section == .promotion ? "Promotion" : "Creator Settings")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: revision) { if section == .promotion { await load() } }
@@ -39,7 +39,7 @@ struct CreatorBusinessView: View {
             DiscoverIdentityCard(title: store?.name ?? page.storeName, subtitle: published ? "Published" : "Draft",
                 detail: store?.bio, avatar: store?.logoUrl.flatMap(URL.init(string:)),
                 banner: store?.coverUrl.flatMap(URL.init(string:)), symbol: "storefront", count: nil)
-            ResearchToolCard(color: Brand.accent(for: scheme)) {
+            ResearchToolCard(color: slipPalette.accent) {
                 ResearchSectionTitle(title: "Discovery")
             } content: {
                 LabeledContent("Marketplace", value: published ? "Published" : "Finish store setup")
@@ -62,7 +62,7 @@ struct CreatorBusinessView: View {
     }
 
     private var settings: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             ResearchSectionTitle(title: "Storefront and Payments")
         } content: {
             NavigationLink {

@@ -6,7 +6,7 @@ struct MessagesView: View {
     var inInbox = false
     var initialInbox: (() -> MessageInbox?)? = nil
     var onUnreadChange: (Int) -> Void = { _ in }
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var inbox: MessageInbox?
     @State private var error: (any Error)?
     @State private var query = ""
@@ -43,7 +43,7 @@ struct MessagesView: View {
                 conversations(inbox)
             } else {
                 ResearchToolMessage(title: "Messages couldn’t load", error: error) { revision += 1 }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             }
         }
         .listStyle(.plain)
@@ -51,8 +51,8 @@ struct MessagesView: View {
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(inInbox ? "Inbox" : "Messages")
         .scrollContentBackground(.hidden)
-        .background(Brand.surface(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.surface)
+        .foregroundStyle(slipPalette.text)
         .toolbar {
             ToolbarItem(placement: .primaryAction) { Button("New message", systemImage: "square.and.pencil") { composing = true } }
         }
@@ -94,7 +94,7 @@ struct MessagesView: View {
             .frame(minHeight: 44).contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
     }
 
     private var requestsList: some View {
@@ -114,14 +114,14 @@ struct MessagesView: View {
                     Button("Decline", role: .destructive) { Task { await respond(to: item, status: "declined") } }
                         .disabled(pending.contains(item.id))
                     Button("Accept") { Task { await respond(to: item, status: "accepted") } }
-                        .tint(Brand.accent(for: scheme)).disabled(pending.contains(item.id))
+                        .tint(slipPalette.accent).disabled(pending.contains(item.id))
                 }
-                .listRowBackground(Brand.surface(for: scheme))
+                .listRowBackground(slipPalette.surface)
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Brand.surface(for: scheme))
+        .background(slipPalette.surface)
         .navigationTitle("Requests")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
@@ -139,7 +139,7 @@ struct MessagesView: View {
         if recent.isEmpty {
             ContentUnavailableView(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "No conversations" : "No matching conversations",
                 systemImage: "bubble.left.and.bubble.right")
-                .listRowBackground(Brand.surface(for: scheme))
+                .listRowBackground(slipPalette.surface)
                 .listRowSeparator(.hidden)
         }
         ForEach(recent) { conversation in
@@ -152,7 +152,7 @@ struct MessagesView: View {
                 }
             }
             .buttonStyle(.plain)
-            .listRowBackground(Brand.surface(for: scheme))
+            .listRowBackground(slipPalette.surface)
         }
     }
 
@@ -189,7 +189,7 @@ struct MessagesView: View {
                     if unread > 0 {
                         Text(unread.formatted()).font(.caption2.bold()).monospacedDigit()
                             .padding(.horizontal, 6).padding(.vertical, 3)
-                            .background(Brand.accent(for: scheme).opacity(0.2), in: .capsule)
+                            .background(slipPalette.accent.opacity(0.2), in: .capsule)
                             .accessibilityLabel("\(unread) unread")
                     }
                 }
@@ -235,7 +235,7 @@ struct MessagesView: View {
 struct MessageAvatar: View {
     let person: MessagePerson?
     var size: CGFloat = 42
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
         if let person {
@@ -244,9 +244,9 @@ struct MessageAvatar: View {
         } else {
             Image(systemName: "person.crop.circle.fill")
                 .font(.system(size: size * 0.65))
-                .foregroundStyle(Brand.accent(for: scheme))
+                .foregroundStyle(slipPalette.accent)
                 .frame(width: size, height: size)
-                .background(Brand.background(for: scheme), in: .circle)
+                .background(slipPalette.background, in: .circle)
                 .accessibilityHidden(true)
         }
     }

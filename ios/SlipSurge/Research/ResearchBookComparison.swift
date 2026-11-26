@@ -51,7 +51,8 @@ struct ResearchBookComparison: View {
 
     let detail: ResearchOddsDetail
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var textSize
     @State private var section = Section.sportsbooks
@@ -93,7 +94,7 @@ struct ResearchBookComparison: View {
             }
             .frame(maxWidth: 580)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .background(Brand.background(for: scheme))
+            .background(slipPalette.background)
             .navigationTitle("Compare odds")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -102,7 +103,7 @@ struct ResearchBookComparison: View {
                 }
             }
         }
-        .tint(Brand.accent(for: scheme))
+        .tint(slipPalette.accent)
         .presentationDetents(textSize.isAccessibilitySize ? [.large] : [.fraction(0.68), .large])
         .presentationDragIndicator(.visible)
         .task(id: retry) { await loadBooks() }
@@ -138,7 +139,7 @@ struct ResearchBookComparison: View {
         .padding(12)
         .background {
             ZStack {
-                Brand.surface(for: scheme)
+                slipPalette.surface
                 LinearGradient(colors: [player.primary.opacity(scheme == .dark ? 0.35 : 0.15),
                     player.secondary.opacity(scheme == .dark ? 0.25 : 0.1)], startPoint: .topLeading, endPoint: .bottomTrailing)
             }
@@ -206,7 +207,7 @@ struct ResearchBookComparison: View {
                 VStack(alignment: .trailing, spacing: 3) {
                     Text(ResearchOddsBoard.price(quote.price.current)).font(.headline).monospacedDigit()
                     if best == quote.price.current {
-                        Text("Best recorded").font(.caption2.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                        Text("Best recorded").font(.caption2.weight(.semibold)).foregroundStyle(slipPalette.accent)
                     }
                 }
             case .quoted:

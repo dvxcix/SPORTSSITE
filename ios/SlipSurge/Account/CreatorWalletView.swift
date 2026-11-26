@@ -7,7 +7,7 @@ struct CreatorWalletView: View {
     private struct RevenueQuery: Equatable { let days: Int; let currency: String; let revision: Int }
 
     let api: CreatorStoreAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var page: CreatorWalletSnapshot?
     @State private var payouts: [CreatorWalletSnapshot.Payout] = []
     @State private var cursor: String?
@@ -58,8 +58,8 @@ struct CreatorWalletView: View {
         }
         .navigationTitle("Balance & payouts")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Refresh", systemImage: "arrow.clockwise") { revision += 1 }.labelStyle(.iconOnly).disabled(loadingWallet)
@@ -89,7 +89,7 @@ struct CreatorWalletView: View {
     }
 
     private var balances: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             Label("Balance", systemImage: "wallet.bifold").font(.headline)
         } content: {
             if let page {
@@ -121,7 +121,7 @@ struct CreatorWalletView: View {
     }
 
     private var revenueCard: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             Text("Revenue").font(.headline)
             Spacer()
             Picker("Revenue period", selection: $days) {
@@ -134,7 +134,7 @@ struct CreatorWalletView: View {
                 Chart(revenue.points) { day in
                     if let date = SidelineBoard.timestamp("\(day.date)T00:00:00Z") {
                         BarMark(x: .value("Date", date, unit: .day), y: .value("Gross sales", NSDecimalNumber(decimal: day.amount).doubleValue))
-                            .foregroundStyle(Brand.accent(for: scheme))
+                            .foregroundStyle(slipPalette.accent)
                             .accessibilityLabel(date.formatted(date: .abbreviated, time: .omitted))
                             .accessibilityValue(money(day.amount))
                     }
@@ -155,7 +155,7 @@ struct CreatorWalletView: View {
     }
 
     private var payoutHistory: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) { Text("Payout history").font(.headline) } content: {
+        ResearchToolCard(color: slipPalette.accent) { Text("Payout history").font(.headline) } content: {
             if page?.historyError == true {
                 Text("Payout history couldn’t load.").font(.subheadline).foregroundStyle(.secondary)
             } else if page != nil {

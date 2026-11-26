@@ -239,7 +239,8 @@ struct CourtTrackingView: View {
     var linkedPlayerID: Int?
     var linkedMetric: String?
     var onMetricChange: ((String) -> Void)?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var data: DataSet?
     @State private var error: (any Error)?
     @State private var retry = 0
@@ -398,7 +399,7 @@ struct CourtTrackingView: View {
             Chart(Array(observations.reversed().enumerated()), id: \.element.id) { index, item in
                 if let value = item.value {
                     BarMark(x: .value("Game", index + 1), y: .value(field.label, field.percentage ? value * 100 : value))
-                        .foregroundStyle(Brand.accent(for: scheme))
+                        .foregroundStyle(slipPalette.accent)
                         .accessibilityLabel(String(item.log.game.date.prefix(10)))
                         .accessibilityValue(format(value, field: field))
                 }

@@ -37,7 +37,7 @@ struct GameCenterView: View {
     let api: DiscoverAPI
     let game: Scoreboard.Match
     let date: String
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var phase
     @Environment(\.nativeEmojiLibrary) private var emojiLibrary
@@ -158,9 +158,9 @@ struct GameCenterView: View {
         .frame(maxWidth: .infinity)
         .navigationTitle(matchTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
+        .tint(slipPalette.accent)
         .socialDetail()
         .toolbar {
             if let url = gameLink.url {
@@ -377,10 +377,10 @@ struct GameCenterView: View {
         .frame(maxWidth: .infinity)
         .background {
             LinearGradient(colors: [
-                treatment(game.away.color).opacity(0.20), Brand.surface(for: scheme),
+                treatment(game.away.color).opacity(0.20), slipPalette.surface,
                 treatment(game.home.secondary ?? game.home.color).opacity(0.20)
             ], startPoint: .leading, endPoint: .trailing)
-            .background(Brand.surface(for: scheme))
+            .background(slipPalette.surface)
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Scoreboard")
@@ -465,7 +465,7 @@ struct GameCenterView: View {
                 FeedPostCard(post: post, discussion: { selectedPost = post.postID },
                     showAuthor: post.author.map { author in { selectedMember = author.username } },
                     actionsAPI: .init(account: api.account, userID: api.userID))
-                    .padding(11).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+                    .padding(11).background(slipPalette.surface, in: .rect(cornerRadius: 14))
             }
         case .room:
             room(data.room ?? [])
@@ -674,7 +674,7 @@ struct GameCenterView: View {
                         Text(name).font(.subheadline.weight(.bold))
                         if note.sender?.isVerified == true {
                             Image(systemName: "checkmark.seal.fill").font(.caption)
-                                .foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Verified")
+                                .foregroundStyle(slipPalette.accent).accessibilityLabel("Verified")
                         }
                         if let date = SidelineBoard.timestamp(note.createdAt) {
                             Text(date, style: .relative).font(.caption2).foregroundStyle(.secondary)
@@ -706,8 +706,8 @@ struct GameCenterView: View {
     }
 
     private func treatment(_ hex: String?) -> Color {
-        guard let hex else { return Brand.accent(for: scheme) }
-        return Color(hex: hex.hasPrefix("#") ? hex : "#\(hex)") ?? Brand.accent(for: scheme)
+        guard let hex else { return slipPalette.accent }
+        return Color(hex: hex.hasPrefix("#") ? hex : "#\(hex)") ?? slipPalette.accent
     }
 
     private func orderedUnique(_ values: [String]) -> [String] {

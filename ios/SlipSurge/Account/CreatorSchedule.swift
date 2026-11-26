@@ -62,7 +62,7 @@ struct CreatorScheduleEditor: View {
     let targets: [Target]
     let allowMLB: Bool
     let didSave: () async -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.dismiss) private var dismiss
     @State private var identifier = UUID()
     @State private var content = ""
@@ -88,7 +88,7 @@ struct CreatorScheduleEditor: View {
                     TextField("Write your post", text: $content, axis: .vertical).lineLimit(5...14)
                     Text("\(content.utf16.count) / \(Self.limit)").font(.caption.monospacedDigit())
                         .foregroundStyle(content.utf16.count > Self.limit ? .red : .secondary)
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
                 Section("Publishing") {
                     Picker("Post type", selection: $kind) { Text("Post").tag("text"); Text("Analysis").tag("analysis") }
                     ResearchArtworkPicker(title: "Sport", options: leagueOptions, selection: $league)
@@ -101,12 +101,12 @@ struct CreatorScheduleEditor: View {
                         DatePicker("Publish at", selection: $schedule, in: Date.now...Date.now.addingTimeInterval(365 * 86_400))
                             .datePickerStyle(.compact)
                     }
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
                 if let problem { Label(problem, systemImage: "exclamationmark.circle").foregroundStyle(.red) }
             }
             .scrollContentBackground(.hidden)
-            .background(Brand.background(for: scheme))
-            .foregroundStyle(Brand.text(for: scheme))
+            .background(slipPalette.background)
+            .foregroundStyle(slipPalette.text)
             .navigationTitle(existing == nil ? "New scheduled post" : "Edit scheduled post")
             .navigationBarTitleDisplayMode(.inline)
             .disabled(busy)

@@ -33,7 +33,8 @@ struct SidelineLaddersView: View {
     let revision: Int
     let initialPlayer: Int?
     let initialLine: Double?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var market = "receiving_yards"
     @State private var book = "fanduel"
     @State private var kind = ContractKind.milestone
@@ -234,7 +235,7 @@ struct SidelineLaddersView: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(lineName(contract.line)).font(.caption.weight(.medium)).foregroundStyle(.secondary)
             Text(primary(contract)).font(.subheadline.weight(.bold)).monospacedDigit()
-                .foregroundStyle(display == .movement ? Brand.signal(contract.movement, for: scheme) : Brand.text(for: scheme))
+                .foregroundStyle(display == .movement ? Brand.signal(contract.movement, for: scheme) : slipPalette.text)
             Text(secondary(contract)).font(.caption2).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
@@ -344,7 +345,7 @@ struct SidelineLaddersView: View {
 
     private func teamVisual(_ code: String) -> SidelineMarketTools.Visual {
         teams.first { SidelineResearchMarket.normalizeTeam($0.code) == SidelineResearchMarket.normalizeTeam(code) }
-            ?? .init(code: code, logo: nil, primary: Brand.accent(for: scheme), secondary: nil)
+            ?? .init(code: code, logo: nil, primary: slipPalette.accent, secondary: nil)
     }
 
 }

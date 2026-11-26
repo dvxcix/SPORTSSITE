@@ -24,7 +24,7 @@ struct NativeExploreView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.openURL) private var openURL
     @State private var data: Explore?
     @State private var scoreboard: Scoreboard?
@@ -67,8 +67,8 @@ struct NativeExploreView: View {
         }
         .navigationTitle("Explore")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 NavigationLink {
@@ -95,7 +95,7 @@ struct NativeExploreView: View {
                                 .frame(width: 20, height: 20)
                             Text(verbatim: sport).font(.subheadline.weight(.semibold))
                         }.padding(.horizontal, 12).frame(minHeight: 44)
-                            .background(Brand.surface(for: scheme), in: .capsule)
+                            .background(slipPalette.surface, in: .capsule)
                     }
                 }
             }
@@ -144,7 +144,7 @@ struct NativeExploreView: View {
     private func scoreTeam(_ team: Scoreboard.Match.Team) -> ResearchMatchup.Team {
         let primary = team.color.flatMap { Color(hex: $0.hasPrefix("#") ? $0 : "#" + $0) }
         let secondary = team.secondary.flatMap { Color(hex: $0.hasPrefix("#") ? $0 : "#" + $0) }
-        return .init(name: team.abbreviation, logo: team.logo, color: primary ?? Brand.surface(for: scheme), secondary: secondary)
+        return .init(name: team.abbreviation, logo: team.logo, color: primary ?? slipPalette.surface, secondary: secondary)
     }
 
     private func scoreLabel(_ match: Scoreboard.Match) -> String {
@@ -160,14 +160,14 @@ struct NativeExploreView: View {
                     discussion: { selectedPost = post.postID },
                     showAuthor: post.author.flatMap { member in siteURL("/profile/\(member.username)").map { url in { openURL(url) } } },
                     actionsAPI: feed, postChanged: { _ in revision += 1 })
-                    .padding(13).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
+                    .padding(13).background(slipPalette.surface, in: .rect(cornerRadius: 16))
                     .disabled(changingPosts.contains(post.postID))
             }
         }
     }
 
     private var research: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             Label("Research", systemImage: "chart.bar.xaxis").font(.title3.bold())
         } content: {
             VStack(alignment: .leading, spacing: 9) {
@@ -202,7 +202,7 @@ struct NativeExploreView: View {
                         identity(row.name, detail: row.description, verified: false)
                         Spacer()
                         chevron
-                    }.padding(10).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+                    }.padding(10).background(slipPalette.surface, in: .rect(cornerRadius: 13))
                 }
             }
         }
@@ -229,7 +229,7 @@ struct NativeExploreView: View {
                             Task { await follow(person.id, enable: !following) }
                         }.buttonStyle(.bordered).disabled(changingPeople.contains(person.id))
                     }
-                }.padding(11).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+                }.padding(11).background(slipPalette.surface, in: .rect(cornerRadius: 13))
             }
         }
     }
@@ -239,7 +239,7 @@ struct NativeExploreView: View {
             HStack(spacing: 5) {
                 Text(verbatim: name).font(.headline)
                 if verified {
-                    Image(systemName: "checkmark.seal.fill").foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Verified")
+                    Image(systemName: "checkmark.seal.fill").foregroundStyle(slipPalette.accent).accessibilityLabel("Verified")
                 }
             }
             if let detail, !detail.isEmpty { Text(verbatim: detail).font(.caption).foregroundStyle(.secondary).lineLimit(2) }

@@ -16,7 +16,7 @@ struct StoriesRail: View {
     let sports: [String]
     let revision: Int
     let showAuthor: (String) -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var page: StoriesAPI.Page?
     @State private var composer = false
     @State private var playback: Playback?
@@ -41,9 +41,9 @@ struct StoriesRail: View {
                                 VStack(spacing: 6) {
                                     Image(systemName: "plus")
                                         .font(.title3.weight(.semibold))
-                                        .foregroundStyle(Brand.accent(for: scheme))
+                                        .foregroundStyle(slipPalette.accent)
                                         .frame(width: 58, height: 58)
-                                        .background(Brand.accent(for: scheme).opacity(0.14), in: Circle())
+                                        .background(slipPalette.accent.opacity(0.14), in: Circle())
                                     Text("Your story").font(.caption.weight(.medium))
                                 }.frame(width: 68)
                             }.buttonStyle(SlipSurgePressStyle())
@@ -57,7 +57,7 @@ struct StoriesRail: View {
                                                 if let sport = story.sport, let logo = LeagueArtwork.logo(sport) {
                                                     ResearchArtwork(urls: [logo], fallback: "sportscourt", pointSize: 15)
                                                         .frame(width: 15, height: 15).padding(4)
-                                                        .background(Brand.surface(for: scheme), in: Circle())
+                                                        .background(slipPalette.surface, in: Circle())
                                                 }
                                             }
                                         Text(story.author.name).font(.caption.weight(.medium)).lineLimit(1)
@@ -102,10 +102,10 @@ struct StoriesRail: View {
 struct StoryAvatar: View {
     let author: FeedStory.Author
     let size: CGFloat
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
-        let accent = Color(hex: author.avatarRingColor) ?? Brand.accent(for: scheme)
+        let accent = Color(hex: author.avatarRingColor) ?? slipPalette.accent
         NativeMemberAvatar(url: author.avatarUrl, name: author.name, size: size - 8,
             style: author.avatarRingStyle, color: author.avatarRingColor)
             .padding(4)

@@ -36,7 +36,8 @@ struct DugoutOddsTerminal: View {
     @State var date: Date
     @State var selectedGame: Int?
     @AppStorage("dugoutOddsTerminalPresets") private var storedPresets = Data()
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var slate: DugoutBoard?
     @State private var history: DugoutOddsHistory?
@@ -87,8 +88,8 @@ struct DugoutOddsTerminal: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Odds Movement Terminal")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: "\(key):\(revision)") { await loadSlate() }

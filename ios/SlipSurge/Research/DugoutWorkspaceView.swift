@@ -7,7 +7,7 @@ struct DugoutWorkspaceView: View {
     let initialPanel: DugoutWorkspaceGame.Panel?
     let initialPlayer: Int?
     @State var date: Date
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var choice: Int?
     @State private var ignoresInitialGame = false
@@ -36,7 +36,7 @@ struct DugoutWorkspaceView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Research Workspace")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: day) { await load(day) }
@@ -106,7 +106,7 @@ struct DugoutWorkspaceView: View {
                     }
                 }.padding(16)
             }
-            .background(Brand.background(for: scheme))
+            .background(slipPalette.background)
             .navigationTitle("Choose a game")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showsGames = false } } }

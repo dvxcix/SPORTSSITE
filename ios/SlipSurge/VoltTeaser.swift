@@ -4,7 +4,7 @@ struct VoltTeaser: View {
     enum Jersey { case nfl, nba }
 
     var jersey = Jersey.nfl
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @State private var open = false
@@ -28,12 +28,12 @@ struct VoltTeaser: View {
                     .frame(width: 47, height: 51)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("VOLT Sparks").font(.headline)
-                    Text("Coming soon").font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                    Text("Coming soon").font(.caption.weight(.semibold)).foregroundStyle(slipPalette.accent)
                 }
                 Button("Close", systemImage: "xmark") { open = false }
                     .labelStyle(.iconOnly).buttonStyle(.borderless).frame(minWidth: 44, minHeight: 44)
             }
-            .foregroundStyle(Brand.text(for: scheme))
+            .foregroundStyle(slipPalette.text)
             .padding(.vertical, 9).padding(.leading, 13).padding(.trailing, 4)
             .presentationCompactAdaptation(.none)
         }

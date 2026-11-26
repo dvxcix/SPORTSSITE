@@ -7,7 +7,7 @@ struct SidelinePlayerTrendView: View {
     let book: String
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var window = 10
 
     var body: some View {
@@ -30,8 +30,8 @@ struct SidelinePlayerTrendView: View {
         }
         .navigationTitle("Player trends")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
     }
 }
 
@@ -90,7 +90,8 @@ struct SidelineMMPlayerView: View {
     let initialBook: String
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var selectedBook: String?
     @State private var books: [String] = []
     @State private var trend: SidelineResearchPayload.Row?
@@ -128,8 +129,8 @@ struct SidelineMMPlayerView: View {
         }
         .navigationTitle("Player trends")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(.iconOnly) }
         }

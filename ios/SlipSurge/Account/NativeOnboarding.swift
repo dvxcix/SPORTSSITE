@@ -87,7 +87,8 @@ struct NativeOnboarding: View {
 
     let account: AccountStore
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var initial: Initial?
     @State private var draft: Draft?
@@ -158,9 +159,9 @@ struct NativeOnboarding: View {
                 }
             }
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
+        .tint(slipPalette.accent)
     }
 
     private var introduction: some View {
@@ -170,9 +171,9 @@ struct NativeOnboarding: View {
                 .accessibilityValue("Step \(stepIndex + 1) of \(Step.allCases.count)")
             Image(systemName: step.icon)
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(Brand.accent(for: scheme))
+                .foregroundStyle(slipPalette.accent)
                 .frame(width: 50, height: 50)
-                .background(Brand.accent(for: scheme).opacity(0.12), in: .circle)
+                .background(slipPalette.accent.opacity(0.12), in: .circle)
                 .accessibilityHidden(true)
             Text(step.rawValue).font(.largeTitle.weight(.bold)).accessibilityAddTraits(.isHeader)
         }
@@ -276,8 +277,8 @@ struct NativeOnboarding: View {
             }
             .padding(.horizontal, 8)
             .frame(minHeight: 44)
-            .foregroundStyle(selected ? Brand.accent(for: scheme) : Brand.text(for: scheme))
-            .background(selected ? Brand.accent(for: scheme).opacity(0.16) : Brand.surface(for: scheme), in: .rect(cornerRadius: 10))
+            .foregroundStyle(selected ? slipPalette.accent : slipPalette.text)
+            .background(selected ? slipPalette.accent.opacity(0.16) : slipPalette.surface, in: .rect(cornerRadius: 10))
         }
         .buttonStyle(SlipSurgePressStyle())
         .accessibilityAddTraits(selected ? .isSelected : [])

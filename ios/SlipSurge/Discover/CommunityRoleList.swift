@@ -5,7 +5,7 @@ struct CommunityRoleList: View {
     let api: CommunitySettingsAPI
     let initial: CommunitySettingsState
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var current: CommunitySettingsState?
     @State private var creating = false
     @State private var removing: CommunitySettingsState.Role?
@@ -20,7 +20,7 @@ struct CommunityRoleList: View {
                     CommunityRoleEditor(api: api, initial: state, original: role) { await reload() }
                 } label: {
                     HStack(spacing: 10) {
-                        Circle().fill(Color(hex: role.color) ?? Brand.accent(for: scheme)).frame(width: 12, height: 12)
+                        Circle().fill(Color(hex: role.color) ?? slipPalette.accent).frame(width: 12, height: 12)
                         Text(verbatim: role.name).font(.subheadline.weight(.semibold))
                         Spacer()
                         if role.isDefault { Text("Default").font(.caption).foregroundStyle(.secondary) }
@@ -29,12 +29,12 @@ struct CommunityRoleList: View {
                 .swipeActions(allowsFullSwipe: false) {
                     if !role.isDefault { Button("Delete", systemImage: "trash", role: .destructive) { removing = role } }
                 }
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
             if let problem { Text(problem).foregroundStyle(.red) }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Roles and permissions")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { Button("New role", systemImage: "plus") { creating = true } }
@@ -72,7 +72,7 @@ private struct CommunityRoleEditor: View {
     let original: CommunitySettingsState.Role?
     let didSave: () async -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var current: CommunitySettingsState?
     @State private var name = ""
     @State private var color = Color(rgb: 0xB4FF4D)
@@ -89,14 +89,14 @@ private struct CommunityRoleEditor: View {
             Section {
                 TextField("Role name", text: $name)
                 ColorPicker("Color", selection: $color, supportsOpacity: false)
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
             if let original {
                 Section("Permissions") {
                     ForEach(Self.labels, id: \.0) { key, label in
                         Toggle(label, isOn: Binding(get: { permissions[key] ?? false }, set: { permissions[key] = $0 }))
                             .disabled(original.isDefault && key == "manage_roles")
                     }
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
                 if !original.isDefault {
                     Section("Assign members") {
                         ForEach(state.members) { member in
@@ -110,7 +110,7 @@ private struct CommunityRoleEditor: View {
                                 }
                             }
                         }
-                    }.listRowBackground(Brand.surface(for: scheme))
+                    }.listRowBackground(slipPalette.surface)
                 }
                 Section("Channel permissions") {
                     ForEach(state.channels) { channel in
@@ -119,13 +119,13 @@ private struct CommunityRoleEditor: View {
                                 previous: state.overrides.first { $0.channelId == channel.id && $0.roleId == original.id }) { await reload() }
                         } label: { Label(channel.name, systemImage: "number") }
                     }
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
             }
-            if let feedback { Text(feedback).foregroundStyle(failure ? .red : Brand.accent(for: scheme)) }
+            if let feedback { Text(feedback).foregroundStyle(failure ? .red : slipPalette.accent) }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle(original == nil ? "New role" : "Edit role")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -194,7 +194,7 @@ private struct CommunityOverrideEditor: View {
     let channel: MessagesAPI.Channel
     let previous: CommunitySettingsState.Override?
     let didSave: () async -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.dismiss) private var dismiss
     @State private var view = Setting.inherited
     @State private var send = Setting.inherited
@@ -209,12 +209,12 @@ private struct CommunityOverrideEditor: View {
                 option("Send messages", selection: $send)
                 option("Manage messages", selection: $moderate)
             } header: { Text(role.name) }
-            .listRowBackground(Brand.surface(for: scheme))
+            .listRowBackground(slipPalette.surface)
             if failure { Text("Channel permissions couldn’t be saved.").foregroundStyle(.red) }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle(channel.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { Button("Save") { Task { await save() } }.disabled(busy) }

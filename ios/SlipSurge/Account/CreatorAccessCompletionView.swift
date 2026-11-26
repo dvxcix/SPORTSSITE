@@ -7,7 +7,7 @@ struct CreatorAccessCompletionView: View {
     let offerID: UUID
     let outcome: Outcome?
     @Environment(\.openURL) private var openURL
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var access: CreatorMembershipAPI.Access?
     @State private var problem = false
     @State private var running = false
@@ -16,7 +16,7 @@ struct CreatorAccessCompletionView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                ResearchToolCard(color: Brand.accent(for: scheme)) {
+                ResearchToolCard(color: slipPalette.accent) {
                     ResearchSectionTitle(title: heading)
                 } content: {
                     if running, access?.active != true { ProgressView("Checking Whop access") }
@@ -48,7 +48,7 @@ struct CreatorAccessCompletionView: View {
         }
         .navigationTitle("Member access")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .task(id: offerID) { await check(poll: outcome == nil) }
     }
 

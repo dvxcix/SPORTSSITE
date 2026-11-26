@@ -4,7 +4,7 @@ struct ResearchSlateControls: View {
     @Binding var date: Date
     var latest: Date? = nil
     @State private var calendarOpen = false
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     private var calendar: Calendar {
         var value = Calendar(identifier: .gregorian)
@@ -29,7 +29,7 @@ struct ResearchSlateControls: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .tint(Brand.accent(for: scheme))
+        .tint(slipPalette.accent)
         .sheet(isPresented: $calendarOpen) {
             NavigationStack {
                 Group {
@@ -88,7 +88,8 @@ struct ResearchMatchup: View {
     let subtitle: String?
     var selected = false
     var fullWidth = false
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     var body: some View {
         VStack(spacing: fullWidth ? 9 : 6) {
@@ -108,7 +109,7 @@ struct ResearchMatchup: View {
         .frame(minWidth: 132, maxWidth: fullWidth ? .infinity : nil)
         .background {
             ZStack {
-                Brand.surface(for: scheme)
+                slipPalette.surface
                 LinearGradient(
                     stops: [
                         .init(color: away.color.opacity(scheme == .dark ? 0.37 : 0.20), location: 0),
@@ -122,7 +123,7 @@ struct ResearchMatchup: View {
         .clipShape(.rect(cornerRadius: fullWidth ? 18 : 13))
         .overlay {
             RoundedRectangle(cornerRadius: fullWidth ? 18 : 13)
-                .strokeBorder(selected ? Brand.accent(for: scheme) : .secondary.opacity(0.22), lineWidth: selected ? 1.5 : 1)
+                .strokeBorder(selected ? slipPalette.accent : .secondary.opacity(0.22), lineWidth: selected ? 1.5 : 1)
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(selected ? .isSelected : [])

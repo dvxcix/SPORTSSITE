@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct SlipSurgeApp: App {
-    @AppStorage("appearance") private var appearance = Appearance.system
+    @AppStorage("appearance") private var appearance = Appearance.color
     @UIApplicationDelegateAdaptor(PushNotifications.self) private var push
     @Environment(\.scenePhase) private var phase
     @State private var account = AccountStore()
@@ -13,6 +13,8 @@ struct SlipSurgeApp: App {
         WindowGroup {
             SlipSurgeTabs(account: account, appearance: $appearance, incomingURL: $incomingURL, notificationOpen: $notificationOpen)
                 .environmentObject(push)
+                .environment(\.slipAppearance, appearance)
+                .environment(\.symbolVariants, appearance == .color ? .fill : .none)
                 .preferredColorScheme(appearance.scheme)
                 .onOpenURL { url in
                     if url.scheme == EmailAuthAttempt.scheme {
@@ -33,12 +35,14 @@ struct SlipSurgeApp: App {
 }
 
 enum Appearance: String, CaseIterable {
+    case color = "Color"
     case system = "System"
     case light = "Light"
     case dark = "Dark"
 
     var symbol: String {
         switch self {
+        case .color: "paintpalette.fill"
         case .system: "circle.lefthalf.filled"
         case .light: "sun.max"
         case .dark: "moon"
@@ -49,28 +53,12 @@ enum Appearance: String, CaseIterable {
         switch self {
         case .system: nil
         case .light: .light
-        case .dark: .dark
+        case .dark, .color: .dark
         }
     }
 }
 
-enum Brand {
-    static func accent(for scheme: ColorScheme) -> Color {
-        Color(rgb: scheme == .dark ? 0xB4FF4D : 0x3F6A13)
-    }
-
-    static func background(for scheme: ColorScheme) -> Color {
-        Color(rgb: scheme == .dark ? 0x0C1118 : 0xEDF0F4)
-    }
-
-    static func surface(for scheme: ColorScheme) -> Color {
-        Color(rgb: scheme == .dark ? 0x141B25 : 0xFFFFFF)
-    }
-
-    static func text(for scheme: ColorScheme) -> Color {
-        Color(rgb: scheme == .dark ? 0xF1F5FB : 0x182331)
-    }
-}
+enum Brand {}
 
 extension Color {
     init?(hex: String?) {

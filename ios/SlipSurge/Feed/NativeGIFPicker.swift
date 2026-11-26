@@ -55,7 +55,7 @@ private struct NativeGIFPicker: View {
     let uploadKind: NativeMediaUpload.Kind
     let choose: (URL) -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @AppStorage("slipsurgeRecentGIFs") private var stored = Data()
     @State private var query = ""
     @State private var search = ""
@@ -109,7 +109,7 @@ private struct NativeGIFPicker: View {
                 .keyboardDone()
             }
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle(showAttachments ? "GIF attachments" : "Choose a GIF")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -176,7 +176,7 @@ private struct NativeGIFPicker: View {
                             Button { select(url, remember: true) } label: {
                                 GIFThumbnail(url: url)
                                     .frame(width: 80, height: 61)
-                                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 9))
+                                    .background(slipPalette.surface, in: .rect(cornerRadius: 9))
                                     .clipShape(.rect(cornerRadius: 9))
                             }
                             .buttonStyle(SlipSurgePressStyle())

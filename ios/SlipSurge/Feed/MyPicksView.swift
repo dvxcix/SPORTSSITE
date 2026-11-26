@@ -12,7 +12,7 @@ struct MyPicksView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.scenePhase) private var phase
     @State private var view = ViewType.active
     @State private var limit = 50
@@ -43,8 +43,8 @@ struct MyPicksView: View {
         }
         .navigationTitle("My Picks")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationDestination(item: $focused) { id in FeedThreadView(api: feed, id: id) }
         .toolbar {
             ToolbarItem(placement: .primaryAction) { Button("Post a pick", systemImage: "square.and.pencil") { compose = true } }
@@ -73,7 +73,7 @@ struct MyPicksView: View {
         if filtered.isEmpty { ContentUnavailableView(view == .active ? "No active picks" : "No picks yet", systemImage: "list.clipboard") }
         ForEach(filtered) { post in
             FeedPostCard(post: post, discussion: { focused = post.postID }, actionsAPI: feed, postChanged: { _ in revision += 1 })
-                .padding(12).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
+                .padding(12).background(slipPalette.surface, in: .rect(cornerRadius: 16))
         }
         if page.hasMore, limit < 500 {
             Button("Load more") { limit = min(500, limit + 50) }.buttonStyle(.bordered)

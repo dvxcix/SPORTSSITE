@@ -54,7 +54,7 @@ struct InformationNavigation: View {
     let account: AccountStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
-    @AppStorage("appearance") private var appearance = Appearance.system
+    @AppStorage("appearance") private var appearance = Appearance.color
     @State private var history: [Destination] = []
 
     var body: some View {
@@ -130,7 +130,7 @@ private struct InformationDocumentView: View {
     }
 
     let page: InformationPage
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var document: Document?
     @State private var issue: (any Error)?
     @State private var revision = 0
@@ -157,8 +157,8 @@ private struct InformationDocumentView: View {
         }
         .navigationTitle(document?.title ?? page.title)
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: revision) {
             do {
                 let value: Document = try await SlipSurgeHTTP.get("/api/mobile/information", query: [.init(name: "page", value: page.rawValue)])
@@ -183,7 +183,7 @@ private struct InformationDocumentView: View {
                     }
                 case .callout:
                     Text(block.content).padding(13).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+                        .background(slipPalette.surface, in: .rect(cornerRadius: 12))
                 }
             }
         }.lineSpacing(4)

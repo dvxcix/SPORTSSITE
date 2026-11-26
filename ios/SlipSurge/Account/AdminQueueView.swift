@@ -67,7 +67,7 @@ struct AdminQueueView: View {
     let userID: UUID
     let queue: AdminQueue
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var rows: [AdminQueueRecord]?
     @State private var status = "pending"
     @State private var kind = ""
@@ -94,7 +94,7 @@ struct AdminQueueView: View {
                         ForEach(["post", "user", "comment", "blog", "event", "page"], id: \.self) { Text($0.capitalized).tag($0) }
                     }
                 }
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
             if let rows {
                 let visible = rows.filter { entry in
                     search.isEmpty || [entry.name, entry.person?.username, entry.reason, entry.preview].compactMap { $0 }
@@ -104,7 +104,7 @@ struct AdminQueueView: View {
                     NavigationLink {
                         AdminQueueDetailView(account: account, userID: userID, queue: queue, entry: entry) { revision += 1 }
                     } label: { row(entry) }
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
                 if visible.isEmpty { ContentUnavailableView("No matching entries", systemImage: queue.icon) }
                 if more {
                     Button("Load more") { Task { await load(append: true) } }.disabled(loading)
@@ -114,8 +114,8 @@ struct AdminQueueView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle(queue.title)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, prompt: queue == .reports ? "Reporter or reason" : "Member")
@@ -133,7 +133,7 @@ struct AdminQueueView: View {
             }
             Spacer()
             Text(entry.status.capitalized).font(.caption.weight(.semibold))
-                .foregroundStyle(entry.status == "pending" ? Brand.accent(for: scheme) : .secondary)
+                .foregroundStyle(entry.status == "pending" ? slipPalette.accent : .secondary)
         }
     }
 

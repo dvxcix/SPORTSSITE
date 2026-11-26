@@ -20,7 +20,7 @@ struct NativeMarketplaceView: View {
     let api: DiscoverAPI
     let userID: UUID
     let target: NativeMarketplaceTarget
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var league: NativeMarketplaceTarget.League
     @State private var allowedMLB: Bool?
     @State private var personSelectedLeague = false
@@ -57,8 +57,8 @@ struct NativeMarketplaceView: View {
         }
         .navigationTitle("Matrix Marketplace")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: userID) {
             let permitted = (try? await DugoutAPI(account: api.account, userID: userID).available()) == true
             guard !Task.isCancelled, api.account.memberID == userID else { return }

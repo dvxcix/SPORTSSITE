@@ -3,7 +3,8 @@ import SwiftUI
 struct FeedPickCard: View {
     let pick: FeedPost.Pick
     let sport: String?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     private var league: String? { pick.single.sport ?? sport }
     private var bookPalette: (primary: Color, secondary: Color)? { Sportsbook.slipPalette(pick.book) }
@@ -49,10 +50,10 @@ struct FeedPickCard: View {
         }
         .padding(13)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .foregroundStyle(Brand.text(for: scheme))
+        .foregroundStyle(slipPalette.text)
         .background {
             let shape = RoundedRectangle(cornerRadius: 15)
-            shape.fill(Brand.surface(for: scheme))
+            shape.fill(slipPalette.surface)
                 .overlay {
                     shape.fill(LinearGradient(stops: [
                         .init(color: tint.opacity(scheme == .dark ? 0.35 : 0.22), location: 0),
@@ -116,6 +117,6 @@ struct FeedPickCard: View {
             guard let hex = UInt32(value.trimmingCharacters(in: CharacterSet(charactersIn: "#")), radix: 16) else { return nil }
             return Color(rgb: hex)
         }
-        return (colors.first ?? Brand.accent(for: scheme), colors.dropFirst().first ?? Brand.surface(for: scheme))
+        return (colors.first ?? slipPalette.accent, colors.dropFirst().first ?? slipPalette.surface)
     }
 }

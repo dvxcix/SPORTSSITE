@@ -10,7 +10,8 @@ struct DugoutSprayView: View {
 
     let api: DugoutToolsAPI
     @State var date: Date
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scene
     @State private var slate: DugoutSpraySlate?
@@ -57,8 +58,8 @@ struct DugoutSprayView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Spray Charts")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: "\(key):\(revision)") {
@@ -207,7 +208,7 @@ struct DugoutSprayView: View {
                                 portraits: [batter.headshot], teamLogo: team.logo, primary: team.color, secondary: team.secondaryColor)
                             Spacer()
                             Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(selected ? Brand.accent(for: scheme) : .secondary)
+                                .foregroundStyle(selected ? slipPalette.accent : .secondary)
                                 .accessibilityHidden(true)
                         }
                     }
@@ -289,8 +290,8 @@ struct DugoutSprayView: View {
         }
         .padding(22)
         .frame(width: 520)
-        .foregroundStyle(Brand.text(for: scheme))
-        .background(Brand.background(for: scheme))
+        .foregroundStyle(slipPalette.text)
+        .background(slipPalette.background)
         .environment(\.colorScheme, scheme))
         renderer.scale = 2
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("SlipSurge-Spray-\(UUID().uuidString).png")

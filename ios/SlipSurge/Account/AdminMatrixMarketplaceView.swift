@@ -37,7 +37,7 @@ struct AdminMatrixMarketplaceView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var status: Status?
     @State private var search = ""
     @State private var revision = 0
@@ -69,8 +69,8 @@ struct AdminMatrixMarketplaceView: View {
                 }
             }.padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Matrix Marketplace")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, prompt: "Find a publication")
@@ -91,11 +91,11 @@ struct AdminMatrixMarketplaceView: View {
     }
 
     private func card(_ listing: Listing) -> some View {
-        ResearchToolCard(color: Color(hex: listing.color) ?? Brand.accent(for: scheme)) {
+        ResearchToolCard(color: Color(hex: listing.color) ?? slipPalette.accent) {
             HStack(alignment: .firstTextBaseline) {
                 Text(listing.title).font(.headline)
                 Spacer()
-                Text(listing.status.visibleLabel).font(.caption.weight(.semibold)).foregroundStyle(listing.status == .published ? Brand.accent(for: scheme) : .secondary)
+                Text(listing.status.visibleLabel).font(.caption.weight(.semibold)).foregroundStyle(listing.status == .published ? slipPalette.accent : .secondary)
             }
         } content: {
             if let author = listing.author {

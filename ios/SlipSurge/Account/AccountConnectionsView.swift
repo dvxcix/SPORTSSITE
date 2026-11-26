@@ -6,7 +6,8 @@ struct AccountConnectionsView: View {
     var focusedProvider: SignInProvider? = nil
 
     @Environment(\.webAuthenticationSession) private var browser
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var connections: [AccountConnection]?
     @State private var working: SignInProvider?
@@ -25,7 +26,7 @@ struct AccountConnectionsView: View {
                     Button("Retry", systemImage: "arrow.clockwise") { Task { try? await load() } }.buttonStyle(.bordered)
                 }
                 if let feedback {
-                    Label(feedback, systemImage: "checkmark.circle").font(.subheadline).foregroundStyle(Brand.accent(for: scheme))
+                    Label(feedback, systemImage: "checkmark.circle").font(.subheadline).foregroundStyle(slipPalette.accent)
                 }
                 if let failure {
                     Label(failure, systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.red)
@@ -33,8 +34,8 @@ struct AccountConnectionsView: View {
             }
             .padding(16).frame(maxWidth: 520).frame(maxWidth: .infinity)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle(focusedProvider?.title ?? "Connected accounts")
         .navigationBarTitleDisplayMode(.inline)
         .task { try? await load() }
@@ -65,7 +66,7 @@ struct AccountConnectionsView: View {
                 }
                 Spacer()
                 if connection.connected {
-                    Image(systemName: "checkmark.seal.fill").foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Connected")
+                    Image(systemName: "checkmark.seal.fill").foregroundStyle(slipPalette.accent).accessibilityLabel("Connected")
                 }
             }
         } content: {
@@ -93,7 +94,7 @@ struct AccountConnectionsView: View {
             Label("Connect \(provider.title)", systemImage: "arrow.up.right")
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity, minHeight: 44)
-                .foregroundStyle(provider == .whop ? Color(rgb: 0x180A05) : Brand.text(for: scheme))
+                .foregroundStyle(provider == .whop ? Color(rgb: 0x180A05) : slipPalette.text)
                 .contentShape(.rect(cornerRadius: 13))
         }.buttonStyle(SlipSurgePressStyle())
         if provider == .whop {
@@ -101,7 +102,7 @@ struct AccountConnectionsView: View {
         } else if #available(iOS 26, *) {
             button.glassEffect(.regular.tint(providerTint(provider).opacity(0.15)).interactive(), in: .rect(cornerRadius: 13))
         } else {
-            button.background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+            button.background(slipPalette.surface, in: .rect(cornerRadius: 13))
         }
     }
 

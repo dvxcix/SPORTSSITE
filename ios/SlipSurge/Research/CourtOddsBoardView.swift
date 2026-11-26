@@ -34,7 +34,7 @@ struct CourtOddsBoardView: View {
     let showsContent: Bool
     let explicitBook: String?
     private let api = CourtOddsAPI()
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var market = "points"
     @State private var book = "fanduel"
     @State private var books: [String] = []
@@ -86,7 +86,7 @@ struct CourtOddsBoardView: View {
                 VStack(alignment: .leading, spacing: 0) { marketPicker; sportsbookPicker }
             }
             .padding(.horizontal, 12)
-            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+            .background(slipPalette.surface, in: .rect(cornerRadius: 12))
             switch state {
             case .loading:
                 loading

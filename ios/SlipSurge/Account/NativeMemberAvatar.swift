@@ -67,7 +67,7 @@ struct NativeMemberAvatar: View {
     var color: String?
     var tone: String?
     var animated = true
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.scenePhase) private var phase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -82,7 +82,7 @@ struct NativeMemberAvatar: View {
         case "ultimate": return Color(rgb: 0x39D9FF)
         case "advanced": return Color(rgb: 0xFF4D6A)
         case "creator": return Color(rgb: 0xF8C15C)
-        default: return Brand.accent(for: scheme).opacity(0.75)
+        default: return slipPalette.accent.opacity(0.75)
         }
     }
 
@@ -91,7 +91,7 @@ struct NativeMemberAvatar: View {
             contentMode: .fill, fallbackText: initials, pointSize: size)
             .font(.system(size: size * 0.3, weight: .semibold))
             .frame(width: size, height: size)
-            .background(Brand.surface(for: scheme), in: .circle)
+            .background(slipPalette.surface, in: .circle)
             .clipShape(.circle)
             .overlay { Circle().strokeBorder(.secondary.opacity(0.23)) }
             .overlay { ornament.allowsHitTesting(false) }

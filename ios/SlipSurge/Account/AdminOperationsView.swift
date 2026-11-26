@@ -66,7 +66,7 @@ struct AdminOperationsView: View {
     let viewer: DiscoverAPI
     let mode: Mode
     var ownerID: UUID?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var index: Index?
     @State private var query = ""
     @State private var filter = ""
@@ -138,7 +138,7 @@ struct AdminOperationsView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
     }
 
     private func auditRow(_ event: AuditEvent) -> some View {
@@ -152,19 +152,19 @@ struct AdminOperationsView: View {
             .font(.footnote)
         } label: {
             VStack(alignment: .leading, spacing: 4) {
-                Text(event.action).font(.subheadline.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                Text(event.action).font(.subheadline.weight(.semibold)).foregroundStyle(slipPalette.accent)
                 Text("\(event.actor?.displayName ?? event.actor?.username ?? "System") · \(event.targetType)")
                     .font(.caption).foregroundStyle(.secondary)
                 if let date = SidelineBoard.timestamp(event.createdAt) { Text(date.formatted(date: .abbreviated, time: .shortened)).font(.caption2) }
             }
         }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
     }
 
     private func notificationRow(_ item: Delivery) -> some View {
         HStack(alignment: .top, spacing: 9) {
             Image(systemName: item.read == true ? "circle" : "circle.fill")
-                .font(.caption2).foregroundStyle(item.read == true ? .secondary : Brand.accent(for: scheme))
+                .font(.caption2).foregroundStyle(item.read == true ? .secondary : slipPalette.accent)
                 .padding(.top, 5).accessibilityLabel(item.read == true ? "Read" : "Unread")
             VStack(alignment: .leading, spacing: 4) {
                 Text(displayName(item.type)).font(.subheadline.bold())
@@ -174,7 +174,7 @@ struct AdminOperationsView: View {
                 if let date = SidelineBoard.timestamp(item.createdAt) { Text(date.formatted(date: .abbreviated, time: .shortened)).font(.caption2) }
             }
         }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
     }
 
     private func communityRow(_ group: Community) -> some View {
@@ -203,7 +203,7 @@ struct AdminOperationsView: View {
                 Button("Delete community", systemImage: "trash", role: .destructive) { deleting = group }
             }.labelStyle(.iconOnly).disabled(busy)
         }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
     }
 
     private var filterForm: some View {

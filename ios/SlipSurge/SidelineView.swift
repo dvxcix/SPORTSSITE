@@ -73,7 +73,8 @@ struct SidelineView: View {
     private let linkedDate: String?
     private let preferredBook: String?
     private let link: SidelineLinkContext
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.nativeResume) private var resume
@@ -175,16 +176,16 @@ struct SidelineView: View {
             .padding(.top, 8)
             .padding(.bottom, 20)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background { SlipBackdrop() }
+        .foregroundStyle(slipPalette.text)
+        .tint(slipPalette.accent)
         .navigationTitle(tool.rawValue)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Research tools", systemImage: "square.grid.2x2") {
                     ForEach(Workspace.allCases, id: \.self) { destination in
-                        Button { tool = destination } label: { Label(destination.rawValue, glyph: destination.glyph) }
+                        Button { tool = destination } label: { Label(destination.rawValue, glyph: destination.glyph, filled: slipPalette == .color) }
                     }
                     if !api.isFeatured {
                         Button("NFL Matrices", systemImage: "square.grid.3x3") { matrices = true }
@@ -380,7 +381,7 @@ struct SidelineView: View {
     }
 
     private func matchupTeam(_ team: SidelineSchedule.Team) -> ResearchMatchup.Team {
-        .init(name: team.abbreviation, logo: team.logo, color: Color(hex: team.color) ?? Brand.surface(for: scheme))
+        .init(name: team.abbreviation, logo: team.logo, color: Color(hex: team.color) ?? slipPalette.surface)
     }
 
     @ViewBuilder
@@ -395,7 +396,7 @@ struct SidelineView: View {
 
     private func matchupTeam(_ name: String, _ game: SidelineBoard.Game, _ board: SidelineBoard) -> ResearchMatchup.Team {
         let team = board.teams.first { $0.game == game.id && $0.abbreviation == name }
-        return .init(name: name, logo: team?.logo, color: Color(hex: team?.primary) ?? Brand.surface(for: scheme),
+        return .init(name: name, logo: team?.logo, color: Color(hex: team?.primary) ?? slipPalette.surface,
             secondary: Color(hex: team?.secondary))
     }
 
@@ -502,7 +503,7 @@ struct SidelineView: View {
             }
         }
         .padding(.horizontal, 12)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 12))
     }
 
     @ViewBuilder
@@ -540,7 +541,7 @@ struct SidelineView: View {
             }
         }
         .padding(12)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 12))
     }
 
     private func loadSchedule() async {

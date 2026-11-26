@@ -5,7 +5,7 @@ struct AccountView: View {
     @Binding var appearance: Appearance
     var isYou = false
     @EnvironmentObject private var push: PushNotifications
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var code = ""
 
     var body: some View {
@@ -20,9 +20,9 @@ struct AccountView: View {
         }
         .navigationTitle(isYou ? "You" : "Account")
         .task { await account.checkProviders() }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background { SlipBackdrop() }
+        .foregroundStyle(slipPalette.text)
+        .tint(slipPalette.accent)
     }
 
     private var signedInForm: some View {
@@ -94,24 +94,26 @@ struct AccountView: View {
                     }
                     .disabled(account.isBusy || push.signingOut)
                 }
-                .listRowBackground(Brand.surface(for: scheme))
+                .listRowBackground(slipPalette.surface)
                 if account.memberID != nil {
                     Section("Device alerts") { DeviceAlertControl() }
-                        .listRowBackground(Brand.surface(for: scheme))
+                        .listRowBackground(slipPalette.surface)
                 }
             }
             if let notice = account.notice {
                 Text(notice)
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             }
             Section("Display") {
-                Picker("Appearance", selection: $appearance) {
+                Picker(selection: $appearance) {
                     ForEach(Appearance.allCases, id: \.self) { option in
                         Label(option.rawValue, systemImage: option.symbol).tag(option)
                     }
+                } label: {
+                    Label("Appearance", systemImage: "paintpalette")
                 }
             }
-            .listRowBackground(Brand.surface(for: scheme))
+            .listRowBackground(slipPalette.surface)
             Section {
                 NavigationLink {
                     NativeMembershipOverview(account: account)
@@ -123,7 +125,7 @@ struct AccountView: View {
                 InformationLink(page: .terms, account: account)
                 InformationLink(page: .privacy, account: account)
             }
-            .listRowBackground(Brand.surface(for: scheme))
+            .listRowBackground(slipPalette.surface)
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
@@ -151,6 +153,6 @@ struct AccountView: View {
             }
             .disabled(account.isBusy)
         }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
     }
 }

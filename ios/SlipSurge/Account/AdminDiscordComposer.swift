@@ -2,7 +2,8 @@ import SwiftUI
 
 struct AdminDiscordComposer: View {
     let api: AdminDiscordAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var draft = AdminDiscordAPI.Draft()
     @State private var channels: [AdminDiscordAPI.Channel]?
     @State private var revision = 0
@@ -14,7 +15,7 @@ struct AdminDiscordComposer: View {
     @State private var colorHex = "#B4FF4D"
 
     private var channel: AdminDiscordAPI.Channel? { channels?.first { $0.id == draft.channelId } }
-    private var tint: Color { Color(hex: colorHex) ?? Brand.accent(for: scheme) }
+    private var tint: Color { Color(hex: colorHex) ?? slipPalette.accent }
     private var hasContent: Bool {
         [draft.content, draft.title, draft.description, draft.authorName, draft.thumbnailUrl, draft.imageUrl, draft.footerText]
             .contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
@@ -123,7 +124,7 @@ struct AdminDiscordComposer: View {
                     }
                 }
             }
-        }.foregroundStyle(Brand.text(for: scheme))
+        }.foregroundStyle(slipPalette.text)
     }
 
     private func previewImage(_ url: URL, height: CGFloat) -> some View {

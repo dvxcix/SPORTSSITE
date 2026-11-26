@@ -132,7 +132,7 @@ struct NativeSettings: View {
     let account: AccountStore
     let userID: UUID
     let section: Section
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var source: SettingsPayload?
     @State private var profile = ProfileEdit()
     @State private var privacy = PrivacyEdit()
@@ -166,8 +166,8 @@ struct NativeSettings: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle(section.rawValue)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -218,7 +218,7 @@ struct NativeSettings: View {
                     }.labelStyle(.iconOnly).buttonStyle(.borderless)
                 }
             }.disabled(uploadingAvatar)
-        }.listRowBackground(Brand.surface(for: scheme))
+        }.listRowBackground(slipPalette.surface)
         if source?.profile.avatarRingStyle != nil { avatarAppearance }
         SwiftUI.Section {
             TextField("Username", text: $profile.username).textContentType(.username)
@@ -228,7 +228,7 @@ struct NativeSettings: View {
             TextField("Location", text: $profile.location)
             TextField("Website", text: $profile.website).keyboardType(.URL).textContentType(.URL)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
-        }.listRowBackground(Brand.surface(for: scheme))
+        }.listRowBackground(slipPalette.surface)
         if let books = source?.profile.sportsbookChoices, !books.isEmpty { sportsbookChoices(books) }
         if let platforms = source?.profile.socialPlatforms, !platforms.isEmpty {
             SwiftUI.Section("Public social links") {
@@ -247,12 +247,12 @@ struct NativeSettings: View {
                         }
                     }
                 }
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
         }
         NavigationLink {
             AccountConnectionsView(api: .init(account: account, userID: userID))
         } label: { Label("Connected accounts", systemImage: "person.badge.shield.checkmark") }
-            .listRowBackground(Brand.surface(for: scheme))
+            .listRowBackground(slipPalette.surface)
     }
 
     private var profileName: String { profile.displayName.isEmpty ? profile.username : profile.displayName }
@@ -271,7 +271,7 @@ struct NativeSettings: View {
             .accessibilityLabel("Change avatar style")
             .accessibilityValue(AvatarArtwork.title(profile.ringStyle))
             if AvatarArtwork.decoration(profile.ringStyle) == nil && profile.ringStyle != "none" {
-                ColorPicker("Ring color", selection: Binding(get: { Color(hex: profile.ringColor) ?? Brand.accent(for: scheme) }, set: { color in
+                ColorPicker("Ring color", selection: Binding(get: { Color(hex: profile.ringColor) ?? slipPalette.accent }, set: { color in
                     var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 1
                     guard UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return }
                     let values = [red, green, blue].map { Int((min(max(0, $0), 1) * 255).rounded()) }
@@ -296,7 +296,7 @@ struct NativeSettings: View {
                     }
                 }
             }
-        }.listRowBackground(Brand.surface(for: scheme))
+        }.listRowBackground(slipPalette.surface)
     }
 
     private func sportsbookChoices(_ choices: [String]) -> some View {
@@ -312,12 +312,12 @@ struct NativeSettings: View {
                     }
                 }
             }
-        }.listRowBackground(Brand.surface(for: scheme))
+        }.listRowBackground(slipPalette.surface)
     }
 
     private var profileArtwork: some View {
         ZStack(alignment: .bottomLeading) {
-            Rectangle().fill(Brand.accent(for: scheme).opacity(0.18))
+            Rectangle().fill(slipPalette.accent.opacity(0.18))
             GeometryReader { geometry in
                 AsyncImage(url: profile.bannerUrl) { image in
                     image.resizable().scaledToFill().frame(width: geometry.size.width, height: geometry.size.height).clipped()
@@ -336,7 +336,7 @@ struct NativeSettings: View {
         } footer: {
             Text("Private accounts limit posts and records to followers. Your username and bio remain visible.")
         }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
     }
 
     @ViewBuilder
@@ -348,7 +348,7 @@ struct NativeSettings: View {
         } footer: {
             Text("Device permission applies here. Your alert preferences apply to your account.")
         }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
         SwiftUI.Section("Delivery timing") {
             Toggle("Quiet hours", isOn: Binding(get: { delivery.quiet_hours_enabled ?? false }, set: { delivery.quiet_hours_enabled = $0 }))
             if delivery.quiet_hours_enabled == true {
@@ -362,13 +362,13 @@ struct NativeSettings: View {
             }
             Toggle("Keep game alerts live", isOn: Binding(get: { delivery.live_game_priority ?? true }, set: { delivery.live_game_priority = $0 }))
         }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
         ForEach(Self.notificationKeys, id: \.0) { key, label in
             SwiftUI.Section(label) {
                 Toggle("Push", isOn: channel(key, defaultValue: true))
                 Toggle("Email", isOn: channel(key + "_email", defaultValue: false))
             }
-            .listRowBackground(Brand.surface(for: scheme))
+            .listRowBackground(slipPalette.surface)
         }
     }
 

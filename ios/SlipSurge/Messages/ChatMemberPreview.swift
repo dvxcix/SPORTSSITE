@@ -7,7 +7,7 @@ struct ChatMemberPreview: View {
     let viewer: DiscoverAPI
     let member: MessagePerson
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.dynamicTypeSize) private var textSize
     @State private var profile: MemberProfileView.Page.Profile?
     @State private var failed = false
@@ -38,8 +38,8 @@ struct ChatMemberPreview: View {
                 }
                 .padding(16)
             }
-            .background(Brand.background(for: scheme))
-            .foregroundStyle(Brand.text(for: scheme))
+            .background(slipPalette.background)
+            .foregroundStyle(slipPalette.text)
             .navigationTitle("Member")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Route.self) { route in
@@ -73,8 +73,8 @@ struct ChatMemberPreview: View {
         let name = profile?.name ?? member.name
         return ZStack(alignment: .bottomLeading) {
             GeometryReader { proxy in
-                LinearGradient(colors: [(colors.first ?? Brand.accent(for: scheme)).opacity(0.46),
-                    colors.dropFirst().first ?? Brand.surface(for: scheme)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                LinearGradient(colors: [(colors.first ?? slipPalette.accent).opacity(0.46),
+                    colors.dropFirst().first ?? slipPalette.surface], startPoint: .topLeading, endPoint: .bottomTrailing)
                 if let banner = profile?.bannerUrl, FeedPostCard.allowedMedia(banner) {
                     ResearchArtwork(urls: [banner], fallback: nil, contentMode: .fill, pointSize: 420)
                         .frame(width: proxy.size.width, height: proxy.size.height).clipped()
@@ -86,7 +86,7 @@ struct ChatMemberPreview: View {
                 style: profile?.avatarRingStyle ?? member.avatarRingStyle,
                 color: profile?.avatarRingColor ?? member.avatarRingColor)
                 .padding(5)
-                .background(Brand.background(for: scheme), in: .circle)
+                .background(slipPalette.background, in: .circle)
                 .padding(.leading, 12)
                 .alignmentGuide(.bottom) { $0[.bottom] - 20 }
                 .accessibilityIdentifier("chat-member-avatar")
@@ -99,7 +99,7 @@ struct ChatMemberPreview: View {
             HStack(spacing: 6) {
                 Text(profile?.name ?? member.name).font(.title3.weight(.bold)).accessibilityAddTraits(.isHeader)
                 if profile?.verified ?? member.isVerified ?? false {
-                    Image(systemName: "checkmark.seal.fill").foregroundStyle(Brand.accent(for: scheme))
+                    Image(systemName: "checkmark.seal.fill").foregroundStyle(slipPalette.accent)
                         .accessibilityLabel("Verified member")
                 }
                 if profile?.isPrivate == true {

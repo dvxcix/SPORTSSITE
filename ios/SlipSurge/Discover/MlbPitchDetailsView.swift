@@ -4,7 +4,7 @@ import SwiftUI
 struct MlbPitchDetailsView: View {
     let pitches: [GameCenterData.Play.Pitch]
     let title: String
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selected: Int?
 
@@ -26,8 +26,8 @@ struct MlbPitchDetailsView: View {
                 }
             }.padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -36,19 +36,19 @@ struct MlbPitchDetailsView: View {
     }
 
     private var zone: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             Label("Pitch locations", systemImage: "scope").font(.headline).accessibilityAddTraits(.isHeader)
         } content: {
             Chart {
                 if let lower = active?.zoneBottom, let upper = active?.zoneTop, upper > lower {
                     RectangleMark(xStart: .value("Left edge", -17.0 / 24.0), xEnd: .value("Right edge", 17.0 / 24.0),
                         yStart: .value("Bottom", lower), yEnd: .value("Top", upper))
-                        .foregroundStyle(Brand.accent(for: scheme).opacity(0.12))
+                        .foregroundStyle(slipPalette.accent.opacity(0.12))
                 }
                 ForEach(pitches) { pitch in
                     if let x = pitch.x, let z = pitch.z {
                         PointMark(x: .value("Horizontal", x), y: .value("Height", z))
-                            .foregroundStyle(pitch.strike ? Brand.accent(for: scheme) : Color.cyan)
+                            .foregroundStyle(pitch.strike ? slipPalette.accent : Color.cyan)
                             .symbolSize(pitch.id == selected ? 135 : 64)
                             .annotation(position: .top) {
                                 if pitch.id == selected, let number = pitch.number {
@@ -67,7 +67,7 @@ struct MlbPitchDetailsView: View {
     }
 
     private func pitchRow(_ pitch: GameCenterData.Play.Pitch) -> some View {
-        ResearchToolCard(color: pitch.strike ? Brand.accent(for: scheme) : .cyan) {
+        ResearchToolCard(color: pitch.strike ? slipPalette.accent : .cyan) {
             HStack {
                 Text(pitch.kind ?? "Pitch").font(.headline)
                 Spacer()

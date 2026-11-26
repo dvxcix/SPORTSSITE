@@ -8,13 +8,14 @@ struct AdminDesignSystemView: View {
     }
 
     private let books = ["fanduel", "draftkings", "caesars", "fanatics", "betmgm", "betrivers"]
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var alerts = true
     @State private var preview = false
     @State private var feedback: String?
 
-    private var accent: Color { Brand.accent(for: scheme) }
+    private var accent: Color { slipPalette.accent }
     private var success: Color { Color(rgb: scheme == .dark ? 0x4ADE80 : 0x176339) }
     private var warning: Color { Color(rgb: scheme == .dark ? 0xFACC61 : 0x805600) }
     private var danger: Color { Color(rgb: scheme == .dark ? 0xFB8185 : 0xA52231) }
@@ -24,8 +25,8 @@ struct AdminDesignSystemView: View {
     }
 
     private var swatches: [Swatch] {
-        [.init(name: "Background", color: Brand.background(for: scheme)), .init(name: "Surface", color: Brand.surface(for: scheme)),
-         .init(name: "Raised", color: Brand.text(for: scheme).opacity(0.12)), .init(name: "Accent", color: accent),
+        [.init(name: "Background", color: slipPalette.background), .init(name: "Surface", color: slipPalette.surface),
+         .init(name: "Raised", color: slipPalette.text.opacity(0.12)), .init(name: "Accent", color: accent),
          .init(name: "Success", color: success), .init(name: "Warning", color: warning),
          .init(name: "Danger", color: danger), .init(name: "Info", color: info)]
     }
@@ -40,8 +41,8 @@ struct AdminDesignSystemView: View {
             }
             .padding(16)
         }
-        .foregroundStyle(Brand.text(for: scheme))
-        .background(Brand.background(for: scheme))
+        .foregroundStyle(slipPalette.text)
+        .background(slipPalette.background)
         .navigationTitle("Design system")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $preview) {
@@ -81,7 +82,7 @@ struct AdminDesignSystemView: View {
                         ProfileSportsbookLogo(key: book, size: 22).accessibilityHidden(true)
                     }
                     .padding(.horizontal, 8).frame(minHeight: 38)
-                    .background(Brand.background(for: scheme), in: .capsule)
+                    .background(slipPalette.background, in: .capsule)
                 }
             }
             .accessibilityElement(children: .contain).accessibilityLabel("Sportsbook logos")

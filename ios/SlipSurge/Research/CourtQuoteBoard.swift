@@ -27,7 +27,8 @@ struct CourtQuoteBoard: View {
     let initialBooks: [String]?
     let oneBook: String?
     let ranks: [Int: CourtAPI.Rank]
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.memberResearchPreferences) private var preferences
     @Environment(\.courtResults) private var results
     @State private var selectedBooks: Set<String>?
@@ -195,7 +196,7 @@ struct CourtQuoteBoard: View {
                             } label: {
                                 ResearchToolBook(book: offer.vendor, price: offer.odds)
                                     .padding(.horizontal, 9).frame(minHeight: 44)
-                                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 10))
+                                    .background(slipPalette.surface, in: .rect(cornerRadius: 10))
                             }.buttonStyle(SlipSurgePressStyle())
                         }
                     }

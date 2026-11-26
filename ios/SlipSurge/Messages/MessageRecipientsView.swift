@@ -5,7 +5,7 @@ struct MessageRecipientsView: View {
     var forward: ((MessageDestination) async throws -> Void)?
     let onOpen: (MessageDestination) -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var group = false
     @State private var name = ""
     @State private var query = ""
@@ -26,7 +26,7 @@ struct MessageRecipientsView: View {
                         Text("Group").tag(true)
                     }
                     .pickerStyle(.segmented)
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
                 }
                 if group {
                     Section {
@@ -43,7 +43,7 @@ struct MessageRecipientsView: View {
                             .accessibilityHint("Remove \(person.name)")
                         }
                     } header: { Text("\(selected.count) of 19 selected") }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
                 }
                 Section {
                     TextField("Search people", text: $query)
@@ -75,12 +75,12 @@ struct MessageRecipientsView: View {
                     }
                     if searchFailed { Text("Search is temporarily unavailable").font(.subheadline).foregroundStyle(.secondary) }
                 }
-                .listRowBackground(Brand.surface(for: scheme))
+                .listRowBackground(slipPalette.surface)
             }
             .scrollDismissesKeyboard(.interactively)
             .keyboardDone()
             .scrollContentBackground(.hidden)
-            .background(Brand.background(for: scheme))
+            .background(slipPalette.background)
             .navigationTitle(forward == nil ? "New message" : "Forward message")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -32,7 +32,7 @@ struct DugoutTeamView: View {
 
     let api: DugoutPlayerProfileAPI
     let id: Int
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var team: Team?
     @State private var error: (any Error)?
     @State private var search = ""
@@ -53,15 +53,15 @@ struct DugoutTeamView: View {
         }
         .navigationTitle(team?.name ?? "MLB Team")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .searchable(text: $search, prompt: "Find a player")
         .refreshable { await load() }
         .task(id: revision) { await load() }
     }
 
     private func header(_ team: Team) -> some View {
-        let primary = Color(hex: team.primary) ?? Brand.accent(for: scheme)
+        let primary = Color(hex: team.primary) ?? slipPalette.accent
         let secondary = Color(hex: team.secondary) ?? primary
         return ResearchToolCard(color: primary) {
             ResearchToolPortrait(name: team.name, subtitle: [team.league, team.division].compactMap { $0 }.joined(separator: " · "),
@@ -83,7 +83,7 @@ struct DugoutTeamView: View {
         }
         if players.isEmpty { ContentUnavailableView(search.isEmpty ? "No active roster" : "No matching players", systemImage: "person.2") }
         ForEach(order, id: \.self) { group in
-            ResearchToolCard(color: Color(hex: team.primary) ?? Brand.accent(for: scheme)) {
+            ResearchToolCard(color: Color(hex: team.primary) ?? slipPalette.accent) {
                 ResearchSectionTitle(title: group)
             } content: {
                 ForEach(groups[group] ?? []) { player in

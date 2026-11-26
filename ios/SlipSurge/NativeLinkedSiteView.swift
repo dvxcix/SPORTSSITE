@@ -4,7 +4,7 @@ struct NativeLinkedSiteView: View {
     let account: AccountStore
     let target: NativeSiteLink
     @Binding var appearance: Appearance
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.openURL) private var openURL
 
     private var viewer: DiscoverAPI { .init(account: account, userID: account.memberID) }
@@ -21,8 +21,8 @@ struct NativeLinkedSiteView: View {
                 publicDestination
             }
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
     }
 
     @ViewBuilder private var publicDestination: some View {

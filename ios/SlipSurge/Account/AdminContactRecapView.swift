@@ -31,7 +31,8 @@ struct AdminContactRecapView: View {
     private struct ExportFile: Identifiable { let url: URL; var id: URL { url } }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.scenePhase) private var scenePhase
     @State private var queue: Queue?
     @State private var error: (any Error)?
@@ -44,7 +45,7 @@ struct AdminContactRecapView: View {
 
     private static let path = "/api/mobile/admin/contact-recap"
     private static let storageHost = "hkldweedwnxartkfhror.supabase.co"
-    private var accent: Color { Brand.accent(for: scheme) }
+    private var accent: Color { slipPalette.accent }
 
     var body: some View {
         ScrollView {
@@ -70,8 +71,8 @@ struct AdminContactRecapView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Daily Contact Recap")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

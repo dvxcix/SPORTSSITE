@@ -8,7 +8,7 @@ struct NativeTopicView: View {
 
     let api: DiscoverAPI
     let tag: String
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var result: Result?
     @State private var error: (any Error)?
     @State private var pending = Set<UUID>()
@@ -32,7 +32,7 @@ struct NativeTopicView: View {
                                     discussion: { selected = post.postID }, showAuthor: post.author.map { identity in { author = identity.username } },
                                     actionsAPI: feed, postChanged: { _ in revision += 1 })
                                     .padding(13)
-                                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
+                                    .background(slipPalette.surface, in: .rect(cornerRadius: 16))
                                     .disabled(pending.contains(post.postID))
                             }
                         }
@@ -58,8 +58,8 @@ struct NativeTopicView: View {
         .navigationDestination(item: $selected) { id in
             FeedThreadView(api: feed, id: id, original: result?.posts.first(where: { $0.postID == id }))
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: revision) { await load() }
         .refreshable { await load() }
         .alert("Post action couldn’t be confirmed", isPresented: $actionProblem) {

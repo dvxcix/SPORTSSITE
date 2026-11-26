@@ -28,7 +28,7 @@ struct DugoutView: View {
     }
 
     let api: DugoutAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var date = Date.now
     @State private var mode = DugoutMode.pregame
@@ -69,8 +69,8 @@ struct DugoutView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background { SlipBackdrop() }
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("The Dugout")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -84,7 +84,7 @@ struct DugoutView: View {
                     Button("Batter Cost", systemImage: "banknote") { tool = .batterCost }
                     Button("Weather Lab", systemImage: "cloud.sun") { tool = .weather }
                     Button("Spray Charts", systemImage: "scope") { tool = .spray }
-                    Button { tool = .oddsMovement } label: { Label("Odds Movement Terminal", glyph: SlipGlyph.marketStory.rawValue) }
+                    Button { tool = .oddsMovement } label: { Label("Odds Movement Terminal", glyph: SlipGlyph.marketStory.rawValue, filled: slipPalette == .color) }
                     Button("Synergy", systemImage: "sparkles") { tool = .synergy }
                     Button("MLB Matrices", systemImage: "square.grid.3x3") { tool = .matrices }
                     Divider()
@@ -291,7 +291,7 @@ struct DugoutView: View {
                 Spacer()
                 if !lineup.isEmpty {
                     Text(confirmed ? "Confirmed" : "Projected")
-                        .font(.caption.weight(.semibold)).foregroundStyle(confirmed ? Brand.accent(for: scheme) : .secondary)
+                        .font(.caption.weight(.semibold)).foregroundStyle(confirmed ? slipPalette.accent : .secondary)
                 }
             }
             if let pitcher = team.code == game.home.code ? game.homePitcher : game.awayPitcher, search.isEmpty {
@@ -305,7 +305,7 @@ struct DugoutView: View {
                         Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
                     }
                     .padding(11)
-                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+                    .background(slipPalette.surface, in: .rect(cornerRadius: 13))
                 }
                 .buttonStyle(SlipSurgePressStyle())
             }
@@ -363,7 +363,7 @@ struct DugoutView: View {
                 } label: {
                     Image(systemName: selected ? "checkmark.circle.fill" : "plus.circle")
                         .font(.title3)
-                        .foregroundStyle(selected ? Brand.accent(for: scheme) : .secondary)
+                        .foregroundStyle(selected ? slipPalette.accent : .secondary)
                         .frame(width: 44, height: 44)
                 }
                 .disabled(!selected && comparisonIDs.count == 4)
@@ -382,7 +382,7 @@ struct DugoutView: View {
                             Label(matrix.name, systemImage: "diamond.fill")
                                 .font(.caption2.weight(.semibold))
                                 .padding(.horizontal, 8).padding(.vertical, 5)
-                                .background((Color(hex: matrix.color) ?? Brand.accent(for: scheme)).opacity(0.15), in: .capsule)
+                                .background((Color(hex: matrix.color) ?? slipPalette.accent).opacity(0.15), in: .capsule)
                         }
                     }
                 }.scrollIndicators(.hidden)
@@ -406,7 +406,7 @@ struct DugoutView: View {
                     }
                 }.padding()
             }
-            .background(Brand.background(for: scheme))
+            .background(slipPalette.background)
             .navigationTitle("Player comparison")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -12,7 +12,8 @@ struct EmailAccountForm: View {
     let flow: Flow
     var prefill = ""
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var email = ""
     @State private var password = ""
@@ -70,7 +71,7 @@ struct EmailAccountForm: View {
                             }
                         }
                         .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(Brand.accent(for: scheme), in: .rect(cornerRadius: 14))
+                        .background(slipPalette.accent, in: .rect(cornerRadius: 14))
                         .foregroundStyle(scheme == .dark ? .black : .white)
                     }
                     .buttonStyle(SlipSurgePressStyle())
@@ -113,8 +114,8 @@ struct EmailAccountForm: View {
         }
         .onChange(of: account.needsNewPassword) { _, ready in if ready && flow != .password { dismiss() } }
         .onChange(of: account.user?.id) { _, user in if user != nil && flow != .password { dismiss() } }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
     }
 
     private var submitTitle: String {
@@ -148,7 +149,7 @@ struct EmailAccountForm: View {
     private var registrationHeading: some View {
         VStack(alignment: .leading, spacing: 9) {
             ProgressView(value: settingUpProfile ? 2 : 1, total: 2)
-                .tint(Brand.accent(for: scheme))
+                .tint(slipPalette.accent)
                 .accessibilityLabel("Registration progress")
                 .accessibilityValue(settingUpProfile ? "2 of 2" : "1 of 2")
             Text(settingUpProfile ? "Set up your profile" : "Join SlipSurge")
@@ -212,12 +213,12 @@ struct EmailAccountForm: View {
                             Text(sport.id).font(.subheadline.weight(.semibold))
                             Spacer(minLength: 0)
                             Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(selected ? Brand.accent(for: scheme) : .secondary)
+                                .foregroundStyle(selected ? slipPalette.accent : .secondary)
                                 .accessibilityHidden(true)
                         }
                         .padding(.horizontal, 9).frame(minHeight: 44)
-                        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 10))
-                        .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(selected ? Brand.accent(for: scheme) : .secondary.opacity(0.18)) }
+                        .background(slipPalette.surface, in: .rect(cornerRadius: 10))
+                        .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(selected ? slipPalette.accent : .secondary.opacity(0.18)) }
                     }
                     .buttonStyle(SlipSurgePressStyle())
                     .accessibilityAddTraits(selected ? .isSelected : [])

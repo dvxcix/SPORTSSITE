@@ -5,7 +5,7 @@ struct AccountSecurityView: View {
     let account: AccountStore
     let userID: UUID
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.openURL) private var openURL
     @State private var current: AccountSession.User?
     @State private var enrollment: AuthenticatorEnrollment?
@@ -30,7 +30,7 @@ struct AccountSecurityView: View {
                 } else {
                     Button("Retry") { Task { await load() } }
                 }
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
 
             if let current {
                 let factors = current.factors?.filter { $0.factorType == "totp" && $0.status == "verified" } ?? []
@@ -61,19 +61,19 @@ struct AccountSecurityView: View {
                 } footer: {
                     if enrollment == nil { Text("Use a six-digit code from your authenticator when you sign in.") }
                 }
-                .listRowBackground(Brand.surface(for: scheme))
+                .listRowBackground(slipPalette.surface)
 
                 Section {
                     Button("Sign out other devices", systemImage: "rectangle.portrait.and.arrow.right") { endSessions = true }
                 } footer: { Text("Keep this iPhone signed in.") }
-                .listRowBackground(Brand.surface(for: scheme))
+                .listRowBackground(slipPalette.surface)
             }
             if let failure { Label(failure, systemImage: "exclamationmark.circle").foregroundStyle(.red) }
-            if let notice { Label(notice, systemImage: "checkmark.circle").foregroundStyle(Brand.accent(for: scheme)) }
+            if let notice { Label(notice, systemImage: "checkmark.circle").foregroundStyle(slipPalette.accent) }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .scrollDismissesKeyboard(.interactively)
         .keyboardDone()
         .navigationTitle("Account security")

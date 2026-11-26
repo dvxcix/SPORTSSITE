@@ -51,7 +51,7 @@ struct AdminSocialContent: View {
 
     let viewer: DiscoverAPI
     let kind: Kind
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var entries: [Entry]?
     @State private var query = ""
     @State private var filters = PostFilter()
@@ -117,13 +117,13 @@ struct AdminSocialContent: View {
                 if entries.count == 100 {
                     Section { Text("Showing the first 100 \(kind.rawValue).").font(.footnote).foregroundStyle(.secondary) }
                 }
-                ForEach(entries) { item in row(item).listRowBackground(Brand.surface(for: scheme)) }
+                ForEach(entries) { item in row(item).listRowBackground(slipPalette.surface) }
             } else {
                 ResearchToolMessage(title: "\(kind.rawValue.capitalized) couldn’t load", error: issue) { revision += 1 }
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
     }
 
     private func row(_ item: Entry) -> some View {

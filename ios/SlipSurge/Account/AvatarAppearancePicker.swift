@@ -27,7 +27,7 @@ struct AvatarAppearancePicker: View {
     let color: String
     let onChoose: (String) -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var draft: String
     @State private var category = Category.all
     @State private var query = ""
@@ -74,14 +74,14 @@ struct AvatarAppearancePicker: View {
                                 }
                                 .padding(.horizontal, 4).padding(.vertical, 12)
                                 .frame(maxWidth: .infinity, minHeight: 92, alignment: .top)
-                                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+                                .background(slipPalette.surface, in: .rect(cornerRadius: 12))
                                 .overlay {
-                                    RoundedRectangle(cornerRadius: 12).strokeBorder(draft == option.id ? Brand.accent(for: scheme) : .secondary.opacity(0.17))
+                                    RoundedRectangle(cornerRadius: 12).strokeBorder(draft == option.id ? slipPalette.accent : .secondary.opacity(0.17))
                                 }
                                 .overlay(alignment: .topTrailing) {
                                     if draft == option.id {
                                         Image(systemName: "checkmark.circle.fill").font(.caption)
-                                            .padding(5).foregroundStyle(Brand.accent(for: scheme)).accessibilityHidden(true)
+                                            .padding(5).foregroundStyle(slipPalette.accent).accessibilityHidden(true)
                                     }
                                 }
                             }
@@ -93,7 +93,7 @@ struct AvatarAppearancePicker: View {
             }
             .padding(15)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Avatar style")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Find an avatar style")

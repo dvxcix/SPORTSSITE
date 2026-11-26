@@ -47,7 +47,8 @@ struct CourtPublicView: View {
     let board: CourtBoard
     let observedAt: Date
     let revision: Int
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.courtResults) private var observedResults
     @State private var captures: Captures?
     @State private var error: (any Error)?
@@ -142,7 +143,7 @@ struct CourtPublicView: View {
                     } content: {
                         Text(label(row.market)).font(.caption.weight(.medium)).foregroundStyle(.secondary)
                         ResearchToolValues(items: [
-                            .init(label: "Picks", text: row.picks.formatted(), tone: Brand.accent(for: scheme)),
+                            .init(label: "Picks", text: row.picks.formatted(), tone: slipPalette.accent),
                             .init(label: "Market share", text: share(row.picks, total: counts[row.market]).map {
                                 $0.formatted(.percent.precision(.fractionLength(1)))
                             } ?? "—"),

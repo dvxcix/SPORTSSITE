@@ -8,7 +8,7 @@ struct ResearchToolRail<Choice: Hashable>: View {
     let glyph: (Choice) -> String
     var compact = false
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var textSize
     @Namespace private var transition
@@ -24,7 +24,7 @@ struct ResearchToolRail<Choice: Hashable>: View {
                 slidingRail
             }
         }
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 17))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 17))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
         .sensoryFeedback(.selection, trigger: selection)
@@ -69,12 +69,12 @@ struct ResearchToolRail<Choice: Hashable>: View {
                         .frame(minHeight: 44)
                 }
             }
-            .foregroundStyle(selection == choice ? Brand.accent(for: scheme) : Brand.text(for: scheme))
+            .foregroundStyle(selection == choice ? slipPalette.accent : slipPalette.text)
             .background {
                 if selection == choice {
                     RoundedRectangle(cornerRadius: 13)
-                        .fill(Brand.accent(for: scheme).opacity(0.15))
-                        .overlay { RoundedRectangle(cornerRadius: 13).strokeBorder(Brand.accent(for: scheme).opacity(0.35)) }
+                        .fill(slipPalette == .color ? AnyShapeStyle(slipPalette.selectionGradient) : AnyShapeStyle(slipPalette.accent.opacity(0.15)))
+                        .overlay { RoundedRectangle(cornerRadius: 13).strokeBorder(slipPalette.accent.opacity(0.35)) }
                         .matchedGeometryEffect(id: "selection", in: transition, isSource: true)
                 }
             }
@@ -91,7 +91,8 @@ struct ResearchToolCard<Header: View, Content: View>: View {
     let color: Color
     @ViewBuilder var header: Header
     @ViewBuilder var content: Content
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -101,9 +102,9 @@ struct ResearchToolCard<Header: View, Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(13)
         .background {
-            LinearGradient(colors: [color.opacity(scheme == .dark ? 0.23 : 0.12), Brand.surface(for: scheme), Brand.surface(for: scheme)],
+            LinearGradient(colors: [color.opacity(scheme == .dark ? 0.23 : 0.12), slipPalette.surface, slipPalette.surface],
                 startPoint: .topLeading, endPoint: .bottomTrailing)
-                .background(Brand.surface(for: scheme))
+                .background(slipPalette.surface)
         }
         .clipShape(.rect(cornerRadius: 16))
         .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(color.opacity(scheme == .dark ? 0.31 : 0.22)) }
@@ -120,7 +121,7 @@ struct ResearchToolValues: View {
 
     let items: [Value]
     var preferredColumns = 3
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.dynamicTypeSize) private var size
 
     var body: some View {
@@ -131,11 +132,11 @@ struct ResearchToolValues: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.label).font(.caption2.weight(.medium)).foregroundStyle(.secondary)
                     Text(item.text).font(.subheadline.weight(.bold)).monospacedDigit()
-                        .foregroundStyle(item.tone ?? Brand.text(for: scheme))
+                        .foregroundStyle(item.tone ?? slipPalette.text)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(7)
-                .background(Brand.background(for: scheme).opacity(0.72), in: .rect(cornerRadius: 9))
+                .background(slipPalette.background.opacity(0.72), in: .rect(cornerRadius: 9))
                 .accessibilityElement(children: .combine)
             }
         }

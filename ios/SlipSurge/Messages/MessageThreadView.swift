@@ -30,7 +30,8 @@ struct MessageThreadView: View {
     let api: MessagesAPI
     let destination: MessageDestination
     var roomDraft: Binding<MessageThreadDraft>? = nil
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.scenePhase) private var phase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
@@ -96,8 +97,8 @@ struct MessageThreadView: View {
                 ResearchToolMessage(title: "Messages couldn’t load", error: error) { revision += 1 }
             }
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .sensoryFeedback(.selection, trigger: reactionFeedback)
         .navigationTitle(thread?.title ?? "Messages")
         .navigationBarTitleDisplayMode(.inline)
@@ -363,7 +364,7 @@ struct MessageThreadView: View {
                     }
                 }
                 .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(mine ? Brand.accent(for: scheme).opacity(scheme == .dark ? 0.22 : 0.17) : Brand.surface(for: scheme), in: .rect(cornerRadius: 17))
+                .background(mine ? slipPalette.accent.opacity(scheme == .dark ? 0.22 : 0.17) : slipPalette.surface, in: .rect(cornerRadius: 17))
                 .contextMenu {
                     if message.isDeleted != true {
                         if thread.canSend {
@@ -406,7 +407,7 @@ struct MessageThreadView: View {
                                     .frame(minWidth: 26, minHeight: 32)
                                 }
                                 .font(.caption2.weight(.semibold)).buttonStyle(.bordered).buttonBorderShape(.capsule)
-                                .tint(selected ? Brand.accent(for: scheme) : .secondary)
+                                .tint(selected ? slipPalette.accent : .secondary)
                                 .accessibilityLabel("\(NativeEmojiLibrary.shortcode(in: symbol) ?? symbol) reaction, \(items.count)")
                                 .accessibilityAddTraits(selected ? .isSelected : [])
                             }
@@ -504,7 +505,7 @@ struct MessageThreadView: View {
                     .accessibilityLabel("Remove attachment")
                 }
                 .padding(6)
-                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+                .background(slipPalette.surface, in: .rect(cornerRadius: 13))
             }
             if !draftData.unsent.isEmpty, draftData.editing == nil {
                 Menu("Unsent drafts (\(draftData.unsent.count))", systemImage: "doc.badge.clock") {
@@ -521,7 +522,7 @@ struct MessageThreadView: View {
             }
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
-        .background { Brand.background(for: scheme).ignoresSafeArea(.container, edges: .bottom) }
+        .background { slipPalette.background.ignoresSafeArea(.container, edges: .bottom) }
         .overlay(alignment: .top) { Rectangle().fill(Color(uiColor: .separator)).frame(height: 0.5).accessibilityHidden(true) }
     }
 
@@ -560,10 +561,10 @@ struct MessageThreadView: View {
                     .accessibilityIdentifier("chat-hide-keyboard")
                 }
             }
-            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 23))
+            .background(slipPalette.surface, in: .rect(cornerRadius: 23))
             .overlay {
                 RoundedRectangle(cornerRadius: 23)
-                    .strokeBorder(focused == .message ? Brand.accent(for: scheme).opacity(0.42) : .secondary.opacity(0.18))
+                    .strokeBorder(focused == .message ? slipPalette.accent.opacity(0.42) : .secondary.opacity(0.18))
                     .allowsHitTesting(false)
             }
             sendControl
@@ -591,9 +592,9 @@ struct MessageThreadView: View {
         } label: {
             Image(systemName: "plus")
                 .font(.body.weight(.semibold))
-                .foregroundStyle(Brand.text(for: scheme))
+                .foregroundStyle(slipPalette.text)
                 .frame(width: 44, height: 46)
-                .background(Brand.surface(for: scheme), in: .circle)
+                .background(slipPalette.surface, in: .circle)
                 .contentShape(.rect)
         }
         .menuOrder(.fixed)
@@ -615,7 +616,7 @@ struct MessageThreadView: View {
             }
             .frame(width: 46, height: 46)
             .foregroundStyle(canSend ? (scheme == .dark ? Color(rgb: 0x18240B) : .white) : .secondary)
-            .background(canSend ? Brand.accent(for: scheme) : Brand.surface(for: scheme), in: .circle)
+            .background(canSend ? slipPalette.accent : slipPalette.surface, in: .circle)
             .contentShape(.circle)
         }
         .buttonStyle(SlipSurgePressStyle())

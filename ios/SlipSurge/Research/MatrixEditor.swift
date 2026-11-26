@@ -11,7 +11,7 @@ struct ResearchMatrixEditor: View {
     let mode: CourtResearchMode
     let didSave: () async -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var name = ""
     @State private var color = "#a7ff3f"
     @State private var kind = "classic"
@@ -67,7 +67,7 @@ struct ResearchMatrixEditor: View {
                             Stepper("Minimum \(matchCount)", value: $matchCount, in: 1...max(1, factors.count))
                         }
                     }
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
                 ForEach(rules) { $rule in
                     ResearchMatrixRuleEditor(league: api.league, catalog: catalog, trackingFields: trackingFields,
                         pipeline: pipeline, rule: $rule)
@@ -83,8 +83,8 @@ struct ResearchMatrixEditor: View {
                 if let error { Label(error, systemImage: "exclamationmark.circle").foregroundStyle(.red) }
             }
             .scrollContentBackground(.hidden)
-            .background(Brand.background(for: scheme))
-            .foregroundStyle(Brand.text(for: scheme))
+            .background(slipPalette.background)
+            .foregroundStyle(slipPalette.text)
             .scrollDismissesKeyboard(.interactively)
             .keyboardDone()
             .navigationTitle(original == nil ? "New \(api.league.title) Matrix" : "Edit \(api.league.title) Matrix")
@@ -149,7 +149,7 @@ private struct ResearchMatrixRuleEditor: View {
     let trackingFields: [ResearchMatrixCatalog.Field]
     let pipeline: Bool
     @Binding var rule: ResearchMatrix.Rule
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     private var basketball: Bool { league == .nba }
     private var isMarket: Bool { rule.category == "market" }
@@ -193,7 +193,7 @@ private struct ResearchMatrixRuleEditor: View {
                 conditionControls
             }
         }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
         .onChange(of: rule.category) { _, category in
             rule.field = isMarket ? "market" : isPicks ? "public_picks" : catalog.fields.first { $0.category == category }?.field ?? "index"
             rule.vendor = isMarket || (basketball && category == "score") ? "fanduel" : nil

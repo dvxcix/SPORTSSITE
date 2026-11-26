@@ -5,7 +5,7 @@ struct AccountCredentialsView: View {
     let userID: UUID
     let email: String?
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var address = ""
     @State private var password = ""
     @State private var confirm = ""
@@ -24,7 +24,7 @@ struct AccountCredentialsView: View {
                 Button("Update email") { Task { await updateEmail() } }
                     .disabled(!address.contains("@") || address.count > 254 || address.caseInsensitiveCompare(email ?? "") == .orderedSame)
             } header: { Text("Email address") }
-            .listRowBackground(Brand.surface(for: scheme))
+            .listRowBackground(slipPalette.surface)
 
             Section {
                 SecureField("New password", text: $password).textContentType(.newPassword)
@@ -36,14 +36,14 @@ struct AccountCredentialsView: View {
                 Button("Change password") { Task { await updatePassword() } }
                     .disabled(!(8...128).contains(password.count) || password != confirm || needsCode && code.isEmpty)
             } header: { Text("Password") }
-            .listRowBackground(Brand.surface(for: scheme))
+            .listRowBackground(slipPalette.surface)
 
             if let failure { Label(failure, systemImage: "exclamationmark.circle").foregroundStyle(.red) }
-            if let message { Label(message, systemImage: "checkmark.circle").foregroundStyle(Brand.accent(for: scheme)) }
+            if let message { Label(message, systemImage: "checkmark.circle").foregroundStyle(slipPalette.accent) }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .scrollDismissesKeyboard(.interactively)
         .keyboardDone()
         .navigationTitle("Email and password")

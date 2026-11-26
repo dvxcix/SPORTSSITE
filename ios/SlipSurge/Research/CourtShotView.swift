@@ -41,7 +41,8 @@ struct CourtShotView: View {
     let game: CourtBoard.Game
     let mode: CourtResearchMode
     var embedded = false
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var played = ""
     @State private var period = 0
     @State private var result = Result.all
@@ -74,8 +75,8 @@ struct CourtShotView: View {
                 .navigationBarTitleDisplayMode(.inline)
             }
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: request) {
             if request.played > 0 { await load(request) }
         }
@@ -245,7 +246,8 @@ private struct CourtHalfCourt: View {
     let heat: Bool
     let color: Color
     let choose: (Int) -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     var body: some View {
         GeometryReader { proxy in
@@ -258,7 +260,7 @@ private struct CourtHalfCourt: View {
                 context.fill(border.applying(transform), with: .color(color.opacity(scheme == .dark ? 0.24 : 0.12)))
                 if heat { drawHeat(context, transform: transform) }
                 context.stroke(border.applying(transform), with: .color(.secondary.opacity(0.55)), lineWidth: 1)
-                context.stroke(Self.lines.applying(transform), with: .color(Brand.text(for: scheme).opacity(0.59)), lineWidth: 1.15)
+                context.stroke(Self.lines.applying(transform), with: .color(slipPalette.text.opacity(0.59)), lineWidth: 1.15)
                 if !heat {
                     for shot in shots {
                         guard let center = shot.coordinate?.applying(transform) else { continue }
@@ -266,7 +268,7 @@ private struct CourtHalfCourt: View {
                         let dot = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
                         let tone = Brand.signal(shot.made ? 1 : -1, for: scheme)
                         if shot.made { context.fill(dot, with: .color(tone)) }
-                        context.stroke(dot, with: .color(shot.order == selected ? Brand.text(for: scheme) : tone), lineWidth: shot.made ? 1 : 1.7)
+                        context.stroke(dot, with: .color(shot.order == selected ? slipPalette.text : tone), lineWidth: shot.made ? 1 : 1.7)
                     }
                 }
             }
@@ -293,7 +295,7 @@ private struct CourtHalfCourt: View {
         for (cell, points) in bins {
             let square = CGRect(x: cell[0], y: cell[1], width: 5, height: min(5, 47 - cell[1]))
             context.fill(Path(square).applying(transform),
-                with: .color(Brand.accent(for: scheme).opacity(0.10 + Double(points.count) / Double(most) * 0.65)))
+                with: .color(slipPalette.accent.opacity(0.10 + Double(points.count) / Double(most) * 0.65)))
         }
     }
 

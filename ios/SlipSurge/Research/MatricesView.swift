@@ -13,7 +13,7 @@ struct MatricesView: View {
     let didChange: () -> Void
     private let showsDone: Bool
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var tab = Tab.mine
     @State private var catalog: ResearchMatrixCatalog?
     @State private var matrices: [ResearchMatrix]?
@@ -63,8 +63,8 @@ struct MatricesView: View {
         }
         .navigationTitle("\(api.league.title) Matrices")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .toolbar {
             if showsDone { ToolbarItem(placement: .cancellationAction) { Button("Done", role: .cancel) { dismiss() } } }
         }
@@ -89,9 +89,9 @@ struct MatricesView: View {
     }
 
     private func matrixCard(_ matrix: ResearchMatrix) -> some View {
-        ResearchToolCard(color: Color(hex: matrix.color) ?? Brand.accent(for: scheme)) {
+        ResearchToolCard(color: Color(hex: matrix.color) ?? slipPalette.accent) {
             HStack(spacing: 8) {
-                Image(systemName: "square.grid.3x3.fill").foregroundStyle(Color(hex: matrix.color) ?? Brand.accent(for: scheme))
+                Image(systemName: "square.grid.3x3.fill").foregroundStyle(Color(hex: matrix.color) ?? slipPalette.accent)
                 Text(verbatim: matrix.name).font(.headline)
                 Spacer()
                 Button(matrix.enabled ? "Disable Matrix" : "Enable Matrix", systemImage: matrix.enabled ? "checkmark.circle.fill" : "circle") {
@@ -115,7 +115,7 @@ struct MatricesView: View {
     }
 
     private func listingCard(_ listing: ResearchMatrixListing) -> some View {
-        ResearchToolCard(color: Color(hex: listing.color) ?? Brand.accent(for: scheme)) {
+        ResearchToolCard(color: Color(hex: listing.color) ?? slipPalette.accent) {
             Text(verbatim: listing.title).font(.headline)
         } content: {
             if !listing.description.isEmpty { Text(verbatim: listing.description).font(.subheadline) }
@@ -125,7 +125,7 @@ struct MatricesView: View {
     }
 
     private var importField: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             Label("Import by element code", systemImage: "tray.and.arrow.down").font(.headline)
         } content: {
             HStack {

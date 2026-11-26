@@ -19,7 +19,8 @@ struct InboxView: View {
     let active: Bool
     let unread: InboxUnread
     let signIn: () -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var openedDestination: ActivityNotification.Destination?
     @State private var problem: NotificationProblem?
 
@@ -44,7 +45,7 @@ struct InboxView: View {
             .navigationTitle("Inbox")
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .top, spacing: 0) { sectionPicker }
-            .background(Brand.background(for: scheme))
+            .background { SlipBackdrop() }
             .navigationDestination(item: $openedDestination) { destination in
                 if let memberID = account.memberID {
                     ActivityDestinationView(api: .init(account: account, userID: memberID), destination: destination)
@@ -117,7 +118,11 @@ struct InboxView: View {
         SocialSectionBar(title: "Inbox sections", sections: InboxSection.allCases, selection: $section) { item in
             let count = unread.count(for: item, memberID: account.memberID)
             HStack(spacing: 6) {
-                Label(item.rawValue, systemImage: item.symbol)
+                Label {
+                    Text(item.rawValue)
+                } icon: {
+                    SlipGlyph.view(item.symbol, size: 16)
+                }
                 if count > 0 { InboxBadge(count: count) }
             }
             .accessibilityElement(children: .combine)
@@ -133,7 +138,8 @@ struct InboxView: View {
 
 struct InboxBadge: View {
     let count: Int
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     var body: some View {
         Text(count > 99 ? "99+" : count.formatted())
@@ -141,7 +147,7 @@ struct InboxBadge: View {
             .foregroundStyle(scheme == .dark ? .black : .white)
             .padding(.horizontal, 4)
             .frame(minWidth: 18, minHeight: 17)
-            .background(Brand.accent(for: scheme), in: .capsule)
+            .background(slipPalette.accent, in: .capsule)
             .fixedSize()
             .accessibilityHidden(true)
     }

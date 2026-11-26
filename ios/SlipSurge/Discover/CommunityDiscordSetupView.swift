@@ -10,7 +10,7 @@ struct CommunityDiscordSetupView: View {
     let api: CommunityDiscordAPI
     private var browser = CommunityDiscordBrowser()
     @Environment(\.openURL) private var openURL
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var setup: CommunityDiscordAPI.Setup?
     @State private var servers: [CommunityDiscordAPI.Server] = []
     @State private var guildID = ""
@@ -43,13 +43,13 @@ struct CommunityDiscordSetupView: View {
                 if let notice {
                     Label(notice, systemImage: failed ? "exclamationmark.circle" : "checkmark.circle")
                         .font(.subheadline)
-                        .foregroundStyle(failed ? .secondary : Brand.accent(for: scheme))
+                        .foregroundStyle(failed ? .secondary : slipPalette.accent)
                 }
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Discord setup")
         .navigationBarTitleDisplayMode(.inline)
         .task { await perform { try await load() } }
@@ -140,7 +140,7 @@ struct CommunityDiscordSetupView: View {
                 } label: {
                     HStack {
                         Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(selected ? Brand.accent(for: scheme) : .secondary)
+                            .foregroundStyle(selected ? slipPalette.accent : .secondary)
                         Text(role.name)
                         Spacer()
                     }

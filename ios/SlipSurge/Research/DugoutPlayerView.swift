@@ -9,7 +9,8 @@ struct DugoutPlayerView: View {
     var profileAPI: DugoutPlayerProfileAPI?
     var showsDone = true
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     var body: some View {
         let team = game.team(for: player)
@@ -63,8 +64,8 @@ struct DugoutPlayerView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle(player.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -137,7 +138,7 @@ struct DugoutPitcherView: View {
     let team: DugoutBoard.Team
     var watchTarget: DugoutWatchTarget?
     var profileAPI: DugoutPlayerProfileAPI?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
         ScrollView {
@@ -158,7 +159,7 @@ struct DugoutPitcherView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle(pitcher.name)
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -237,7 +238,8 @@ struct DugoutMismatchTrend: View {
 
 struct DugoutQuoteRow: View {
     let quote: DugoutBoard.Market.Quote
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     var body: some View {
         let book = Sportsbook.normalized(quote.book)
@@ -257,11 +259,11 @@ struct DugoutQuoteRow: View {
                 let movement = quote.opening.flatMap { dugoutTone(Double($0 - price), scheme: scheme) }
                 Text(ResearchFormat.price(price))
                     .font(.subheadline.weight(.bold)).monospacedDigit()
-                    .foregroundStyle(movement ?? Brand.text(for: scheme))
+                    .foregroundStyle(movement ?? slipPalette.text)
             }
         }
         .padding(9)
-        .background(Brand.background(for: scheme).opacity(0.7), in: .rect(cornerRadius: 9))
+        .background(slipPalette.background.opacity(0.7), in: .rect(cornerRadius: 9))
         .accessibilityElement(children: .combine)
     }
 }

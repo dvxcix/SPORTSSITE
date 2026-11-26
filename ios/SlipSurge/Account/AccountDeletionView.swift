@@ -5,7 +5,7 @@ struct AccountDeletionView: View {
     let userID: UUID
     let hasPaidPlan: Bool
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var current: Request?
     @State private var loaded = false
     @State private var busy = false
@@ -40,7 +40,7 @@ struct AccountDeletionView: View {
                     if current.status != "scheduled" {
                         Button("Cancel deletion request") { Task { await cancel() } }
                     }
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
             } else if loaded {
                 Section {
                     if hasPaidPlan {
@@ -54,7 +54,7 @@ struct AccountDeletionView: View {
                         .disabled(confirmation != "DELETE")
                 } header: { Text("Permanent deletion") }
                 footer: { Text("SlipSurge will confirm by email before removing your account and data.") }
-                .listRowBackground(Brand.surface(for: scheme))
+                .listRowBackground(slipPalette.surface)
             } else if failure == nil {
                 ProgressView("Checking deletion status")
             } else {
@@ -63,8 +63,8 @@ struct AccountDeletionView: View {
             if let failure { Label(failure, systemImage: "exclamationmark.circle").foregroundStyle(.red) }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Delete account")
         .navigationBarTitleDisplayMode(.inline)
         .disabled(busy)

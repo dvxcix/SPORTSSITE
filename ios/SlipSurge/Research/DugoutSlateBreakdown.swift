@@ -10,7 +10,7 @@ struct DugoutSlateBreakdown: View {
     let api: DugoutSlateBreakdownAPI
     @State var date: Date
     @State var selectedGame: Int?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var mode = DugoutMode.pregame
     @State private var data: (Request, DugoutSlateBreakdownData)?
@@ -35,7 +35,7 @@ struct DugoutSlateBreakdown: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Slate Breakdown")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: request) {

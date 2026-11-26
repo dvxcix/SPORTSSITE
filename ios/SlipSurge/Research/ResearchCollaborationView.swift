@@ -3,7 +3,7 @@ import SwiftUI
 struct ResearchCollaborationView: View {
     let api: ResearchLibraryAPI
     let workspace: ResearchLibraryData.Workspace
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.scenePhase) private var phase
     @Environment(\.dismiss) private var dismiss
     @State private var snapshot: ResearchCollaborationData?
@@ -33,14 +33,14 @@ struct ResearchCollaborationView: View {
                 discussion(snapshot)
             } else {
                 ResearchToolMessage(title: "Collaboration couldn’t load", error: error) { Task { await refresh() } }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             }
         }
         .navigationTitle("Collaborate")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task {
             await refresh()
             while !Task.isCancelled {
@@ -83,7 +83,7 @@ struct ResearchCollaborationView: View {
                     }
                 }
             }.disabled(busy || query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        }.listRowBackground(Brand.surface(for: scheme))
+        }.listRowBackground(slipPalette.surface)
     }
 
     private func members(_ snapshot: ResearchCollaborationData) -> some View {
@@ -98,7 +98,7 @@ struct ResearchCollaborationView: View {
                     }
                     Spacer()
                     if snapshot.activeIds.contains(person.userId) {
-                        Circle().fill(Brand.accent(for: scheme)).frame(width: 7, height: 7).accessibilityLabel("Active now")
+                        Circle().fill(slipPalette.accent).frame(width: 7, height: 7).accessibilityLabel("Active now")
                     }
                     if snapshot.owner || person.userId == api.userID {
                         Button("Remove", systemImage: "person.crop.circle.badge.minus", role: .destructive) { removing = person }
@@ -106,7 +106,7 @@ struct ResearchCollaborationView: View {
                     }
                 }
             }
-        }.listRowBackground(Brand.surface(for: scheme))
+        }.listRowBackground(slipPalette.surface)
     }
 
     private func discussion(_ snapshot: ResearchCollaborationData) -> some View {
@@ -126,7 +126,7 @@ struct ResearchCollaborationView: View {
                     }
                 }
             }
-        }.listRowBackground(Brand.surface(for: scheme))
+        }.listRowBackground(slipPalette.surface)
     }
 
     private func avatar(_ person: ResearchCollaborationData.Person?) -> some View {

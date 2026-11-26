@@ -98,7 +98,7 @@ struct NbaDirectoryEntityView: View {
     var game: Int?
     var mode = CourtResearchMode.pregame
     @Environment(\.openURL) private var openURL
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var entity: Entity?
     @State private var board: CourtBoard?
     @State private var observedAt: Date?
@@ -134,8 +134,8 @@ struct NbaDirectoryEntityView: View {
         }
         .navigationTitle(entity?.player?.name ?? entity?.team?.name ?? "NBA")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: revision) { await load() }
         .refreshable { await load() }
     }
@@ -228,7 +228,7 @@ struct NbaDirectoryEntityView: View {
             Text("Player profile").font(.title2.bold()).accessibilityAddTraits(.isHeader)
             ForEach(facts, id: \.0) { label, value in
                 if let value, !value.isEmpty {
-                    LabeledContent(label, value: value).padding(12).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+                    LabeledContent(label, value: value).padding(12).background(slipPalette.surface, in: .rect(cornerRadius: 12))
                 }
             }
         }
@@ -264,7 +264,7 @@ struct NbaDirectoryEntityView: View {
                             }
                             Spacer()
                             Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
-                        }.padding(11).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+                        }.padding(11).background(slipPalette.surface, in: .rect(cornerRadius: 13))
                     }
                 }
             }

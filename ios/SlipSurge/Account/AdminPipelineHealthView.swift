@@ -68,7 +68,7 @@ struct AdminPipelineHealthView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var health: Health?
     @State private var error: (any Error)?
     @State private var query = ""
@@ -96,8 +96,8 @@ struct AdminPipelineHealthView: View {
         }
         .navigationTitle("Pipeline Health")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .searchable(text: $query, prompt: "Find a pipeline")
         .task(id: revision) { await load() }
         .refreshable { await load() }
@@ -237,7 +237,7 @@ struct AdminPipelineHealthView: View {
         }
         .navigationTitle(job.name)
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .interactiveDismissDisabled(running)
         .confirmationDialog("Confirm pipeline action", isPresented: Binding(get: { action != nil }, set: { if !$0 { action = nil } }),
             titleVisibility: .visible, presenting: action) { request in
@@ -265,7 +265,7 @@ struct AdminPipelineHealthView: View {
 
     private func tone(_ value: String) -> Color {
         switch value {
-        case "succeeded": Brand.accent(for: scheme)
+        case "succeeded": slipPalette.accent
         case "failed", "timed_out": .red
         case "stale", "deferred": .orange
         default: .secondary

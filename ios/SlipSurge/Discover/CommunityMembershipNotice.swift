@@ -17,7 +17,7 @@ struct CommunityMembershipNotice: View {
     let requirement: Requirement
     let subject: String
     let account: AccountStore
-    @AppStorage("appearance") private var appearance = Appearance.system
+    @AppStorage("appearance") private var appearance = Appearance.color
 
     var body: some View {
         ContentUnavailableView {

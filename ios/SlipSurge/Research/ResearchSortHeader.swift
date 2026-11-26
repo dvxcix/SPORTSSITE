@@ -6,7 +6,7 @@ struct ResearchSortHeader: View {
     let ascending: Bool
     let action: () -> Void
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
         Button(action: action) {
@@ -23,7 +23,7 @@ struct ResearchSortHeader: View {
             .contentShape(.rect)
         }
         .buttonStyle(SlipSurgePressStyle())
-        .foregroundStyle(selected ? Brand.accent(for: scheme) : Brand.text(for: scheme))
+        .foregroundStyle(selected ? slipPalette.accent : slipPalette.text)
         .accessibilityValue(selected ? (ascending ? "Ascending" : "Descending") : "")
         .accessibilityAddTraits(selected ? [.isHeader, .isSelected] : .isHeader)
         .accessibilityHint("Sort by " + title)

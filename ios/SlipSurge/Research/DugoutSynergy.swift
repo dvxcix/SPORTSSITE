@@ -75,7 +75,8 @@ struct DugoutSynergy: View {
     let api: DugoutAPI
     @State var game = ""
     @State var ranking = Ranking.best
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var mode = DugoutMode.pregame
     @State private var response: DugoutSynergySlate?
     @State private var failure: (any Error)?
@@ -105,8 +106,8 @@ struct DugoutSynergy: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Synergy")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -198,7 +199,7 @@ struct DugoutSynergy: View {
     private func portrait(_ player: DugoutSynergySlate.Player, subtitle: String?) -> some View {
         ResearchToolPortrait(name: player.name, subtitle: subtitle ?? player.team?.code ?? "",
             portraits: player.headshot.map { [$0] } ?? [], teamLogo: player.team?.logo,
-            primary: player.team?.color ?? Brand.surface(for: scheme), secondary: player.team?.secondaryColor ?? Brand.background(for: scheme))
+            primary: player.team?.color ?? slipPalette.surface, secondary: player.team?.secondaryColor ?? slipPalette.background)
     }
 
     private func tone(_ score: Int) -> Color {

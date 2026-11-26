@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CreatorStoreView: View {
     let api: CreatorStoreAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var page: CreatorStorePage?
     @State private var error: (any Error)?
     @State private var retry = 0
@@ -14,8 +14,8 @@ struct CreatorStoreView: View {
         }
         .navigationTitle("Storefront")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: retry) {
             error = nil
             do { page = try await api.load() }
@@ -46,7 +46,7 @@ private struct CreatorStoreEditor: View {
     }
 
     let api: CreatorStoreAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.openURL) private var openURL
     @State private var page: CreatorStorePage
     @State private var saved: CreatorStorePage.Store?
@@ -118,7 +118,7 @@ private struct CreatorStoreEditor: View {
     }
 
     private var brandPanel: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) { Text("Brand").font(.headline) } content: {
+        ResearchToolCard(color: slipPalette.accent) { Text("Brand").font(.headline) } content: {
             TextField("Storefront name", text: $draft.name).textFieldStyle(.roundedBorder)
             TextField("Introduce your storefront", text: $draft.bio, axis: .vertical).lineLimit(3...8).textFieldStyle(.roundedBorder)
             NativePhotoPicker(title: "Choose logo", upload: { photo in
@@ -132,7 +132,7 @@ private struct CreatorStoreEditor: View {
 
     private var audiencePanel: some View {
         VStack(alignment: .leading, spacing: 10) {
-            ResearchToolCard(color: Brand.accent(for: scheme)) { Text("Sports").font(.headline) } content: {
+            ResearchToolCard(color: slipPalette.accent) { Text("Sports").font(.headline) } content: {
                 ForEach(page.sports, id: \.self) { sport in
                     Toggle(isOn: selection(sport, in: $draft.sports)) {
                         HStack(spacing: 9) {
@@ -143,7 +143,7 @@ private struct CreatorStoreEditor: View {
                     }
                 }
             }
-            ResearchToolCard(color: Brand.accent(for: scheme)) { Text("Topics").font(.headline) } content: {
+            ResearchToolCard(color: slipPalette.accent) { Text("Topics").font(.headline) } content: {
                 ForEach(Array(Set(page.tags + draft.tags)).sorted(), id: \.self) { tag in
                     Toggle(tag, isOn: selection(tag, in: $draft.tags))
                 }
@@ -210,7 +210,7 @@ private struct CreatorStoreEditor: View {
     }
 
     private var communityPanel: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) { Text("Member community").font(.headline) } content: {
+        ResearchToolCard(color: slipPalette.accent) { Text("Member community").font(.headline) } content: {
             if let id = saved?.communityId, let group = page.groups.first(where: { $0.id == id }) {
                 NavigationLink {
                     CommunitySettingsView(api: .init(account: api.account, userID: api.userID, groupID: group.id))
@@ -240,7 +240,7 @@ private struct CreatorStoreEditor: View {
     }
 
     private var publishPanel: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) { Text("Publish storefront").font(.headline) } content: {
+        ResearchToolCard(color: slipPalette.accent) { Text("Publish storefront").font(.headline) } content: {
             LabeledContent("Access", value: draft.access.capitalized)
             LabeledContent("Community", value: page.groups.first { $0.id == saved?.communityId }?.name ?? "Choose in Access")
             Button(saved?.status == "published" ? "Publish changes" : "Publish", systemImage: "arrow.up.circle") { confirmPublish = true }

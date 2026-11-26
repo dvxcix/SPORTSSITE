@@ -4,7 +4,7 @@ struct CommunityChannelManager: View {
     let api: CommunitySettingsAPI
     let initial: CommunitySettingsState
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var current: CommunitySettingsState?
     @State private var editor: Item?
     @State private var removing: MessagesAPI.Channel?
@@ -31,13 +31,13 @@ struct CommunityChannelManager: View {
                         Button("Delete", systemImage: "trash", role: .destructive) { removing = channel }
                     }
                 }
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
             if state.channels.isEmpty { ContentUnavailableView("No channels", systemImage: "number") }
             if let problem { Text(problem).foregroundStyle(.red) }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Manage channels")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { Button("New channel", systemImage: "plus") { editor = Item(channel: nil) } }
@@ -71,7 +71,7 @@ private struct ChannelEditor: View {
     let channel: MessagesAPI.Channel?
     let didSave: () async -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var name = ""
     @State private var description = ""
     @State private var icon = "#"
@@ -89,11 +89,11 @@ private struct ChannelEditor: View {
                     Picker("Channel type", selection: $kind) {
                         ForEach(Self.kinds, id: \.self) { Text($0.capitalized).tag($0) }
                     }
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
                 if failure { Text("The channel couldn’t be saved. Try again.").foregroundStyle(.red) }
             }
             .scrollContentBackground(.hidden)
-            .background(Brand.background(for: scheme))
+            .background(slipPalette.background)
             .navigationTitle(channel == nil ? "New channel" : "Edit channel")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

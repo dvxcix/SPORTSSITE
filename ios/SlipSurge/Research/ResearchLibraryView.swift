@@ -16,7 +16,8 @@ struct ResearchLibraryView: View {
 
     let api: ResearchLibraryAPI
     var initialSection = Section.saved
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var section = Section.saved
     @State private var data: ResearchLibraryData?
     @State private var selectedWorkspace = ""
@@ -68,8 +69,8 @@ struct ResearchLibraryView: View {
         }
         .navigationTitle("Workspace")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .onAppear { if data == nil { section = initialSection } }
         .onChange(of: selectedWorkspace) { _, _ in select(workspace) }
         .task(id: revision) { await load() }
@@ -142,7 +143,7 @@ struct ResearchLibraryView: View {
         if selected.isEmpty { ContentUnavailableView("No markets selected", systemImage: "square.split.2x1", description: Text("Add up to four markets from Watchlist.")) }
         ForEach(selected.compactMap { id in library.items.first { $0.id == id } }) { market in marketCard(market) }
         if !library.nflMatrices.isEmpty || !library.mlbMatrices.isEmpty {
-            ResearchToolCard(color: Brand.accent(for: scheme)) { Text("Attached Matrices").font(.headline) } content: {
+            ResearchToolCard(color: slipPalette.accent) { Text("Attached Matrices").font(.headline) } content: {
                 ForEach(library.nflMatrices) { matrix in matrixToggle(matrix, league: "NFL", current: $nfl) }
                 ForEach(library.mlbMatrices) { matrix in matrixToggle(matrix, league: "MLB", current: $mlb) }
             }
@@ -171,7 +172,7 @@ struct ResearchLibraryView: View {
 
     private func marketCard(_ market: ResearchLibraryData.SavedMarket, canRemove: Bool = false) -> some View {
         let colors = (market.colors ?? []).compactMap { Color(hex: $0) }
-        let primary = colors.first ?? Brand.accent(for: scheme), secondary = colors.dropFirst().first ?? Brand.surface(for: scheme)
+        let primary = colors.first ?? slipPalette.accent, secondary = colors.dropFirst().first ?? slipPalette.surface
         let included = selected.contains(market.id)
         let line = market.line.flatMap { $0.isEmpty ? nil : $0 } ?? market.propLabel
         let selectedBook = market.book.map(Sportsbook.normalized)
@@ -214,7 +215,7 @@ struct ResearchLibraryView: View {
         Button("New note", systemImage: "square.and.pencil") { note = DraftNote() }.buttonStyle(.borderedProminent)
         if notes.isEmpty { ContentUnavailableView("No notes", systemImage: "note.text") }
         ForEach(notes) { entry in
-            ResearchToolCard(color: Brand.accent(for: scheme)) {
+            ResearchToolCard(color: slipPalette.accent) {
                 HStack {
                     if entry.pinned { Image(systemName: "pin.fill").accessibilityLabel("Pinned") }
                     Text(entry.title).font(.headline)
@@ -236,7 +237,7 @@ struct ResearchLibraryView: View {
         let visible = entries.filter { $0.workspaceId == workspace?.id }
         if visible.isEmpty { ContentUnavailableView("No captured evidence", systemImage: "square.stack") }
         ForEach(visible) { item in
-            ResearchToolCard(color: Brand.accent(for: scheme)) {
+            ResearchToolCard(color: slipPalette.accent) {
                 Label {
                     Text(item.title).font(.headline)
                 } icon: {

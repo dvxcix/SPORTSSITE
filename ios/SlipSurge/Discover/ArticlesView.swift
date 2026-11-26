@@ -3,7 +3,7 @@ import SwiftUI
 struct ArticlesView: View {
     let api: ArticlesAPI
     var mine = false
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var entries: [ArticlesAPI.Article]?
     @State private var next: String?
     @State private var loadingMore = false
@@ -51,7 +51,7 @@ struct ArticlesView: View {
             .frame(maxWidth: 650)
             .frame(maxWidth: .infinity)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle(mine ? "My articles" : "Articles")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -102,7 +102,7 @@ struct ArticlesView: View {
 struct ArticleReader: View {
     let api: ArticlesAPI
     let slug: String
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var result: ArticlesAPI.Detail?
     @State private var liked: Bool?
     @State private var likes: Int?
@@ -141,7 +141,7 @@ struct ArticleReader: View {
                     }
                     ArticleParagraphs(content: article.content ?? "")
                     if let bio = article.author?.bio, !bio.isEmpty {
-                        ResearchToolCard(color: Brand.accent(for: scheme)) {
+                        ResearchToolCard(color: slipPalette.accent) {
                             Text("About the author").font(.headline)
                         } content: { Text(bio).font(.subheadline).foregroundStyle(.secondary) }
                     }
@@ -166,7 +166,7 @@ struct ArticleReader: View {
             .frame(maxWidth: 650)
             .frame(maxWidth: .infinity, alignment: .center)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Article")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -234,7 +234,8 @@ private struct ArticleCoverCard: View {
     var lead = false
     var showStatus = false
     var views: Int?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -247,7 +248,7 @@ private struct ArticleCoverCard: View {
                         ResearchArtwork(urls: [logo], fallback: "sportscourt").frame(width: 23, height: 23)
                         Text(LeagueArtwork.label(sport)).font(.caption.weight(.semibold))
                     }
-                    if let category = value.category { Text(category).font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme)) }
+                    if let category = value.category { Text(category).font(.caption.weight(.semibold)).foregroundStyle(slipPalette.accent) }
                     if showStatus, let status = value.status { Text(status.capitalized).font(.caption.weight(.semibold)).foregroundStyle(.secondary) }
                 }
                 Text(value.title).font(lead ? .largeTitle.weight(.bold) : .title3.weight(.bold)).fixedSize(horizontal: false, vertical: true)
@@ -260,14 +261,14 @@ private struct ArticleCoverCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .foregroundStyle(.primary)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 18))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 18))
         .clipShape(.rect(cornerRadius: 18))
     }
 
     private var authorLine: some View {
         let author = value.author
         let photo = author?.avatarUrl.flatMap { FeedPostCard.allowedMedia($0) ? $0 : nil }
-        let ring = Color(hex: author?.avatarRingColor) ?? Brand.accent(for: scheme)
+        let ring = Color(hex: author?.avatarRingColor) ?? slipPalette.accent
         let hasRing = author?.avatarRingStyle.map { !["", "none", "default"].contains($0) } ?? false
         return HStack(spacing: 6) {
             if let author {
@@ -275,7 +276,7 @@ private struct ArticleCoverCard: View {
                     .frame(width: 29, height: 29).clipShape(.circle)
                     .overlay { if hasRing { Circle().strokeBorder(ring, lineWidth: 2) } }
                 if let name = author.displayName ?? author.username { Text(name).lineLimit(1) }
-                if author.isVerified == true { Image(systemName: "checkmark.seal.fill").foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Verified") }
+                if author.isVerified == true { Image(systemName: "checkmark.seal.fill").foregroundStyle(slipPalette.accent).accessibilityLabel("Verified") }
                 Spacer(minLength: 0)
             }
             if let date = value.createdAt.flatMap(SidelineBoard.timestamp) {

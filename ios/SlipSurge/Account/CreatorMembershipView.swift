@@ -8,8 +8,9 @@ struct CreatorMembershipView: View {
     var artwork: URL? = nil
     var community: DiscoverAPI.Communities.Community? = nil
     var creatorUsername: String? = nil
-    @AppStorage("appearance") private var appearance = Appearance.system
-    @Environment(\.colorScheme) private var scheme
+    @AppStorage("appearance") private var appearance = Appearance.color
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var phase
     @State private var signIn = false
@@ -39,13 +40,13 @@ struct CreatorMembershipView: View {
                     DiscoverIdentityCard(title: community.name, subtitle: "Included community", detail: community.description,
                         avatar: community.avatarUrl, banner: nil, symbol: "person.2", count: nil)
                 }
-                ResearchToolCard(color: Brand.accent(for: scheme)) { Text("Member access").font(.headline) } content: {
+                ResearchToolCard(color: slipPalette.accent) { Text("Member access").font(.headline) } content: {
                     if offer.status == "paused", access?.active != true, !owner {
                         Text("New purchases are paused. Current members can still verify and open their community.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     if access?.active == true || owner {
-                        Label("Access active", systemImage: "checkmark.seal.fill").foregroundStyle(Brand.accent(for: scheme))
+                        Label("Access active", systemImage: "checkmark.seal.fill").foregroundStyle(slipPalette.accent)
                         if let group = access?.group ?? community {
                             NavigationLink {
                                 CommunityDetailView(api: client, group: group, initialMember: true)
@@ -65,8 +66,8 @@ struct CreatorMembershipView: View {
         }
         .navigationTitle(offer.title)
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: account.memberID) {
             storefront = await Storefront.current?.countryCode
             await load()
@@ -155,7 +156,7 @@ struct CreatorMembershipView: View {
 
 struct CreatorMembershipsView: View {
     let api: CreatorMembershipAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var offers: [CreatorMembershipOffer]?
     @State private var error: (any Error)?
     @State private var retry = 0
@@ -170,14 +171,14 @@ struct CreatorMembershipsView: View {
                     } label: {
                         LabeledContent(offer.title, value: offer.active == true ? "Active" : (offer.accessStatus?.capitalized ?? ""))
                     }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
                 }
             } else { ResearchToolMessage(title: "Creator memberships couldn’t load", error: error) { retry += 1 } }
         }
         .navigationTitle("Creator memberships")
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: retry) { await load() }
         .refreshable { await load() }
     }

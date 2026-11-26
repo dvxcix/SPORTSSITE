@@ -32,7 +32,7 @@ struct CommunityMemberPreferences: View {
     let group: DiscoverAPI.Communities.Community
     let saved: () -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var page: Page?
     @State private var error: (any Error)?
     @State private var accept = false
@@ -53,7 +53,7 @@ struct CommunityMemberPreferences: View {
                         Text(page.rules?.isEmpty == false ? page.rules ?? "" : "SlipSurge community standards apply.")
                             .font(.subheadline)
                         Toggle("I agree to the community rules", isOn: $accept)
-                    }.listRowBackground(Brand.surface(for: scheme))
+                    }.listRowBackground(slipPalette.surface)
                     if !page.channels.isEmpty {
                         Section("Favorite channels") {
                             ForEach(page.channels) { channel in
@@ -68,22 +68,22 @@ struct CommunityMemberPreferences: View {
                                     }
                                 }
                             }
-                        }.listRowBackground(Brand.surface(for: scheme))
+                        }.listRowBackground(slipPalette.surface)
                     }
                     Section("Membership preferences") {
                         TextField("Community flair", text: $flair, prompt: Text("Optional"))
                         Picker("Notifications", selection: $alerts) {
                             ForEach(Alerts.allCases, id: \.self) { Text($0.title).tag($0) }
                         }
-                    }.listRowBackground(Brand.surface(for: scheme))
+                    }.listRowBackground(slipPalette.surface)
                     if let message { Label(message, systemImage: "exclamationmark.circle").foregroundStyle(.red) }
                 } else {
                     ResearchToolMessage(title: "Preferences couldn’t load", error: error) { retry += 1 }
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Brand.background(for: scheme))
-            .foregroundStyle(Brand.text(for: scheme))
+            .background(slipPalette.background)
+            .foregroundStyle(slipPalette.text)
             .navigationTitle(group.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

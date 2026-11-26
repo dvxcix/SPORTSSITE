@@ -23,7 +23,8 @@ struct GameMarkets: View {
     let offers: [GameMarketBook]
     var initialBook: String?
     @State private var pickedBook: String?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
 
     private var ordered: [GameMarketBook] {
         var seen = Set<String>()
@@ -85,7 +86,7 @@ struct GameMarkets: View {
             }
         }
         .padding(14)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 14))
     }
 
     private func team(_ team: ResearchMatchup.Team) -> some View {

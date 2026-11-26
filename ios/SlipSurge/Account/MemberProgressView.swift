@@ -42,7 +42,7 @@ struct MemberProgressView: View {
     ]
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var mastery: Mastery?
     @State private var failed = false
 
@@ -70,8 +70,8 @@ struct MemberProgressView: View {
             .padding(16)
         }
         .navigationTitle("Missions")
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 NavigationLink(destination: DiscoverView(api: api, opensDestination: .constant(.leaderboard))) {
@@ -86,9 +86,9 @@ struct MemberProgressView: View {
     private func levelCard(_ value: Mastery) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Level \(value.level)", systemImage: "trophy.fill")
-                .font(.subheadline.weight(.heavy)).foregroundStyle(Brand.accent(for: scheme))
+                .font(.subheadline.weight(.heavy)).foregroundStyle(slipPalette.accent)
             Text("\(value.points.formatted()) points").font(.largeTitle.weight(.heavy)).monospacedDigit()
-            ProgressView(value: value.fraction).tint(Brand.accent(for: scheme))
+            ProgressView(value: value.fraction).tint(slipPalette.accent)
                 .accessibilityLabel("Progress to level \(value.level + 1)")
             Text("\(value.remaining.formatted(.number.precision(.fractionLength(0)))) points to Level \(value.level + 1)")
                 .font(.subheadline).foregroundStyle(.secondary)
@@ -97,8 +97,8 @@ struct MemberProgressView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(alignment: .topLeading) {
             let shape = RoundedRectangle(cornerRadius: 22)
-            shape.fill(Brand.surface(for: scheme)).overlay {
-                shape.fill(.linearGradient(colors: [Brand.accent(for: scheme).opacity(0.18), .clear],
+            shape.fill(slipPalette.surface).overlay {
+                shape.fill(.linearGradient(colors: [slipPalette.accent.opacity(0.18), .clear],
                     startPoint: .topLeading, endPoint: .bottomTrailing))
             }
         }
@@ -109,28 +109,28 @@ struct MemberProgressView: View {
             HStack {
                 Text(mission.period.capitalized).foregroundStyle(.secondary)
                 Spacer()
-                Text("+\(mission.points)").foregroundStyle(Brand.accent(for: scheme)).monospacedDigit()
+                Text("+\(mission.points)").foregroundStyle(slipPalette.accent).monospacedDigit()
             }.font(.subheadline.weight(.semibold))
             Text(verbatim: mission.title).font(.headline)
-            ProgressView(value: mission.fraction).tint(Brand.accent(for: scheme))
+            ProgressView(value: mission.fraction).tint(slipPalette.accent)
                 .accessibilityLabel(mission.title)
             if mission.complete {
                 Label("Complete", systemImage: "checkmark.circle.fill")
-                    .font(.caption.weight(.bold)).foregroundStyle(Brand.accent(for: scheme))
+                    .font(.caption.weight(.bold)).foregroundStyle(slipPalette.accent)
             } else {
                 Text("\(mission.current) / \(mission.target)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
         }
         .padding(14)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 15))
     }
 
     private func achievementRow(_ achievement: Achievement, earned: Bool) -> some View {
         HStack(spacing: 11) {
             Image(systemName: achievement.icon)
                 .frame(width: 38, height: 38)
-                .foregroundStyle(earned ? Brand.accent(for: scheme) : .secondary)
-                .background(Brand.background(for: scheme), in: .circle)
+                .foregroundStyle(earned ? slipPalette.accent : .secondary)
+                .background(slipPalette.background, in: .circle)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(verbatim: achievement.title).font(.headline)
@@ -138,11 +138,11 @@ struct MemberProgressView: View {
             }
             Spacer(minLength: 0)
             Image(systemName: earned ? "checkmark.circle.fill" : "lock")
-                .foregroundStyle(earned ? Brand.accent(for: scheme) : .secondary)
+                .foregroundStyle(earned ? slipPalette.accent : .secondary)
                 .accessibilityLabel(earned ? "Earned" : "Locked")
         }
         .padding(12)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 15))
         .accessibilityElement(children: .combine)
     }
 
@@ -195,7 +195,7 @@ struct ActivityReplayView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.openURL) private var openURL
     @State private var events: [Event]?
     @State private var failed = false
@@ -211,7 +211,7 @@ struct ActivityReplayView: View {
                             Button("Open the feed") { openURL(url) }
                         }
                     }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
                 }
                 ForEach(days(events)) { day in
                     Section(dayLabel(day.id)) {
@@ -228,7 +228,7 @@ struct ActivityReplayView: View {
                                 row(event)
                             }
                         }
-                    }.listRowBackground(Brand.surface(for: scheme))
+                    }.listRowBackground(slipPalette.surface)
                 }
             } else if failed {
                 ContentUnavailableView {
@@ -242,17 +242,17 @@ struct ActivityReplayView: View {
         }
         .navigationTitle("Activity Replay")
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task { await load() }
         .refreshable { await load() }
     }
 
     private func row(_ event: Event) -> some View {
         HStack(spacing: 11) {
-            Image(systemName: event.symbol).foregroundStyle(Brand.accent(for: scheme))
+            Image(systemName: event.symbol).foregroundStyle(slipPalette.accent)
                 .frame(width: 36, height: 36)
-                .background(Brand.background(for: scheme), in: .circle)
+                .background(slipPalette.background, in: .circle)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(verbatim: event.label).font(.headline)

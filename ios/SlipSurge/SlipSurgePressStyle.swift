@@ -9,15 +9,15 @@ struct SlipSurgePressStyle: ButtonStyle {
 
 struct SlipSurgePrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var enabled
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(enabled ? Color(rgb: 0x14220C) : Brand.text(for: scheme))
+            .foregroundStyle(enabled ? Color(rgb: 0x14220C) : slipPalette.text)
             .padding(.horizontal, 13)
             .frame(minHeight: 44)
-            .background(enabled ? Color(rgb: 0xB4FF4D) : Color.secondary.opacity(0.15), in: .rect(cornerRadius: 11))
+            .background(enabled ? slipPalette.actionFill : AnyShapeStyle(Color.secondary.opacity(0.15)), in: .rect(cornerRadius: 11))
             .contentShape(.rect(cornerRadius: 11))
             .modifier(SlipSurgeButtonFeedback(pressed: configuration.isPressed))
     }

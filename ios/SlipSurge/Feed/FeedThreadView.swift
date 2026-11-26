@@ -12,7 +12,8 @@ struct FeedThreadView: View {
     var onPostChange: (FeedPost) -> Void = { _ in }
     var onPostRemoved: () -> Void = {}
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.dismiss) private var dismiss
     @State private var thread: FeedThread?
     @State private var unavailable = false
@@ -58,8 +59,8 @@ struct FeedThreadView: View {
                     .presentationDetents([.medium, .large])
             }
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: id) { await load() }
         .refreshable { await load() }
         .confirmationDialog("Delete comment?", isPresented: Binding(get: { deleted != nil }, set: { if !$0 { deleted = nil } }), titleVisibility: .visible) {
@@ -81,7 +82,7 @@ struct FeedThreadView: View {
                     postChanged: { removed in
                         if removed { onPostRemoved(); dismiss() } else { Task { await load() } }
                     })
-                    .padding(14).background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
+                    .padding(14).background(slipPalette.surface, in: .rect(cornerRadius: 16))
             }
             if let notice {
                 Label(notice, systemImage: "exclamationmark.circle").font(.footnote)
@@ -130,7 +131,7 @@ struct FeedThreadView: View {
                 } label: {
                     Image(systemName: "plus").font(.body.weight(.semibold))
                         .frame(width: 44, height: 46)
-                        .background(Brand.surface(for: scheme), in: .circle)
+                        .background(slipPalette.surface, in: .circle)
                         .contentShape(.rect)
                 }
                 .accessibilityLabel("Add to reply")
@@ -155,7 +156,7 @@ struct FeedThreadView: View {
                         .accessibilityLabel("Hide keyboard")
                     }
                 }
-                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 23))
+                .background(slipPalette.surface, in: .rect(cornerRadius: 23))
                 .overlay {
                     RoundedRectangle(cornerRadius: 23).strokeBorder(.secondary.opacity(0.18)).allowsHitTesting(false)
                 }
@@ -165,7 +166,7 @@ struct FeedThreadView: View {
                     Image(systemName: editing == nil ? "arrow.up" : "checkmark").font(.body.weight(.bold))
                         .foregroundStyle(commentIsSendable ? (scheme == .dark ? .black : .white) : .secondary)
                         .frame(width: 46, height: 46)
-                        .background(commentIsSendable ? Brand.accent(for: scheme) : Brand.surface(for: scheme), in: .circle)
+                        .background(commentIsSendable ? slipPalette.accent : slipPalette.surface, in: .circle)
                         .contentShape(.circle)
                 }
                 .buttonStyle(SlipSurgePressStyle())
@@ -174,7 +175,7 @@ struct FeedThreadView: View {
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
-        .background { Brand.background(for: scheme).ignoresSafeArea(.container, edges: .bottom) }
+        .background { slipPalette.background.ignoresSafeArea(.container, edges: .bottom) }
         .overlay(alignment: .top) { Divider().allowsHitTesting(false) }
     }
 
@@ -264,7 +265,7 @@ struct FeedThreadView: View {
         }
         .padding(11)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 12))
     }
 
     private func action(_ action: FeedAPI.Mutation) {

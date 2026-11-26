@@ -5,7 +5,8 @@ struct DugoutPlayerProfileView: View {
     let api: DugoutPlayerProfileAPI
     let playerID: Int
     var preferredRole: DugoutProfile.Role?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var data: DugoutProfile?
@@ -46,7 +47,7 @@ struct DugoutPlayerProfileView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Player Profile")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: revision) { await load() }
@@ -74,12 +75,12 @@ struct DugoutPlayerProfileView: View {
             withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) { page = tab }
         } label: {
             Text(tab.rawValue).font(.subheadline.weight(.semibold))
-                .foregroundStyle(page == tab ? Brand.accent(for: scheme) : Brand.text(for: scheme))
+                .foregroundStyle(page == tab ? slipPalette.accent : slipPalette.text)
                 .padding(.horizontal, typeSize.isAccessibilitySize ? 12 : 4)
                 .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(SlipSurgePressStyle())
-        .modifier(PlayerPageGlass(tint: page == tab ? Brand.accent(for: scheme).opacity(0.26) : nil))
+        .modifier(PlayerPageGlass(tint: page == tab ? slipPalette.accent.opacity(0.26) : nil))
         .accessibilityAddTraits(page == tab ? .isSelected : [])
     }
 

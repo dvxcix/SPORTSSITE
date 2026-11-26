@@ -33,7 +33,7 @@ struct AdminDiscordView: View {
     }
 
     let api: AdminDiscordAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var page = Page.server
     @State private var config: AdminDiscordAPI.Configuration?
     @State private var channels: [AdminDiscordAPI.Channel] = []
@@ -89,8 +89,8 @@ struct AdminDiscordView: View {
             .padding(16)
             .disabled(running != nil)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .scrollDismissesKeyboard(.interactively)
         .keyboardDone()
         .navigationTitle("Discord Bot")

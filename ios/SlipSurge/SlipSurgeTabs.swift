@@ -5,7 +5,7 @@ struct SlipSurgeTabs: View {
     @Binding var appearance: Appearance
     @Binding var incomingURL: URL?
     @Binding var notificationOpen: InboxNotificationOpen?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.scenePhase) private var phase
     enum Destination: String, CaseIterable {
         case feed = "Feed", research = "Research", community = "Community", inbox = "Inbox", you = "You"
@@ -148,7 +148,8 @@ struct SlipSurgeTabs: View {
             .tabItem { Label(Destination.you.rawValue, glyph: Destination.you.glyph.rawValue) }
             .tag(Destination.you)
         }
-        .tint(Brand.accent(for: scheme))
+        .tint(slipPalette.accent)
+        .environment(\.slipActiveDestination, selected)
         .environment(socialDetails)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if !keyboardVisible && !socialDetails.showsDetail(in: selected) {
@@ -455,14 +456,14 @@ struct NativeResumeOffer: View {
     let offer: NativeResumeStore.Offer
     let open: () -> Void
     let dismiss: () -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
         let content = HStack(spacing: 4) {
             Button(action: open) {
                 HStack(spacing: 9) {
                     Image(systemName: "clock.arrow.circlepath").font(.title3)
-                        .foregroundStyle(Brand.accent(for: scheme))
+                        .foregroundStyle(slipPalette.accent)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Continue where you left off").font(.caption).foregroundStyle(.secondary)
                         Text(offer.title).font(.subheadline.weight(.semibold)).lineLimit(1)
@@ -478,7 +479,7 @@ struct NativeResumeOffer: View {
                 .labelStyle(.iconOnly).font(.caption.weight(.semibold))
                 .buttonStyle(.borderless).frame(minWidth: 44, minHeight: 44)
         }
-        .foregroundStyle(Brand.text(for: scheme)).padding(.leading, 12).padding(.vertical, 3)
+        .foregroundStyle(slipPalette.text).padding(.leading, 12).padding(.vertical, 3)
         Group {
             if #available(iOS 26, *) { content.glassEffect(.regular, in: .rect(cornerRadius: 18)) }
             else { content.background(.regularMaterial, in: .rect(cornerRadius: 18)) }
@@ -488,7 +489,7 @@ struct NativeResumeOffer: View {
 
 private struct ResearchHome: View {
     let account: AccountStore
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.dynamicTypeSize) private var textSize
     @Environment(\.memberResearchPreferences) private var preferences
     @State private var dugoutAvailable = false
@@ -515,8 +516,8 @@ private struct ResearchHome: View {
             .frame(maxWidth: .infinity)
         }
         .navigationTitle("Research")
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background { SlipBackdrop(animatedFor: .research) }
+        .foregroundStyle(slipPalette.text)
         .task(id: account.memberID) {
             guard let userID = account.memberID else { dugoutAvailable = false; return }
             let allowed = (try? await DugoutAPI(account: account, userID: userID).available()) == true
@@ -554,7 +555,7 @@ private struct ResearchHome: View {
             NavigationLink {
                 NativeMarketplaceView(api: .init(account: account, userID: id), userID: id, target: .init())
             } label: {
-                ResearchToolCard(color: Brand.accent(for: scheme)) {
+                ResearchToolCard(color: slipPalette.accent) {
                     Label("Matrix Marketplace", systemImage: "storefront").font(.title3.weight(.semibold))
                 } content: { EmptyView() }
             }
@@ -562,7 +563,7 @@ private struct ResearchHome: View {
             NavigationLink {
                 ResearchLibraryView(api: ResearchLibraryAPI(account: account, userID: id))
             } label: {
-                ResearchToolCard(color: Brand.accent(for: scheme)) {
+                ResearchToolCard(color: slipPalette.accent) {
                     Label("Workspace", systemImage: "square.grid.2x2").font(.title3.weight(.semibold))
                 } content: {
                     Text("Watchlist, comparisons, notes and shared research").font(.subheadline).foregroundStyle(.secondary)
@@ -572,7 +573,7 @@ private struct ResearchHome: View {
             NavigationLink {
                 MyPicksView(api: DiscoverAPI(account: account, userID: id))
             } label: {
-                ResearchToolCard(color: Brand.accent(for: scheme)) {
+                ResearchToolCard(color: slipPalette.accent) {
                     Label("My Picks", systemImage: "list.clipboard").font(.title3.weight(.semibold))
                 } content: {
                     Text("Active picks, parlays and results").font(.subheadline).foregroundStyle(.secondary)
@@ -590,7 +591,7 @@ private struct ResearchHome: View {
             )
             .frame(width: 39, height: 39)
             VStack(alignment: .leading, spacing: 5) {
-                Text(league).font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                Text(league).font(.caption.weight(.semibold)).foregroundStyle(slipPalette.accent)
                 Text(title).font(.title3.weight(.semibold))
             }
             Spacer()
@@ -600,7 +601,7 @@ private struct ResearchHome: View {
                 .accessibilityHidden(true)
         }
         .padding(15)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 14))
         .overlay {
             RoundedRectangle(cornerRadius: 14).strokeBorder(.secondary.opacity(0.2))
         }

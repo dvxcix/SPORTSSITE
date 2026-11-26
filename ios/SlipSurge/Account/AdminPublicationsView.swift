@@ -50,7 +50,8 @@ struct AdminPublicationsView: View {
 
     let viewer: DiscoverAPI
     let kind: Kind
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var entries: [Entry]?
     @State private var issue: (any Error)?
     @State private var actionIssue = false
@@ -71,7 +72,7 @@ struct AdminPublicationsView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle(kind.title)
         .navigationBarTitleDisplayMode(.inline)
         .task(id: revision) { await load() }
@@ -92,10 +93,10 @@ struct AdminPublicationsView: View {
             Group {
                 if let artwork = entry.artwork { ResearchArtwork(urls: [artwork], fallback: kind.image) }
                 else if let emoji = entry.emoji { Text(emoji).font(.title2) }
-                else { Image(systemName: kind.image).foregroundStyle(Brand.accent(for: scheme)) }
+                else { Image(systemName: kind.image).foregroundStyle(slipPalette.accent) }
             }
             .frame(width: 40, height: 40)
-            .background(Brand.accent(for: scheme).opacity(0.12), in: .rect(cornerRadius: 9))
+            .background(slipPalette.accent.opacity(0.12), in: .rect(cornerRadius: 9))
             .clipShape(.rect(cornerRadius: 9))
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 5) {
@@ -131,7 +132,7 @@ struct AdminPublicationsView: View {
             .labelStyle(.iconOnly).disabled(pending.contains(entry.id))
         }
         .padding(.vertical, 4)
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
     }
 
     private func load() async {

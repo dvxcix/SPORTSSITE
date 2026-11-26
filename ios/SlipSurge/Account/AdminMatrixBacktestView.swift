@@ -40,7 +40,7 @@ struct AdminMatrixBacktestView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var code = ""
     @State private var start = Date.now
     @State private var end = Date.now
@@ -77,8 +77,8 @@ struct AdminMatrixBacktestView: View {
         .navigationTitle("Matrix backtest")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background(slipPalette.background)
+        .tint(slipPalette.accent)
         .task(id: retry) { await loadAvailability() }
         .refreshable { if !running { await loadAvailability() } }
     }

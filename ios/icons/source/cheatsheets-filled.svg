@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" data-style="filled" data-waive-small="The solid outer silhouette spans the normal keyline; the measured cutouts are deliberately inset">
+  <rect x="4.25" y="2.75" width="15.5" height="18.5" rx="2" data-role="silhouette"/>
+  <path d="M8 9.5 11 12.5l5-5M8 17h8" data-role="detail"/>
+</svg>

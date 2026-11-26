@@ -4,7 +4,7 @@ struct FeedBookmarksView: View {
     private struct Bookmarks: Decodable { let posts: [FeedPost] }
 
     let api: FeedAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var bookmarks: Bookmarks?
     @State private var error: (any Error)?
     @State private var revision = 0
@@ -21,7 +21,7 @@ struct FeedBookmarksView: View {
                         FeedPostCard(post: post, discussion: { selected = post.postID }, actionsAPI: api, postChanged: { _ in revision += 1 })
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 18))
+                        .background(slipPalette.surface, in: .rect(cornerRadius: 18))
                         .contextMenu {
                             Button("Remove bookmark", systemImage: "bookmark.slash", role: .destructive) {
                                 Task {
@@ -42,8 +42,8 @@ struct FeedBookmarksView: View {
         }
         .navigationTitle("Bookmarks")
         .navigationDestination(item: $selected) { id in FeedThreadView(api: api, id: id, original: bookmarks?.posts.first { $0.postID == id }) }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: revision) { await load() }
         .refreshable { await load() }
     }

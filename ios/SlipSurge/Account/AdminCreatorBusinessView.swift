@@ -21,7 +21,7 @@ struct AdminCreatorBusinessView: View {
 
     typealias Data = AdminCreatorBusinessData
     let api: AdminCreatorBusinessAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var data: Data?
     @State private var failure: (any Error)?
     @State private var selected: UUID?
@@ -55,8 +55,8 @@ struct AdminCreatorBusinessView: View {
         }
         .navigationTitle("Creator Operations")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: revision) { await load() }
         .refreshable { await load() }
         .sheet(item: $management) { change in
@@ -101,7 +101,7 @@ struct AdminCreatorBusinessView: View {
         if creators.isEmpty { ContentUnavailableView("No matching creators", systemImage: "person.2") }
         ForEach(creators) { creator in
             let communities = data.groups.filter { $0.ownerId == creator.id }
-            ResearchToolCard(color: Brand.accent(for: scheme)) {
+            ResearchToolCard(color: slipPalette.accent) {
                 DiscoverIdentityCard(title: creator.name, subtitle: "@\(creator.username)", detail: creator.email,
                     avatar: creator.avatarUrl, banner: nil, symbol: "person.crop.circle", count: nil)
             } content: {
@@ -132,7 +132,7 @@ struct AdminCreatorBusinessView: View {
         let offers = data.offers.filter { inScope($0.creatorId) }
         if offers.isEmpty { ContentUnavailableView("No offers", systemImage: "storefront") }
         ForEach(offers) { offer in
-            ResearchToolCard(color: Brand.accent(for: scheme)) {
+            ResearchToolCard(color: slipPalette.accent) {
                 ResearchSectionTitle(title: offer.title)
             } content: {
                 LabeledContent(pretty(offer.status), value: offer.price.formatted(.currency(code: offer.currency)))
@@ -159,7 +159,7 @@ struct AdminCreatorBusinessView: View {
         let members = data.members.filter { inScope($0.creatorId) }
         if members.isEmpty { ContentUnavailableView("No memberships", systemImage: "person.2") }
         ForEach(members) { member in
-            ResearchToolCard(color: member.held ? .orange : Brand.accent(for: scheme)) {
+            ResearchToolCard(color: member.held ? .orange : slipPalette.accent) {
                 ResearchSectionTitle(title: member.name)
             } content: {
                 LabeledContent(data.offers.first(where: { $0.id == member.productId })?.title ?? "Creator membership", value: member.held ? "Held" : pretty(member.status))
@@ -190,7 +190,7 @@ struct AdminCreatorBusinessView: View {
         let events = data.events.filter { inScope($0.creatorId) }
         if events.isEmpty { ContentUnavailableView("No payment activity", systemImage: "creditcard") }
         ForEach(events) { event in
-            ResearchToolCard(color: Brand.accent(for: scheme)) {
+            ResearchToolCard(color: slipPalette.accent) {
                 Text(pretty(event.eventType)).font(.headline)
             } content: {
                 LabeledContent(pretty(event.status ?? "Record"), value: event.amount.map { $0.formatted(.currency(code: (event.currency ?? "USD").uppercased())) } ?? "—")

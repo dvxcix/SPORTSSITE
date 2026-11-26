@@ -60,7 +60,8 @@ struct CourtIntelligenceView: View {
     let board: CourtBoard
     let defense: Bool
     let revision: Int
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var market = CourtPlayerMarket.points
     @State private var book = "all"
@@ -168,7 +169,7 @@ struct CourtIntelligenceView: View {
                     } content: {
                         if let offer = record.offer { ResearchToolBook(book: offer.vendor, price: offer.price(side)) }
                         ResearchToolValues(items: [
-                            .init(label: "SlipSurge Score", text: ResearchFormat.decimal(record.score), tone: Brand.accent(for: scheme)),
+                            .init(label: "SlipSurge Score", text: ResearchFormat.decimal(record.score), tone: slipPalette.accent),
                             .init(label: "MM", text: ResearchFormat.signed(record.mm), tone: Brand.signal(record.mm.map(Double.init), for: scheme)),
                             .init(label: "Minutes", text: ResearchFormat.decimal(record.minutes)),
                             .init(label: "Production", text: ResearchFormat.decimal(record.production))

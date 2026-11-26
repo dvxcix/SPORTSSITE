@@ -3133,3 +3133,42 @@ physical-device push are still open.
   verification pending. Several dense metric pickers and segmented value
   controls are still text-led. No membership or admin actions were
   exercised in live data.
+
+### 2026-11-26 · App-wide Color appearance and dark kit artwork
+
+- This checkpoint follows `05aa7ad3` on the native task branch. Refreshed
+  `origin/main` at `8bdbe182`. The owner clarified that the requested mark
+  is the full `brand/kit/ios/app-icon-dark` export with the green halo and
+  ink background. Regenerated that composition from the checked-in
+  `brand/build-social.js` and `brand/geo.js` at `8bdbe182`, preserving the
+  supplied gradient and symbol geometry. It is the standard Home Screen
+  image, the tile in the in-app Color lockup, and part of the launch
+  lockup in both system appearances. The standard icon is an opaque
+  1024 px export. The OS Dark and Tinted slots retain their platform art.
+- Color is a persisted app-wide appearance alongside System, Light and
+  Dark. Fresh installs and installs with no stored preference start in
+  Color. Existing explicit preferences keep their values. The same native
+  palette reaches Feed, Research, Community, Inbox and You, including
+  account, message and research detail surfaces. In Color, navigation and
+  action fills use deeper green gradients, the custom icon set has twelve
+  filled twins, and SF Symbols use filled variants where available.
+  Team, player, sportsbook, provider and profile art keep their own colors.
+- Ambient motion is confined to the visible Feed, Research landing or
+  signed-out You backdrop. It honors Reduce Motion, Reduce Transparency
+  and scene activity. Two iPhone Simulator captures two seconds apart
+  showed the upper-left background moving from RGB 28/61/39 to 21/42/29
+  while sampled card colors stayed fixed. Selected-tab text contrast was
+  checked against the lightest gradient stop at 4.89:1.
+- The signed-in iPhone 18 Pro Simulator switched from Light to Dark to
+  Color through You → Account → Appearance. Color was retained after
+  relaunch. Verified the active icon, Inbox badge and You avatar, plus
+  the populated Miami–Philadelphia Odds Board and its filled research
+  menu. On Devin’s iPad verified the standard Home Screen icon, Color
+  Feed at phone width and at full width, and the Community tab with the
+  same five icons. Installed and opened the signed Debug build on iPad.
+- Both final Xcode Debug builds passed, as did all 288 native/source
+  checks. All 24 icon sources passed lint with zero errors and zero
+  unwaived warnings. The filled-icon size waivers account for the linter
+  measuring the inset cutouts rather than the opaque silhouettes.
+  Scope was native iOS appearance. No shared service, Windows, Android
+  or desktop web code was changed.

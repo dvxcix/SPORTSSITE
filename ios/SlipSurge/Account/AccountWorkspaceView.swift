@@ -90,7 +90,7 @@ struct AccountWorkspaceView: View {
     let account: AccountStore
     let userID: UUID
     let workspace: Workspace
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var studio: Studio?
     @State private var admin: Admin?
     @State private var studioTab = StudioTab.offers
@@ -155,8 +155,8 @@ struct AccountWorkspaceView: View {
         }
         .navigationTitle(workspace.title)
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: retry) { await load() }
         .refreshable { await load() }
         .sheet(item: $editing) { editor in
@@ -231,7 +231,7 @@ struct AccountWorkspaceView: View {
                 if studio.offers.isEmpty { ContentUnavailableView("No membership offers", systemImage: "creditcard") }
                 if let offerProblem { Text(offerProblem).font(.subheadline).foregroundStyle(.red) }
                 ForEach(studio.offers) { offer in
-                    ResearchToolCard(color: Brand.accent(for: scheme)) {
+                    ResearchToolCard(color: slipPalette.accent) {
                         Text(offer.title).font(.headline)
                     } content: {
                         if let description = offer.description { Text(description).font(.subheadline).foregroundStyle(.secondary) }
@@ -271,9 +271,9 @@ struct AccountWorkspaceView: View {
                 if let scheduleProblem { Text(scheduleProblem).font(.subheadline).foregroundStyle(.red) }
                 if studio.drafts.isEmpty { ContentUnavailableView("No drafts or scheduled posts", systemImage: "calendar") }
                 ForEach(studio.drafts) { draft in
-                    ResearchToolCard(color: Brand.accent(for: scheme)) {
+                    ResearchToolCard(color: slipPalette.accent) {
                         HStack {
-                            Text(pretty(draft.status)).font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                            Text(pretty(draft.status)).font(.caption.weight(.semibold)).foregroundStyle(slipPalette.accent)
                             Spacer()
                             Menu("Scheduled post actions", systemImage: "ellipsis") {
                                 Button("Edit", systemImage: "pencil") { editing = Editor(post: draft) }
@@ -322,7 +322,7 @@ struct AccountWorkspaceView: View {
             ])
             ResearchToolRail(title: "Admin", choices: AdminTab.allCases, selection: $adminTab, label: \.rawValue, glyph: \.glyph)
             if adminTab == .moderation {
-                ResearchToolCard(color: Brand.accent(for: scheme)) {
+                ResearchToolCard(color: slipPalette.accent) {
                     Text("Awaiting review").font(.headline)
                 } content: {
                     ForEach(AdminQueue.allCases, id: \.self) { queue in
@@ -360,47 +360,47 @@ struct AccountWorkspaceView: View {
                 NavigationLink {
                     AdminMembersView(api: .init(account: account, userID: userID))
                 } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Manage members", systemImage: "person.2") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Manage members", systemImage: "person.2") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminBadgeStudio(viewer: .init(account: account, userID: userID)) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Badge studio", systemImage: "rosette") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Badge studio", systemImage: "rosette") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminNflAccessView(api: .init(account: account, userID: userID)) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("NFL early access", systemImage: "football") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("NFL early access", systemImage: "football") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminRecentSignInsView(api: .init(account: account, userID: userID)) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Recent sign-ins", systemImage: "clock.badge.checkmark") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Recent sign-ins", systemImage: "clock.badge.checkmark") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
             } else if adminTab == .settings {
                 NavigationLink { AdminDesignSystemView() } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Design system", systemImage: "swatchpalette") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Design system", systemImage: "swatchpalette") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 ForEach(AdminPlatformSettingsView.Page.allCases) { page in
                     NavigationLink { AdminPlatformSettingsView(api: .init(account: account, userID: userID), page: page) } label: {
-                        ResearchToolCard(color: Brand.accent(for: scheme)) { Label(page.title, systemImage: page.icon) } content: {}
+                        ResearchToolCard(color: slipPalette.accent) { Label(page.title, systemImage: page.icon) } content: {}
                     }.buttonStyle(SlipSurgePressStyle())
                 }
                 NavigationLink {
                     AdminFeatureRollouts(account: account, userID: userID)
                 } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Feature rollouts", systemImage: "switch.2") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Feature rollouts", systemImage: "switch.2") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink {
                     AdminAnnouncementsView(account: account, userID: userID)
                 } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Announcements", systemImage: "megaphone") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Announcements", systemImage: "megaphone") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminOperationsView(viewer: .init(account: account, userID: userID), mode: .audit) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Audit log", systemImage: "list.bullet.rectangle") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Audit log", systemImage: "list.bullet.rectangle") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminOperationsView(viewer: .init(account: account, userID: userID), mode: .notifications) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Notification history", systemImage: "bell") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Notification history", systemImage: "bell") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminSocialPlatformsView(api: .init(account: account, userID: userID)) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Social platforms", systemImage: "at") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Social platforms", systemImage: "at") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminEmailOperationsView(api: .init(account: account, userID: userID)) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Email operations", systemImage: "envelope.badge.shield.half.filled") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Email operations", systemImage: "envelope.badge.shield.half.filled") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminWhopView(api: .init(account: account, userID: userID)) } label: {
                     ResearchToolCard(color: Color(rgb: 0xFA4616)) {
@@ -413,25 +413,25 @@ struct AccountWorkspaceView: View {
                 }.buttonStyle(SlipSurgePressStyle())
             } else {
                 NavigationLink { AdminPipelineHealthView(api: .init(account: account, userID: userID)) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Pipeline health", systemImage: "waveform.path") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Pipeline health", systemImage: "waveform.path") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminExperienceAuditView(api: .init(account: account, userID: userID)) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Experience audit", systemImage: "checklist") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Experience audit", systemImage: "checklist") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminMlbArchiveView(api: .init(account: account, userID: userID)) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("MLB archive", systemImage: "archivebox") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("MLB archive", systemImage: "archivebox") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminMatrixBacktestView(api: .init(account: account, userID: userID)) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Matrix backtest", systemImage: "chart.line.uptrend.xyaxis") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Matrix backtest", systemImage: "chart.line.uptrend.xyaxis") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminHrIntelligenceView(api: .init(account: account, userID: userID)) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("HR Intelligence", systemImage: "scope") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("HR Intelligence", systemImage: "scope") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminContactRecapView(api: .init(account: account, userID: userID)) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Daily Contact Recap", systemImage: "film.stack") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Daily Contact Recap", systemImage: "film.stack") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminBrowserAutomationView(api: .init(account: account, userID: userID)) } label: {
-                    ResearchToolCard(color: Brand.accent(for: scheme)) { Label("Browser automation", systemImage: "cloud") } content: {}
+                    ResearchToolCard(color: slipPalette.accent) { Label("Browser automation", systemImage: "cloud") } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 NavigationLink { AdminDiscordView(api: .init(viewer: .init(account: account, userID: userID))) } label: {
                     ResearchToolCard(color: Color(rgb: 0x5865F2)) {
@@ -442,7 +442,7 @@ struct AccountWorkspaceView: View {
                     } content: {}
                 }.buttonStyle(SlipSurgePressStyle())
                 ForEach(admin.pipelines) { pipeline in
-                    ResearchToolCard(color: Brand.accent(for: scheme)) {
+                    ResearchToolCard(color: slipPalette.accent) {
                         Text(pipeline.label).font(.headline)
                     } content: {
                         Label(pretty(pipeline.status), systemImage: pipeline.status == "succeeded" ? "checkmark.circle" : "waveform")

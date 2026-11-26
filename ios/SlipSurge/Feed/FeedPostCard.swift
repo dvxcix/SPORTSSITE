@@ -9,7 +9,8 @@ struct FeedPostCard: View {
     var showAuthor: (() -> Void)?
     var actionsAPI: FeedAPI?
     var postChanged: ((Bool) -> Void)?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var revealed = false
     @State private var showingEmoji = false
@@ -139,7 +140,7 @@ struct FeedPostCard: View {
                             }
                             .padding(.horizontal, 9).frame(minHeight: 44)
                             .background {
-                                Capsule().fill(reactions.selected.contains(symbol) ? Brand.accent(for: scheme).opacity(0.15) : Color.secondary.opacity(0.08))
+                                Capsule().fill(reactions.selected.contains(symbol) ? slipPalette.accent.opacity(0.15) : Color.secondary.opacity(0.08))
                                     .frame(height: 28)
                             }
                         }
@@ -255,7 +256,7 @@ struct FeedPostCard: View {
         ForEach(Self.quickReactions, id: \.self) { symbol in
             Button { react(symbol) } label: {
                 Text(symbol).font(.title3).frame(width: 44, height: 44)
-                    .background(reactions.selected.contains(symbol) ? Brand.accent(for: scheme).opacity(0.16) : .clear, in: .circle)
+                    .background(reactions.selected.contains(symbol) ? slipPalette.accent.opacity(0.16) : .clear, in: .circle)
             }
             .buttonStyle(SlipSurgePressStyle())
             .accessibilityLabel("\(reactions.selected.contains(symbol) ? "Remove reaction" : "React") \(symbol)")
@@ -273,7 +274,7 @@ struct FeedPostCard: View {
                 Image(systemName: icon)
                 if let value, value > 0 { Text(value.formatted()).monospacedDigit() }
             }
-            .foregroundStyle(active ? Brand.accent(for: scheme) : .secondary)
+            .foregroundStyle(active ? slipPalette.accent : .secondary)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(.rect)
         }
@@ -301,7 +302,7 @@ struct FeedPostCard: View {
                             Text(percent.formatted(.percent.precision(.fractionLength(0)))).font(.caption.weight(.bold))
                         }
                         if post.pollVote == index {
-                            Image(systemName: "checkmark.circle.fill").foregroundStyle(Brand.accent(for: scheme))
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(slipPalette.accent)
                         }
                     }
                     .padding(10)

@@ -136,7 +136,8 @@ struct ResearchOddsBoard: View {
     var live = false
     var defaultSort = OddsSort.alphabetical
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @ScaledMetric(relativeTo: .subheadline) private var identityWidth = 153.0
     @ScaledMetric(relativeTo: .subheadline) private var priceWidth = 88.0
     @State private var filtersOpen = false
@@ -226,7 +227,7 @@ struct ResearchOddsBoard: View {
             }
             .padding(.horizontal, 11)
             .frame(minHeight: 44)
-            .background(Brand.surface(for: scheme), in: .capsule)
+            .background(slipPalette.surface, in: .capsule)
             if #available(iOS 26, *) {
                 filterButton.buttonStyle(.glass)
             } else {
@@ -297,11 +298,11 @@ struct ResearchOddsBoard: View {
                 Image(systemName: "xmark").font(.caption2.weight(.bold)).accessibilityHidden(true)
             }
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Brand.text(for: scheme))
+            .foregroundStyle(slipPalette.text)
             .padding(.horizontal, 11)
             .padding(.vertical, 8)
-            .background(Brand.surface(for: scheme), in: .capsule)
-            .overlay { Capsule().strokeBorder(Brand.accent(for: scheme).opacity(0.45)) }
+            .background(slipPalette.surface, in: .capsule)
+            .overlay { Capsule().strokeBorder(slipPalette.accent.opacity(0.45)) }
             .frame(minHeight: 44)
             .contentShape(.rect)
         }
@@ -355,7 +356,7 @@ struct ResearchOddsBoard: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .tint(Brand.accent(for: scheme))
+        .tint(slipPalette.accent)
     }
 
     private func table(_ players: [ResearchOddsSlate.Player], columns: [Double], sortedLine: Double?) -> some View {
@@ -375,7 +376,7 @@ struct ResearchOddsBoard: View {
                         .frame(width: priceWidth)
                     }
                 }
-                .background(Brand.surface(for: scheme))
+                .background(slipPalette.surface)
                 ForEach(players) { player in
                     let byLine = Dictionary(uniqueKeysWithValues: player.prices.map { ($0.line, $0) })
                     HStack(spacing: 2) {
@@ -386,12 +387,12 @@ struct ResearchOddsBoard: View {
                         }
                     }
                     .frame(minHeight: 84)
-                    .background(Brand.surface(for: scheme))
+                    .background(slipPalette.surface)
                     Divider()
                 }
             }
         }
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 17))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 17))
         .clipShape(.rect(cornerRadius: 17))
         .overlay { RoundedRectangle(cornerRadius: 17).strokeBorder(.secondary.opacity(0.22)) }
         .accessibilityElement(children: .contain)
@@ -430,7 +431,7 @@ struct ResearchOddsBoard: View {
                     original: .init(price: price, expiry: slate.expiry), read: readBook))
             } label: {
                 VStack(spacing: 3) {
-                    Text(Self.price(price.current)).font(.subheadline.bold()).foregroundStyle(Brand.text(for: scheme))
+                    Text(Self.price(price.current)).font(.subheadline.bold()).foregroundStyle(slipPalette.text)
                     Text("\(filter.comparison.label(live: live)) \(Self.price(price.baseline(filter.comparison)))")
                         .font(.caption2).foregroundStyle(.secondary)
                     if let move {
@@ -460,7 +461,7 @@ struct ResearchOddsBoard: View {
 
     private func movementColor(_ change: Double?) -> Color {
         guard let change else { return .secondary }
-        if change > 0 { return Brand.accent(for: scheme) }
+        if change > 0 { return slipPalette.accent }
         if change < 0 { return scheme == .dark ? Color(rgb: 0xFCA5A5) : Color(rgb: 0xB91C1C) }
         return .secondary
     }

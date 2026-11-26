@@ -32,7 +32,7 @@ struct AdminNflAccessView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var grants: Grants?
     @State private var matches: Matches?
     @State private var page = 0
@@ -76,7 +76,7 @@ struct AdminNflAccessView: View {
         .navigationTitle("NFL early access")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Username or name")
         .autocorrectionDisabled()
         .textInputAutocapitalization(.never)

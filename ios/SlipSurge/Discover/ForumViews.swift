@@ -4,7 +4,7 @@ struct ForumIndexView: View {
     let api: ForumAPI
     var opensComposer = false
     var composerCategory: String?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var categories: [ForumAPI.Category]?
     @State private var issue: (any Error)?
     @State private var creating = false
@@ -35,7 +35,7 @@ struct ForumIndexView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Discussions")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $routed) { topic in ForumThreadView(api: api, id: topic) }
@@ -79,7 +79,7 @@ struct ForumIndexView: View {
 struct ForumCategoryView: View {
     let api: ForumAPI
     let slug: String
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var board: ForumAPI.Board?
     @State private var failure: (any Error)?
     @State private var creating = false
@@ -110,7 +110,7 @@ struct ForumCategoryView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle(board?.category.name ?? "Discussions")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $routed) { id in ForumThreadView(api: api, id: id) }
@@ -150,10 +150,10 @@ struct ForumCategoryView: View {
 struct ForumCategoryRow: View {
     let category: ForumAPI.Category
     var showCount = true
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             HStack(spacing: 10) {
                 Group {
                     if let sport = category.sport, let artwork = LeagueArtwork.logo(sport) {
@@ -161,11 +161,11 @@ struct ForumCategoryRow: View {
                     } else if let icon = category.icon, !icon.isEmpty {
                         Text(icon).font(.title2)
                     } else {
-                        Image(systemName: "bubble.left.and.bubble.right").foregroundStyle(Brand.accent(for: scheme))
+                        Image(systemName: "bubble.left.and.bubble.right").foregroundStyle(slipPalette.accent)
                     }
                 }
                 .frame(width: 39, height: 39)
-                .background(Brand.accent(for: scheme).opacity(0.11), in: .rect(cornerRadius: 10))
+                .background(slipPalette.accent.opacity(0.11), in: .rect(cornerRadius: 10))
                 .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(category.name).font(.headline).foregroundStyle(.primary)
@@ -186,16 +186,16 @@ struct ForumCategoryRow: View {
 
 struct ForumTopicRow: View {
     let topic: ForumAPI.Topic
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
-        ResearchToolCard(color: topic.isPinned == true ? Brand.accent(for: scheme) : .secondary) {
+        ResearchToolCard(color: topic.isPinned == true ? slipPalette.accent : .secondary) {
             HStack(alignment: .top, spacing: 8) {
                 ForumAvatar(author: topic.author, size: 37)
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(alignment: .firstTextBaseline, spacing: 5) {
                         if topic.isPinned == true {
-                            Image(systemName: "pin.fill").foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Pinned")
+                            Image(systemName: "pin.fill").foregroundStyle(slipPalette.accent).accessibilityLabel("Pinned")
                         }
                         if topic.isLocked == true { Image(systemName: "lock").accessibilityLabel("Locked") }
                         Text(topic.title).font(.headline).foregroundStyle(.primary)
@@ -215,15 +215,15 @@ struct ForumTopicRow: View {
 struct ForumAvatar: View {
     let author: ForumAPI.Author?
     let size: CGFloat
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
-        let ring = Color(hex: author?.avatarRingColor) ?? Brand.accent(for: scheme)
+        let ring = Color(hex: author?.avatarRingColor) ?? slipPalette.accent
         let decorated = !(author?.avatarRingStyle.map { ["", "none", "default"].contains($0) } ?? true)
         let avatar = author?.avatarUrl.flatMap { FeedPostCard.allowedMedia($0) ? $0 : nil }
         ResearchArtwork(urls: [avatar].compactMap { $0 }, fallback: "person.crop.circle.fill")
             .frame(width: size, height: size)
-            .background(Brand.surface(for: scheme))
+            .background(slipPalette.surface)
             .clipShape(.circle)
             .overlay {
                 if decorated { Circle().strokeBorder(ring, lineWidth: 2) }

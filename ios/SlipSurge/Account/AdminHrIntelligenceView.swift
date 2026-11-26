@@ -110,7 +110,7 @@ private struct HrIntelSlate: Decodable {
 struct AdminHrIntelligenceView: View {
     private struct Issue: Decodable { let error: String }
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var date = Date.now
     @State private var availability: HrIntelSlate.Availability?
     @State private var availabilityError: (any Error)?
@@ -145,8 +145,8 @@ struct AdminHrIntelligenceView: View {
         .navigationTitle("HR Intelligence")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background(slipPalette.background)
+        .tint(slipPalette.accent)
         .task(id: retry) { await check() }
         .refreshable { if !loading { await check() } }
     }

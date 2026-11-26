@@ -51,7 +51,7 @@ struct AdminFeatureRollouts: View {
 
     let account: AccountStore
     let userID: UUID
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var entries: [Rollout]?
     @State private var original: [String: Rollout] = [:]
     @State private var saving: String?
@@ -74,8 +74,8 @@ struct AdminFeatureRollouts: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Feature rollouts")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
@@ -90,7 +90,7 @@ struct AdminFeatureRollouts: View {
     }
 
     private func card(_ item: Rollout, feature: Feature) -> some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             Label(feature.title, systemImage: feature.icon).font(.headline)
         } content: {
             Picker("Audience", selection: binding(item, field: \.audience)) {

@@ -3,7 +3,7 @@ import SwiftUI
 struct DugoutWeatherView: View {
     let api: DugoutToolsAPI
     @State var date: Date
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.scenePhase) private var scene
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var slate: DugoutWeather?
@@ -40,8 +40,8 @@ struct DugoutWeatherView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Weather Lab")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: "\(key):\(revision)") {
@@ -119,7 +119,7 @@ struct DugoutWeatherView: View {
                 ])
                 Label(hour.carry.label, systemImage: "baseball")
                     .font(.footnote.weight(.medium))
-                    .foregroundStyle(hour.carry.score > 0.5 ? Brand.accent(for: scheme) : .secondary)
+                    .foregroundStyle(hour.carry.score > 0.5 ? slipPalette.accent : .secondary)
                 Text(game.source).font(.caption2).foregroundStyle(.secondary)
             }
             Button("Park home run history", systemImage: "clock.arrow.circlepath") { history = game }
@@ -181,7 +181,7 @@ private struct DugoutParkHistoryView: View {
     let api: DugoutToolsAPI
     let game: DugoutWeather.Game
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var data: DugoutParkHistory?
     @State private var error: (any Error)?
     @State private var retry = 0
@@ -215,7 +215,7 @@ private struct DugoutParkHistoryView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Park home run history")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

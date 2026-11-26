@@ -10,16 +10,23 @@ struct SlipSurgeTabBar: View {
     let profile: AccountStore.ProfileIdentity?
     let unread: Int
     let select: (SlipSurgeTabs.Destination) -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Namespace private var selectionMotion
 
     var body: some View {
         Group {
             if #available(iOS 26, *) {
-                buttons.glassEffect(.regular, in: .capsule)
+                buttons.glassEffect(slipPalette == .color ? .regular.tint(slipPalette.surface.opacity(0.74)) : .regular,
+                                    in: .capsule)
             } else {
-                buttons.background(.regularMaterial, in: .capsule)
+                buttons
+                    .background {
+                        if slipPalette == .color {
+                            Capsule().fill(slipPalette.surface.opacity(0.88))
+                        }
+                    }
+                    .background(.regularMaterial, in: .capsule)
                     .overlay { Capsule().strokeBorder(.secondary.opacity(0.15)) }
             }
         }
@@ -53,11 +60,11 @@ struct SlipSurgeTabBar: View {
                         Text(tab.rawValue)
                             .font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
                     }
-                    .foregroundStyle(selection == tab ? Brand.accent(for: scheme) : Brand.text(for: scheme))
+                    .foregroundStyle(selection == tab ? slipPalette.accent : slipPalette.text)
                     .frame(maxWidth: .infinity, minHeight: Self.buttonHeight)
                     .background {
                         if selection == tab {
-                            Capsule().fill(Brand.accent(for: scheme).opacity(scheme == .dark ? 0.17 : 0.13))
+                            Capsule().fill(slipPalette.selectionGradient)
                                 .matchedGeometryEffect(id: "activeTab", in: selectionMotion)
                         }
                     }

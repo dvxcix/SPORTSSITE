@@ -6,7 +6,7 @@ struct AccountDataView: View {
     let userID: UUID
     let hasPaidPlan: Bool
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var history: [Request]?
     @State private var failure: String?
     @State private var busy = false
@@ -60,19 +60,19 @@ struct AccountDataView: View {
                 }
             } header: { Text("Export") }
             footer: { Text("Save a private copy of your SlipSurge account data to Files.") }
-            .listRowBackground(Brand.surface(for: scheme))
+            .listRowBackground(slipPalette.surface)
 
             Section {
                 NavigationLink {
                     AccountDeletionView(account: account, userID: userID, hasPaidPlan: hasPaidPlan)
                 } label: { Label("Delete account", systemImage: "trash") }
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
 
             if let failure { Label(failure, systemImage: "exclamationmark.circle").foregroundStyle(.red) }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Your data")
         .navigationBarTitleDisplayMode(.inline)
         .disabled(busy)

@@ -6,7 +6,7 @@ struct MessageParticipantsView: View {
     let initial: MessageThread
     let onChange: () async -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var updated: MessageThread?
     @State private var query = ""
     @State private var matches: [MessagePerson] = []
@@ -34,7 +34,7 @@ struct MessageParticipantsView: View {
                         }
                     }
                 }
-                .listRowBackground(Brand.surface(for: scheme))
+                .listRowBackground(slipPalette.surface)
                 if thread.owner {
                     Section("Add someone") {
                         TextField("Search people", text: $query)
@@ -50,13 +50,13 @@ struct MessageParticipantsView: View {
                             .disabled(busy)
                         }
                     }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
                 }
             }
             .navigationTitle("Participants")
             .navigationBarTitleDisplayMode(.inline)
             .scrollContentBackground(.hidden)
-            .background(Brand.background(for: scheme))
+            .background(slipPalette.background)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(.iconOnly) }
             }

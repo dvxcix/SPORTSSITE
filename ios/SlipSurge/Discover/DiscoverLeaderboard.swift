@@ -17,9 +17,10 @@ struct DiscoverLeaderboard: View {
     let thisWeek: Bool
     let search: String
     let refresh: () -> Void
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.dynamicTypeSize) private var typeSize
-    @AppStorage("appearance") private var appearance = Appearance.system
+    @AppStorage("appearance") private var appearance = Appearance.color
     @State private var composing = false
     @State private var signIn = false
 
@@ -124,7 +125,7 @@ struct DiscoverLeaderboard: View {
             }
             .frame(maxWidth: .infinity, minHeight: 124)
             .padding(.vertical, 8)
-            .background(LinearGradient(colors: [tone.opacity(0.20), Brand.surface(for: scheme)],
+            .background(LinearGradient(colors: [tone.opacity(0.20), slipPalette.surface],
                 startPoint: .top, endPoint: .bottom), in: .rect(cornerRadius: 16))
             .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(tone.opacity(0.32)) }
         }
@@ -133,7 +134,7 @@ struct DiscoverLeaderboard: View {
     }
 
     private func row(_ place: Place) -> some View {
-        let tone = place.rank <= 3 ? medal(place.rank) : Brand.text(for: scheme)
+        let tone = place.rank <= 3 ? medal(place.rank) : slipPalette.text
         return HStack(spacing: 9) {
             if !typeSize.isAccessibilitySize {
                 Text("#\(place.rank)").font(.caption.weight(.bold).monospacedDigit()).foregroundStyle(tone)
@@ -145,7 +146,7 @@ struct DiscoverLeaderboard: View {
                     Text(place.name).font(.subheadline.weight(.bold))
                     if place.member.isVerified == true {
                         Image(systemName: "checkmark.seal.fill").font(.caption)
-                            .foregroundStyle(Brand.accent(for: scheme)).accessibilityLabel("Verified")
+                            .foregroundStyle(slipPalette.accent).accessibilityLabel("Verified")
                     }
                     if place.member.accountType == "creator" {
                         Text("PRO").font(.caption2.weight(.heavy)).foregroundStyle(.purple).accessibilityLabel("Creator")
@@ -163,7 +164,7 @@ struct DiscoverLeaderboard: View {
             }
         }
         .padding(10)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 13))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 13))
         .accessibilityElement(children: .combine)
         .accessibilityHint("Opens member profile")
         .contentShape(.rect(cornerRadius: 13))
@@ -189,7 +190,7 @@ struct DiscoverLeaderboard: View {
     }
 
     private func avatar(_ place: Place, size: CGFloat) -> some View {
-        let color = Color(hex: place.member.avatarRingColor) ?? Brand.accent(for: scheme)
+        let color = Color(hex: place.member.avatarRingColor) ?? slipPalette.accent
         return ResearchArtwork(urls: [place.member.avatarUrl].compactMap { $0 }, fallback: "person.crop.circle.fill")
             .foregroundStyle(color)
             .frame(width: size, height: size)
@@ -221,6 +222,6 @@ struct DiscoverLeaderboard: View {
     }
 
     private func winColor(_ record: League.Record) -> Color {
-        (record.rate ?? 0) >= 0.55 ? Brand.signal(1, for: scheme) : Brand.text(for: scheme)
+        (record.rate ?? 0) >= 0.55 ? Brand.signal(1, for: scheme) : slipPalette.text
     }
 }

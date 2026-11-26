@@ -9,7 +9,7 @@ private struct ReactionBurstEffect: ViewModifier {
     let burst: ReactionBurst?
     let alignment: Alignment
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     func body(content: Content) -> some View {
         content.overlay(alignment: alignment) {
@@ -18,11 +18,11 @@ private struct ReactionBurstEffect: ViewModifier {
                     NativeReactionArtwork(symbol: burst?.symbol ?? "", size: 30)
                     Image(systemName: "sparkle")
                         .font(.caption.weight(.heavy))
-                        .foregroundStyle(Brand.accent(for: scheme))
+                        .foregroundStyle(slipPalette.accent)
                         .offset(x: -17, y: 11)
                     Image(systemName: "sparkle")
                         .font(.caption2)
-                        .foregroundStyle(Brand.accent(for: scheme))
+                        .foregroundStyle(slipPalette.accent)
                         .offset(x: 16, y: -9)
                 }
                 .keyframeAnimator(initialValue: 0.0, trigger: burst?.id) { effect, progress in

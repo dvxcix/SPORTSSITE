@@ -41,7 +41,7 @@ struct ResearchPriceHistory: View {
     private struct PriceHistoryChart: View {
         let timeline: [Date]
         let prices: [Date: Int]
-        @Environment(\.colorScheme) private var scheme
+        @Environment(\.slipPalette) private var slipPalette
         @State private var selectedCapture: Date?
 
         private var chartSelection: Binding<Date?> {
@@ -94,7 +94,7 @@ struct ResearchPriceHistory: View {
             let lower = max(0, (probabilities.min() ?? 0) - 0.06)
             let upper = min(1, (probabilities.max() ?? 1) + 0.06)
             let dateFormat: Date.FormatStyle = spansOneDay ? .dateTime.hour().minute() : .dateTime.month(.abbreviated).day()
-            let accent = Brand.accent(for: scheme)
+            let accent = slipPalette.accent
 
             return Chart {
                 if let selected {

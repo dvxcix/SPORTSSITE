@@ -4,7 +4,7 @@ struct CommunityPagesView: View {
     let api: CommunityPagesAPI
     var initialCategory = ""
     var startsCreating = false
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var category = ""
     @State private var mine = false
     @State private var pages: [CommunityPagesAPI.Page]?
@@ -41,7 +41,7 @@ struct CommunityPagesView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle(mine ? "My pages" : "Pages")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -80,7 +80,7 @@ struct CommunityPagesView: View {
     }
 
     private func pageCard(_ page: CommunityPagesAPI.Page) -> some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             HStack(spacing: 10) {
                 CommunityPageAvatar(page: page, size: 49)
                 VStack(alignment: .leading, spacing: 4) {
@@ -119,7 +119,7 @@ struct CommunityPagesView: View {
 struct CommunityPageAvatar: View {
     let page: CommunityPagesAPI.Page
     let size: CGFloat
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
         Group {
@@ -133,7 +133,7 @@ struct CommunityPageAvatar: View {
             }
         }
         .frame(width: size, height: size)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: size * 0.22))
+        .background(slipPalette.surface, in: .rect(cornerRadius: size * 0.22))
         .clipShape(.rect(cornerRadius: size * 0.22))
         .accessibilityHidden(true)
     }
@@ -148,7 +148,7 @@ struct CommunityPageDetail: View {
     let slug: String
     var startsManaging = false
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var detail: CommunityPagesAPI.Detail?
     @State private var posts: [FeedPost] = []
@@ -185,7 +185,7 @@ struct CommunityPageDetail: View {
                                 Task { await load() }
                             })
                             .padding(.horizontal, 12).padding(.vertical, 7)
-                            .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 16))
+                            .background(slipPalette.surface, in: .rect(cornerRadius: 16))
                             .disabled(pending.contains(post.postID))
                     }
                     if let next {
@@ -203,7 +203,7 @@ struct CommunityPageDetail: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle(detail?.page.name ?? "Page")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -274,7 +274,7 @@ struct CommunityPageDetail: View {
                     if let sport = page.sport, let logo = LeagueArtwork.logo(sport) {
                         ResearchArtwork(urls: [logo], fallback: "sportscourt").frame(width: 22, height: 22)
                     }
-                    if let category = page.category { Text(category).foregroundStyle(Brand.accent(for: scheme)) }
+                    if let category = page.category { Text(category).foregroundStyle(slipPalette.accent) }
                     if page.isPublished == false { Label("Unpublished", systemImage: "lock") }
                 }
                 .font(.subheadline.weight(.semibold))
@@ -287,7 +287,7 @@ struct CommunityPageDetail: View {
             .padding(14)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 18))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 18))
         .clipShape(.rect(cornerRadius: 18))
     }
 

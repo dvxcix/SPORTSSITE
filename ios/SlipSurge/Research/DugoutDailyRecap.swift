@@ -16,7 +16,8 @@ struct DugoutDailyRecap: View {
 
     let api: DugoutAPI
     @State var date: Date
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.scenePhase) private var phase
     @State private var board: DugoutBoard?
     @State private var error: (any Error)?
@@ -43,8 +44,8 @@ struct DugoutDailyRecap: View {
                 }
             }.padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Daily Recap")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -116,7 +117,7 @@ struct DugoutDailyRecap: View {
         let times = timeline
         let position = min(cursor ?? times.count - 1, times.count - 1)
         let point = times.indices.contains(position) ? times[position] : nil
-        return ResearchToolCard(color: Brand.accent(for: scheme)) {
+        return ResearchToolCard(color: slipPalette.accent) {
             ResearchSectionTitle(title: "Market History")
         } content: {
             if times.count > 1 {
@@ -196,7 +197,7 @@ struct DugoutDailyRecap: View {
         }
         .navigationTitle(entry.first.playerName)
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
     }
 
     private func ranked(_ left: Entry, _ right: Entry) -> Bool {

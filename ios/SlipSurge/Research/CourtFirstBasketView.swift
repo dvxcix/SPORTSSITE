@@ -18,7 +18,7 @@ struct CourtFirstBasketView: View {
     let reload: Int
     var explicitBook: String?
     var linkedBooks: [String]?
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.memberResearchPreferences) private var preferences
     @State private var page = Page.odds
@@ -222,7 +222,7 @@ struct CourtFirstBasketView: View {
                                     primary: colors.primary, secondary: colors.secondary)
                             } content: {
                                 ResearchToolValues(items: [
-                                    .init(label: "First field goal", text: String(sample.firstFieldGoals), tone: Brand.accent(for: scheme)),
+                                    .init(label: "First field goal", text: String(sample.firstFieldGoals), tone: slipPalette.accent),
                                     .init(label: "First score", text: String(sample.firstScores)),
                                     .init(label: "First attempt", text: String(sample.firstAttempts)),
                                     .init(label: "Team’s first field goal", text: String(sample.teamFirstFieldGoals)),

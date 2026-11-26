@@ -3,7 +3,7 @@ import SwiftUI
 struct CommunitySettingsView: View {
     let api: CommunitySettingsAPI
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var settings: CommunitySettingsState?
     @State private var problem: (any Error)?
     @State private var revision = 0
@@ -15,39 +15,39 @@ struct CommunitySettingsView: View {
                     NavigationLink {
                         CommunityOverviewEditor(api: api, initial: settings) { await load() }
                     } label: { Label("Overview and rules", systemImage: "square.and.pencil") }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
                     NavigationLink {
                         CommunityDiscordSetupView(api: .init(account: api.account, userID: api.userID, groupID: api.groupID))
                     } label: {
                         CommunityDiscordIdentity(title: "Discord setup", detail: nil)
                     }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
                 }
                 if settings.channelManagement {
                     NavigationLink {
                         CommunityChannelManager(api: api, initial: settings)
                     } label: { Label("Manage channels", systemImage: "number") }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
                 }
                 if settings.roleManagement {
                     NavigationLink {
                         CommunityRoleList(api: api, initial: settings)
                     } label: { Label("Roles and permissions", systemImage: "checkmark.shield") }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
                 }
                 if settings.memberManagement || settings.invite {
                     NavigationLink {
                         CommunityMembersManager(api: api, initial: settings)
                     } label: { Label("Members and invitations", systemImage: "person.2") }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
                 }
             } else {
                 ResearchToolMessage(title: "Community settings couldn’t load", error: problem) { revision += 1 }
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Community settings")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: revision) { await load() }
@@ -67,7 +67,7 @@ private struct CommunityOverviewEditor: View {
     let initial: CommunitySettingsState
     let didSave: () async -> Void
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var name = ""
     @State private var description = ""
     @State private var rules = ""
@@ -104,17 +104,17 @@ private struct CommunityOverviewEditor: View {
                     Task { await save(.init(action: "overview", name: name, description: description, sport: sport,
                         avatar: avatar, banner: banner, public: shared)) }
                 }.disabled(busy || !(2...60).contains(name.utf16.count) || description.utf16.count > 280)
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
             Section("Community rules") {
                 TextField("Rules for members", text: $rules, axis: .vertical).lineLimit(5...12)
                 Button("Save rules") { Task { await save(.init(action: "rules", rules: rules)) } }
                     .disabled(busy || rules.utf16.count > 4000)
-            }.listRowBackground(Brand.surface(for: scheme))
-            if let feedback { Text(feedback).foregroundStyle(failure ? .red : Brand.accent(for: scheme)) }
+            }.listRowBackground(slipPalette.surface)
+            if let feedback { Text(feedback).foregroundStyle(failure ? .red : slipPalette.accent) }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Overview and rules")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {

@@ -14,7 +14,7 @@ struct CourtMatrixBoard<Content: View>: View {
     let revision: Int
     let manage: () -> Void
     @ViewBuilder let content: ([Int: [CourtMatrixResults.Match]], String?) -> Content
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var result: (Request, CourtMatrixResults)?
     @State private var issue = false
     @State private var retry = 0
@@ -32,7 +32,7 @@ struct CourtMatrixBoard<Content: View>: View {
         let filter = matches.contains { $0.id == selection } ? selection : nil
         VStack(alignment: .leading, spacing: 9) {
             if !matches.isEmpty {
-                ResearchToolCard(color: Brand.accent(for: scheme)) {
+                ResearchToolCard(color: slipPalette.accent) {
                     Label("NBA Matrices", systemImage: "square.grid.3x3").font(.headline)
                     Spacer()
                     Button("Manage", action: manage).font(.subheadline.weight(.semibold))

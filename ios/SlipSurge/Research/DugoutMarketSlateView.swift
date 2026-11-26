@@ -67,7 +67,8 @@ struct DugoutMarketSlateView: View {
     let api: DugoutAPI
     @State var date: Date
     let mode: Mode
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.scenePhase) private var scenePhase
     @State private var slate: DugoutBoard?
     @State private var game = ""
@@ -104,8 +105,8 @@ struct DugoutMarketSlateView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle(mode.title)
         .navigationBarTitleDisplayMode(.inline)
         .task(id: "\(key):\(revision)") {
@@ -258,7 +259,7 @@ struct DugoutMarketSlateView: View {
                             tone: cost.firstHomeRunVsSeason.flatMap { tone(-$0) }),
                     ])
                     if cost.power {
-                        Label("Power Vehicle", systemImage: "bolt.fill").font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                        Label("Power Vehicle", systemImage: "bolt.fill").font(.caption.weight(.semibold)).foregroundStyle(slipPalette.accent)
                     }
                 }
             }
@@ -298,7 +299,7 @@ struct DugoutMarketSlateView: View {
                 let quotes = row.batter.markets.first { $0.key == key }?.quotes.filter { $0.price != nil } ?? []
                 if !quotes.isEmpty {
                     Label("\(threshold)+ cleared", systemImage: "checkmark.circle.fill")
-                        .font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                        .font(.caption.weight(.semibold)).foregroundStyle(slipPalette.accent)
                     quoteStrip(quotes)
                 }
             }
@@ -309,7 +310,7 @@ struct DugoutMarketSlateView: View {
                 }
                 if !cleared.isEmpty {
                     Label("Cleared lines", systemImage: "checkmark.circle.fill")
-                        .font(.caption.weight(.semibold)).foregroundStyle(Brand.accent(for: scheme))
+                        .font(.caption.weight(.semibold)).foregroundStyle(slipPalette.accent)
                     quoteStrip(cleared)
                 }
             }
@@ -332,7 +333,7 @@ struct DugoutMarketSlateView: View {
                             }
                         }
                         .padding(.horizontal, 8).padding(.vertical, 6)
-                        .background(Brand.background(for: scheme), in: .rect(cornerRadius: 8))
+                        .background(slipPalette.background, in: .rect(cornerRadius: 8))
                     }
                 }
             }.scrollIndicators(.hidden)

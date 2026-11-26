@@ -34,7 +34,8 @@ struct SidelineResearchView: View {
     let game: String
     let teams: [SidelineMarketTools.Visual]
     let revision: Int
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var sample = SidelineResearchSample.automatic
     @State private var window = Window.season
@@ -248,7 +249,7 @@ struct SidelineResearchView: View {
             }
             .padding(.horizontal, 11)
             .frame(minHeight: 40)
-            .background(matrixID == id ? Brand.accent(for: scheme).opacity(0.18) : Color.secondary.opacity(0.10), in: Capsule())
+            .background(matrixID == id ? slipPalette.accent.opacity(0.18) : Color.secondary.opacity(0.10), in: Capsule())
         }
         .buttonStyle(SlipSurgePressStyle())
         .accessibilityAddTraits(matrixID == id ? .isSelected : [])
@@ -383,7 +384,7 @@ struct SidelineResearchView: View {
 
     private func visual(_ code: String) -> SidelineMarketTools.Visual {
         teams.first { SidelineResearchMarket.normalizeTeam($0.code) == SidelineResearchMarket.normalizeTeam(code) }
-            ?? .init(code: code, logo: nil, primary: Brand.surface(for: scheme), secondary: nil)
+            ?? .init(code: code, logo: nil, primary: slipPalette.surface, secondary: nil)
     }
 
     private func includesTeam(_ code: String) -> Bool {

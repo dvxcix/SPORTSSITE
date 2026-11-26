@@ -62,7 +62,8 @@ struct AdminWhopView: View {
     private struct APIError: Decodable { let error: String }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var page: Page
     @State private var commerce: Commerce?
     @State private var connection: PaymentConnection?
@@ -100,7 +101,7 @@ struct AdminWhopView: View {
         .navigationTitle("Whop payments")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Link(destination: URL(string: "https://whop.com/dashboard")!) {

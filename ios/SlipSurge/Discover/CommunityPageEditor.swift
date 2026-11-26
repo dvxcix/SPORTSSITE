@@ -6,7 +6,8 @@ struct CommunityPageEditor: View {
     let saved: (CommunityPagesAPI.Page) -> Void
     let deleted: () -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var busy = false
     @State private var confirmingDelete = false
     @State private var issue: String?
@@ -37,7 +38,7 @@ struct CommunityPageEditor: View {
                     ForEach(icons, id: \.self) { icon in
                         Button { draft.emoji = icon } label: {
                             Text(icon).font(.title2).frame(maxWidth: .infinity, minHeight: 44)
-                                .background(draft.emoji == icon ? Brand.accent(for: scheme).opacity(0.16) : Color.clear, in: .rect(cornerRadius: 10))
+                                .background(draft.emoji == icon ? slipPalette.accent.opacity(0.16) : Color.clear, in: .rect(cornerRadius: 10))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Page icon \(icon)")
@@ -63,7 +64,7 @@ struct CommunityPageEditor: View {
         }
         .disabled(busy)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle(draft.page == nil ? "Create page" : "Manage page")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

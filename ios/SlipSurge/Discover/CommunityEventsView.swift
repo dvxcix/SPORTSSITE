@@ -3,7 +3,7 @@ import SwiftUI
 struct CommunityEventsView: View {
     let api: CommunityEventsAPI
     var opensComposer = false
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var calendar: CommunityEventsAPI.Calendar?
     @State private var failure: (any Error)?
     @State private var creating = false
@@ -34,7 +34,7 @@ struct CommunityEventsView: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Events")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $eventRoute) { id in
@@ -87,10 +87,10 @@ struct CommunityEventsView: View {
 
 struct CommunityEventRow: View {
     let event: CommunityEventsAPI.Event
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
 
     var body: some View {
-        ResearchToolCard(color: Brand.accent(for: scheme)) {
+        ResearchToolCard(color: slipPalette.accent) {
             HStack(alignment: .top, spacing: 11) {
                 if let date = event.start {
                     VStack(spacing: 3) {
@@ -98,7 +98,7 @@ struct CommunityEventRow: View {
                         Text(date.formatted(.dateTime.day())).font(.title3.weight(.heavy)).monospacedDigit()
                     }
                     .frame(minWidth: 51, minHeight: 53)
-                    .background(Brand.accent(for: scheme).opacity(0.12), in: .rect(cornerRadius: 10))
+                    .background(slipPalette.accent.opacity(0.12), in: .rect(cornerRadius: 10))
                     .accessibilityLabel(date.formatted(date: .abbreviated, time: .omitted))
                 }
                 VStack(alignment: .leading, spacing: 6) {
@@ -143,8 +143,8 @@ struct CommunityEventDetail: View {
     let api: CommunityEventsAPI
     let id: UUID
     let refreshList: () -> Void
-    @Environment(\.colorScheme) private var scheme
-    @AppStorage("appearance") private var appearance = Appearance.system
+    @Environment(\.slipPalette) private var slipPalette
+    @AppStorage("appearance") private var appearance = Appearance.color
     @State private var result: CommunityEventsAPI.Detail?
     @State private var failure: (any Error)?
     @State private var actionFailure = false
@@ -169,7 +169,7 @@ struct CommunityEventDetail: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle("Event")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: revision) { await load() }
@@ -200,10 +200,10 @@ struct CommunityEventDetail: View {
             if let cover = event.coverImage, FeedPostCard.allowedMedia(cover) {
                 ResearchArtwork(urls: [cover], fallback: "photo")
                     .frame(maxWidth: .infinity).frame(height: 165)
-                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 15))
+                    .background(slipPalette.surface, in: .rect(cornerRadius: 15))
                     .clipShape(.rect(cornerRadius: 15))
             }
-            ResearchToolCard(color: Brand.accent(for: scheme)) {
+            ResearchToolCard(color: slipPalette.accent) {
                 if let sport = event.sport, let logo = LeagueArtwork.logo(sport) {
                     ResearchArtwork(urls: [logo], fallback: "sportscourt").frame(width: 25, height: 25)
                 }
@@ -244,7 +244,7 @@ struct CommunityEventDetail: View {
             if let description = event.description {
                 Text(SiteAnnouncements.linkedText(description)).font(.body)
                     .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
+                    .background(slipPalette.surface, in: .rect(cornerRadius: 12))
             }
             if let url = event.url {
                 Link(destination: url) { Label("Open event link", systemImage: "arrow.up.right") }.buttonStyle(.bordered)
@@ -266,8 +266,8 @@ struct CommunityEventDetail: View {
             }
             .buttonStyle(SlipSurgePressStyle())
             .disabled(saving)
-            .foregroundStyle(selected ? Brand.accent(for: scheme) : Brand.text(for: scheme))
-            .background(Brand.accent(for: scheme).opacity(selected ? 0.16 : 0.05), in: .capsule)
+            .foregroundStyle(selected ? slipPalette.accent : slipPalette.text)
+            .background(slipPalette.accent.opacity(selected ? 0.16 : 0.05), in: .capsule)
             .accessibilityAddTraits(selected ? .isSelected : [])
         }
     }

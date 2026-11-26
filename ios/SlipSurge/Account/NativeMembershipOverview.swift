@@ -15,8 +15,8 @@ struct NativeMembershipOverview: View {
     }
 
     let account: AccountStore
-    @Environment(\.colorScheme) private var scheme
-    @AppStorage("appearance") private var appearance = Appearance.system
+    @Environment(\.slipPalette) private var slipPalette
+    @AppStorage("appearance") private var appearance = Appearance.color
     @State private var catalog: Catalog?
     @State private var billingPeriod = "monthly"
     @State private var canShowWhop = false
@@ -43,8 +43,8 @@ struct NativeMembershipOverview: View {
         }
         .navigationTitle("Memberships")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task(id: retry) { await load() }
         .refreshable { await load() }
     }
@@ -65,7 +65,7 @@ struct NativeMembershipOverview: View {
     }
 
     private func plan(_ catalog: Catalog, ultimate: Bool) -> some View {
-        ResearchToolCard(color: ultimate ? Brand.accent(for: scheme) : Brand.surface(for: scheme)) {
+        ResearchToolCard(color: ultimate ? slipPalette.accent : slipPalette.surface) {
             HStack {
                 Label(ultimate ? "Ultimate" : "Free", systemImage: ultimate ? "bolt.fill" : "person.crop.circle")
                     .font(.title2.weight(.bold))

@@ -37,7 +37,8 @@ struct CourtPlayerView: View {
     var linkedMetric: String?
     var initialVenue = CourtPlayerMarket.Venue.all
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.nativeResume) private var resume
     @Environment(\.nativeResumeActive) private var resumeActive
@@ -94,7 +95,7 @@ struct CourtPlayerView: View {
                 .listRowSeparator(.hidden)
             if expired || (expiry.map { $0 <= .now } ?? false) {
                 Text(mode == .live ? "Return to The Court for a fresh live observation." : "Return to The Court to load the saved pregame snapshot.")
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             } else {
                 ResearchToolRail(title: "Player research", choices: panelOptions,
                     selection: Binding(get: { panel }, set: { selectedPanel = $0 }), label: \.label, glyph: \.icon)
@@ -107,9 +108,9 @@ struct CourtPlayerView: View {
         .navigationTitle("\(player.firstName) \(player.lastName)")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
+        .tint(slipPalette.accent)
         .toolbar {
             if let url = shareURL {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -160,13 +161,13 @@ struct CourtPlayerView: View {
             Section("Recent form") {
                 marketSelection
                 trend
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
             if let average = player.average {
                 Section("Recorded averages") {
                     stat("Points", average["pts"] ?? nil)
                     stat("Rebounds", average["reb"] ?? nil)
                     stat("Assists", average["ast"] ?? nil)
-                }.listRowBackground(Brand.surface(for: scheme))
+                }.listRowBackground(slipPalette.surface)
             }
         case .ladder, .markets:
             Section(panel == .ladder ? "Recorded lines" : mode == .live ? "Live markets" : "Pregame markets") {
@@ -175,27 +176,27 @@ struct CourtPlayerView: View {
                     .sorted { (Double($0.lineValue) ?? 0, $0.id) < (Double($1.lineValue) ?? 0, $1.id) }
                 if selected.isEmpty { Text("No recorded offers for this selection.").foregroundStyle(.secondary) }
                 ForEach(selected) { offer in offerRow(offer) }
-            }.listRowBackground(Brand.surface(for: scheme))
+            }.listRowBackground(slipPalette.surface)
             if panel == .ladder {
-                Section("Recent form") { trend }.listRowBackground(Brand.surface(for: scheme))
+                Section("Recent form") { trend }.listRowBackground(slipPalette.surface)
             }
         case .movement:
             if let researchScope, let metric = CourtPlayerMarket(rawValue: market) {
                 CourtMovementView(scope: researchScope, game: game, mode: mode, players: [player],
                     initialMarket: metric, initialSide: side, initialBook: sportsbook,
                     initialContract: line?.contract, initialTarget: line?.line, playerID: player.id)
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             }
         case .tracking:
             if let matchupBoard, let researchScope {
                 CourtTrackingView(scope: researchScope, board: matchupBoard, revision: 0,
                     linkedPlayerID: player.id, linkedMetric: trackingMetric ?? linkedMetric) { trackingMetric = $0 }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             }
         case .court:
             if let researchScope {
                 CourtShotView(api: .init(scope: researchScope), player: player, game: game, mode: mode, embedded: true)
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             }
         }
     }

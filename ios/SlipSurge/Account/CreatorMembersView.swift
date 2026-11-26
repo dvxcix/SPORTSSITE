@@ -14,7 +14,7 @@ struct CreatorMembersView: View {
         let member: Profile?
     }
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var members: [Member]?
     @State private var filter = ""
     @State private var error: (any Error)?
@@ -28,15 +28,15 @@ struct CreatorMembersView: View {
                         .compactMap { $0 }.contains { $0.localizedStandardContains(filter) }
                 }
                 if visible.isEmpty { ContentUnavailableView("No members found", systemImage: "person.2") }
-                ForEach(visible, content: row).listRowBackground(Brand.surface(for: scheme))
+                ForEach(visible, content: row).listRowBackground(slipPalette.surface)
             } else {
                 ResearchToolMessage(title: "Members couldn’t load", error: error) { retry += 1 }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .navigationTitle("Members")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $filter, prompt: "Name, offer or status")
@@ -57,7 +57,7 @@ struct CreatorMembersView: View {
             }
             Spacer()
             Text(member.status.replacingOccurrences(of: "_", with: " ").capitalized).font(.caption.weight(.semibold))
-                .foregroundStyle(["active", "trialing"].contains(member.status) ? Brand.accent(for: scheme) : .secondary)
+                .foregroundStyle(["active", "trialing"].contains(member.status) ? slipPalette.accent : .secondary)
         }.accessibilityElement(children: .combine)
     }
 

@@ -32,7 +32,7 @@ struct MutedAndBlockedView: View {
     }
 
     let api: DiscoverAPI
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @State private var pages: [Kind: Page] = [:]
     @State private var loading = Set<Kind>()
     @State private var errors = Set<Kind>()
@@ -49,14 +49,14 @@ struct MutedAndBlockedView: View {
             }
             ForEach(Kind.allCases) { kind in
                 Section(kind.title) { rows(kind) }
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             }
         }
         .navigationTitle("Muted and blocked")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
         .task { await reload() }
         .refreshable { await reload() }
         .confirmationDialog("Unblock this account?",
@@ -114,13 +114,13 @@ struct MutedAndBlockedView: View {
             ResearchArtwork(urls: portrait.map { [$0] } ?? [], fallback: "person.crop.circle.fill")
                 .frame(width: 37, height: 37)
                 .clipShape(.circle)
-                .overlay { Circle().strokeBorder(Color(hex: person.avatarRingColor) ?? Brand.surface(for: scheme), lineWidth: 1.5) }
+                .overlay { Circle().strokeBorder(Color(hex: person.avatarRingColor) ?? slipPalette.surface, lineWidth: 1.5) }
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 4) {
                     Text(verbatim: person.name).font(.headline)
                     if person.isVerified == true {
-                        Image(systemName: "checkmark.seal.fill").foregroundStyle(Brand.accent(for: scheme))
+                        Image(systemName: "checkmark.seal.fill").foregroundStyle(slipPalette.accent)
                             .accessibilityLabel("Verified")
                     }
                 }
@@ -129,7 +129,7 @@ struct MutedAndBlockedView: View {
                 }
             }
         }
-        .foregroundStyle(Brand.text(for: scheme))
+        .foregroundStyle(slipPalette.text)
         .accessibilityElement(children: .combine)
     }
 

@@ -22,7 +22,8 @@ struct CourtPlayerBoard: View {
     var comparing: [Int] = []
     var toggleComparison: ((Int) -> Void)?
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.courtResults) private var results
 
     private struct Entry: Identifiable {
@@ -136,7 +137,7 @@ struct CourtPlayerBoard: View {
             }
         }
         .padding(12)
-        .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 14))
+        .background(slipPalette.surface, in: .rect(cornerRadius: 14))
     }
 
     private func playerRow(_ player: CourtBoard.Player, quote: CourtPlayerMarket.Reference?) -> some View {
@@ -189,7 +190,7 @@ struct CourtPlayerBoard: View {
     }
 
     private func mismatch(_ rank: CourtAPI.Rank) -> some View {
-        let color = rank.mm > 0 ? Brand.accent(for: scheme) : rank.mm < 0 ?
+        let color = rank.mm > 0 ? slipPalette.accent : rank.mm < 0 ?
             (scheme == .dark ? Color(rgb: 0xFCA5A5) : Color(rgb: 0xB91C1C)) : .secondary
         return VStack(alignment: .trailing, spacing: 3) {
             Text("MM \(rank.mm > 0 ? "+" : "")\(rank.mm)")

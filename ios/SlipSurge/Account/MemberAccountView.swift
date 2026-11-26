@@ -4,7 +4,8 @@ struct MemberAccountView: View {
     let account: AccountStore
     let userID: UUID
 
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
+    private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var details: Details?
     @State private var unavailable = false
     @State private var revision = 0
@@ -39,17 +40,17 @@ struct MemberAccountView: View {
                 } actions: {
                     Button("Retry") { revision += 1 }
                 }
-                .listRowBackground(Brand.surface(for: scheme))
+                .listRowBackground(slipPalette.surface)
             } else {
                 ProgressView("Loading account")
-                    .listRowBackground(Brand.surface(for: scheme))
+                    .listRowBackground(slipPalette.surface)
             }
         }
         .navigationTitle("Profile & membership")
         .scrollContentBackground(.hidden)
-        .background(Brand.background(for: scheme))
-        .foregroundStyle(Brand.text(for: scheme))
-        .tint(Brand.accent(for: scheme))
+        .background(slipPalette.background)
+        .foregroundStyle(slipPalette.text)
+        .tint(slipPalette.accent)
         .task(id: revision) { await load() }
         .refreshable { await load() }
     }
@@ -103,7 +104,7 @@ struct MemberAccountView: View {
                 Label("Alert preferences", systemImage: "bell.badge")
             }
         }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
 
         Section("Account") {
             NavigationLink {
@@ -116,7 +117,7 @@ struct MemberAccountView: View {
                 AccountDataView(account: account, userID: userID, hasPaidPlan: ["basic", "advanced", "ultimate"].contains(details.membership.purchasedTier))
             } label: { Label("Your data", systemImage: "archivebox") }
         }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
 
         Section("Membership") {
             LabeledContent("Access", value: tierLabel(details.accessTier))
@@ -140,7 +141,7 @@ struct MemberAccountView: View {
                 CreatorMembershipsView(api: .init(client: .init(account: account, userID: userID)))
             } label: { Label("Creator memberships", systemImage: "person.2") }
         }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
 
         Section("Workspaces") {
             if details.canOpenStudio == true || details.role == "creator" || details.role == "admin" {
@@ -162,7 +163,7 @@ struct MemberAccountView: View {
                 } label: { Label("Set up your storefront", systemImage: "storefront") }
             }
         }
-        .listRowBackground(Brand.surface(for: scheme))
+        .listRowBackground(slipPalette.surface)
     }
 
     private func tierLabel(_ rawValue: String) -> String {

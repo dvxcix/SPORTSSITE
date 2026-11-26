@@ -28,7 +28,7 @@ struct NativeEmojiPicker: View {
     var title = "Emoji"
     let select: (String) -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.slipPalette) private var slipPalette
     @Environment(\.nativeEmojiLibrary) private var library
     @State private var query = ""
     private let fallback = ["❤️", "🔥", "⚡", "👀", "👏", "😂", "💯", "🏆", "👍", "👎", "🙌", "🤝"]
@@ -74,7 +74,7 @@ struct NativeEmojiPicker: View {
             }
             .padding(16)
         }
-        .background(Brand.background(for: scheme))
+        .background(slipPalette.background)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search emoji")
@@ -95,7 +95,7 @@ struct NativeEmojiPicker: View {
             dismiss()
         } label: {
             artwork().frame(maxWidth: .infinity, minHeight: 44)
-                .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 9))
+                .background(slipPalette.surface, in: .rect(cornerRadius: 9))
         }
         .buttonStyle(SlipSurgePressStyle())
         .accessibilityLabel(label.replacingOccurrences(of: "_", with: " "))
