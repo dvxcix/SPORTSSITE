@@ -3276,3 +3276,13 @@ physical-device push are still open.
 - After the invitation is accepted, install 1.0 (1) through TestFlight, verify
   its production bundle on the iPad, then sign in to SlipSurge for member-flow
   testing. The registered-device QA bundle remains a separate installation.
+
+#### TestFlight installation confirmed
+
+Devin accepted the invitation and installed SlipSurge 1.0 (1) on the physical
+iPad. App Store Connect shows **Installed** for Devin. Device tooling reports
+`com.slipsurge.ios` 1.0 build 1 and successfully launched that exact bundle.
+The TestFlight copy showed its first-run sheet over Feed and the live score
+strip, then opened the native **You** sign-in screen with Whop, Discord, X,
+and email. Member testing is awaiting Devin’s sign-in to SlipSurge in this
+copy. No new app build or web deployment was made for enrollment.
