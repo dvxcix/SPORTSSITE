@@ -54,11 +54,16 @@ struct SlipSurgeTabBar: View {
                         .frame(height: 28)
                         .overlay(alignment: .topTrailing) {
                             if tab == .inbox, unread > 0 {
-                                InboxBadge(count: unread).offset(x: 11, y: -3)
+                                InboxBadge(count: unread)
+                                    .dynamicTypeSize(...DynamicTypeSize.large)
+                                    .offset(x: 11, y: -3)
                             }
                         }
                         Text(tab.rawValue)
-                            .font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                            .font(.caption2.weight(.semibold))
+                            .dynamicTypeSize(...DynamicTypeSize.large)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .foregroundStyle(selection == tab ? slipPalette.accent : slipPalette.text)
                     .frame(maxWidth: .infinity, minHeight: Self.buttonHeight)
@@ -74,6 +79,9 @@ struct SlipSurgeTabBar: View {
                 .accessibilityLabel(tab.rawValue)
                 .accessibilityValue(accessibilityValue(for: tab))
                 .accessibilityAddTraits(selection == tab ? .isSelected : [])
+                .accessibilityShowsLargeContentViewer {
+                    Label(tab.rawValue, glyph: tab.glyph.rawValue)
+                }
             }
         }
         .padding(Self.contentPadding)

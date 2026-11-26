@@ -3538,3 +3538,12 @@ which is an interaction to simplify in a later build.
   note. Remaining checks include actual story buffering, live two-account
   Inbox mutations, room navigation under interrupted networking,
   animation frame timing, and independent role/provider coverage.
+
+The signed-in Accessibility Extra Large check then exposed clipped tab
+titles. The main bar now keeps all five icons and readable labels and
+offers each title and icon through iOS Large Content Viewer. Content
+inside the app uses the selected Dynamic Type size. The iPhone 18 Pro
+visually showed complete tab names and separate lines for the profile
+statistics at that size. The device’s text setting was restored after QA.
+Build 5 was archived and exported, then stopped before Xcode began
+uploading. Build 6 is the distribution candidate with the tab fix.
