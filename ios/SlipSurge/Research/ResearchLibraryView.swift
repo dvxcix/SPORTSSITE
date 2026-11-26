@@ -15,13 +15,13 @@ struct ResearchLibraryView: View {
     }
 
     let api: ResearchLibraryAPI
-    var initialSection = Section.saved
+    var initialSection: Section
     @Environment(\.slipPalette) private var slipPalette
     private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var section = Section.saved
     @State private var data: ResearchLibraryData?
-    @State private var selectedWorkspace = ""
-    @State private var drafts: [String: Selection] = [:]
+    @AppStorage private var selectedWorkspace: String
+    @State private var drafts: [String: Selection]
     @State private var loadID: UUID?
     @State private var selectionWithoutWorkspace = Selection()
     @State private var searching = ""
@@ -38,7 +38,7 @@ struct ResearchLibraryView: View {
     @State private var deleteWorkspace = false
     @State private var notice: String?
 
-    private struct Selection: Equatable {
+    private struct Selection: Codable, Equatable {
         var items: [UUID] = []
         var nfl: Set<UUID> = []
         var mlb: Set<UUID> = []
@@ -60,6 +60,24 @@ struct ResearchLibraryView: View {
         }
     }
 
+    init(api: ResearchLibraryAPI, initialSection: Section = .saved) {
+        self.api = api
+        self.initialSection = initialSection
+        _selectedWorkspace = AppStorage(wrappedValue: "", Self.storageKey("selection", for: api.userID))
+        let stored = UserDefaults.standard.data(forKey: Self.storageKey("drafts", for: api.userID))
+        _drafts = State(initialValue: stored.flatMap { try? JSONDecoder().decode([String: Selection].self, from: $0) } ?? [:])
+    }
+
+    private static func storageKey(_ kind: String, for userID: UUID) -> String {
+        "slipsurge.workspace.\(kind).\(userID.uuidString)"
+    }
+
+    private func storeDrafts() {
+        let key = Self.storageKey("drafts", for: api.userID)
+        if drafts.isEmpty { UserDefaults.standard.removeObject(forKey: key) }
+        else if let encoded = try? JSONEncoder().encode(drafts) { UserDefaults.standard.set(encoded, forKey: key) }
+    }
+
     private struct DraftNote: Identifiable {
         let id: UUID
         let original: ResearchLibraryData.Note?
@@ -79,6 +97,7 @@ struct ResearchLibraryView: View {
             guard let data, let workspace else { selectionWithoutWorkspace = newValue; return }
             let id = key(workspace.id)
             drafts[id] = savingWorkspace != id && newValue == Selection(workspace, in: data) ? nil : newValue
+            storeDrafts()
         }
     }
 
@@ -188,6 +207,9 @@ struct ResearchLibraryView: View {
             }
         }
         if let workspace, workspace.canEdit {
+            if drafts[key(workspace.id)] != nil {
+                Text("Unsaved changes").font(.caption.weight(.medium)).foregroundStyle(.secondary)
+            }
             Button("Save comparison", systemImage: "checkmark") {
                 Task {
                     let submitted = selection
@@ -305,7 +327,8 @@ struct ResearchLibraryView: View {
             let result = try await api.load()
             try Task.checkCancellation()
             guard loadID == request else { return }
-            for (id, var draft) in drafts {
+            let previousDrafts = drafts
+            for (id, var draft) in previousDrafts {
                 guard let row = result.workspaces.first(where: { key($0.id) == id }), row.canEdit else {
                     drafts[id] = nil
                     continue
@@ -313,6 +336,7 @@ struct ResearchLibraryView: View {
                 draft.retainAvailable(in: result)
                 drafts[id] = draft == Selection(row, in: result) ? nil : draft
             }
+            if drafts != previousDrafts { storeDrafts() }
             selectionWithoutWorkspace.retainAvailable(in: result)
             data = result
             if workspace == nil { selectedWorkspace = result.workspaces.first.map { key($0.id) } ?? "" }

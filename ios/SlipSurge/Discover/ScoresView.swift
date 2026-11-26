@@ -238,6 +238,7 @@ struct LiveGamesStrip: View {
         let board = liveBoard.board(for: today)
         let games = board?.leagues.flatMap(\.games) ?? []
         let live = games.filter(\.live)
+        let hasFreshLive = live.contains { !$0.delayed }
         let upcoming = games.filter { $0.state == "pre" }.sorted { $0.start < $1.start }
         let completed = games.filter { $0.state == "post" }.reversed()
         let slate = live + upcoming + completed
@@ -245,7 +246,7 @@ struct LiveGamesStrip: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     if !slate.isEmpty {
-                        Label(live.isEmpty ? "Games today" : "Live now", systemImage: live.isEmpty ? "list.number" : "dot.radiowaves.left.and.right")
+                        Label(hasFreshLive ? "Live now" : "Games today", systemImage: hasFreshLive ? "dot.radiowaves.left.and.right" : "list.number")
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(slipPalette.text)
                             .accessibilityAddTraits(.isHeader)

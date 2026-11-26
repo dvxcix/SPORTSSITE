@@ -247,6 +247,20 @@ open verification items.
 
 ### Apple device signing and universal links
 
+SlipSurge LLC owns Apple Developer team `G69D2DL58M`. The production
+[SlipSurge App Store Connect record](https://appstoreconnect.apple.com/apps/6839724521/distribution/ios/version/inflight)
+uses `com.slipsurge.ios`. The paired WidgetKit extension uses
+`com.slipsurge.ios.widgets`. Local device QA uses the separate
+`com.slipsurge.ios.llc.development` app and its widget, so local Run preserves
+the production app identity. Both use Xcode automatic signing.
+
+Archive the Release configuration for a generic iOS device with the LLC team,
+production bundle ID and `SlipSurgeDistribution.entitlements` selected. Xcode
+signs the archive for development and changes App Store export to Apple
+Distribution and production APNs. Verify both the app and embedded widget
+signatures after export. A registered-device Release export uses the QA
+bundle. An App Store Connect export uses the production bundle.
+
 The Mac Simulator keeps its existing development bundle identifier. For a
 provisioned iPhone or TestFlight build, set `SLIPSURGE_IOS_DEVELOPMENT_TEAM`
 and `SLIPSURGE_IOS_BUNDLE_IDENTIFIER` in the Mac’s ignored

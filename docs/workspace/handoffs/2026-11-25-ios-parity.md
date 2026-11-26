@@ -3216,24 +3216,43 @@ physical-device push are still open.
   retains the path and its optimistic-version check. The older paths still
   open, and pregame freeze behavior remains in effect.
 - Workspace keeps unsaved markets and attached matrices per workspace during
-  reloads, note saves and workspace switching in the open Workspace. A failed
-  refresh leaves the latest shown data and a retry action. What’s New closes
+  reloads, note saves, workspace switching and reopening the app on the same
+  device. Local drafts store only selection IDs and are scoped to the member.
+  A failed refresh leaves the latest shown data and a retry action. What’s New closes
   immediately via its button, close icon or system sheet gesture, persists
   queued dismissals per account and retries sync after connectivity returns.
 - Xcode 27.2 Debug builds passed for the iPhone 18 Pro Simulator and Devin’s
   physical iPad mini. Verified that Continue restored the November 25 NBA
   Miami–Philadelphia Odds Board in Pregame mode with Points and BetMGM after
-  simulator process relaunch. Opened the Bears–Lions scoreboard from Feed in
-  the resized iPad window. All 289 native/source tests and 21 focused Swift
-  cases passed, including score expiry, fallback, restoration and offline
-  dismissal persistence. The earlier read of App Store Connect reached Apple
-  sign-in, and the production association endpoint returned 404.
+  simulator process relaunch. An NFL resume link also restored the November 26
+  slate, Bears–Lions header, Eagles–Cowboys Odds Board matchup, Dallas team,
+  DraftKings, Rushing Yards, and Lamb search. Opened the Bears–Lions scoreboard
+  from Feed in the resized iPad window. All 289 native/source tests and 25
+  focused Swift cases passed, covering score expiry and fallback, research
+  restoration, offline release-dismissal persistence, and Workspace storage.
+  The production association endpoint returned 404.
 - In Xcode, SlipSurge LLC is team `G69D2DL58M` with Admin access. The old
   `com.slipsurge.ios.development` app and widget IDs belong to the personal team.
   Apple provisioned the LLC-only QA app `com.slipsurge.ios.llc.development`
   against Devin’s iPad with development APNs and Associated Domains, and a
-  matching LLC widget development profile. The first organization build
-  stopped at macOS signing-key authorization. A retry is in progress.
-  Active-game scoring on physical hardware, signed-in iPad feature checks,
-  the distribution bundle and App Store Connect record, APNs delivery and
-  TestFlight remain to be verified. No site release or production config change.
+  matching LLC widget development profile. Debug signing subsequently passed,
+  and the ignored local Xcode settings now select the LLC team and QA bundle.
+  Xcode archived a Release build and exported it for registered-device testing.
+  The app and widget signatures verify as Apple Distribution under SlipSurge LLC.
+  The Release profile carries production APNs for the app. Both the Debug and
+  exported Release builds installed and launched on Devin’s iPad. The final
+  QA archive is in Xcode Organizer. At kickoff the iPad’s Game Center changed
+  from a 19:00 scheduled start to a 0–0 live score with 14:15 left in the first
+  quarter, matching ESPN’s public NFL score. The iPhone 18 Pro Max Simulator
+  Feed independently showed the game live at 14:11.
+- App Store Connect was available under SlipSurge LLC on the second check.
+  Created the iOS draft record for SlipSurge 1.0 with bundle identifier
+  `com.slipsurge.ios`, SKU `SLIPSURGE-IOS`, and English (U.S.) as the primary
+  language. The production archive and App Store Connect export passed.
+  Verified Apple Distribution signatures for the app and
+  `com.slipsurge.ios.widgets`. Xcode uploaded version 1.0 build 1 to the private
+  App Store Connect record. TestFlight showed the upload as Processing. Apple
+  accepted the binary and noted a missing vendor dSYM for GiphyUISDK 2.4.0.
+  Production APNs delivery, universal links and signed-in member flows on
+  the iPad still need verification. No site release or production configuration
+  change was made.
