@@ -104,14 +104,14 @@ struct CourtPublicView: View {
             }
         }
         HStack {
-            ResearchToolFilter(title: "Market", selection: market.isEmpty ? "All markets" : label(market)) {
+            ResearchToolFilter(title: "Market", symbol: "ticket", selection: market.isEmpty ? "All markets" : label(market)) {
                 Picker("Market", selection: $market) {
                     Text("All markets").tag("")
                     ForEach(markets, id: \.self) { Text(label($0)).tag($0) }
                 }
             }
             Spacer()
-            ResearchToolFilter(title: "Sort", selection: sort.rawValue) {
+            ResearchToolFilter(title: "Sort", symbol: "arrow.up.arrow.down", selection: sort.rawValue) {
                 Picker("Sort", selection: $sort) {
                     ForEach(Sort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }

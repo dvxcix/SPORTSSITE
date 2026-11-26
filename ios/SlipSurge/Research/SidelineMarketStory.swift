@@ -106,9 +106,9 @@ struct SidelineMarketStory: View {
         let availableBooks = Set((frame?.1.books ?? []) + [book]).sorted()
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
-                ResearchToolFilter(title: "Market", selection: SidelineResearchMarket.title(market)) {
+                ResearchToolFilter(title: "Market", symbol: "ticket", selection: SidelineResearchMarket.title(market)) {
                     Picker("Market", selection: $market) {
-                        ForEach(availableMarkets, id: \.self) { Text(SidelineResearchMarket.title($0)).tag($0) }
+                        ForEach(availableMarkets, id: \.self) { Label(SidelineResearchMarket.title($0), systemImage: SidelineResearchMarket.glyph($0)).tag($0) }
                     }
                 }
                 Spacer(minLength: 0)

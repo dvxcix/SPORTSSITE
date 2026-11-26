@@ -12,11 +12,11 @@ struct CourtView: View {
 
         var glyph: String {
             switch self {
-            case .players: "basketball"
-            case .odds: "chart.bar.xaxis"
-            case .comparison: "rectangle.split.2x1"
+            case .players: "person.text.rectangle"
+            case .odds: SlipGlyph.oddsBoard.rawValue
+            case .comparison: SlipGlyph.compareBooks.rawValue
             case .ladders: "stairs"
-            case .movement: "chart.line.uptrend.xyaxis"
+            case .movement: SlipGlyph.marketStory.rawValue
             case .markets: "list.bullet.rectangle"
             }
         }
@@ -245,7 +245,7 @@ struct CourtView: View {
                 Menu("Research tools", systemImage: "square.grid.2x2") {
                     Button("The Court", systemImage: "basketball") { tool = nil }
                     ForEach(CourtMatchupTool.allCases, id: \.self) { destination in
-                        Button(destination.rawValue, systemImage: destination.glyph) { tool = destination }
+                        Button { tool = destination } label: { Label(destination.rawValue, glyph: destination.glyph) }
                     }
                     if !isPreview { Button("NBA Matrices", systemImage: "square.grid.3x3") { matrices = true } }
                 }

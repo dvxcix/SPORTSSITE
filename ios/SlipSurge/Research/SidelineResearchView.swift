@@ -111,7 +111,7 @@ struct SidelineResearchView: View {
                     if mismatch || page == .market || page == .exact {
                         marketPicker
                         if !mismatch { sportsbookPicker }
-                        ResearchToolFilter(title: "Sort", selection: activeSort.rawValue) {
+                        ResearchToolFilter(title: "Sort", symbol: "arrow.up.arrow.down", selection: activeSort.rawValue) {
                             Picker("Sort", selection: Binding(get: { activeSort }, set: { sort = $0 })) {
                                 ForEach(mismatch ? [Sort.mismatch, .score] : [.edge, .hits], id: \.self) { Text($0.rawValue).tag($0) }
                             }
@@ -131,7 +131,7 @@ struct SidelineResearchView: View {
     }
 
     private var samplePicker: some View {
-        ResearchToolFilter(title: "Historical sample", selection: validResult?.sampleLabel ?? sample.label) {
+        ResearchToolFilter(title: "Historical sample", symbol: "clock.arrow.circlepath", selection: validResult?.sampleLabel ?? sample.label) {
             Picker("Historical sample", selection: $sample) {
                 ForEach(SidelineResearchSample.allCases, id: \.self) { Text($0.label).tag($0) }
             }
@@ -140,9 +140,9 @@ struct SidelineResearchView: View {
 
     private var marketPicker: some View {
         let options = mismatch ? SidelineResearchMarket.mismatch : result?.1.markets ?? SidelineResearchMarket.mismatch
-        return ResearchToolFilter(title: "Market", selection: SidelineResearchMarket.title(market)) {
+        return ResearchToolFilter(title: "Market", symbol: "ticket", selection: SidelineResearchMarket.title(market)) {
             Picker("Market", selection: $market) {
-                ForEach(Set(options + [market]).sorted(), id: \.self) { Text(SidelineResearchMarket.title($0)).tag($0) }
+                ForEach(Set(options + [market]).sorted(), id: \.self) { Label(SidelineResearchMarket.title($0), systemImage: SidelineResearchMarket.glyph($0)).tag($0) }
             }
         }
     }

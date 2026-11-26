@@ -37,6 +37,14 @@ enum Appearance: String, CaseIterable {
     case light = "Light"
     case dark = "Dark"
 
+    var symbol: String {
+        switch self {
+        case .system: "circle.lefthalf.filled"
+        case .light: "sun.max"
+        case .dark: "moon"
+        }
+    }
+
     var scheme: ColorScheme? {
         switch self {
         case .system: nil

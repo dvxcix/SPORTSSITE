@@ -113,7 +113,7 @@ struct CourtShotView: View {
                     ResearchArtworkPicker(title: "Shot chart game", options: games.map { game in
                         .init(id: String(game.id), title: shotDate(game.date), icon: "calendar")
                     }, selection: Binding(get: { String(current) }, set: { played = $0 }))
-                    ResearchToolFilter(title: "Period", selection: periodText(period)) {
+                    ResearchToolFilter(title: "Period", symbol: "clock", selection: periodText(period)) {
                         Picker("Period", selection: $period) {
                             Text("All periods").tag(0)
                             ForEach(periods, id: \.self) { Text(periodText($0)).tag($0) }
@@ -132,10 +132,10 @@ struct CourtShotView: View {
 
     @ViewBuilder
     private var resultFilters: some View {
-        ResearchToolFilter(title: "Result", selection: result.rawValue) {
+        ResearchToolFilter(title: "Result", symbol: "target", selection: result.rawValue) {
             Picker("Result", selection: $result) { ForEach(Result.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
         }
-        ResearchToolFilter(title: "Shot value", selection: points == 0 ? "Twos + threes" : "\(points)-pointers") {
+        ResearchToolFilter(title: "Shot value", symbol: "basketball", selection: points == 0 ? "Twos + threes" : "\(points)-pointers") {
             Picker("Shot value", selection: $points) {
                 Text("Twos + threes").tag(0)
                 Text("Two-pointers").tag(2)

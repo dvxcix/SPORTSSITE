@@ -167,7 +167,7 @@ struct DugoutMarketSlateView: View {
             }.scrollIndicators(.hidden)
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
-                    ResearchToolFilter(title: "Sort", selection: sortMode.rawValue) {
+                    ResearchToolFilter(title: "Sort", symbol: "arrow.up.arrow.down", selection: sortMode.rawValue) {
                         Picker("Sort", selection: Binding(get: { sortMode }, set: { sort = $0 })) {
                             ForEach(mode == .cost ? [Sort.seasonHR, .seasonFirst, .shorten, .drift] : [.popularity, .increase, .decrease], id: \.self) {
                                 Text($0.rawValue).tag($0)
@@ -175,7 +175,7 @@ struct DugoutMarketSlateView: View {
                         }
                     }
                     if mode == .cost {
-                        ResearchToolFilter(title: "Price movement", selection: movement.rawValue) {
+                        ResearchToolFilter(title: "Price movement", symbol: "chart.line.uptrend.xyaxis", selection: movement.rawValue) {
                             Picker("Price movement", selection: $movement) {
                                 ForEach(Movement.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                             }

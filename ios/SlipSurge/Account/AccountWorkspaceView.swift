@@ -63,8 +63,29 @@ struct AccountWorkspaceView: View {
         let pipelines: [Pipeline]
     }
 
-    private enum StudioTab: String, CaseIterable { case offers = "Memberships", groups = "Communities", drafts = "Scheduled posts" }
-    private enum AdminTab: String, CaseIterable { case moderation = "Queues", members = "Members", delivery = "System health", settings = "Settings" }
+    private enum StudioTab: String, CaseIterable {
+        case offers = "Memberships", groups = "Communities", drafts = "Scheduled posts"
+
+        var glyph: String {
+            switch self {
+            case .offers: "person.badge.key"
+            case .groups: SlipGlyph.community.rawValue
+            case .drafts: "calendar.badge.clock"
+            }
+        }
+    }
+    private enum AdminTab: String, CaseIterable {
+        case moderation = "Queues", members = "Members", delivery = "System health", settings = "Settings"
+
+        var glyph: String {
+            switch self {
+            case .moderation: "list.bullet.clipboard"
+            case .members: "person.2"
+            case .delivery: "waveform.path.ecg"
+            case .settings: "gearshape"
+            }
+        }
+    }
 
     let account: AccountStore
     let userID: UUID
@@ -199,7 +220,7 @@ struct AccountWorkspaceView: View {
                 CreatorWalletView(api: .init(account: account, userID: userID))
             } label: { Label("Balance & payouts", systemImage: "wallet.bifold") }
             .buttonStyle(.bordered)
-            ResearchToolRail(title: "Creator Studio", choices: StudioTab.allCases, selection: $studioTab, label: \.rawValue, compact: true)
+            ResearchToolRail(title: "Creator Studio", choices: StudioTab.allCases, selection: $studioTab, label: \.rawValue, glyph: \.glyph, compact: true)
             switch studioTab {
             case .offers:
                 Button("New product", systemImage: "plus") { newOffer = true }.buttonStyle(.borderedProminent)
@@ -299,7 +320,7 @@ struct AccountWorkspaceView: View {
                 .init(label: "Published posts", text: count(admin.counts["posts"] ?? nil)),
                 .init(label: "Communities", text: count(admin.counts["groups"] ?? nil)),
             ])
-            ResearchToolRail(title: "Admin", choices: AdminTab.allCases, selection: $adminTab, label: \.rawValue)
+            ResearchToolRail(title: "Admin", choices: AdminTab.allCases, selection: $adminTab, label: \.rawValue, glyph: \.glyph)
             if adminTab == .moderation {
                 ResearchToolCard(color: Brand.accent(for: scheme)) {
                     Text("Awaiting review").font(.headline)

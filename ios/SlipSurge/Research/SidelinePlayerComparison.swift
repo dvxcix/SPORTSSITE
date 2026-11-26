@@ -118,10 +118,10 @@ struct SidelinePlayerComparison: View {
                     }
                     if page == .books {
                         HStack {
-                            ResearchToolFilter(title: "Comparison market", selection: SidelineResearchMarket.title(market)) {
+                            ResearchToolFilter(title: "Comparison market", symbol: "ticket", selection: SidelineResearchMarket.title(market)) {
                                 Picker("Market", selection: $market) {
-                                    if !options.contains(where: { $0.id == market }) { Text(SidelineResearchMarket.title(market)).tag(market) }
-                                    ForEach(options) { Text(SidelineResearchMarket.title($0.id)).tag($0.id) }
+                                    if !options.contains(where: { $0.id == market }) { Label(SidelineResearchMarket.title(market), systemImage: SidelineResearchMarket.glyph(market)).tag(market) }
+                                    ForEach(options) { Label(SidelineResearchMarket.title($0.id), systemImage: SidelineResearchMarket.glyph($0.id)).tag($0.id) }
                                 }
                             }
                             Spacer()

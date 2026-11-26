@@ -10,13 +10,13 @@ struct SlipSurgeTabs: View {
     enum Destination: String, CaseIterable {
         case feed = "Feed", research = "Research", community = "Community", inbox = "Inbox", you = "You"
 
-        var symbol: String {
+        var glyph: SlipGlyph {
             switch self {
-            case .feed: "bubble.left.and.bubble.right"
-            case .research: "chart.bar.xaxis"
-            case .community: "person.2"
-            case .inbox: "tray"
-            case .you: "person.crop.circle"
+            case .feed: .feed
+            case .research: .research
+            case .community: .community
+            case .inbox: .inbox
+            case .you: .you
             }
         }
     }
@@ -80,7 +80,7 @@ struct SlipSurgeTabs: View {
             .environment(\.socialTab, .feed)
             .toolbar(.hidden, for: .tabBar)
             .id(account.memberID)
-            .tabItem { Label("Feed", systemImage: "bubble.left.and.bubble.right") }
+            .tabItem { Label(Destination.feed.rawValue, glyph: Destination.feed.glyph.rawValue) }
             .tag(Destination.feed)
 
             NavigationStack(path: $researchPath) {
@@ -97,7 +97,7 @@ struct SlipSurgeTabs: View {
             .toolbar(.hidden, for: .tabBar)
             .id(account.memberID)
             .environment(\.nativeResumeActive, selected == .research && sitePresentation == nil)
-            .tabItem { Label("Research", systemImage: "chart.bar.xaxis") }
+            .tabItem { Label(Destination.research.rawValue, glyph: Destination.research.glyph.rawValue) }
             .tag(Destination.research)
 
             NavigationStack {
@@ -107,7 +107,7 @@ struct SlipSurgeTabs: View {
             .environment(\.socialTab, .community)
             .toolbar(.hidden, for: .tabBar)
             .id(account.memberID)
-            .tabItem { Label(Destination.community.rawValue, systemImage: Destination.community.symbol) }
+            .tabItem { Label(Destination.community.rawValue, glyph: Destination.community.glyph.rawValue) }
             .tag(Destination.community)
 
             NavigationStack {
@@ -118,7 +118,7 @@ struct SlipSurgeTabs: View {
             .toolbar(.hidden, for: .tabBar)
             .id(account.memberID)
             .id(inboxNavigationRevision)
-            .tabItem { Label(Destination.inbox.rawValue, systemImage: Destination.inbox.symbol) }
+            .tabItem { Label(Destination.inbox.rawValue, glyph: Destination.inbox.glyph.rawValue) }
             .badge(inboxUnread.total(for: account.memberID))
             .tag(Destination.inbox)
 
@@ -145,7 +145,7 @@ struct SlipSurgeTabs: View {
             .environment(\.socialTab, .you)
             .toolbar(.hidden, for: .tabBar)
             .id(account.user?.id)
-            .tabItem { Label(Destination.you.rawValue, systemImage: Destination.you.symbol) }
+            .tabItem { Label(Destination.you.rawValue, glyph: Destination.you.glyph.rawValue) }
             .tag(Destination.you)
         }
         .tint(Brand.accent(for: scheme))

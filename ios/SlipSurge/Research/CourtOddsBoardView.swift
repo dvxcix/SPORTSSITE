@@ -117,7 +117,10 @@ struct CourtOddsBoardView: View {
 
     private var marketPicker: some View {
         Picker("Odds Board market", selection: $market) {
-            ForEach(markets) { Text($0.name).tag($0.id) }
+            ForEach(markets) { market in
+                Label(market.name, systemImage: CourtPlayerMarket(rawValue: market.id)?.symbol ?? "ticket")
+                    .tag(market.id)
+            }
         }
         .fixedSize(horizontal: true, vertical: false)
         .frame(minHeight: 44)

@@ -69,6 +69,8 @@ struct ResearchOddsSlate {
 enum OddsComparison: String, CaseIterable {
     case opening, earlier
 
+    var symbol: String { self == .opening ? "flag" : "clock.arrow.circlepath" }
+
     func label(live: Bool) -> String {
         switch self {
         case .opening: live ? "First seen" : "Opening"
@@ -81,6 +83,14 @@ enum OddsSort: String, CaseIterable {
     case alphabetical = "Player A–Z"
     case shortened = "Most shortened"
     case lengthened = "Most lengthened"
+
+    var symbol: String {
+        switch self {
+        case .alphabetical: "textformat.abc"
+        case .shortened: "arrow.down.right"
+        case .lengthened: "arrow.up.right"
+        }
+    }
 }
 
 @Observable final class ResearchOddsFilters {
@@ -312,16 +322,24 @@ struct ResearchOddsBoard: View {
                         + teams.map { item in
                             .team(id: item.code, title: item.name, logo: slate.players.first { $0.team.code == item.code }?.logo)
                         }, selection: Binding(get: { filter.team ?? "" }, set: { filter.team = $0.isEmpty ? nil : $0 }))
-                    Picker("Compare with", selection: $filter.comparison) {
-                        ForEach(OddsComparison.allCases, id: \.self) { Text($0.label(live: live)).tag($0) }
+                    Picker(selection: $filter.comparison) {
+                        ForEach(OddsComparison.allCases, id: \.self) { Label($0.label(live: live), systemImage: $0.symbol).tag($0) }
+                    } label: {
+                        Label("Compare with", systemImage: "clock")
                     }
-                    Picker("Sort", selection: Binding(get: { selectedSort }, set: { filter.sort = $0; filter.sortedPriceLine = nil; filter.ascendingName = true })) {
-                        ForEach(OddsSort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    Picker(selection: Binding(get: { selectedSort }, set: { filter.sort = $0; filter.sortedPriceLine = nil; filter.ascendingName = true })) {
+                        ForEach(OddsSort.allCases, id: \.self) { Label($0.rawValue, systemImage: $0.symbol).tag($0) }
+                    } label: {
+                        Label("Sort", systemImage: "arrow.up.arrow.down")
                     }
                     if scorerLabel == nil {
-                        Picker("Milestone", selection: $filter.target) {
-                            Text("All milestones").tag(nil as Double?)
-                            ForEach(milestones, id: \.self) { Text("\($0.formatted())+").tag(Optional($0)) }
+                        Picker(selection: $filter.target) {
+                            Label("All milestones", systemImage: "line.3.horizontal.decrease").tag(nil as Double?)
+                            ForEach(milestones, id: \.self) {
+                                Label("\($0.formatted())+", systemImage: "plus.circle").tag(Optional($0))
+                            }
+                        } label: {
+                            Label("Milestone", systemImage: "target")
                         }
                     }
                 } header: {

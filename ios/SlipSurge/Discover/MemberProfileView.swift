@@ -7,7 +7,7 @@ struct MemberProfileView: View {
         var glyph: String {
             switch self {
             case .all: "text.bubble"
-            case .picks: "chart.line.uptrend.xyaxis"
+            case .picks: "ticket"
             case .replies: "arrowshape.turn.up.left"
             case .reposts: "arrow.2.squarepath"
             case .media: "photo"
@@ -168,7 +168,7 @@ struct MemberProfileView: View {
                             let count = section == .all ? profile.postCount : section == .reposts ? profile.repostCount : nil
                             let name = section == .all ? "Posts" : section.rawValue
                             HStack(spacing: 4) {
-                                Text(name)
+                                Label(name, glyph: section == .all ? SlipGlyph.feed.rawValue : section.glyph)
                                 if let count { Text(count.formatted()).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
                             }
                             .accessibilityElement(children: .combine)

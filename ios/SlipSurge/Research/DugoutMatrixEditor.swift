@@ -140,7 +140,13 @@ struct DugoutMatrixRules: View {
         if pipe {
             Menu("Add step", systemImage: "plus") {
                 ForEach(kinds, id: \.self) { kind in
-                    Button(kind.capitalized) { rules.append(.step(kind, previous: rules.last)) }
+                    let symbol = switch kind {
+                    case "filter": "line.3.horizontal.decrease"
+                    case "group": "square.stack"
+                    case "rank": "list.number"
+                    default: "exclamationmark.circle"
+                    }
+                    Button(kind.capitalized, systemImage: symbol) { rules.append(.step(kind, previous: rules.last)) }
                 }
             }.disabled(rules.count >= 50)
         } else {

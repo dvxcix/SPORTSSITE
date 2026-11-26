@@ -104,6 +104,8 @@ struct ScoresView: View {
                         if let logo = LeagueArtwork.logo(sport) {
                             ResearchArtwork(urls: [logo], fallback: "sportscourt", pointSize: 18)
                                 .frame(width: 18, height: 18)
+                        } else {
+                            Image(systemName: "sportscourt")
                         }
                         Text(sport.isEmpty ? "All sports" : LeagueArtwork.label(sport))
                     }

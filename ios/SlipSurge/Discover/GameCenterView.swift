@@ -13,6 +13,16 @@ struct GameCenterView: View {
             }
         }
 
+        var symbol: String {
+            switch self {
+            case .plays: "waveform.path"
+            case .room: "number"
+            case .box: "tablecells"
+            case .picks: "ticket"
+            case .overview: "list.bullet.rectangle"
+            }
+        }
+
         var query: String {
             switch self {
             case .overview: "overview"
@@ -134,7 +144,13 @@ struct GameCenterView: View {
             }
             .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: cue?.id)
             SocialSectionBar(title: "Game sections", sections: Section.allCases, selection: $section) {
-                Text($0.rawValue).lineLimit(1).minimumScaleFactor(0.8).accessibilityLabel($0.label)
+                let item = $0
+                VStack(spacing: 3) {
+                    Image(systemName: item.symbol).font(.caption.weight(.semibold))
+                        .accessibilityHidden(true)
+                    Text(item.rawValue).font(.caption).lineLimit(1).minimumScaleFactor(0.8)
+                }
+                .accessibilityLabel(item.label)
             }
             gameContent
         }
@@ -477,7 +493,7 @@ struct GameCenterView: View {
         let periods = orderedUnique(entries.reversed().compactMap { $0.play.period })
         if !periods.isEmpty {
             HStack(spacing: 8) {
-                ResearchToolFilter(title: periodName, selection: selectedPeriod.isEmpty ? allPeriods : selectedPeriod) {
+                ResearchToolFilter(title: periodName, symbol: "clock", selection: selectedPeriod.isEmpty ? allPeriods : selectedPeriod) {
                     Picker(periodName, selection: $selectedPeriod) {
                         Text(allPeriods).tag("")
                         ForEach(periods, id: \.self) { Text($0).tag($0) }

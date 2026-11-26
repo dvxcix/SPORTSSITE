@@ -5,6 +5,21 @@ struct SidelineView: View {
         case gameDay = "Game Day", touchdowns = "TDs", props = "Props", oddsBoard = "Odds Board", capture = "Market Story"
         case usage = "Usage", tracking = "Tracking", team = "Team", all = "All", custom = "Custom"
 
+        var glyph: String {
+            switch self {
+            case .gameDay: "calendar"
+            case .touchdowns: "flag.checkered"
+            case .props: "ticket"
+            case .oddsBoard: SlipGlyph.oddsBoard.rawValue
+            case .capture: SlipGlyph.marketStory.rawValue
+            case .usage: "chart.pie"
+            case .tracking: "location"
+            case .team: "shield"
+            case .all: "tablecells"
+            case .custom: "slider.horizontal.3"
+            }
+        }
+
         var statsMode: SidelineStatMode? { SidelineStatMode(rawValue: rawValue) }
         var quotes: Bool { self == .touchdowns || self == .props || self == .oddsBoard }
     }
@@ -22,12 +37,12 @@ struct SidelineView: View {
         var glyph: String {
             switch self {
             case .matchup: "football"
-            case .mismatch: "chart.bar.xaxis"
-            case .cheatsheets: "tablecells"
-            case .slateEdge: "chart.line.uptrend.xyaxis"
-            case .publicActivity: "person.2"
-            case .sportsbooks: "chart.bar"
-            case .ladders: "line.3.horizontal.decrease"
+            case .mismatch: SlipGlyph.mismatch.rawValue
+            case .cheatsheets: SlipGlyph.cheatsheets.rawValue
+            case .slateEdge: SlipGlyph.slateEdge.rawValue
+            case .publicActivity: "chart.pie"
+            case .sportsbooks: "sportscourt"
+            case .ladders: "stairs"
             case .matchupLab: "chart.xyaxis.line"
             }
         }
@@ -169,7 +184,7 @@ struct SidelineView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu("Research tools", systemImage: "square.grid.2x2") {
                     ForEach(Workspace.allCases, id: \.self) { destination in
-                        Button(destination.rawValue, systemImage: destination.glyph) { tool = destination }
+                        Button { tool = destination } label: { Label(destination.rawValue, glyph: destination.glyph) }
                     }
                     if !api.isFeatured {
                         Button("NFL Matrices", systemImage: "square.grid.3x3") { matrices = true }
@@ -240,7 +255,7 @@ struct SidelineView: View {
 
     private var boardPicker: some View {
         ResearchToolRail(title: "Board", choices: api.isFeatured ? [.gameDay, .props, .oddsBoard] : Section.allCases,
-            selection: $section, label: \.rawValue)
+            selection: $section, label: \.rawValue, glyph: \.glyph)
         .onChange(of: section) { _, current in
             if current == .touchdowns { selection.market = "anytime_td" }
         }
@@ -465,7 +480,9 @@ struct SidelineView: View {
     private func quoteFilters(_ board: SidelineBoard) -> some View {
         let markets = Array(Set(board.markets + [selection.market, "anytime_td", "first_td"])).sorted()
         let market = Picker("Market", selection: $selection.market) {
-            ForEach(markets, id: \.self) { Text(marketName($0)).tag($0) }
+            ForEach(markets, id: \.self) {
+                Label(marketName($0), systemImage: SidelineResearchMarket.glyph($0)).tag($0)
+            }
         }
         .fixedSize(horizontal: true, vertical: false)
         .frame(minHeight: 44)

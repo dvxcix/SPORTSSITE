@@ -46,16 +46,27 @@ struct CommunityMembersManager: View {
         }
     }
 
+    private func roleSymbol(_ role: String) -> String {
+        switch role {
+        case "owner": "crown"
+        case "admin": "shield"
+        case "moderator": "checkmark.shield"
+        case "analyst": "chart.xyaxis.line"
+        case "subscriber": "star"
+        default: "person"
+        }
+    }
+
     private func row(_ member: CommunitySettingsState.Member) -> some View {
         HStack(spacing: 10) {
             MessageAvatar(person: member.user, size: 34)
             Text(member.user?.name ?? "Member").font(.subheadline.weight(.semibold))
             Spacer()
             if member.role != "owner", member.id != api.userID {
-                Menu(member.role.capitalized) {
+                Menu(member.role.capitalized, systemImage: roleSymbol(member.role)) {
                     if state.owner {
                         ForEach(Self.roles, id: \.self) { role in
-                            Button(role.capitalized) {
+                            Button(role.capitalized, systemImage: roleSymbol(role)) {
                                 Task { await change(.init(action: "member-role", user: member.id.uuidString.lowercased(), role: role)) }
                             }.disabled(role == member.role)
                         }

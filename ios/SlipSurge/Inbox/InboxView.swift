@@ -7,7 +7,7 @@ enum InboxSection: String, CaseIterable {
     var symbol: String {
         switch self {
         case .activity: "bell"
-        case .messages: "envelope"
+        case .messages: "bubble.left.and.bubble.right"
         }
     }
 }
@@ -117,7 +117,7 @@ struct InboxView: View {
         SocialSectionBar(title: "Inbox sections", sections: InboxSection.allCases, selection: $section) { item in
             let count = unread.count(for: item, memberID: account.memberID)
             HStack(spacing: 6) {
-                Text(item.rawValue)
+                Label(item.rawValue, systemImage: item.symbol)
                 if count > 0 { InboxBadge(count: count) }
             }
             .accessibilityElement(children: .combine)

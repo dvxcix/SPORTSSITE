@@ -3,6 +3,15 @@ import SwiftUI
 struct AdminWhopView: View {
     enum Page: String, CaseIterable {
         case activity = "Activity", fees = "Fees", connection = "Connection", verification = "Verification"
+
+        var glyph: String {
+            switch self {
+            case .activity: "waveform.path"
+            case .fees: "creditcard"
+            case .connection: "link"
+            case .verification: "checkmark.seal"
+            }
+        }
     }
 
     private struct Commerce: Decodable {
@@ -85,7 +94,7 @@ struct AdminWhopView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            ResearchToolRail(title: "Whop section", choices: Page.allCases, selection: $page, label: \.rawValue)
+            ResearchToolRail(title: "Whop section", choices: Page.allCases, selection: $page, label: \.rawValue, glyph: \.glyph)
                 .padding(.vertical, 6).background(.bar)
         }
         .navigationTitle("Whop payments")

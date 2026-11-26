@@ -246,7 +246,13 @@ struct FeedView: View {
                 guard filter != value else { return }
                 filter = value
                 recordPosition(0)
-            })) { Text($0.rawValue.capitalized) }
+            })) { item in
+            VStack(spacing: 3) {
+                Image(systemName: item.symbol).font(.caption.weight(.semibold))
+                    .accessibilityHidden(true)
+                Text(item.rawValue.capitalized).font(.caption)
+            }
+        }
     }
 
     private var sports: some View {

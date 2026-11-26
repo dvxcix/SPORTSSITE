@@ -4,6 +4,14 @@ import SwiftUI
 struct AdminBrowserAutomationView: View {
     enum Page: String, CaseIterable {
         case overview = "Overview", extractors = "Extractors", sessions = "Sessions"
+
+        var glyph: String {
+            switch self {
+            case .overview: "rectangle.3.group"
+            case .extractors: "arrow.down.document"
+            case .sessions: "clock.arrow.circlepath"
+            }
+        }
     }
 
     private struct Snapshot: Decodable {
@@ -104,7 +112,7 @@ struct AdminBrowserAutomationView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            ResearchToolRail(title: "Browser automation section", choices: Page.allCases, selection: $page, label: \.rawValue)
+            ResearchToolRail(title: "Browser automation section", choices: Page.allCases, selection: $page, label: \.rawValue, glyph: \.glyph)
                 .padding(.vertical, 6).background(.bar)
         }
         .navigationTitle("Browser automation")

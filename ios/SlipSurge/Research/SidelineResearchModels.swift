@@ -209,6 +209,22 @@ enum SidelineResearchMarket {
         }
     }
 
+    static func glyph(_ name: String) -> String {
+        switch name {
+        case "anytime_td": "flag.checkered"
+        case "first_td": "1.circle"
+        case "receiving_yards": "ruler"
+        case "receptions": "hands.clap"
+        case "rushing_yards": "figure.run"
+        case "passing_yards": "football"
+        case "rushing_attempts": "shoeprints.fill"
+        case "passing_attempts": "arrow.up.right"
+        case "passing_completions", "completions": "checkmark.circle"
+        case "passing_tds": "flag"
+        default: "ticket"
+        }
+    }
+
     static func normalizeTeam(_ name: String) -> String {
         switch name.uppercased() {
         case "LA": "LAR"

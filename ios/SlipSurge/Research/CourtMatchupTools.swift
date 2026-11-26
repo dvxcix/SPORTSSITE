@@ -18,13 +18,13 @@ enum CourtMatchupTool: String, CaseIterable {
         switch self {
         case .matchup: "chart.xyaxis.line"
         case .availability: "heart.text.square"
-        case .firstBasket: "basketball"
-        case .cheatsheets: "tablecells"
-        case .slateEdge: "chart.bar.xaxis"
+        case .firstBasket: SlipGlyph.firstBasket.rawValue
+        case .cheatsheets: SlipGlyph.cheatsheets.rawValue
+        case .slateEdge: SlipGlyph.slateEdge.rawValue
         case .score: "bolt"
         case .defense: "shield"
         case .lineups: "person.3"
-        case .publicActivity: "person.2"
+        case .publicActivity: "chart.pie"
         case .crossMarket: "arrow.left.arrow.right"
         case .scouting: "gauge.open.with.lines.needle.33percent"
         case .tracking: "waveform.path"

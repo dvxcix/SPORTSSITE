@@ -311,11 +311,11 @@ private struct DugoutSwingTake: View {
             ResearchSectionTitle(title: "Swing/Take Run Value")
         } content: {
             HStack {
-                ResearchToolFilter(title: "Group type", selection: selected) {
+                ResearchToolFilter(title: "Group type", symbol: "rectangle.3.group", selection: selected) {
                     ForEach(groups, id: \.self) { option in Button(option) { group = option; subtype = "" } }
                 }
                 if !subtypes.isEmpty {
-                    ResearchToolFilter(title: "Subtype", selection: active?.dims["sub_type"]?.text ?? "Subtype") {
+                    ResearchToolFilter(title: "Subtype", symbol: "tree", selection: active?.dims["sub_type"]?.text ?? "Subtype") {
                         ForEach(subtypes, id: \.self) { option in Button(option) { subtype = option } }
                     }
                 }
@@ -361,7 +361,7 @@ private struct DugoutStanceCard: View {
                 .pickerStyle(.segmented)
             }
             if let selection, let row = rows.first(where: { $0.dims["pitch_hand"]?.text == selection }) {
-                ResearchToolFilter(title: "Pitch hand", selection: selection == "All" ? "All pitchers" : "vs. \(selection)HP") {
+                ResearchToolFilter(title: "Pitch hand", symbol: "hand.raised", selection: selection == "All" ? "All pitchers" : "vs. \(selection)HP") {
                     ForEach(available, id: \.self) { candidate in
                         Button(candidate == "All" ? "All pitchers" : "vs. \(candidate)HP") { hand = candidate }
                     }

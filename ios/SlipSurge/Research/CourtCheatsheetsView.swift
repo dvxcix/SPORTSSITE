@@ -83,28 +83,28 @@ struct CourtCheatsheetsView: View {
             }
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
-                    ResearchToolFilter(title: "Market", selection: market.label) {
+                    ResearchToolFilter(title: "Market", symbol: "ticket", selection: market.label) {
                         Picker("Market", selection: $market) {
                             ForEach(CourtPlayerMarket.allCases.filter { available.isEmpty || available.contains($0.rawValue) || $0 == market }, id: \.self) {
-                                Text($0.label).tag($0)
+                                Label($0.label, systemImage: $0.symbol).tag($0)
                             }
                         }
                     }
                     ResearchArtworkPicker(title: "Sportsbook",
                         options: [.init(id: "all", title: "All books", icon: "books.vertical")] + books.map(ResearchArtworkPicker.Option.sportsbook),
                         selection: $book)
-                    ResearchToolFilter(title: "Contract", selection: contract.label) {
+                    ResearchToolFilter(title: "Contract", symbol: "doc.text", selection: contract.label) {
                         Picker("Contract", selection: $contract) {
                             ForEach(Contract.allCases, id: \.self) { Text($0.label).tag($0) }
                         }
                     }
-                    ResearchToolFilter(title: "Line", selection: line.map { ResearchFormat.decimal($0) } ?? "Any line") {
+                    ResearchToolFilter(title: "Line", symbol: "number", selection: line.map { ResearchFormat.decimal($0) } ?? "Any line") {
                         Picker("Line", selection: $line) {
                             Text("Any line").tag(nil as Double?)
                             ForEach(lines, id: \.self) { Text($0.formatted()).tag(Optional($0)) }
                         }
                     }
-                    ResearchToolFilter(title: "Historical venue", selection: location == .all ? "All venues" : location.rawValue.capitalized) {
+                    ResearchToolFilter(title: "Historical venue", symbol: "sportscourt", selection: location == .all ? "All venues" : location.rawValue.capitalized) {
                         Picker("Historical venue", selection: $location) {
                             ForEach(Location.allCases, id: \.self) { Text($0.rawValue.capitalized).tag($0) }
                         }
@@ -113,7 +113,7 @@ struct CourtCheatsheetsView: View {
                         options: [.init(id: "", title: "Both teams", icon: "person.2")] + [board.game.visitorTeam, board.game.homeTeam].map {
                             .team(id: String($0.id), title: $0.abbreviation, logo: $0.logo)
                         }, selection: Binding(get: { selectedTeam.map(String.init) ?? "" }, set: { selectedTeam = Int($0) }))
-                    ResearchToolFilter(title: "Sort", selection: sort.rawValue) {
+                    ResearchToolFilter(title: "Sort", symbol: "arrow.up.arrow.down", selection: sort.rawValue) {
                         Picker("Sort", selection: $sort) {
                             ForEach(Sort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                         }

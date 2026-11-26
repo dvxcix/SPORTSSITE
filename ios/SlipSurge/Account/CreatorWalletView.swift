@@ -161,7 +161,7 @@ struct CreatorWalletView: View {
             } else if page != nil {
                 HStack {
                     TextField("Find a payout", text: $search).textFieldStyle(.roundedBorder).autocorrectionDisabled()
-                    ResearchToolFilter(title: "Status", selection: status.isEmpty ? "All statuses" : pretty(status)) {
+                    ResearchToolFilter(title: "Status", symbol: "checkmark.circle", selection: status.isEmpty ? "All statuses" : pretty(status)) {
                         Picker("Status", selection: $status) {
                             Text("All statuses").tag("")
                             ForEach(["requested", "in_review", "processing", "completed", "reversed", "canceled", "failed", "denied"], id: \.self) { Text(pretty($0)).tag($0) }

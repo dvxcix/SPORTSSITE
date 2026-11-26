@@ -73,9 +73,9 @@ struct CourtSlateEdgeView: View {
             }
             ScrollView(.horizontal) {
                 HStack(spacing: 7) {
-                    ResearchToolFilter(title: "Market", selection: market.label) {
+                    ResearchToolFilter(title: "Market", symbol: "ticket", selection: market.label) {
                         Picker("Market", selection: $market) {
-                            ForEach(CourtPlayerMarket.allCases, id: \.self) { Text($0.label).tag($0) }
+                            ForEach(CourtPlayerMarket.allCases, id: \.self) { Label($0.label, systemImage: $0.symbol).tag($0) }
                         }
                     }
                     ResearchArtworkPicker(title: "Sportsbook",
@@ -85,7 +85,7 @@ struct CourtSlateEdgeView: View {
                     ResearchArtworkPicker(title: "Game", options: [.init(id: "", title: "All games", icon: "basketball")] + games.map {
                         .init(id: String($0.id), title: matchup($0), url: $0.visitorTeam.logo, secondaryLogo: $0.homeTeam.logo, icon: "shield")
                     }, selection: Binding(get: { selectedGame.map(String.init) ?? "" }, set: { selectedGame = Int($0) }))
-                    ResearchToolFilter(title: "Sort", selection: sort.rawValue) {
+                    ResearchToolFilter(title: "Sort", symbol: "arrow.up.arrow.down", selection: sort.rawValue) {
                         Picker("Sort", selection: $sort) {
                             ForEach(Sort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                         }

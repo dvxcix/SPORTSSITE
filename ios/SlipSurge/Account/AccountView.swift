@@ -86,10 +86,10 @@ struct AccountView: View {
                         } label: {
                             Label("Finish account setup", systemImage: "person.crop.circle.badge.checkmark")
                         }
-                        Button("Check account setup") { Task { await account.recheckOnboarding() } }
+                        Button("Check account setup", systemImage: "arrow.clockwise") { Task { await account.recheckOnboarding() } }
                             .disabled(account.isBusy)
                     }
-                    Button("Sign out", role: .destructive) {
+                    Button("Sign out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
                         Task { await push.signOut(account: account) }
                     }
                     .disabled(account.isBusy || push.signingOut)
@@ -107,7 +107,7 @@ struct AccountView: View {
             Section("Display") {
                 Picker("Appearance", selection: $appearance) {
                     ForEach(Appearance.allCases, id: \.self) { option in
-                        Text(option.rawValue).tag(option)
+                        Label(option.rawValue, systemImage: option.symbol).tag(option)
                     }
                 }
             }
@@ -115,7 +115,7 @@ struct AccountView: View {
             Section {
                 NavigationLink {
                     NativeMembershipOverview(account: account)
-                } label: { Text("Memberships") }
+                } label: { Label("Memberships", systemImage: "person.crop.circle.badge.checkmark") }
                 InformationLink(page: .support, account: account)
                 InformationLink(page: .faq, account: account)
                 InformationLink(page: .about, account: account)

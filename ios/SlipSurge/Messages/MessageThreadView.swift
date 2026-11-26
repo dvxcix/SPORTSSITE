@@ -141,7 +141,7 @@ struct MessageThreadView: View {
             if let thread {
                 ToolbarItem(placement: .primaryAction) {
                     Menu("Conversation actions", systemImage: "ellipsis.circle") {
-                        Button(searching ? "Close search" : "Search messages", systemImage: "magnifyingglass") {
+                        Button(searching ? "Close search" : "Search messages", systemImage: searching ? "xmark" : "magnifyingglass") {
                             if searching { closeSearch() }
                             else { searching = true }
                         }
@@ -379,7 +379,7 @@ struct MessageThreadView: View {
                             ForEach(["❤️", "🔥", "⚡", "👏", "😂", "👀"], id: \.self) { symbol in
                                 Button(symbol) { react(symbol, on: messageID, enabled: !reactions.contains { $0.emoji == symbol && $0.mine }) }
                             }
-                            Button("More reactions", systemImage: "ellipsis") {
+                            Button("More reactions", systemImage: "face.smiling") {
                                 selectingReaction = .init(id: message.id, mine: Set(reactions.filter(\.mine).map(\.emoji)))
                             }
                         }
@@ -508,7 +508,7 @@ struct MessageThreadView: View {
             }
             if !draftData.unsent.isEmpty, draftData.editing == nil {
                 Menu("Unsent drafts (\(draftData.unsent.count))", systemImage: "doc.badge.clock") {
-                    ForEach(draftData.unsent) { item in Button(String(item.text.prefix(70))) { insertDraft(item) } }
+                    ForEach(draftData.unsent) { item in Button(String(item.text.prefix(70)), systemImage: "doc.text") { insertDraft(item) } }
                 }
                 .font(.footnote)
                 .disabled(draftData.text.utf16.count >= 999)

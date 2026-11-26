@@ -136,7 +136,13 @@ struct MembershipBillingView: View {
             Text("Ultimate").font(.title2.weight(.heavy))
         } content: {
             ResearchToolRail(title: "Billing period", choices: [Offer.monthly, .discord, .annual].filter { options[$0.rawValue] != nil },
-                selection: $offer, label: \.title) { $0 == .discord ? "person.2" : "calendar" }
+                selection: $offer, label: \.title) { offer in
+                    switch offer {
+                    case .monthly: "calendar"
+                    case .discord: "person.2.badge.gearshape"
+                    case .annual: "calendar.badge.clock"
+                    }
+                }
             if let quote = options[offer.rawValue] {
                 Text("\(quote.price) every \(quote.days) days").font(.headline.monospacedDigit())
                 if quote.trialDays > 0 {

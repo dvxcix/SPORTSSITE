@@ -234,14 +234,14 @@ struct CourtPlayerView: View {
             ResearchArtworkPicker(title: "Sportsbook", options: choices.map(ResearchArtworkPicker.Option.sportsbook),
                 selection: Binding(get: { sportsbook }, set: { sportsbook = $0; line = nil; selectMarket() }))
         }
-        ResearchToolFilter(title: "Market", selection: marketName(market)) { marketPicker }
+        ResearchToolFilter(title: "Market", symbol: "ticket", selection: marketName(market)) { marketPicker }
     }
 
     private var marketPicker: some View {
         let choices = Set(markets + (market.isEmpty ? [] : [market])).sorted()
         return Picker("Market", selection: Binding(get: { market }, set: { market = $0; line = nil })) {
             ForEach(choices, id: \.self) {
-                Text(marketName($0)).tag($0)
+                Label(marketName($0), systemImage: CourtPlayerMarket(rawValue: $0)?.symbol ?? "ticket").tag($0)
             }
         }
     }

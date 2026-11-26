@@ -3,6 +3,17 @@ import SwiftUI
 struct AvatarAppearancePicker: View {
     private enum Category: String, CaseIterable {
         case all = "All", rings = "Rings", football = "Football", basketball = "Basketball", baseball = "Baseball", slipsurge = "SlipSurge"
+
+        var glyph: String {
+            switch self {
+            case .all: "square.grid.2x2"
+            case .rings: "circle.dashed"
+            case .football: "football"
+            case .basketball: "basketball"
+            case .baseball: "baseball"
+            case .slipsurge: "bolt"
+            }
+        }
     }
 
     private struct Option: Identifiable {
@@ -48,7 +59,7 @@ struct AvatarAppearancePicker: View {
                 NativeMemberAvatar(url: url, name: name, size: 82, style: draft, color: color, animated: true)
                     .padding(.top, 13)
                 Text(AvatarArtwork.title(draft)).font(.headline).accessibilityAddTraits(.isHeader)
-                ResearchToolRail(title: "Avatar categories", choices: Category.allCases, selection: $category, label: \.rawValue)
+                ResearchToolRail(title: "Avatar categories", choices: Category.allCases, selection: $category, label: \.rawValue, glyph: \.glyph)
                 if options.isEmpty {
                     ContentUnavailableView.search(text: query)
                 } else {

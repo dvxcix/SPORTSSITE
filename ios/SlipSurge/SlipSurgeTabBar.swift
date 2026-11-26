@@ -41,7 +41,7 @@ struct SlipSurgeTabBar: View {
                                 NativeMemberAvatar(url: profile.avatarUrl, name: profile.name, size: 22,
                                     style: profile.avatarRingStyle, color: profile.avatarRingColor)
                             } else {
-                                Image(systemName: tab.symbol).font(.system(size: 19, weight: .semibold))
+                                SlipGlyph.view(tab.glyph.rawValue, size: 22)
                             }
                         }
                         .frame(height: 28)

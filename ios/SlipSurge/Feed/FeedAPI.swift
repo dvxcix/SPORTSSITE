@@ -2,6 +2,15 @@ import Foundation
 
 enum FeedFilter: String, CaseIterable {
     case latest, top, picks, following
+
+    var symbol: String {
+        switch self {
+        case .latest: "clock"
+        case .top: "flame"
+        case .picks: "ticket"
+        case .following: "person.badge.checkmark"
+        }
+    }
 }
 
 struct FeedPost: Decodable, Identifiable {

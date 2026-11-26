@@ -76,7 +76,15 @@ struct DugoutWorkspaceGame: View {
 
     @ViewBuilder private var playerField: some View {
         ResearchToolRail(title: "Mechanics and MM sample", choices: DugoutWindow.form, selection: $window, label: \.title,
-            glyph: { _ in "chart.bar.xaxis" }, compact: true)
+            glyph: { window in
+                switch window {
+                case .l1: "1.circle"
+                case .l3: "3.circle"
+                case .l5: "5.circle"
+                case .l10: "10.circle"
+                case .season: "calendar"
+                }
+            }, compact: true)
         if let loaded = model, loaded.0 == request {
             if let details = loaded.1, !details.players.isEmpty {
                 leaders

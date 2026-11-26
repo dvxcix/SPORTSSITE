@@ -90,7 +90,7 @@ struct CourtQuoteBoard: View {
                 Button { selectSort(book) } label: {
                     if let logo = Sportsbook.artwork(Sportsbook.normalized(book)) {
                         Label(Sportsbook.name(book), image: logo)
-                    } else { Text(Sportsbook.name(book)) }
+                    } else { Label(Sportsbook.name(book), systemImage: "sportscourt") }
                 }
             }
         }.frame(minHeight: 44)
@@ -99,7 +99,7 @@ struct CourtQuoteBoard: View {
     private var bookOptions: some View {
         NavigationStack {
             List {
-                Button("All available books") { selectedBooks = Set(availableBooks) }
+                Button("All available books", systemImage: "checkmark.circle") { selectedBooks = Set(availableBooks) }
                 ForEach(availableBooks, id: \.self) { book in
                     Button {
                         var selected = selectedBooks ?? Set(visibleBooks)

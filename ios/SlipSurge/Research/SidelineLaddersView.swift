@@ -134,17 +134,17 @@ struct SidelineLaddersView: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
                     if kind == .overUnder {
-                        ResearchToolFilter(title: "Side", selection: side.rawValue.capitalized) {
+                        ResearchToolFilter(title: "Side", symbol: "arrow.up.arrow.down.circle", selection: side.rawValue.capitalized) {
                             Picker("Side", selection: $side) { ForEach(Side.allCases, id: \.self) { Text($0.rawValue.capitalized).tag($0) } }
                         }
                     }
-                    ResearchToolFilter(title: "Display", selection: display.rawValue) {
+                    ResearchToolFilter(title: "Display", symbol: "rectangle.split.2x1", selection: display.rawValue) {
                         Picker("Display", selection: $display) { ForEach(Display.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
                     }
-                    ResearchToolFilter(title: "Sort", selection: order.rawValue) {
+                    ResearchToolFilter(title: "Sort", symbol: "arrow.up.arrow.down", selection: order.rawValue) {
                         Picker("Sort", selection: $order) { ForEach(Order.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
                     }
-                    ResearchToolFilter(title: "Historical sample", selection: sample.label) {
+                    ResearchToolFilter(title: "Historical sample", symbol: "clock.arrow.circlepath", selection: sample.label) {
                         Picker("Historical sample", selection: $sample) { ForEach(SidelineResearchSample.allCases, id: \.self) { Text($0.label).tag($0) } }
                     }
                 }.padding(.vertical, 3)
@@ -175,7 +175,7 @@ struct SidelineLaddersView: View {
         let from = chosen.flatMap { allLines.firstIndex(of: $0) } ?? 0
         let visible = Set(allLines.dropFirst(from).prefix(6))
         if !starts.isEmpty {
-            ResearchToolFilter(title: "Starting line", selection: chosen.map(lineName) ?? "—") {
+            ResearchToolFilter(title: "Starting line", symbol: "flag", selection: chosen.map(lineName) ?? "—") {
                 Picker("Starting line", selection: Binding(get: { chosen }, set: { threshold = $0 })) {
                     ForEach(starts, id: \.self) { Text(lineName($0)).tag(Optional($0)) }
                 }

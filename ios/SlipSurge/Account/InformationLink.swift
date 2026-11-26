@@ -5,6 +5,17 @@ enum InformationPage: String, Identifiable {
     case responsibleGambling = "responsible-gambling"
 
     var id: String { rawValue }
+    var symbol: String {
+        switch self {
+        case .about: "info.circle"
+        case .faq: "questionmark.circle"
+        case .privacy: "lock.shield"
+        case .responsibleGambling: "heart.text.square"
+        case .support: "lifepreserver"
+        case .terms: "doc.text"
+        }
+    }
+
     var title: String {
         switch self {
         case .about: "About SlipSurge"
@@ -25,7 +36,13 @@ struct InformationLink: View {
     @State private var presented = false
 
     var body: some View {
-        Button(label ?? page.title) { presented = true }
+        Button { presented = true } label: {
+            if let label {
+                Text(label)
+            } else {
+                Label(page.title, systemImage: page.symbol)
+            }
+        }
             .sheet(isPresented: $presented) { InformationNavigation(page: page, account: account) }
     }
 }
@@ -127,7 +144,7 @@ private struct InformationDocumentView: View {
                         if document.sections.count > 4 {
                             Menu("On this page", systemImage: "list.bullet") {
                                 ForEach(document.sections) { section in
-                                    if let title = section.title { Button(title) { proxy.scrollTo(section.id, anchor: .top) } }
+                                    if let title = section.title { Button(title, systemImage: "text.alignleft") { proxy.scrollTo(section.id, anchor: .top) } }
                                 }
                             }.buttonStyle(.bordered)
                         }

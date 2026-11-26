@@ -60,15 +60,15 @@ struct SidelineSlateEdgeView: View {
         let books = Set(data?.entries.flatMap { $0.markets[market]?.books ?? [] } ?? []).sorted()
         return VStack(alignment: .leading, spacing: 7) {
             ResearchToolRail(title: "Market", choices: SidelineResearchMarket.edge, selection: $market,
-                label: SidelineResearchMarket.title)
+                label: SidelineResearchMarket.title, glyph: SidelineResearchMarket.glyph)
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
-                    ResearchToolFilter(title: "Sample", selection: data?.sampleLabel ?? sample.label) {
+                    ResearchToolFilter(title: "Sample", symbol: "clock.arrow.circlepath", selection: data?.sampleLabel ?? sample.label) {
                         Picker("Sample", selection: $sample) {
                             ForEach(SidelineResearchSample.allCases, id: \.self) { Text($0.label).tag($0) }
                         }
                     }
-                    ResearchToolFilter(title: "Game", selection: data?.games.first { $0.id == game }?.label ?? "All games") {
+                    ResearchToolFilter(title: "Game", symbol: "calendar", selection: data?.games.first { $0.id == game }?.label ?? "All games") {
                         Picker("Game", selection: $game) {
                             Text("All games").tag(nil as String?)
                             ForEach(data?.games ?? []) { Text($0.label).tag(Optional($0.id)) }
@@ -77,7 +77,7 @@ struct SidelineSlateEdgeView: View {
                     ResearchArtworkPicker(title: "Availability by sportsbook",
                         options: [.init(id: "", title: "All books", icon: "books.vertical")] + books.map(ResearchArtworkPicker.Option.sportsbook),
                         selection: Binding(get: { book ?? "" }, set: { book = $0.isEmpty ? nil : $0 }))
-                    ResearchToolFilter(title: "Sort", selection: sort.rawValue) {
+                    ResearchToolFilter(title: "Sort", symbol: "arrow.up.arrow.down", selection: sort.rawValue) {
                         Picker("Sort", selection: $sort) {
                             ForEach(Sort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                         }

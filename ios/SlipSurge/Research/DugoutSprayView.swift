@@ -168,7 +168,16 @@ struct DugoutSprayView: View {
                 .pickerStyle(.segmented)
             }
             ResearchToolRail(title: "Contact result", choices: DugoutSpraySlate.Result.allCases, selection: $result,
-                label: \.title, glyph: { $0 == .all ? "scope" : "baseball" })
+                label: \.title, glyph: { result in
+                    switch result {
+                    case .all: "scope"
+                    case .homeRun: "baseball"
+                    case .nearHomeRun: "arrow.up.right"
+                    case .hit: "checkmark"
+                    case .out: "xmark"
+                    case .other: "ellipsis"
+                    }
+                })
         }
         .sheet(isPresented: $choosingPlayers) { playerPicker(game, events: events) }
     }

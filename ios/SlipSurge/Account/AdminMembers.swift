@@ -237,7 +237,12 @@ private struct AdminMemberDetail: View {
                 }
                 Menu("Grant membership", systemImage: "person.crop.circle.badge.plus") {
                     ForEach(["basic", "advanced", "ultimate"], id: \.self) { tier in
-                        Button(tier.capitalized) { planned = .init(title: "Grant \(tier.capitalized)", endpoint: "manage", action: "grantTier", value: tier) }
+                        let symbol = switch tier {
+                        case "advanced": "bolt"
+                        case "ultimate": "crown"
+                        default: "person"
+                        }
+                        Button(tier.capitalized, systemImage: symbol) { planned = .init(title: "Grant \(tier.capitalized)", endpoint: "manage", action: "grantTier", value: tier) }
                     }
                 }
                 if let grant = member.adminGrantedTier {
@@ -250,7 +255,12 @@ private struct AdminMemberDetail: View {
             Section("Account access") {
                 Menu("Account type", systemImage: "checkmark.shield") {
                     ForEach(["user", "creator", "admin"], id: \.self) { role in
-                        Button(role == "user" ? "Member" : role.capitalized) {
+                        let symbol = switch role {
+                        case "creator": "person.crop.square"
+                        case "admin": "shield"
+                        default: "person"
+                        }
+                        Button(role == "user" ? "Member" : role.capitalized, systemImage: symbol) {
                             planned = .init(title: "Change account type", endpoint: "manage", action: "setType", value: role)
                         }.disabled(member.accountType == role)
                     }

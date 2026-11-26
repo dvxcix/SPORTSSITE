@@ -99,13 +99,13 @@ struct CourtIntelligenceView: View {
                 }
             }
             HStack {
-                ResearchToolFilter(title: "Market", selection: market.label) {
+                ResearchToolFilter(title: "Market", symbol: "ticket", selection: market.label) {
                     Picker("Market", selection: $market) {
-                        ForEach(CourtPlayerMarket.allCases, id: \.self) { Text($0.label).tag($0) }
+                        ForEach(CourtPlayerMarket.allCases, id: \.self) { Label($0.label, systemImage: $0.symbol).tag($0) }
                     }
                 }
                 if defense {
-                    ResearchToolFilter(title: "Position", selection: position.isEmpty ? "All positions" : position) {
+                    ResearchToolFilter(title: "Position", symbol: "person.text.rectangle", selection: position.isEmpty ? "All positions" : position) {
                         Picker("Position", selection: $position) {
                             Text("All positions").tag("")
                             ForEach(positions, id: \.self) { Text($0).tag($0) }

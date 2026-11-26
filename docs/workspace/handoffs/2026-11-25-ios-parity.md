@@ -3097,3 +3097,39 @@ physical-device push are still open.
   and a selectable History observation. The local Mac
   [visual receipt](/Users/vick/.codex/visualizations/2026/11/25/01a21037-b02d-7d53-85e3-36b17a54b24d/ios-comparison-welcome/visual-evidence.json)
   covers the final phone comparison and branded first run.
+
+### 2026-11-26 · Native icon system and menu audit
+
+- Task branch is `codex/ios-parity-20261125`. This checkpoint is based on
+  `1e8c095a` with `origin/main` verified at `8bdbe182`. The reviewed
+  icon source, Xcode assets and build script are recorded in the commit
+  containing this entry. Web, Android, services and production had no
+  changes in this checkpoint.
+- Installed `draw-icons` from `ronykax/skills` at
+  `4b64f8f38b381441d3cb3eb437efebcffff52f80`. The project uses a
+  rounded, 24-unit outline with appearance-aware tint. Twelve original
+  product icons cover the main tabs, Odds Board, MM, Cheatsheets, Slate
+  Edge, First Basket, Compare Books and Market Story. Source is
+  `ios/icons/source`. Regenerate the Xcode image sets from the repo root
+  with `node ios/scripts/build-icons.mjs /path/to/draw-icons/scripts/icons.js`.
+- Removed the default bar-chart icon from the shared rail. Every rail now
+  supplies its glyphs. Research filter controls also supply their own
+  symbols. Market, sorting and reference choices on the Odds Boards are
+  labeled, with team and book artwork preserved. Feed, Community, Game
+  Center, Inbox, profiles, Account, creator and admin controls gained
+  distinct glyphs. Familiar system actions share symbols across screens.
+  The signed-in You tab still uses the member’s avatar and decoration.
+- All twelve source glyphs passed `draw-icons` lint with zero errors and
+  zero open warnings. Reviewed the icon sheets at control sizes. Both Xcode
+  Debug builds passed, and the native/source suite passed 288 of 288.
+  Installed and opened the reviewed signed Debug build on Devin’s iPad.
+  Saw the five tabs and The Court tools in its narrow window. On the
+  signed-in iPhone 18 Pro Simulator saw the NBA Odds Board, filter sheet,
+  Feed and Inbox badges and existing You avatar. The dark iPhone 18 Pro
+  Max Simulator showed the NFL slate and the MM, Cheatsheets and Slate
+  Edge menu icons. The iPad was signed out for this visual pass and was
+  left on The Court preview.
+- Role-gated creator/admin menus were compiled, with live role-by-role UI
+  verification pending. Several dense metric pickers and segmented value
+  controls are still text-led. No membership or admin actions were
+  exercised in live data.

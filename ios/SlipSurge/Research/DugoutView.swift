@@ -7,9 +7,9 @@ struct DugoutView: View {
 
         var glyph: String {
             switch self {
-            case .lineup: "list.bullet"
-            case .mismatch: "chart.bar.xaxis"
-            case .odds: "chart.line.uptrend.xyaxis"
+            case .lineup: "person.3"
+            case .mismatch: SlipGlyph.mismatch.rawValue
+            case .odds: SlipGlyph.oddsBoard.rawValue
             case .matrices: "square.grid.3x3"
             }
         }
@@ -78,13 +78,13 @@ struct DugoutView: View {
                 Menu("Dugout tools", systemImage: mode == .live ? "dot.radiowaves.left.and.right" : "square.grid.2x2") {
                     Button("Pitcher Report", systemImage: "gauge") { tool = .pitcher }
                     Button("Slate Breakdown", systemImage: "chart.bar.xaxis") { tool = .slateBreakdown }
-                    Button("Research Workspace", systemImage: "scope") { tool = .workspace }
+                    Button("Research Workspace", systemImage: "rectangle.3.group") { tool = .workspace }
                     Button("Daily Recap", systemImage: "calendar.badge.clock") { tool = .recap }
-                    Button("The Public", systemImage: "person.2") { tool = .publicPicks }
-                    Button("Batter Cost", systemImage: "chart.line.uptrend.xyaxis") { tool = .batterCost }
+                    Button("The Public", systemImage: "chart.pie") { tool = .publicPicks }
+                    Button("Batter Cost", systemImage: "banknote") { tool = .batterCost }
                     Button("Weather Lab", systemImage: "cloud.sun") { tool = .weather }
                     Button("Spray Charts", systemImage: "scope") { tool = .spray }
-                    Button("Odds Movement Terminal", systemImage: "chart.line.uptrend.xyaxis") { tool = .oddsMovement }
+                    Button { tool = .oddsMovement } label: { Label("Odds Movement Terminal", glyph: SlipGlyph.marketStory.rawValue) }
                     Button("Synergy", systemImage: "sparkles") { tool = .synergy }
                     Button("MLB Matrices", systemImage: "square.grid.3x3") { tool = .matrices }
                     Divider()
@@ -259,7 +259,7 @@ struct DugoutView: View {
                         SportsbookPicker(books: books, selection: $book)
                     }
                     if board == .mismatch || board == .matrices {
-                        ResearchToolFilter(title: "Recent form", selection: window.title) {
+                        ResearchToolFilter(title: "Recent form", symbol: "clock.arrow.circlepath", selection: window.title) {
                             Picker("Recent form", selection: $window) {
                                 ForEach(DugoutWindow.form, id: \.self) { Text($0.title).tag($0) }
                             }

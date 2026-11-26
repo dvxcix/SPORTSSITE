@@ -92,7 +92,7 @@ struct CourtFirstBasketView: View {
                     return matchesBook && (market == nil || row.offer.propType == market)
                 }
                 HStack {
-                    ResearchToolFilter(title: "Market", selection: market.map(marketLabel) ?? "All markets") {
+                    ResearchToolFilter(title: "Market", symbol: "ticket", selection: market.map(marketLabel) ?? "All markets") {
                         Picker("Market", selection: $market) {
                             Text("All markets").tag(nil as String?)
                             ForEach(markets, id: \.self) { Text(marketLabel($0)).tag(Optional($0)) }

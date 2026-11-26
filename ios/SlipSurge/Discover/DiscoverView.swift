@@ -66,7 +66,7 @@ struct DiscoverView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             if opensJoined {
                 SocialSectionBar(title: "Community view", sections: [true, false], selection: $yours) { joined in
-                    Text(joined ? "Joined" : "Browse")
+                    Label(joined ? "Joined" : "Browse", systemImage: joined ? "person.badge.checkmark" : "square.grid.2x2")
                 }
             }
         }
@@ -193,7 +193,7 @@ struct DiscoverView: View {
         ResearchToolRail(title: opensJoined ? "Browse" : "Discover", choices: Section.allCases, selection: $section,
             label: \.rawValue, glyph: {
                 switch $0 {
-                case .communities: "person.2"
+                case .communities: SlipGlyph.community.rawValue
                 case .creators: "person.crop.square"
                 case .records: "trophy"
                 }
@@ -224,15 +224,15 @@ struct DiscoverView: View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 if section == .communities, api.userID != nil, !opensJoined {
-                    ResearchToolFilter(title: "Membership", selection: yours ? "Yours" : "All communities") {
+                    ResearchToolFilter(title: "Membership", symbol: "person.badge.checkmark", selection: yours ? "Yours" : "All communities") {
                         Picker("Membership", selection: $yours) {
-                            Text("All communities").tag(false)
-                            Text("Yours").tag(true)
+                            Label("All communities", glyph: SlipGlyph.community.rawValue).tag(false)
+                            Label("Yours", systemImage: "person.badge.checkmark").tag(true)
                         }
                     }
                 }
                 if section == .records {
-                    ResearchToolFilter(title: "Record period", selection: thisWeek ? "This week" : "All time") {
+                    ResearchToolFilter(title: "Record period", symbol: "calendar", selection: thisWeek ? "This week" : "All time") {
                         Picker("Record period", selection: $thisWeek) {
                             Text("All time").tag(false)
                             Text("This week").tag(true)

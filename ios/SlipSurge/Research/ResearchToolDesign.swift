@@ -5,7 +5,7 @@ struct ResearchToolRail<Choice: Hashable>: View {
     let choices: [Choice]
     @Binding var selection: Choice
     let label: (Choice) -> String
-    var glyph: (Choice) -> String = { _ in "chart.bar" }
+    let glyph: (Choice) -> String
     var compact = false
 
     @Environment(\.colorScheme) private var scheme
@@ -53,13 +53,17 @@ struct ResearchToolRail<Choice: Hashable>: View {
             Group {
                 if stacked {
                     VStack(spacing: 4) {
-                        Image(systemName: glyph(choice))
+                        SlipGlyph.view(glyph(choice), size: 16)
                         Text(label(choice)).lineLimit(1).minimumScaleFactor(0.75)
                     }
                     .font(.caption.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 48)
                 } else {
-                    Label(label(choice), systemImage: glyph(choice))
+                    Label {
+                        Text(label(choice))
+                    } icon: {
+                        SlipGlyph.view(glyph(choice), size: 18)
+                    }
                         .font(.subheadline.weight(.semibold))
                         .padding(.horizontal, 13)
                         .frame(minHeight: 44)
@@ -152,6 +156,7 @@ enum ResearchFormat {
 
 struct ResearchToolFilter<Options: View>: View {
     let title: String
+    let symbol: String
     let selection: String
     @ViewBuilder var options: Options
 
@@ -160,6 +165,7 @@ struct ResearchToolFilter<Options: View>: View {
             options
         } label: {
             HStack(spacing: 6) {
+                Image(systemName: symbol).font(.caption.weight(.semibold)).accessibilityHidden(true)
                 Text(selection).font(.subheadline.weight(.semibold))
                 Image(systemName: "chevron.up.chevron.down").font(.caption2.weight(.semibold))
             }

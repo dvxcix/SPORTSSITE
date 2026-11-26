@@ -67,7 +67,7 @@ struct CourtRoleView: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
                     teamPicker
-                    ResearchToolFilter(title: "Sort players", selection: order.rawValue) {
+                    ResearchToolFilter(title: "Sort players", symbol: "arrow.up.arrow.down", selection: order.rawValue) {
                         Picker("Sort players", selection: $order) {
                             ForEach(Order.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                         }
@@ -296,13 +296,13 @@ struct CourtTrackingView: View {
                     ResearchArtworkPicker(title: "Metric", options: visible.sorted { $0.label < $1.label }.map {
                         .init(id: $0.key, title: $0.label, icon: "chart.bar")
                     }, selection: Binding(get: { field.key }, set: { chosenMetric = $0 }))
-                    ResearchToolFilter(title: "Category", selection: group.isEmpty ? "All metrics" : group) {
+                    ResearchToolFilter(title: "Category", symbol: "square.grid.2x2", selection: group.isEmpty ? "All metrics" : group) {
                         Picker("Metric category", selection: $group) {
                             Text("All metrics").tag("")
                             ForEach(groups, id: \.self) { Text($0).tag($0) }
                         }
                     }
-                    ResearchToolFilter(title: "Venue", selection: venue.rawValue) {
+                    ResearchToolFilter(title: "Venue", symbol: "sportscourt", selection: venue.rawValue) {
                         Picker("Venue", selection: $venue) { ForEach(Venue.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
                     }
                     Button(ascending ? "Ascending" : "Descending", systemImage: ascending ? "arrow.up" : "arrow.down") {

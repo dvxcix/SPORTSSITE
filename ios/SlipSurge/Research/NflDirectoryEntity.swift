@@ -183,7 +183,7 @@ struct NflDirectoryEntityView: View {
                         HStack { yearPicker(season, seasons: seasons); Spacer(); metricPicker(displayedMetric, metrics: metrics) }
                         VStack(alignment: .leading) { yearPicker(season, seasons: seasons); metricPicker(displayedMetric, metrics: metrics) }
                     }
-                    ResearchToolRail(title: "Recent games", choices: Form.allCases, selection: $form, label: { "L\($0.rawValue)" })
+                    ResearchToolRail(title: "Recent games", choices: Form.allCases, selection: $form, label: { "L\($0.rawValue)" }, glyph: { "\($0.rawValue).circle" })
                 }
             } content: {
                 VStack(alignment: .leading, spacing: 8) {

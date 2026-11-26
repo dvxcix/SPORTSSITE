@@ -57,6 +57,23 @@ enum CourtPlayerMarket: String, CaseIterable {
         }
     }
 
+    var symbol: String {
+        switch self {
+        case .points: "basketball"
+        case .rebounds: "arrow.uturn.up"
+        case .assists: "arrow.turn.up.right"
+        case .threes: "3.circle"
+        case .steals: "hand.raised"
+        case .blocks: "shield"
+        case .turnovers: "arrow.left.arrow.right"
+        case .pointsReboundsAssists: "square.stack.3d.up"
+        case .pointsRebounds, .pointsAssists, .reboundsAssists: "plus.circle"
+        case .doubleDouble: "2.circle"
+        case .tripleDouble: "3.square"
+        case .pointsFirstQuarter, .reboundsFirstQuarter, .assistsFirstQuarter: "1.circle"
+        }
+    }
+
     private var fields: [String] {
         switch self {
         case .points, .pointsFirstQuarter: ["pts"]

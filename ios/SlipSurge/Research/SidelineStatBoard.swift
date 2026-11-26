@@ -5,6 +5,19 @@ struct SidelineStatBoard: View {
         case role = "Role Command", scoring = "Score Zone", receiving = "Receiving Value", routes = "Route Leverage"
         case rushing = "Ground Game", passing = "QB Command", explosive = "Explosive Lanes", market = "Market Signal"
 
+        var glyph: String {
+            switch self {
+            case .role: "person.text.rectangle"
+            case .scoring: "flag.checkered"
+            case .receiving: "hands.clap"
+            case .routes: "point.topleft.down.to.point.bottomright.curvepath"
+            case .rushing: "figure.run"
+            case .passing: "football"
+            case .explosive: "bolt"
+            case .market: "waveform.path"
+            }
+        }
+
         var fields: [String] {
             switch self {
             case .role: ["volume", "targetShare", "carryShare", "evidence"]
@@ -216,7 +229,7 @@ struct SidelineStatBoard: View {
         return VStack(alignment: .leading, spacing: 7) {
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
-                    ResearchToolFilter(title: "Historical sample", selection: projection?.sampleLabel ?? sample.label) {
+                    ResearchToolFilter(title: "Historical sample", symbol: "clock.arrow.circlepath", selection: projection?.sampleLabel ?? sample.label) {
                         Picker("Historical sample", selection: $sample) {
                             ForEach(SidelineResearchSample.allCases, id: \.self) { Text($0.label).tag($0) }
                         }
@@ -224,7 +237,7 @@ struct SidelineStatBoard: View {
                     if mode != .team {
                         ResearchArtworkPicker(title: "Team", options: [.init(id: "", title: "Both teams", icon: "shield")]
                             + teams.map { .team(id: $0.code, title: $0.code, logo: $0.logo) }, selection: $team)
-                        ResearchToolFilter(title: "Role", selection: role.rawValue) {
+                        ResearchToolFilter(title: "Role", symbol: "person.text.rectangle", selection: role.rawValue) {
                             Picker("Role", selection: $role) {
                                 ForEach(Role.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                             }
@@ -238,7 +251,7 @@ struct SidelineStatBoard: View {
                 ForEach(SidelineStatWindow.allCases, id: \.self) { Text($0.label).tag($0) }
             }.pickerStyle(.segmented)
             if mode == .matchup {
-                ResearchToolRail(title: "Matchup research", choices: Category.allCases, selection: $category, label: \.rawValue)
+                ResearchToolRail(title: "Matchup research", choices: Category.allCases, selection: $category, label: \.rawValue, glyph: \.glyph)
             }
             if mode == .custom {
                 Button("Customize columns", systemImage: "slider.horizontal.3") { configuring = true }.buttonStyle(.bordered)

@@ -14,7 +14,17 @@ struct CommunityDetailView: View {
         let hasMore: Bool
     }
 
-    enum Feed: String, CaseIterable { case posts = "Posts", picks = "Picks", rooms = "Rooms" }
+    enum Feed: String, CaseIterable {
+        case posts = "Posts", picks = "Picks", rooms = "Rooms"
+
+        var glyph: String {
+            switch self {
+            case .posts: SlipGlyph.feed.rawValue
+            case .picks: "ticket"
+            case .rooms: "number"
+            }
+        }
+    }
     private struct Membership: Decodable { let member: Bool }
     private struct InviteResult: Decodable { let status: String? }
 
@@ -100,7 +110,7 @@ struct CommunityDetailView: View {
             if let page, page.canView {
                 SocialSectionBar(title: "Community section", sections: Feed.allCases.filter { $0 != .rooms || page.role != nil },
                     selection: $feed) { section in
-                    Text(section.rawValue)
+                    Label(section.rawValue, glyph: section.glyph)
                 }
             }
         }
