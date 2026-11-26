@@ -44,6 +44,8 @@ struct ActivityView: View {
         }
     }
 
+    private var visibleUnreadIDs: [UUID] { filtered.filter { !$0.read }.map(\.id) }
+
     var body: some View {
         List {
             switch state {
@@ -92,10 +94,10 @@ struct ActivityView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Button("Mark all visible read", systemImage: "checkmark.circle") {
-                            let ids = rows.filter { !$0.read }.map(\.id)
+                            let ids = visibleUnreadIDs
                             Task { await mutate { try await api.markRead(ids) } }
                         }
-                        .disabled(rows.allSatisfy(\.read))
+                        .disabled(visibleUnreadIDs.isEmpty)
                         Button("Clear all notifications", systemImage: "trash", role: .destructive) { showClear = true }
                     } label: {
                         Label("Actions", systemImage: "ellipsis.circle")

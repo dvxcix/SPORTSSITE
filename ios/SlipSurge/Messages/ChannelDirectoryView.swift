@@ -44,7 +44,7 @@ struct RoomDirectory: View {
                         .buttonStyle(.borderedProminent)
                 }
             } else {
-                ResearchToolMessage(title: "Rooms couldn’t load", error: error) { Task { await load() } }
+                ResearchToolMessage(title: "Rooms couldn’t load", error: error, loadingLabel: "Loading rooms") { Task { await load() } }
             }
         }
         .foregroundStyle(slipPalette.text)

@@ -229,13 +229,17 @@ struct ResearchToolBook: View {
 struct ResearchToolMessage: View {
     let title: String
     let error: (any Error)?
+    var loadingLabel = "Loading"
     var retry: (() -> Void)?
 
     var body: some View {
         if let error {
-            if let status = error as? SlipSurgeHTTP.Status, [401, 403].contains(status.code) {
-                ContentUnavailableView("Ultimate access required", systemImage: "lock",
-                    description: Text("Sign in with an eligible SlipSurge account to open this board."))
+            if let status = error as? SlipSurgeHTTP.Status, status.code == 401 {
+                ContentUnavailableView("Sign in required", systemImage: "lock",
+                    description: Text("Sign in to SlipSurge and try again."))
+            } else if let status = error as? SlipSurgeHTTP.Status, status.code == 403 {
+                ContentUnavailableView("Access required", systemImage: "lock",
+                    description: Text("This feature isn’t available to your account."))
             } else {
                 ContentUnavailableView {
                     Label(title, systemImage: "exclamationmark.circle")
@@ -245,7 +249,7 @@ struct ResearchToolMessage: View {
             }
         } else {
             ProgressView().frame(maxWidth: .infinity).padding(.vertical, 24)
-                .accessibilityLabel("Loading research")
+                .accessibilityLabel(loadingLabel)
         }
     }
 }

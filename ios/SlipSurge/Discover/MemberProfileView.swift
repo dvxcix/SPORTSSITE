@@ -183,7 +183,7 @@ struct MemberProfileView: View {
                 } else if let response = error as? SlipSurgeHTTP.Status, response.code == 404 {
                     ContentUnavailableView("Profile unavailable", systemImage: "person.crop.circle.badge.xmark")
                 } else {
-                    ResearchToolMessage(title: "Profile couldn’t load", error: error) { retry += 1 }
+                    ResearchToolMessage(title: "Profile couldn’t load", error: error, loadingLabel: "Loading profile") { retry += 1 }
                 }
             }
             .padding(.horizontal, 16).padding(.bottom, 14)

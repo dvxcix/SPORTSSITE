@@ -29,6 +29,7 @@ struct FeedComposerView: View {
     let onPost: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.slipPalette) private var slipPalette
     @FocusState private var focused: Field?
     @State private var draftID = UUID()
     @State private var content = ""
@@ -126,11 +127,23 @@ struct FeedComposerView: View {
                     }
                     TextEditor(text: $content)
                         .focused($focused, equals: .content)
+                        .scrollContentBackground(.hidden)
                         .frame(minHeight: 110)
+                        .overlay(alignment: .topLeading) {
+                            if content.isEmpty {
+                                Text("Write a post")
+                                    .foregroundStyle(.secondary)
+                                    .padding(.top, 8)
+                                    .padding(.leading, 5)
+                                    .allowsHitTesting(false)
+                                    .accessibilityHidden(true)
+                            }
+                        }
                         .accessibilityLabel("Post text")
                 } footer: {
                     Text("\(content.utf16.count) / 500")
                 }
+                .listRowBackground(slipPalette.surface)
                 if kind == .poll {
                     Section("Poll options") {
                         ForEach(choices.indices, id: \.self) { index in
@@ -187,6 +200,7 @@ struct FeedComposerView: View {
                         Button("Remove attachment", systemImage: "trash", role: .destructive) { self.image = nil }
                     }
                 }
+                .listRowBackground(slipPalette.surface)
                 Section {
                     if kind != .pick {
                         let sports = ["NFL", "NBA", "NHL", "Soccer", "MMA", "CFB", "CBB"]
@@ -202,8 +216,11 @@ struct FeedComposerView: View {
                     }
                     Toggle("Contains a spoiler", isOn: $spoiler)
                 }
+                .listRowBackground(slipPalette.surface)
                 if let notice { Text(notice).foregroundStyle(.secondary) }
             }
+            .scrollContentBackground(slipPalette == .color ? .hidden : .automatic)
+            .background(slipPalette == .color ? slipPalette.background : Color.clear)
             .disabled(posting)
             .scrollDismissesKeyboard(.interactively)
             .keyboardDone { focused = nil }

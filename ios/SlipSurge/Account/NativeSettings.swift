@@ -162,7 +162,7 @@ struct NativeSettings: View {
                 }
                 if let feedback { Text(feedback).font(.subheadline) }
             } else {
-                ResearchToolMessage(title: "Settings couldn’t load", error: error) { retry += 1 }
+                ResearchToolMessage(title: "Settings couldn’t load", error: error, loadingLabel: "Loading settings") { retry += 1 }
             }
         }
         .scrollContentBackground(.hidden)

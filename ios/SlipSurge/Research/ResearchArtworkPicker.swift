@@ -31,6 +31,11 @@ struct ResearchArtworkPicker: View {
 
     private var selected: Option? { options.first { $0.id == selection } }
 
+    private var matchingOptions: [Option] {
+        let term = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        return term.isEmpty ? options : options.filter { $0.title.localizedCaseInsensitiveContains(term) }
+    }
+
     var body: some View {
         Button {
             search = ""
@@ -52,7 +57,18 @@ struct ResearchArtworkPicker: View {
         .sheet(isPresented: $shown) {
             NavigationStack {
                 List {
-                    ForEach(search.isEmpty ? options : options.filter { $0.title.localizedCaseInsensitiveContains(search) }) { option in
+                    let matches = matchingOptions
+                    if matches.isEmpty {
+                        ContentUnavailableView {
+                            Label(search.isEmpty ? "No options available" : "No matches", systemImage: "magnifyingglass")
+                        } description: {
+                            if !search.isEmpty { Text("Try a different search.") }
+                        } actions: {
+                            if !search.isEmpty { Button("Clear search") { search = "" } }
+                        }
+                        .listRowBackground(Color.clear)
+                    }
+                    ForEach(matches) { option in
                         Button {
                             withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) { selection = option.id }
                             shown = false

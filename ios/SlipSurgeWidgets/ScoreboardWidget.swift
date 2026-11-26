@@ -124,7 +124,9 @@ private struct ScoreWidgetView: View {
     }
 
     private func status(_ game: WidgetScoreboard.Game) -> some View {
-        if entry.stale && game.state != "post" {
+        if game.state == "pre", let start = game.startDate {
+            Text(start, style: .time)
+        } else if entry.stale && game.state == "in" {
             Text("As of ") + Text(entry.observedAt ?? entry.date, style: .time)
         } else if let status = game.status, !status.isEmpty {
             Text(verbatim: status)

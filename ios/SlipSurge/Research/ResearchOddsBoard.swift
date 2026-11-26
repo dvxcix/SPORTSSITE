@@ -451,12 +451,30 @@ struct ResearchOddsBoard: View {
                 .background(color.opacity(0.12), in: .rect(cornerRadius: 8))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(player.name), \(milestone), \(Self.price(price.current)), \(filter.comparison.label(live: live)) \(Self.price(price.baseline(filter.comparison)))")
+            .accessibilityLabel(priceAccessibilityLabel(price, player: player, milestone: milestone, movement: move))
             .accessibilityHint("Compare sportsbooks or see price history. Observed \(price.observedAt.formatted(date: .abbreviated, time: .shortened))")
         } else {
             Text("—").foregroundStyle(.secondary)
-                .accessibilityLabel("\(milestone), price unavailable")
+                .accessibilityLabel("\(player.name), \(milestone), price unavailable")
         }
+    }
+
+    private func priceAccessibilityLabel(_ price: ResearchOddsSlate.Price, player: ResearchOddsSlate.Player,
+                                         milestone: String, movement: Double?) -> String {
+        var parts = [
+            player.name, milestone, Self.price(price.current),
+            "\(filter.comparison.label(live: live)) \(Self.price(price.baseline(filter.comparison)))",
+        ]
+        if let movement {
+            parts.append("Price movement \(moveLabel(movement))")
+        }
+        if let result = price.result {
+            parts.append(result ? "Hit" : "Miss")
+        }
+        if let picks = price.picks {
+            parts.append("\(price.estimated ? "Estimated " : "")\(picks.formatted()) \(picks == 1 ? "pick" : "picks")")
+        }
+        return parts.joined(separator: ", ")
     }
 
     private func movementColor(_ change: Double?) -> Color {

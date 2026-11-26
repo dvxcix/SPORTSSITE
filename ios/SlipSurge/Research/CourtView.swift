@@ -821,10 +821,15 @@ struct CourtView: View {
         }
     }
 
+    private func hasLiveBoard(for request: BoardRequest) -> Bool {
+        guard request.mode == .live, case .loaded(let board, _) = state else { return false }
+        return board.oddsMode == .live && board.game.id == request.gameID && board.game.date == request.slate.date
+    }
+
     private func loadBoard(_ request: BoardRequest) async {
         let game = selectedGame
         if !isPreview, game == nil { return }
-        if !isPreview { state = .loading }
+        if !isPreview, !hasLiveBoard(for: request) { state = .loading }
         do {
             let board: CourtBoard
             switch scope {

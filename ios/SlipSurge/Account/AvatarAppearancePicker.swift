@@ -69,7 +69,7 @@ struct AvatarAppearancePicker: View {
                                 draft = option.id
                             } label: {
                                 VStack(spacing: 9) {
-                                    NativeMemberAvatar(url: url, name: name, size: 40, style: option.id, color: color)
+                                    NativeMemberAvatar(url: url, name: name, size: 40, style: option.id, color: color, animated: false)
                                     Text(option.name).font(.caption.weight(.semibold)).multilineTextAlignment(.center)
                                 }
                                 .padding(.horizontal, 4).padding(.vertical, 12)

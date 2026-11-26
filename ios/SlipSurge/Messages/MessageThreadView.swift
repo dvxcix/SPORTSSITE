@@ -10,6 +10,17 @@ struct MessageThreadDraft {
         let image: URL?
     }
 
+    static let textLimit = 1_000
+
+    static func boundedText(_ text: String) -> String {
+        guard text.utf16.count > textLimit else { return text }
+        var count = 0
+        return String(text.prefix { character in
+            count += String(character).utf16.count
+            return count <= textLimit
+        })
+    }
+
     var text = ""
     var revision = 0
     var picture: URL?
@@ -94,7 +105,7 @@ struct MessageThreadView: View {
             } else if let status = error as? SlipSurgeHTTP.Status, status.code == 404 {
                 ContentUnavailableView("Conversation unavailable", systemImage: "lock")
             } else {
-                ResearchToolMessage(title: "Messages couldn’t load", error: error) { revision += 1 }
+                ResearchToolMessage(title: "Messages couldn’t load", error: error, loadingLabel: "Loading messages") { revision += 1 }
             }
         }
         .background(slipPalette.background)
@@ -120,7 +131,7 @@ struct MessageThreadView: View {
                 NavigationStack {
                     NativeEmojiPicker { value in
                         let next = draftData.text.isEmpty ? value : draftData.text + " " + value
-                        if next.utf16.count <= 1_000 { draftData.text = next }
+                        if next.utf16.count <= MessageThreadDraft.textLimit { draftData.text = next }
                     }
                 }
                 .presentationDetents([.medium, .large])
@@ -541,7 +552,8 @@ struct MessageThreadView: View {
                     .accessibilityIdentifier("chat-message-input")
                     .onChange(of: draftData.text) { _, value in
                         draftData.revision += 1
-                        if value.utf16.count > 1_000 { draftData.text = String(value.prefix(1_000)) }
+                        let bounded = MessageThreadDraft.boundedText(value)
+                        if bounded != value { draftData.text = bounded }
                         if draftData.editing == nil, thread.canSend, focused == .message {
                             typingPresence.didType(hasText: !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
@@ -605,7 +617,7 @@ struct MessageThreadView: View {
     }
 
     private var sendControl: some View {
-        let canSend = !draftData.composing && !draftData.uploading && draftData.text.utf16.count <= 1_000 &&
+        let canSend = !draftData.composing && !draftData.uploading && draftData.text.utf16.count <= MessageThreadDraft.textLimit &&
             (!draftData.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || draftData.picture != nil && draftData.editing == nil)
         return Button {
             Task { await send() }

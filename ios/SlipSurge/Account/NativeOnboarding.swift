@@ -117,7 +117,7 @@ struct NativeOnboarding: View {
                                 .font(.footnote).foregroundStyle(Brand.signal(-1, for: scheme))
                         }
                     } else {
-                        ResearchToolMessage(title: "Setup couldn’t load", error: error) { retry += 1 }
+                        ResearchToolMessage(title: "Setup couldn’t load", error: error, loadingLabel: "Loading account setup") { retry += 1 }
                     }
                 }
                 .frame(maxWidth: 560)

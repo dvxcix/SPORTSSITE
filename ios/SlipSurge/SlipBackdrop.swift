@@ -42,7 +42,9 @@ struct SlipBackdrop: View {
     }
 
     private var glow: some View {
-        RadialGradient(colors: [SlipPalette.glow, .clear], center: .topLeading, startRadius: 8, endRadius: 420)
+        RadialGradient(colors: [SlipPalette.glow, .clear], center: UnitPoint(x: 0.16, y: 0),
+                       startRadius: 8, endRadius: 420)
+            .padding(.horizontal, -110)
     }
 }
 

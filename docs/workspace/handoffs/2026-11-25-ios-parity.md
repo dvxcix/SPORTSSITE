@@ -3172,3 +3172,31 @@ physical-device push are still open.
   measuring the inset cutouts rather than the opaque silhouettes.
   Scope was native iOS appearance. No shared service, Windows, Android
   or desktop web code was changed.
+
+### 2026-11-26 · Whole-app experience audit and repairs
+
+- Installed all 20 `emilkowalski/skills` for Codex at source
+  `64eb3deb9a5fbfa041faf783e0bc3fd635872e9c`. Applied the motion audit,
+  interface review, Apple design and modern Swift guidance with separate
+  read-only review of Research, social, account/role and notification areas.
+  The [experience audit](../../ios/experience-audit-2026-11-26.md) records
+  device evidence, source-backed findings and outstanding role checks.
+- Fixed filtered Activity read scope, misleading loading/access copy,
+  same-game NBA live refresh remount, empty artwork-picker search,
+  UTF-16 message limits, Color compose surfaces and moving-glow clipping.
+  Added contextual Odds Board spoken labels, static avatar-picker swatches,
+  and preserved scheduled kickoff time in the Scoreboard widget.
+- Reproduced and retested Activity, matchup search and composer on the
+  signed-in iPhone 18 Pro Simulator. The Color glow no longer exposes a
+  moving edge. The iPhone 17e large-text audit exposed kickoff clipping
+  and crowded Feed actions. On Devin’s iPad, the review build launched,
+  public scores opened, X and Whop presented their login pages, and Discord
+  reached its domain without rendering the form in the observed attempts.
+  No provider credentials were entered.
+- Both Xcode builds and 288 native/source checks passed, plus five local
+  UTF-16 draft cases. The detached review worktree kept the Mac’s existing
+  Xcode project and scheme edits out of the pushed changes. No web release.
+- Highest remaining work is provider-score freshness, exact research
+  resume and unsaved Workspace state, offline release-sheet dismissal,
+  and interruptible live reading. Push delivery, provider completion,
+  production purchases and role-specific writes remain separate checks.

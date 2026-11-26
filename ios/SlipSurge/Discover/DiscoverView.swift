@@ -366,7 +366,8 @@ struct DiscoverView: View {
     }
 
     private var loading: some View {
-        ResearchToolMessage(title: "Couldn’t load \(section.rawValue.lowercased())", error: error) { revision += 1 }
+        ResearchToolMessage(title: "Couldn’t load \(section.rawValue.lowercased())", error: error,
+            loadingLabel: "Loading \(section.rawValue.lowercased())") { revision += 1 }
     }
 
     private func matches(_ id: String?, texts: [String?]) -> Bool {

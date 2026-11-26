@@ -74,7 +74,7 @@ struct CreatorAnalyticsView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 } else {
-                    ResearchToolMessage(title: "Analytics couldn’t load", error: failure) { revision += 1 }
+                    ResearchToolMessage(title: "Analytics couldn’t load", error: failure, loadingLabel: "Loading analytics") { revision += 1 }
                 }
             }.padding(16)
         }

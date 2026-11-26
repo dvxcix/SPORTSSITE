@@ -42,7 +42,7 @@ struct MessagesView: View {
                 if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { requestsEntry(inbox) }
                 conversations(inbox)
             } else {
-                ResearchToolMessage(title: "Messages couldn’t load", error: error) { revision += 1 }
+                ResearchToolMessage(title: "Messages couldn’t load", error: error, loadingLabel: "Loading conversations") { revision += 1 }
                     .listRowBackground(slipPalette.surface)
             }
         }

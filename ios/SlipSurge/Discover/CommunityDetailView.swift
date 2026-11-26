@@ -101,7 +101,7 @@ struct CommunityDetailView: View {
                     Label("Membership required", systemImage: "lock").foregroundStyle(.secondary)
                     paidMembership
                 } else {
-                    ResearchToolMessage(title: "Community couldn’t load", error: error) { Task { await load(postFeed) } }
+                    ResearchToolMessage(title: "Community couldn’t load", error: error, loadingLabel: "Loading community") { Task { await load(postFeed) } }
                 }
             }
             .padding(16)
