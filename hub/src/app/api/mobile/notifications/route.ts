@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { nativeNotificationArtwork } from '@/lib/nativeNotificationArtwork'
 import { requireTier } from '@/lib/requireTier'
 import { getBlockedEitherWayIds } from '@/lib/blocks'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
@@ -24,13 +25,16 @@ export async function GET(request: Request) {
   try {
     const blocked = await getBlockedEitherWayIds(supabase, userId)
     let query = supabase.from('notifications')
-      .select('id,type,message,body,link,read,created_at,actor_id,target_id,target_type,actor:users!notifications_actor_id_fkey(username,display_name,avatar_url,avatar_ring_style,avatar_ring_color)')
+      .select('id,type,message,body,link,read,created_at,actor_id,target_id,target_type,artwork:data->>avatar_url,actor:users!notifications_actor_id_fkey(username,display_name,avatar_url,avatar_ring_style,avatar_ring_color)')
       .eq('user_id', userId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(50)
     if (id) query = query.eq('id', id)
     if (blocked.length) query = query.or(`actor_id.is.null,actor_id.not.in.(${blocked.join(',')})`)
     const { data, error } = await query
     if (error) return unavailable()
-    return NextResponse.json({ notifications: data ?? [] }, { headers })
+    const notifications = (data ?? []).map(({ artwork, ...row }) => ({
+      ...row, artwork_url: nativeNotificationArtwork(row.type, row.actor_id, artwork),
+    }))
+    return NextResponse.json({ notifications }, { headers })
   } catch {
     return unavailable()
   }
