@@ -3463,3 +3463,19 @@ check widget was removed. The lock-screen widget was outside this check.
 The final iOS task-branch suite passed 304 tests. The follow-up NFL
 backend suite passed 152 checks. The scheduled live alert is tracked
 separately from the prior labeled canary.
+
+The automatic NFL alert passed on physical build 4. The Bears’ Kyle
+Monangai rushed for a touchdown on play `4018730812743` at 20:07:32 UTC,
+with the source updating the same play to include the extra point. The
+NFL import captured it at 20:10:14.927 UTC. The scheduled production
+worker claimed it at 20:11:13.662 UTC and Apple returned HTTP 200.
+Devin’s iPad showed the regular Touchdown banner while TestFlight was
+foregrounded, followed by the matching Notification Center entry.
+It showed CHI 17 · DET 19 and the play detail. Tapping it opened and
+highlighted Kyle Monangai’s rushing touchdown at 10:40 in Q3. A subsequent
+query still showed one delivery for that play. Event to dispatch was
+3m42s, including provider/import delay and the scheduled worker. The
+notification carried native text and score. Animated MLB alert artwork
+and a physical NBA/MLB delivery are still open checks. The app opens a
+linked Game Center sheet over an already open game in this warm path,
+which is an interaction to simplify in a later build.
