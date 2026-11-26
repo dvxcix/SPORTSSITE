@@ -61,7 +61,7 @@ test('NBA uses actual score changes and groups two provider period-end entries i
 
 test('freshness and game identity prevent archive, stale, pending and future events from being delivered', () => {
   const events = gameAlertEvents(nfl, summary(nfl.gameId, [
-    play('1', 'End of 3rd Quarter', { wallclock: timestamp(151), period: { number: 3, displayValue: 'Q3' } }),
+    play('1', 'End of 3rd Quarter', { wallclock: timestamp(301), period: { number: 3, displayValue: 'Q3' } }),
     play('2', 'Fumble Recovery', { wallclock: undefined }),
     play('3', 'Pass Interception', { wallclock: timestamp(-10) }),
     play('4', 'End of Game', { wallclock: timestamp(30), period: { number: 4, displayValue: 'Q4' } }),
@@ -73,6 +73,12 @@ test('freshness and game identity prevent archive, stale, pending and future eve
   assert.deepEqual(gameAlertEvents(nfl, summary(nfl.gameId, [play('1', 'End of Game', { wallclock: timestamp(301) })], true), now), [])
   assert.equal(gameAlertScope('nba', nfl.gameId, '2026-11-26'), null)
   assert.equal(gameAlertScope('nfl', nfl.gameId, '2026-11-31'), null)
+})
+
+test('allows a second delivery pass after delayed NFL ingestion and keeps the NBA freshness limit', () => {
+  const delayed = play('5', 'End of Half', { wallclock: timestamp(181), period: { number: 2, displayValue: 'Q2' } })
+  assert.deepEqual(gameAlertEvents(nfl, summary(nfl.gameId, [delayed]), now).map(event => event.title), ['Halftime'])
+  assert.deepEqual(gameAlertEvents(nba, summary(nba.gameId, [delayed]), now), [])
 })
 
 test('MLB alerts contain a confirmed home run and verified near-home-run contact details', () => {
