@@ -1,4 +1,5 @@
 import type { ESPNGame, ESPNPlay, ESPNSummary } from '@slipsurge/core/espn-api'
+import { nflPlayerPortrait } from './nflPlayerPortrait'
 
 type Row = Record<string, unknown>
 type Team = { id?: number; abbreviation: string }
@@ -30,18 +31,55 @@ const GROUPS = [
   { name: 'Kicking', activity: ['field_goals_attempted', 'extra_points_attempted'], fields: ['field_goals_made', 'field_goals_attempted', 'extra_points_made', 'extra_points_attempted'], labels: ['FGM', 'FGA', 'XPM', 'XPA'] },
 ] as const
 
+type DirectoryPlayer = { display_name: string; latest_team: string | null; headshot: string | null; espn_id: string | number | null }
+const playerName = (row: NflCenterStat) => `${row.player.first_name} ${row.player.last_name}`.trim()
+const playerKey = (name: string) => name.normalize('NFC').toLowerCase()
+const trustedHeadshot = (url: string | null | undefined) => url?.startsWith('https://') ? url : null
+
+export function nflCenterStats(game: ESPNGame, feed: NflCenterFeed | null) {
+  const providerId = Number(game.competitions[0].id)
+  const teams = new Set(game.competitions[0].competitors.map(row => canonicalNflTeam(row.team.abbreviation)))
+  if (!feed || feed.game?.id !== providerId) return []
+  return (feed.stats ?? []).filter(row => row.game?.id === providerId && row.player && row.team && teams.has(canonicalNflTeam(row.team.abbreviation)))
+}
+
+export function nflCenterPortraitNames(stats: NflCenterStat[]) {
+  return [...new Set(stats.filter(row => !trustedHeadshot(row.player.headshot_url)).map(playerName)
+    .filter(name => name.length >= 3 && name.length <= 100))].slice(0, 150)
+}
+
+function directoryPortrait(row: NflCenterStat, byName: Map<string, DirectoryPlayer[]>) {
+  const candidates = byName.get(playerKey(playerName(row))) ?? []
+  // The retained game team disambiguates exact names. Skip uncertain matches
+  // rather than showing another player, including after historical team changes.
+  const team = canonicalNflTeam(row.team.abbreviation)
+  const matches = candidates.filter(player => player.latest_team && canonicalNflTeam(player.latest_team) === team)
+  return matches.length === 1 ? nflPlayerPortrait(matches[0]) : null
+}
+
 /** Presentation adapter only. Missing observations stay missing, not zero. */
-export function buildNflGameCenter(game: ESPNGame, feed: NflCenterFeed | null) {
+export function buildNflGameCenter(game: ESPNGame, feed: NflCenterFeed | null, directory: DirectoryPlayer[] = []) {
   const competitors = game.competitions[0].competitors
   const providerId = Number(game.competitions[0].id)
   const validFeed = feed?.game?.id === providerId ? feed : null
-  const stats = (validFeed?.stats ?? []).filter(row => row.game?.id === providerId && row.player && row.team)
+  const stats = nflCenterStats(game, validFeed)
+  const byName = new Map<string, DirectoryPlayer[]>()
+  for (const row of directory) {
+    const key = playerKey(row.display_name.trim())
+    const group = byName.get(key)
+    if (group) group.push(row)
+    else byName.set(key, [row])
+  }
   const teamFor = (abbr: string) => competitors.find(c => canonicalNflTeam(c.team.abbreviation) === canonicalNflTeam(abbr))
-  const athlete = (row: NflCenterStat) => ({
-    id: String(row.player.id), displayName: `${row.player.first_name} ${row.player.last_name}`.trim(),
-    position: { abbreviation: row.player.position_abbreviation },
-    ...(row.player.headshot_url ? { headshot: { href: row.player.headshot_url } } : {}),
-  })
+  const athlete = (row: NflCenterStat) => {
+    const portrait = trustedHeadshot(row.player.headshot_url) ?? directoryPortrait(row, byName)
+    return {
+      id: String(row.player.id), displayName: playerName(row),
+      position: { abbreviation: row.player.position_abbreviation },
+      ...(portrait ? { headshot: { href: portrait } } : {}),
+    }
+  }
+  const athletes = new Map(stats.map(row => [row.player.id, athlete(row)]))
   const seen = new Set<string>()
   const ordered = (validFeed?.plays ?? []).filter(play => {
     if (play.game?.id !== providerId || seen.has(String(play.id))) return false
@@ -61,8 +99,8 @@ export function buildNflGameCenter(game: ESPNGame, feed: NflCenterFeed | null) {
     clock: { displayValue: play.clock_display ?? '' },
     ...(play.team && teamFor(play.team.abbreviation) ? { team: { id: teamFor(play.team.abbreviation)!.team.id } } : {}),
     athletes: (play.participants ?? []).flatMap(participant => {
-      const row = stats.find(stat => stat.player.id === participant.player_id)
-      return row ? [{ athlete: athlete(row) }] : []
+      const match = participant.player_id == null ? null : athletes.get(participant.player_id)
+      return match ? [{ athlete: match }] : []
     }),
   }))
   const latest = ordered.at(-1)

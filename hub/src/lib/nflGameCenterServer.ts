@@ -3,7 +3,7 @@ import { unstable_cache } from 'next/cache'
 import { createAdminClient } from './supabase/admin'
 import { getNflBdlGames, matchNflBdlGame, type ApiGame } from './nflOdds'
 import { mapStoredGame, type ScheduleRow, type TeamRow } from './nflScoreboard'
-import { buildNflGameCenter, canonicalNflTeam, type NflCenterFeed } from './nflGameCenter'
+import { buildNflGameCenter, canonicalNflTeam, nflCenterPortraitNames, nflCenterStats, type NflCenterFeed } from './nflGameCenter'
 
 /** Shared across visitors. No per-viewer provider requests or ingestion writes. */
 export const getNflGameCenter = unstable_cache(async (gameId: string) => {
@@ -33,5 +33,11 @@ export const getNflGameCenter = unstable_cache(async (gameId: string) => {
     gameType: schedule.game_type, gameday: schedule.gameday, away: { abbr: schedule.away_team }, home: { abbr: schedule.home_team } }) : null
   const game = mapStoredGame(schedule, new Map((teamResult.data as TeamRow[]).map(t => [canonicalNflTeam(t.team_abbr), t])), live ?? fallback)
   const complete = Boolean(feedResult.data?.reconciled && feed?.game?.status_state === 'final' && feed.game.id === Number(game.competitions[0].id))
-  return { game, ...buildNflGameCenter(game, feed), complete, updatedAt: feedResult.data?.fetched_at ?? null, date: schedule.gameday }
-}, ['nfl-game-center-v1'], { revalidate: 30, tags: ['sideline:nfl-live'] })
+  const names = nflCenterPortraitNames(nflCenterStats(game, feed))
+  const portraits = await Promise.all(Array.from({ length: Math.ceil(names.length / 35) }, (_, index) =>
+    admin.from('nfl_players').select('display_name,latest_team,headshot,espn_id')
+      .in('display_name', names.slice(index * 35, (index + 1) * 35))
+      .abortSignal(AbortSignal.timeout(2500))))
+  const directory = portraits.flatMap(result => result.error ? [] : result.data ?? [])
+  return { game, ...buildNflGameCenter(game, feed, directory), complete, updatedAt: feedResult.data?.fetched_at ?? null, date: schedule.gameday }
+}, ['nfl-game-center-v2'], { revalidate: 30, tags: ['sideline:nfl-live'] })
