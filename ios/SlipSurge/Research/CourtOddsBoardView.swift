@@ -86,7 +86,8 @@ struct CourtOddsBoardView: View {
                 loading
             case .loaded(let selection, let slate):
                 if selection == request.selection {
-                    ResearchOddsBoard(slate: slate, selectedGame: gameID.map(String.init), scorerLabel: nil, live: mode == .live)
+                    ResearchOddsBoard(slate: slate, selectedGame: gameID.map(String.init),
+                        marketLabel: markets.first { $0.id == market }?.name ?? market, scorerLabel: nil, live: mode == .live)
                 } else {
                     loading
                 }

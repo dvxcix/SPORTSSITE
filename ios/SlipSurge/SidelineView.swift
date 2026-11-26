@@ -404,7 +404,7 @@ struct SidelineView: View {
                     }
                 } else {
                     ResearchOddsBoard(slate: oddsSlate, selectedGame: selectedGameID,
-                        scorerLabel: board.scorerLabel, defaultSort: .shortened)
+                        marketLabel: marketName(board.market), scorerLabel: board.scorerLabel, defaultSort: .shortened)
                 }
             } else {
                 loading("Loading board")

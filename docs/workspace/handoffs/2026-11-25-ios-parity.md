@@ -2995,3 +2995,44 @@ physical-device push are still open.
 - Both native Debug builds succeeded, the signed build installed and opened
   on Devin’s iPad, and all 288 native and source checks passed. Continue the
   physical competitor review once the reference apps are installed.
+
+### 2026-11-26 · Physical research walkthrough and Odds Board filters
+
+- Operated all four reference apps on Devin’s iPad mini in narrow windows.
+  In HOF, opened Bears–Lions, switched to L5, expanded a quarterback inline,
+  and opened Compare odds. The player row kept its context while it loaded.
+  The comparison sheet carried the same player, market, and threshold.
+- In PropFinder, changed the board’s season sort and opened Andrew Wiggins.
+  Switching the player chart from L5 to the current season updated the bars
+  and average under the same market and threshold. During the board sort,
+  the filter toolbar remained usable above the row placeholders.
+- In Outlier, switched the NBA slate date, opened a matchup through its
+  research control, selected L5, and changed the shot chart to 3PT. The
+  matchup, team artwork, and market remained visible as the body changed.
+  StatMuse’s native search returned Andrew Wiggins’s season summary with
+  the named season and supporting table. Its home showed a sign-in prompt,
+  and the exact five-game query was not verified in the device mirror.
+- The shared native Odds Board keeps Team, Compare, Sort, and Milestone
+  within reach by opening the slate in a compact matchup picker. The board
+  reveals active filters after the sheet closes. Team and matchup chips
+  use SlipSurge’s existing logos. Each chip clears independently, and
+  removing an in-board matchup override returns to the selected slate
+  game. An unmatched search keeps the chosen milestone visible and
+  removable. This checkpoint is on `codex/ios-parity-20261125`.
+- Both Xcode Debug builds and all 288 native and source checks passed.
+  The signed build opened The Sideline on Devin’s iPad in its narrow
+  portrait tile. Verified the Eagles–Cowboys override, clearing back to
+  Bears–Lions, and applying and clearing 30+ receiving yards. An unmatched
+  search retained the active chips. On iPhone 18 Pro Simulator the final
+  sheet fit all five controls and the Points heading, and the Team picker
+  applied the Miami selection in the form. Independent design review
+  caught the missing market heading before the final render. The visual
+  receipt is saved on the Mac as
+  [visual-evidence.json](/Users/vick/.codex/visualizations/2026/11/25/01a21037-b02d-7d53-85e3-36b17a54b24d/odds-board-filters/visual-evidence.json).
+- One in-session NFL reload dropped the filters when the table remounted.
+  Preserve those selections across same-scope reads before expanding the
+  flow. Evaluate a same-player, same-threshold odds comparison using
+  recorded quotes from the selected date and mode. Preserve the pregame
+  cutoff, membership checks, and exact observations. Localize loading within
+  the affected panel and keep the selected matchup and market visible during
+  player or chart transitions.

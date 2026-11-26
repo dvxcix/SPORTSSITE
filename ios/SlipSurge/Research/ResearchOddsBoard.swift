@@ -103,6 +103,7 @@ struct ResearchOddsBoard: View {
 
     let slate: ResearchOddsSlate
     let selectedGame: String?
+    let marketLabel: String
     let scorerLabel: String?
     var live = false
     var defaultSort = OddsSort.alphabetical
@@ -123,6 +124,8 @@ struct ResearchOddsBoard: View {
     @State private var selectedPrice: SelectedPrice?
 
     private var selectedSort: OddsSort { sort ?? defaultSort }
+    private var slateGame: String? { selectedGame.flatMap { id in slate.games.first { $0.id == id }?.id } }
+
     private var teams: [ResearchOddsSlate.Team] {
         Array(Set(slate.players.filter { game == nil || $0.gameID == game }.map(\.team)))
             .sorted { $0.name < $1.name }
@@ -173,6 +176,7 @@ struct ResearchOddsBoard: View {
         let rows = rows(for: players, sortedLine: sortedLine)
         VStack(alignment: .leading, spacing: 12) {
             navigation
+            activeFilters(sortedLine: sortedLine)
             ForEach(slate.notices, id: \.self) { notice in
                 Label(notice, systemImage: "info.circle")
                     .font(.footnote).foregroundStyle(.secondary)
@@ -183,23 +187,27 @@ struct ResearchOddsBoard: View {
                 table(rows, columns: target.map { [$0] } ?? milestones, sortedLine: sortedLine)
             }
         }
-        .onChange(of: selectedGame, initial: true) { _, value in
-            game = value.flatMap { id in slate.games.contains { $0.id == id } ? id : nil }
-            team = nil
-            target = nil
+        .onChange(of: slateGame, initial: true) { _, value in
+            selectGame(value)
         }
         .onChange(of: slate.games.map(\.id)) { _, ids in
-            if let game, !ids.contains(game) { self.game = nil }
+            if let game, !ids.contains(game) { selectGame(slateGame) }
         }
-        .onChange(of: milestones) { _, visible in
-            if let target, !visible.contains(target) { self.target = nil }
+        .sheet(isPresented: $filtersOpen) {
+            filters(milestones: Array(Set(milestones + (target.map { [$0] } ?? []))).sorted())
         }
-        .sheet(isPresented: $filtersOpen) { filters(milestones: milestones) }
         .sheet(item: $selectedPrice) { selection in quoteDetail(selection) }
     }
 
+    private func selectGame(_ id: String?) {
+        guard game != id else { return }
+        game = id
+        team = nil
+        target = nil
+    }
+
     private var navigation: some View {
-            HStack(spacing: 10) {
+        HStack(spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").accessibilityHidden(true)
                 TextField("Player or team", text: $search).autocorrectionDisabled().submitLabel(.search)
@@ -230,50 +238,98 @@ struct ResearchOddsBoard: View {
         .accessibilityLabel("Odds Board filters")
     }
 
+    @ViewBuilder
+    private func activeFilters(sortedLine: Double?) -> some View {
+        let hasScopeOverride = game != slateGame
+        let hasCustomSort = sortedLine == nil && selectedSort != defaultSort
+        if hasScopeOverride || team != nil || target != nil || comparison != .opening || hasCustomSort {
+            ScrollView(.horizontal) {
+                HStack(spacing: 7) {
+                    if hasScopeOverride {
+                        let matchup = slate.games.first { $0.id == game }
+                        let logos = [matchup?.away?.logo, matchup?.home?.logo].compactMap { $0 }
+                        let scope = matchup.map { "Odds for \($0.title)" } ?? "All games"
+                        filterChip(scope, icon: "calendar", logos: logos) {
+                            selectGame(slateGame)
+                        }
+                    }
+                    if let team {
+                        let player = slate.players.first { $0.team.code == team }
+                        filterChip(player?.team.name ?? team, icon: "shield", logos: player?.logo.map { [$0] } ?? []) {
+                            self.team = nil
+                        }
+                    }
+                    if let target {
+                        filterChip("\(target.formatted())+", icon: "number") { self.target = nil }
+                    }
+                    if comparison != .opening {
+                        filterChip(comparison.label(live: live), icon: "clock.arrow.circlepath") { comparison = .opening }
+                    }
+                    if hasCustomSort {
+                        filterChip(selectedSort.rawValue, icon: "arrow.up.arrow.down") { sort = nil }
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Active Odds Board filters")
+        }
+    }
+
+    private func filterChip(_ title: String, icon: String, logos: [URL] = [], clear: @escaping () -> Void) -> some View {
+        Button(action: clear) {
+            HStack(spacing: 6) {
+                if logos.isEmpty {
+                    Image(systemName: icon).accessibilityHidden(true)
+                } else {
+                    ForEach(logos.indices, id: \.self) { index in
+                        ResearchArtwork(urls: [logos[index]], fallback: icon, pointSize: 17)
+                            .frame(width: 17, height: 17)
+                    }
+                }
+                Text(title)
+                Image(systemName: "xmark").font(.caption2.weight(.bold)).accessibilityHidden(true)
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Brand.text(for: scheme))
+            .padding(.horizontal, 11)
+            .padding(.vertical, 8)
+            .background(Brand.surface(for: scheme), in: .capsule)
+            .overlay { Capsule().strokeBorder(Brand.accent(for: scheme).opacity(0.45)) }
+            .frame(minHeight: 44)
+            .contentShape(.rect)
+        }
+        .buttonStyle(SlipSurgePressStyle())
+        .accessibilityLabel("Clear \(title)")
+    }
+
     private func filters(milestones: [Double]) -> some View {
         NavigationStack {
             Form {
-                Section("Matchup") {
-                    Button {
-                        game = nil
-                    } label: {
-                        HStack {
-                            Label("All games", systemImage: "calendar")
-                            Spacer()
-                            if game == nil { Image(systemName: "checkmark") }
-                        }
-                    }.accessibilityAddTraits(game == nil ? .isSelected : [])
-                    ForEach(slate.games) { matchup in
-                        Button {
-                            game = matchup.id
-                        } label: {
-                            if let away = matchup.away, let home = matchup.home {
-                                ResearchMatchup(away: away, home: home, subtitle: nil, selected: game == matchup.id, fullWidth: true)
-                            } else {
-                                LabeledContent(matchup.title, value: game == matchup.id ? "Selected" : "")
-                            }
-                        }
-                        .buttonStyle(SlipSurgePressStyle())
-                        .accessibilityLabel(matchup.title)
-                        .accessibilityAddTraits(game == matchup.id ? .isSelected : [])
+                Section {
+                    ResearchArtworkPicker(title: "Odds Board matchup", options: [.init(id: "", title: "All games", icon: "calendar")]
+                        + slate.games.map { matchup in
+                            .init(id: matchup.id, title: matchup.title, url: matchup.away?.logo ?? matchup.home?.logo,
+                                  secondaryLogo: matchup.away?.logo == nil ? nil : matchup.home?.logo, icon: "calendar")
+                        }, selection: Binding(get: { game ?? "" }, set: { selectGame($0.isEmpty ? nil : $0) }))
+                    ResearchArtworkPicker(title: "Team", options: [.init(id: "", title: "All teams", icon: "shield")]
+                        + teams.map { item in
+                            .team(id: item.code, title: item.name, logo: slate.players.first { $0.team.code == item.code }?.logo)
+                        }, selection: Binding(get: { team ?? "" }, set: { team = $0.isEmpty ? nil : $0 }))
+                    Picker("Compare with", selection: $comparison) {
+                        ForEach(OddsComparison.allCases, id: \.self) { Text($0.label(live: live)).tag($0) }
                     }
-                }
-                .onChange(of: game) { _, _ in team = nil }
-                ResearchArtworkPicker(title: "Team", options: [.init(id: "", title: "All teams", icon: "shield")]
-                    + teams.map { item in
-                        .team(id: item.code, title: item.name, logo: slate.players.first { $0.team.code == item.code }?.logo)
-                    }, selection: Binding(get: { team ?? "" }, set: { team = $0.isEmpty ? nil : $0 }))
-                Picker("Compare with", selection: $comparison) {
-                    ForEach(OddsComparison.allCases, id: \.self) { Text($0.label(live: live)).tag($0) }
-                }
-                Picker("Sort", selection: Binding(get: { selectedSort }, set: { sort = $0; sortedPriceLine = nil; ascendingName = true })) {
-                    ForEach(OddsSort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                if scorerLabel == nil {
-                    Picker("Milestone", selection: $target) {
-                        Text("All milestones").tag(nil as Double?)
-                        ForEach(milestones, id: \.self) { Text("\($0.formatted())+").tag(Optional($0)) }
+                    Picker("Sort", selection: Binding(get: { selectedSort }, set: { sort = $0; sortedPriceLine = nil; ascendingName = true })) {
+                        ForEach(OddsSort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }
+                    if scorerLabel == nil {
+                        Picker("Milestone", selection: $target) {
+                            Text("All milestones").tag(nil as Double?)
+                            ForEach(milestones, id: \.self) { Text("\($0.formatted())+").tag(Optional($0)) }
+                        }
+                    }
+                } header: {
+                    Text(marketLabel)
                 }
             }
             .navigationTitle("Odds Board filters")
