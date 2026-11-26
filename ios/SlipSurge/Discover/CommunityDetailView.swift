@@ -33,13 +33,15 @@ struct CommunityDetailView: View {
     let initialMember: Bool
     let onMembershipChange: () -> Void
     @Environment(\.slipPalette) private var slipPalette
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var page: Page?
     @State private var feed: Feed
     @State private var loadedFeed: Feed?
     @State private var roomRevision = 0
     @State private var posts: [FeedPost] = []
     @State private var error: (any Error)?
+    @State private var requestID: UUID?
+    @State private var loadingMore = false
+    @State private var retryCursor: String?
     @State private var feedback: String?
     @State private var mutation = false
     @State private var confirmLeave = false
@@ -93,6 +95,7 @@ struct CommunityDetailView: View {
                             }
                         }
                         if feed != .rooms { postsContent(page) }
+                        else if error != nil { reloadButton }
                     } else {
                         Label("Members-only community", systemImage: "lock").foregroundStyle(.secondary)
                         paidMembership
@@ -196,8 +199,9 @@ struct CommunityDetailView: View {
     }
 
     @ViewBuilder private func postsContent(_ page: Page) -> some View {
+        if error != nil, retryCursor == nil { reloadButton }
         if loadedFeed != postFeed {
-            ProgressView().frame(maxWidth: .infinity, minHeight: 80)
+            if error == nil { ProgressView().frame(maxWidth: .infinity, minHeight: 80) }
         } else if posts.isEmpty {
             ContentUnavailableView("No \(feed.rawValue.lowercased()) yet", systemImage: "bubble.left")
         } else {
@@ -211,9 +215,25 @@ struct CommunityDetailView: View {
                 }
             }
             if page.hasMore, let cursor = page.nextCursor {
-                Button("Load more") { Task { await load(postFeed, cursor: cursor) } }.frame(minHeight: 44)
+                Button(retryCursor == cursor ? "Retry loading more" : "Load more") {
+                    Task { await load(postFeed, cursor: cursor) }
+                }
+                .frame(minHeight: 44)
+                .disabled(requestID != nil)
+                .overlay(alignment: .trailing) {
+                    if loadingMore { ProgressView().offset(x: 25).accessibilityHidden(true) }
+                }
             }
         }
+    }
+
+    private var reloadButton: some View {
+        Button("Couldn’t refresh community. Retry", systemImage: "arrow.clockwise") {
+            Task { await load(postFeed) }
+        }
+        .font(.subheadline)
+        .frame(minHeight: 44)
+        .disabled(requestID != nil)
     }
 
     @ViewBuilder
@@ -253,25 +273,40 @@ struct CommunityDetailView: View {
 
     private func load(_ requested: Feed, cursor: String? = nil) async {
         guard api.userID != nil, group.invitationId == nil || responseComplete else { return }
+        if let cursor {
+            guard requestID == nil, loadedFeed == requested, page?.nextCursor == cursor else { return }
+        }
+        let request = UUID()
+        requestID = request
+        loadingMore = cursor != nil
+        error = nil
+        retryCursor = nil
+        defer {
+            if requestID == request { requestID = nil; loadingMore = false }
+        }
         var query = [URLQueryItem(name: "view", value: requested.rawValue.lowercased())]
         if let cursor { query.append(.init(name: "cursor", value: cursor)) }
         do {
             let data = try await api.memberRead(Page.self, path: path, query: query)
-            guard !Task.isCancelled, postFeed == requested else { return }
-            var seen = Set(cursor == nil ? [] : posts.map(\.id))
-            let next = data.posts.filter { seen.insert($0.id).inserted }
-            withAnimation(reduceMotion ? nil : .smooth(duration: 0.22)) {
-                page = data
-                loadedFeed = requested
-                if feed == .rooms, data.role == nil || !data.canView { feed = .posts }
+            guard !Task.isCancelled, requestID == request, postFeed == requested else { return }
+            page = data
+            loadedFeed = requested
+            if feed == .rooms, data.role == nil || !data.canView { feed = .posts }
+            if data.canView {
+                var seen = Set(cursor == nil ? [] : posts.map(\.id))
+                let next = data.posts.filter { seen.insert($0.id).inserted }
                 posts = cursor == nil ? next : posts + next
-                error = nil
+            } else {
+                posts = []
             }
         } catch {
-            if !Task.isCancelled, postFeed == requested {
-                self.error = error
+            guard !Task.isCancelled, requestID == request, postFeed == requested else { return }
+            self.error = error
+            retryCursor = cursor
+            if let status = error as? SlipSurgeHTTP.Status, [401, 403, 404].contains(status.code) {
                 page = nil
                 posts = []
+                loadedFeed = nil
             }
         }
     }

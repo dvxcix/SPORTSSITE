@@ -52,7 +52,6 @@ struct ResearchGameChart: View {
     var showLog = true
     @State private var selected: Int?
     @Environment(\.slipPalette) private var slipPalette
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -61,13 +60,7 @@ struct ResearchGameChart: View {
             } else {
                 if line != nil { sampleResults }
                 chart
-                if let selected, games.indices.contains(selected) {
-                    gameRow(games[selected])
-                        .transition(.opacity)
-                } else if let line {
-                    Label("\(metric) line \(line.formatted())", systemImage: "minus")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+                if let sample = games.first { selectionReadout(sizingFrom: sample) }
                 if showLog {
                     DisclosureGroup("Game log") {
                         VStack(spacing: 8) {
@@ -83,8 +76,20 @@ struct ResearchGameChart: View {
             }
         }
         .sensoryFeedback(.selection, trigger: selected) { _, next in next != nil }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: selected)
         .onChange(of: games) { _, _ in selected = nil }
+    }
+
+    private func selectionReadout(sizingFrom sample: Game) -> some View {
+        ZStack(alignment: .leading) {
+            gameRow(sample).hidden().accessibilityHidden(true)
+            if let selected, games.indices.contains(selected) {
+                gameRow(games[selected])
+            } else if let line {
+                Label("\(metric) line \(line.formatted())", systemImage: "minus")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .lineLimit(1)
     }
 
     private var sampleResults: some View {

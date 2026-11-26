@@ -9,6 +9,12 @@ struct RoomConversationView: View {
     @State private var room: MessageDestination
     @State private var catalog: [MessagesAPI.Channel]
     @State private var drafts: [UUID: MessageThreadDraft] = [:]
+    @State private var recentThreads: [UUID: Snapshot] = [:]
+
+    private struct Snapshot {
+        let thread: MessageThread
+        let date: Date
+    }
 
     private var busy: Bool { drafts[room.id]?.composing == true || drafts[room.id]?.uploading == true }
 
@@ -22,7 +28,16 @@ struct RoomConversationView: View {
     }
 
     var body: some View {
-        MessageThreadView(api: api, destination: room, roomDraft: draft(for: room.id))
+        let current = room
+        let now = Date.now
+        let cached = recentThreads[current.id].flatMap { now.timeIntervalSince($0.date) < 30 ? $0.thread : nil }
+        MessageThreadView(api: api, destination: current, roomDraft: draft(for: current.id), initialThread: cached) { thread in
+            guard api.account.memberID == api.userID else { return }
+            recentThreads[current.id] = thread.map { Snapshot(thread: $0, date: .now) }
+            if recentThreads.count > 5, let oldest = recentThreads.min(by: { $0.value.date < $1.value.date })?.key {
+                recentThreads.removeValue(forKey: oldest)
+            }
+        }
             .id(room.id)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .safeAreaInset(edge: .top, spacing: 0) {

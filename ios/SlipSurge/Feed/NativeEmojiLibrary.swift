@@ -145,17 +145,22 @@ struct NativeInlineEmojiText: View {
     @Environment(\.scenePhase) private var phase
     @State private var visible = false
 
+    private enum Part {
+        case text(Text)
+        case emoji(code: String, fallback: Text)
+    }
+
     var body: some View {
         let matches = source.matches(of: #/:([a-z0-9_]{2,30}):/#).map { (range: $0.range, code: String($0.output.1)) }
-        let attributed = linkify(source)
+        let parts = segments(linkify(source), matches: matches)
         let codes = matches.map(\.code)
         Group {
             if visible, !reduceMotion, phase == .active, let library, codes.contains(where: library.hasMotion) {
                 TimelineView(.animation(minimumInterval: 1.0 / 15.0)) { time in
-                    content(attributed, matches: matches, at: time.date)
+                    content(parts, at: time.date)
                 }
             } else {
-                content(attributed, matches: matches, at: nil)
+                content(parts, at: nil)
             }
         }
         .onAppear { visible = true }
@@ -165,30 +170,46 @@ struct NativeInlineEmojiText: View {
         }
     }
 
-    private func content(_ attributed: AttributedString, matches: [(range: Range<String.Index>, code: String)],
-                         at date: Date?) -> Text {
-        guard !matches.isEmpty, let library else { return Text(attributed) }
+    private func segments(_ attributed: AttributedString, matches: [(range: Range<String.Index>, code: String)]) -> [Part] {
+        guard !matches.isEmpty, let library else { return [.text(Text(attributed))] }
         var cursor = attributed.startIndex
-        var rendered = Text("")
+        var parts: [Part] = []
         for match in matches {
             guard let start = AttributedString.Index(match.range.lowerBound, within: attributed),
                   let end = AttributedString.Index(match.range.upperBound, within: attributed),
                   attributed[start..<end].link == nil else { continue }
-            let replaced: Text
-            if let icon = library.image(for: match.code, at: date) {
-                let scale = Double(max(icon.width, icon.height)) / iconSize
-                replaced = Text(Image(decorative: icon, scale: scale)).accessibilityLabel(Text(match.code))
-            } else if library.entry(for: match.code) != nil || library.revision == 0 {
-                replaced = Text(Image(systemName: "face.smiling")).accessibilityLabel(Text(match.code))
+            let replacement: Part
+            if library.entry(for: match.code) != nil || library.revision == 0 {
+                replacement = .emoji(code: match.code,
+                    fallback: Text(Image(systemName: "face.smiling")).accessibilityLabel(Text(match.code)))
             } else if let symbol = library.unicode(for: match.code) {
-                replaced = Text(symbol)
+                replacement = .text(Text(symbol))
             } else {
                 continue
             }
-            let before = Text(AttributedString(attributed[cursor..<start]))
-            rendered = Text("\(rendered)\(before)\(replaced)")
+            if cursor != start { parts.append(.text(Text(AttributedString(attributed[cursor..<start])))) }
+            parts.append(replacement)
             cursor = end
         }
-        return Text("\(rendered)\(Text(AttributedString(attributed[cursor...])))")
+        if cursor != attributed.endIndex { parts.append(.text(Text(AttributedString(attributed[cursor...])))) }
+        return parts
+    }
+
+    private func content(_ parts: [Part], at date: Date?) -> Text {
+        parts.reduce(Text("")) { current, part in
+            let next: Text
+            switch part {
+            case .text(let text):
+                next = text
+            case .emoji(let code, let fallback):
+                if let icon = library?.image(for: code, at: date) {
+                    let scale = Double(max(icon.width, icon.height)) / iconSize
+                    next = Text(Image(decorative: icon, scale: scale)).accessibilityLabel(Text(code))
+                } else {
+                    next = fallback
+                }
+            }
+            return Text("\(current)\(next)")
+        }
     }
 }

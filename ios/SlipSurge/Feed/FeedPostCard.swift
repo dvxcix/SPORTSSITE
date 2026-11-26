@@ -18,6 +18,7 @@ struct FeedPostCard: View {
     @State private var expandReactions = false
     @State private var reactionFailed = false
     @State private var heartPulse = 0
+    @State private var reactionEffect: ReactionBurst?
 
     private static let heart = "❤️"
     private static let quickReactions = ["🔥", "⚡", "👀", "👏", "😂"]
@@ -70,7 +71,7 @@ struct FeedPostCard: View {
         HStack(spacing: 10) {
             NativeMemberAvatar(url: post.author?.avatar, name: post.author?.displayName ?? post.author?.username ?? "Member",
                 size: 36, style: post.author?.avatarRingStyle, color: post.author?.avatarRingColor, tone: post.author?.avatarTone,
-                animated: post.author?.avatarRingStyle != nil)
+                animated: post.author?.avatarRingStyle != AvatarArtwork.Ring.surge.rawValue)
             VStack(alignment: .leading, spacing: 2) {
                 if let author = post.author {
                     HStack(spacing: 5) {
@@ -159,7 +160,24 @@ struct FeedPostCard: View {
     }
 
     private var interactions: some View {
-        HStack(spacing: 0) {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 0) {
+                engagementActions
+                Spacer(minLength: 0)
+                extraActions
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 0) { engagementActions }
+                HStack(spacing: 0) { extraActions }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .font(.subheadline.weight(.medium))
+        .foregroundStyle(.secondary)
+    }
+
+    @ViewBuilder private var engagementActions: some View {
+        Group {
             if showDiscussionButton, let discussion {
                 actionButton("Replies", icon: "bubble", value: post.comments, action: discussion)
             } else {
@@ -173,12 +191,23 @@ struct FeedPostCard: View {
                 count("Reposts", icon: "arrow.2.squarepath", value: post.reposts)
             }
             heartButton
+        }
+    }
+
+    @ViewBuilder private var extraActions: some View {
+        Group {
             if canReact {
-                Button("More reactions", systemImage: "face.smiling") { showingQuickReactions = true }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(SlipSurgePressStyle())
-                    .frame(minWidth: 44, minHeight: 44)
-                    .popover(isPresented: $showingQuickReactions, arrowEdge: .bottom) { quickReactionPicker }
+                Button {
+                    showingQuickReactions = true
+                } label: {
+                    Image(systemName: "face.smiling")
+                        .frame(width: 44, height: 44)
+                        .contentShape(.rect)
+                }
+                .accessibilityLabel("More reactions")
+                .buttonStyle(SlipSurgePressStyle())
+                .popover(isPresented: $showingQuickReactions, arrowEdge: .bottom) { quickReactionPicker }
+                .reactionBurst(reactionEffect)
             }
             if let operation {
                 actionButton(post.bookmarked == true ? "Remove bookmark" : "Bookmark",
@@ -189,12 +218,10 @@ struct FeedPostCard: View {
             if post.shareable, let url = URL(string: "https://\(SlipSurgeHTTP.site)/posts/\(post.postID.uuidString.lowercased())") {
                 ShareLink(item: url) {
                     Image(systemName: "square.and.arrow.up").frame(minWidth: 44, minHeight: 44)
+                        .contentShape(.rect)
                 }.accessibilityLabel("Share post")
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .font(.subheadline.weight(.medium))
-        .foregroundStyle(.secondary)
     }
 
     @ViewBuilder
@@ -209,15 +236,12 @@ struct FeedPostCard: View {
                         else { Image(systemName: liked ? "heart.fill" : "heart").symbolEffect(.bounce.up, value: heartPulse) }
                     }
                     if count > 0 {
-                        Text(count.formatted()).monospacedDigit().contentTransition(.numericText())
+                        Text(count.formatted(.number.notation(.compactName))).monospacedDigit()
                     }
                 }
                 .foregroundStyle(liked ? Color(rgb: scheme == .dark ? 0xFF6C8C : 0xC22B5A) : .secondary)
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(.rect)
-                .overlay(alignment: .leading) {
-                    if !reduceMotion { LikeBurst(trigger: heartPulse).offset(x: 9) }
-                }
             }
             .buttonStyle(SlipSurgePressStyle())
             .accessibilityLabel(liked ? "Unlike post" : "Like post")
@@ -272,7 +296,7 @@ struct FeedPostCard: View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
-                if let value, value > 0 { Text(value.formatted()).monospacedDigit() }
+                if let value, value > 0 { Text(value.formatted(.number.notation(.compactName))).monospacedDigit() }
             }
             .foregroundStyle(active ? slipPalette.accent : .secondary)
             .frame(minWidth: 44, minHeight: 44)
@@ -324,9 +348,9 @@ struct FeedPostCard: View {
     private func react(_ symbol: String) {
         let value = symbol.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let actionsAPI, !value.isEmpty, value.utf16.count <= 32 else { return }
-        withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) {
-            if actionsAPI.account.postReactions.toggle(value, post: post, api: actionsAPI, failed: { reactionFailed = true }),
-               value == Self.heart { heartPulse += 1 }
+        if actionsAPI.account.postReactions.toggle(value, post: post, api: actionsAPI, failed: { reactionFailed = true }) {
+            if value == Self.heart { heartPulse += 1 }
+            else if !reduceMotion { reactionEffect = .init(symbol: value) }
         }
         showingQuickReactions = false
         showingEmoji = false
@@ -335,7 +359,7 @@ struct FeedPostCard: View {
     private func count(_ label: String, icon: String, value: Int) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
-            if value > 0 { Text(value.formatted()).monospacedDigit() }
+            if value > 0 { Text(value.formatted(.number.notation(.compactName))).monospacedDigit() }
         }
         .frame(minWidth: 44, minHeight: 44)
             .accessibilityLabel("\(value) \(label.lowercased())")
@@ -347,29 +371,6 @@ struct FeedPostCard: View {
         return host == SlipSurgeHTTP.site || host == "hkldweedwnxartkfhror.supabase.co" ||
             host == "media.tenor.com" || host == "a.espncdn.com" || host == "cdn.nba.com" || host == "static.www.nfl.com" || host == "img.mlbstatic.com" ||
             host == "cdn.discordapp.com" || host == "pbs.twimg.com" || host.hasSuffix(".public.blob.vercel-storage.com")
-    }
-}
-
-private struct LikeBurst: View {
-    let trigger: Int
-
-    var body: some View {
-        Color.clear.frame(width: 19, height: 19)
-            .keyframeAnimator(initialValue: 1.0, trigger: trigger) { content, progress in
-                content.overlay {
-                    ForEach(0..<6) { index in
-                        let angle = Double(index) * (.pi / 3) - .pi / 6
-                        let radius = 8 + 11 * progress
-                        Circle().fill(index.isMultiple(of: 2) ? Color(rgb: 0xFF6C8C) : Color(rgb: 0xFFB84D))
-                            .frame(width: 3, height: 3).offset(x: cos(angle) * radius, y: sin(angle) * radius)
-                            .opacity(max(0, (1 - progress) * 0.85))
-                    }
-                }
-            } keyframes: { _ in
-                MoveKeyframe(0)
-                CubicKeyframe(1, duration: 0.34)
-            }
-            .allowsHitTesting(false).accessibilityHidden(true)
     }
 }
 

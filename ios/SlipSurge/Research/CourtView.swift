@@ -710,9 +710,10 @@ struct CourtView: View {
 
     private func playerFilters(_ board: CourtBoard) -> some View {
         let vendors = Set(board.players.flatMap(\.props).map(\.vendor) + (sportsbook.map { [$0] } ?? [])).sorted()
-        let targets = Set(board.players.flatMap { market.offers($0, gameID: board.game.id, side: side) }.filter {
-            (sportsbook == nil || $0.vendor == sportsbook) && (contract == nil || $0.milestone == (contract == .milestone))
-        }.map(\.line) + (target.map { [$0] } ?? [])).sorted()
+        let offers = board.players.flatMap { market.offers($0, gameID: board.game.id, side: side) }
+            .filter { contract == nil || $0.milestone == (contract == .milestone) }
+        let targets = Set(offers.filter { sportsbook == nil || $0.vendor == sportsbook }.map(\.line)
+            + (target.map { [$0] } ?? [])).sorted()
         return VStack(alignment: .leading, spacing: 8) {
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
@@ -723,16 +724,28 @@ struct CourtView: View {
                 }
                 ResearchArtworkPicker(title: "Sportsbook",
                     options: [.init(id: "", title: "All books", icon: "books.vertical")] + vendors.map(ResearchArtworkPicker.Option.sportsbook),
-                    selection: Binding(get: { sportsbook ?? "" }, set: { sportsbook = $0.isEmpty ? nil : $0 }))
+                    selection: Binding(get: { sportsbook ?? "" }, set: { selectedBook in
+                        sportsbook = selectedBook.isEmpty ? nil : selectedBook
+                        if let target, !offers.contains(where: { $0.line == target && (sportsbook == nil || $0.vendor == sportsbook) }) {
+                            self.target = nil
+                        }
+                    }))
                 menu(side.rawValue, icon: nil, accessibility: "Side, \(side.rawValue)") {
-                    Picker("Side", selection: $side) {
+                    Picker("Side", selection: Binding(get: { side }, set: { newSide in
+                        guard side != newSide else { return }
+                        side = newSide
+                        target = nil
+                        if newSide == .under, contract == .milestone { contract = nil }
+                    })) {
                         ForEach(CourtPlayerMarket.Side.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }
                 }
                 Menu("Lines", systemImage: "target") {
                     Picker("Contract", selection: Binding(get: { contract }, set: { contract = $0; target = nil })) {
                         Text("All contracts").tag(nil as CourtLinkContext.Contract?)
-                        ForEach(CourtLinkContext.Contract.allCases, id: \.self) { Text($0.label).tag(Optional($0)) }
+                        ForEach(CourtLinkContext.Contract.allCases.filter { $0 != .milestone || side == .over }, id: \.self) {
+                            Text($0.label).tag(Optional($0))
+                        }
                     }
                     Picker("Line", selection: $target) {
                         Text("All lines").tag(nil as Double?)

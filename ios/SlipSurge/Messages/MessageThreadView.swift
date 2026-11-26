@@ -40,7 +40,8 @@ struct MessageThreadView: View {
     }
     let api: MessagesAPI
     let destination: MessageDestination
-    var roomDraft: Binding<MessageThreadDraft>? = nil
+    var roomDraft: Binding<MessageThreadDraft>?
+    private let onThreadRefresh: ((MessageThread?) -> Void)?
     @Environment(\.slipPalette) private var slipPalette
     private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.scenePhase) private var phase
@@ -90,6 +91,15 @@ struct MessageThreadView: View {
     private struct HistoryPage {
         let cursor: String
         var result: MessageThread
+    }
+
+    init(api: MessagesAPI, destination: MessageDestination, roomDraft: Binding<MessageThreadDraft>? = nil,
+         initialThread: MessageThread? = nil, onThreadRefresh: ((MessageThread?) -> Void)? = nil) {
+        self.api = api
+        self.destination = destination
+        self.roomDraft = roomDraft
+        self.onThreadRefresh = onThreadRefresh
+        _thread = State(initialValue: initialThread)
     }
 
     private var draftBinding: Binding<MessageThreadDraft> { roomDraft ?? $localDraft }
@@ -658,6 +668,7 @@ struct MessageThreadView: View {
                     thread = value
                 }
                 if error != nil { error = nil }
+                onThreadRefresh?(value)
                 if atBottom { read(value.messages.last?.id) }
             }
         } catch {
@@ -665,6 +676,7 @@ struct MessageThreadView: View {
                 self.error = error
                 if accessLost(error) {
                     thread = nil
+                    onThreadRefresh?(nil)
                     clearHistory()
                 }
             }

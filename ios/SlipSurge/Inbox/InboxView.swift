@@ -91,12 +91,12 @@ struct InboxView: View {
             switch section {
             case .activity:
                 ActivityView(api: .init(account: account, userID: memberID), inInbox: true,
-                    initialActivity: { unread.recentActivity(for: memberID) }) {
+                    initialActivity: { unread.recentActivity(for: memberID) }, sharedInbox: unread) {
                     update(.activity, count: $0, memberID: memberID)
                 }
             case .messages:
                 MessagesView(api: .init(account: account, userID: memberID), inInbox: true,
-                    initialInbox: { unread.recentMessages(for: memberID) }) {
+                    initialInbox: { unread.recentMessages(for: memberID) }, sharedInbox: unread) {
                     update(.messages, count: $0, memberID: memberID)
                 }
             }

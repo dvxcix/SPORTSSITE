@@ -18,8 +18,8 @@ struct MovingAvatarDecoration: View {
         Group {
             if let sprite, sprite.key == key {
                 AvatarFramePlayer(sprite: sprite, playing: playing && visible)
-            } else if let still = AvatarArtwork.still(item) {
-                Image(decorative: still, scale: 1).resizable().scaledToFit()
+            } else {
+                AvatarStillDecoration(item: item)
             }
         }
         .onAppear { visible = true }

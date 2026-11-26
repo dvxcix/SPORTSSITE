@@ -3479,3 +3479,62 @@ notification carried native text and score. Animated MLB alert artwork
 and a physical NBA/MLB delivery are still open checks. The app opens a
 linked Game Center sheet over an already open game in this warm path,
 which is an interaction to simplify in a later build.
+
+### 2026-11-26 · App-wide SwiftUI interaction improvements
+
+- Refreshed all 20 skills from `emilkowalski/skills` at
+  `64eb3deb9a5fbfa041faf783e0bc3fd635872e9c` for Codex on the Mac.
+  Applied the SwiftUI and interaction guidance to the real app. Three
+  independent read-only reviews covered social, Research, and profile
+  and account surfaces. The following changes were implemented and
+  reviewed on `codex/ios-parity-20261125` from `7c6c16e0`.
+- The shared Odds Board keeps a player’s portrait and name anchored
+  while scrolling milestones in both leagues. At accessibility text
+  sizes it gives the full width to the scrollable table for reading
+  large labels. The comparison shows the same selected player, matchup
+  and line, with a fixed sportsbook order and the best quote marked
+  when loading completes. Chart scrubbing updates the bar and uses a
+  fixed game readout so the game log stays put. Changing the NBA side or
+  sportsbook clears a line that no longer applies. Under cannot
+  select the milestone-only contract from the controls.
+- Feed actions fit a narrow window with larger counts and retain full
+  VoiceOver values. Routine Likes use one confirmation effect. Custom
+  reactions keep their own burst. Feed scroll restoration yields when
+  the reader starts dragging. The default ring is still on dense Feed
+  rows, and selected custom decorations retain animation. The avatar
+  still atlas decodes off the main actor and inline emoji reuse their
+  attributed text fragments between frames.
+- Community keeps loaded navigation and posts on a transient failure,
+  retries at the failed cursor, and discards restricted data on an
+  explicit access denial. A recently opened room can reuse its last
+  in-memory page while refreshing, while the existing room draft
+  remains separate. Game Room keeps Photo, GIF and Emoji accessible
+  while the keyboard is open. Inbox uses the same refresh snapshots
+  for the visible list and each count. Incoming snapshots do not
+  replace a direct request or an Activity mutation in flight.
+- Profiles reflow stats at accessibility sizes and show Follow
+  progress. Account settings show Save progress and pause editing
+  during the request. Stories follow the actual video playhead during
+  buffering and freeze a paused GIF at its current frame. Playback
+  behavior was source-reviewed. No published story was created for QA.
+- First-run Sign in and Create account stay visible at accessibility
+  text sizes, with explicit preview navigation. Returning users can
+  use the app immediately after launch. Introductions can still be
+  replayed from Account.
+- Xcode 27.2 passed Debug builds for iPhone simulators and Devin’s
+  physical iPad. The signed-in iPhone 18 Pro kept player identity
+  visible when browsing later NFL and NBA prices. Its Darius Cooper
+  25+ receiving yards comparison displayed FanDuel and DraftKings in
+  the same order before and after the latter loaded. Verified that the
+  Game Room attachment menu offered Photo, GIF and Emoji while its
+  input was focused. The iPhone 17e at Accessibility Extra Large
+  visibly offered both account actions before scrolling, and Sign in
+  opened the native login. The signed development build on Devin’s
+  iPad showed first run and Feed in compact and full-screen windows.
+  That QA bundle was signed out. No live chat or personal account
+  settings were written for this check.
+- The native and production source smoke run passed 295 checks.
+  Reviewed source changes are confined to the native app and this
+  note. Remaining checks include actual story buffering, live two-account
+  Inbox mutations, room navigation under interrupted networking,
+  animation frame timing, and independent role/provider coverage.

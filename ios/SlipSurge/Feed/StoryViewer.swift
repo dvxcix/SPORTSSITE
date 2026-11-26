@@ -162,7 +162,8 @@ struct StoryViewer: View {
                 else { ProgressView().tint(.white) }
             } else if NativeGIFSource.canPlay(url) {
                 let id = mediaID
-                NativeGIFPlayback(url: url, maxHeight: size.height, maxWidth: size.width, label: "Story GIF") { loaded in
+                NativeGIFPlayback(url: url, maxHeight: size.height, maxWidth: size.width,
+                    label: "Story GIF", autoplay: !paused && !removing) { loaded in
                     if loaded { loadedPhoto = id }
                     else { failedPhoto = id }
                 }
@@ -201,7 +202,7 @@ struct StoryViewer: View {
             let asset = AVURLAsset(url: url)
             let duration = try await asset.load(.duration).seconds
             guard !Task.isCancelled else { return }
-            seconds = min(15, max(3, duration.isFinite ? duration : 5))
+            seconds = min(15, duration.isFinite && duration > 0 ? duration : 5)
             let playbackPlayer = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             playbackPlayer.isMuted = true
             player = playbackPlayer
@@ -215,8 +216,13 @@ struct StoryViewer: View {
         while !Task.isCancelled && progress < 1 {
             do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
             guard !Task.isCancelled, id == current?.id else { return }
-            if player?.currentItem?.status == .failed { failed = true; return }
-            progress = min(1, progress + 0.05 / seconds)
+            if let player {
+                if player.currentItem?.status == .failed { failed = true; return }
+                let played = player.currentTime().seconds
+                if played.isFinite { progress = min(1, max(progress, played / seconds)) }
+            } else {
+                progress = min(1, progress + 0.05 / seconds)
+            }
         }
         if !Task.isCancelled, id == current?.id { move(1) }
     }

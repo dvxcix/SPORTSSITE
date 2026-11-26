@@ -473,6 +473,7 @@ private struct FeedResumeScroll: ViewModifier {
     @MainActor private final class Measurements {
         var geometry = Geometry()
         var visible: [FeedPost.ID] = []
+        var userInterrupted: UUID?
     }
 
     let intent: NativeResumeStore.FeedRestore?
@@ -497,6 +498,10 @@ private struct FeedResumeScroll: ViewModifier {
                 if restoring { measurements.geometry = value }
             }
             .onScrollPhaseChange { old, next, context in
+                if next == .interacting, let intent {
+                    measurements.userInterrupted = intent.id
+                    consume(intent)
+                }
                 if next == .idle, old == .interacting || old == .decelerating {
                     let point = context.geometry.contentOffset.y + context.geometry.contentInsets.top
                     let offset = min(10_000_000, max(0, Int(point.rounded())))
@@ -514,6 +519,7 @@ private struct FeedResumeScroll: ViewModifier {
 
     private func restore(_ target: NativeResumeStore.FeedRestore) async {
         do {
+            guard measurements.userInterrupted != target.id else { return }
             if target.offset == 0 {
                 position.scrollTo(edge: .top)
                 consume(target)
@@ -521,6 +527,7 @@ private struct FeedResumeScroll: ViewModifier {
             }
             try await Task.sleep(for: .milliseconds(150))
             for _ in 0..<4 {
+                guard measurements.userInterrupted != target.id, !Task.isCancelled else { return }
                 if let id = target.anchor.flatMap(findPost) {
                     position.scrollTo(id: id, anchor: .top)
                     consume(target)
@@ -530,6 +537,7 @@ private struct FeedResumeScroll: ViewModifier {
                 try await Task.sleep(for: .milliseconds(150))
             }
             try Task.checkCancellation()
+            guard measurements.userInterrupted != target.id else { return }
             if let id = target.anchor.flatMap(findPost) {
                 position.scrollTo(id: id, anchor: .top)
                 consume(target)
@@ -542,6 +550,7 @@ private struct FeedResumeScroll: ViewModifier {
             // Lazy rows can update the layout after the first jump.
             for _ in 0..<2 {
                 try await Task.sleep(for: .milliseconds(200))
+                guard measurements.userInterrupted != target.id else { return }
                 let measured = measurements.geometry
                 let correction = desired - measured.offset
                 guard abs(correction) > 3, measured.limit > 0 else { break }

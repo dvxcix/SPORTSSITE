@@ -143,6 +143,7 @@ struct NativeSettings: View {
     @State private var feedback: String?
     @State private var retry = 0
     @State private var saving = false
+    @State private var loading = false
     @State private var uploadingAvatar = false
     @State private var uploadingBanner = false
     @State private var choosingAvatarStyle = false
@@ -152,14 +153,14 @@ struct NativeSettings: View {
     var body: some View {
         Form {
             if source != nil {
-                switch section {
-                case .profile:
-                    profileFields
-                case .privacy:
-                    privacyFields
-                case .alerts:
-                    alertFields
+                Group {
+                    switch section {
+                    case .profile: profileFields
+                    case .privacy: privacyFields
+                    case .alerts: alertFields
+                    }
                 }
+                .disabled(saving || loading)
                 if let feedback { Text(feedback).font(.subheadline) }
             } else {
                 ResearchToolMessage(title: "Settings couldn’t load", error: error, loadingLabel: "Loading settings") { retry += 1 }
@@ -173,13 +174,13 @@ struct NativeSettings: View {
         .toolbar {
             if source != nil {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { Task { await save() } }
-                        .disabled(saving || uploadingAvatar || uploadingBanner || (section == .profile && profile.username.count < 2))
+                    Button(saving ? "Saving…" : "Save") { Task { await save() } }
+                        .disabled(saving || loading || uploadingAvatar || uploadingBanner || (section == .profile && profile.username.count < 2))
                 }
             }
         }
         .task(id: retry) { await load() }
-        .refreshable { await load() }
+        .refreshable { if !saving { await load() } }
         .sheet(isPresented: $choosingAvatarStyle) {
             NavigationStack {
                 AvatarAppearancePicker(url: profile.avatarUrl, name: profileName, style: profile.ringStyle, color: profile.ringColor) {
@@ -278,7 +279,8 @@ struct NativeSettings: View {
                     profile.ringColor = String(format: "#%02x%02x%02x", values[0], values[1], values[2])
                 }), supportsOpacity: false)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 6)]) {
-                    ForEach(AvatarArtwork.colors, id: \.self) { hex in
+                    ForEach(AvatarArtwork.colors, id: \.hex) { color in
+                        let hex = color.hex
                         let selected = profile.ringColor.caseInsensitiveCompare(hex) == .orderedSame
                         Button { profile.ringColor = hex } label: {
                             Circle().fill(Color(hex: hex) ?? .white)
@@ -291,7 +293,7 @@ struct NativeSettings: View {
                                 .contentShape(.rect)
                         }
                         .buttonStyle(.borderless)
-                        .accessibilityLabel("Use \(hex) ring color")
+                        .accessibilityLabel("Use \(color.name) ring color")
                         .accessibilityAddTraits(selected ? .isSelected : [])
                     }
                 }
@@ -391,6 +393,9 @@ struct NativeSettings: View {
     }
 
     private func load() async {
+        guard !loading else { return }
+        loading = true
+        defer { loading = false }
         do {
             let data = try await SlipSurgeHTTP.memberData(Self.path, account: account, userID: userID)
             let value = try JSONDecoder().decode(SettingsPayload.self, from: data)
@@ -408,12 +413,15 @@ struct NativeSettings: View {
             notifications = value.notifications.settings.filter { known.contains($0.key) }
             baseline = .init(notification_settings: notifications, notification_delivery_settings: value.notifications.delivery)
         } catch {
-            if !Task.isCancelled { source = nil; self.error = error }
+            if !Task.isCancelled {
+                if source == nil { self.error = error }
+                else { feedback = "Couldn’t refresh saved settings." }
+            }
         }
     }
 
     private func save() async {
-        guard !saving else { return }
+        guard !saving, !loading else { return }
         saving = true
         feedback = nil
         defer { saving = false }
@@ -444,8 +452,9 @@ struct NativeSettings: View {
             case .privacy: try await patch(Self.path, body: privacy)
             case .alerts:
                 guard let baseline else { return }
-                try await patch("/api/account/preferences", body: NotificationsEdit(value: .init(settings: notifications, delivery: delivery), expected: baseline))
-                self.baseline = .init(notification_settings: notifications, notification_delivery_settings: delivery)
+                let edit = NotificationsEdit(value: .init(settings: notifications, delivery: delivery), expected: baseline)
+                try await patch("/api/account/preferences", body: edit)
+                self.baseline = .init(notification_settings: edit.value.settings, notification_delivery_settings: edit.value.delivery)
             }
             feedback = "Saved"
         } catch let error as SlipSurgeHTTP.Status where error.code == 409 {

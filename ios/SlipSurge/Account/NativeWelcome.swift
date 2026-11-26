@@ -41,33 +41,58 @@ struct NativeWelcome: View {
     @State private var scene = Scene.research
     @State private var playing = true
 
-    private var canAdvance: Bool { playing && !reduceMotion && !voiceOverEnabled && phase == .active && scene != .community }
+    private var canAdvance: Bool {
+        playing && !reduceMotion && !voiceOverEnabled && !textSize.isAccessibilitySize && phase == .active && scene != .community
+    }
 
     var body: some View {
         GeometryReader { geometry in
             let wide = geometry.size.width >= 780 && !textSize.isAccessibilitySize
             let previewHeight = wide ? 345 : min(310, max(216, geometry.size.height * 0.37))
-            ScrollView {
-                VStack(alignment: .leading, spacing: wide ? 28 : 18) {
-                    header
-                    if wide {
-                        HStack(alignment: .center, spacing: 38) {
-                            preview(height: previewHeight)
-                            guide.frame(maxWidth: 380, alignment: .leading)
-                        }
-                    } else {
-                        VStack(alignment: .leading, spacing: 20) {
-                            preview(height: previewHeight)
-                            guide
+            if textSize.isAccessibilitySize {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        header
+                        guideCopy
+                        preview(height: min(200, geometry.size.height * 0.3))
+                        exploreResearch
+                    }
+                    .frame(maxWidth: 510)
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 18)
+                    .frame(maxWidth: .infinity)
+                }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    primaryActions
+                        .frame(maxWidth: 510)
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 9)
+                        .frame(maxWidth: .infinity)
+                        .background(SlipPalette.color.background)
+                }
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: wide ? 28 : 18) {
+                        header
+                        if wide {
+                            HStack(alignment: .center, spacing: 38) {
+                                preview(height: previewHeight)
+                                guide.frame(maxWidth: 380, alignment: .leading)
+                            }
+                        } else {
+                            VStack(alignment: .leading, spacing: 20) {
+                                preview(height: previewHeight)
+                                guide
+                            }
                         }
                     }
+                    .frame(maxWidth: wide ? 980 : 510)
+                    .padding(.horizontal, wide ? 32 : 22)
+                    .padding(.vertical, wide ? 36 : 18)
+                    .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .center)
                 }
-                .frame(maxWidth: wide ? 980 : 510)
-                .padding(.horizontal, wide ? 32 : 22)
-                .padding(.vertical, wide ? 36 : 18)
-                .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .center)
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
         }
         .background { SlipBackdrop() }
         .environment(\.slipAppearance, .color)
@@ -131,7 +156,7 @@ struct NativeWelcome: View {
                     .accessibilityAddTraits(item == scene ? .isSelected : [])
                 }
                 Spacer(minLength: 4)
-                if !reduceMotion && !voiceOverEnabled {
+                if !reduceMotion && !voiceOverEnabled && !textSize.isAccessibilitySize {
                     Button(scene == .community ? "Replay preview" : playing ? "Pause preview" : "Play preview",
                            systemImage: scene == .community ? "arrow.counterclockwise" : playing ? "pause.fill" : "play.fill") {
                         if scene == .community {
@@ -149,38 +174,45 @@ struct NativeWelcome: View {
 
     private var guide: some View {
         VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(scene.label)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(SlipPalette.color.accent)
-                Text(scene.headline)
-                    .font(.system(.largeTitle, design: .default, weight: .black))
-                    .accessibilityAddTraits(.isHeader)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(scene.detail)
-                    .font(.subheadline)
-                    .foregroundStyle(SlipPalette.color.text.opacity(0.76))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .accessibilityElement(children: .combine)
-            .id(scene)
-            .transition(.opacity)
-
-            if isSignedIn {
-                callToAction("Open Feed") { choose(.feed) }
-                Button("Explore Research") { choose(.research) }
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            } else {
-                if textSize.isAccessibilitySize {
-                    VStack(spacing: 9) { signIn; signUp }
-                } else {
-                    HStack(spacing: 10) { signIn; signUp }
-                }
-                Button("Explore Research") { choose(.research) }
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
+            guideCopy
+            primaryActions
+            exploreResearch
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var guideCopy: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(scene.label)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(SlipPalette.color.accent)
+            Text(scene.headline)
+                .font(.system(.largeTitle, design: .default, weight: .black))
+                .accessibilityAddTraits(.isHeader)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(scene.detail)
+                .font(.subheadline)
+                .foregroundStyle(SlipPalette.color.text.opacity(0.76))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+        .id(scene)
+        .transition(textSize.isAccessibilitySize ? .identity : .opacity)
+    }
+
+    @ViewBuilder private var primaryActions: some View {
+        if isSignedIn {
+            callToAction("Open Feed") { choose(.feed) }
+        } else if textSize.isAccessibilitySize {
+            VStack(spacing: 9) { signIn; signUp }
+        } else {
+            HStack(spacing: 10) { signIn; signUp }
+        }
+    }
+
+    private var exploreResearch: some View {
+        Button("Explore Research") { choose(.research) }
+            .frame(maxWidth: .infinity, minHeight: 44)
     }
 
     private var signIn: some View {

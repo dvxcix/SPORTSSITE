@@ -31,6 +31,6 @@ private struct SlipSurgeButtonFeedback: ViewModifier {
         content
             .opacity(pressed ? 0.84 : 1)
             .scaleEffect(pressed && !reduceMotion ? 0.98 : 1)
-            .animation(reduceMotion ? nil : .snappy(duration: 0.21), value: pressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: pressed ? 0.12 : 0.09), value: pressed)
     }
 }

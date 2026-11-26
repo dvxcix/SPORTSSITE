@@ -62,46 +62,82 @@ struct GameRoomComposer: View {
                 }
                 .padding(.leading, 10)
             }
-            HStack(alignment: .bottom, spacing: 4) {
-                if !messageFocused {
-                    Menu {
-                        Button("Photo", systemImage: "photo.on.rectangle") { pickingPhoto = true }
-                        Button("GIF", systemImage: "play.rectangle") { picker = .gif }
-                        Button("Emoji", systemImage: "face.smiling") { picker = .emoji }
-                    } label: {
-                        Group {
-                            if uploading { ProgressView() }
-                            else { Image(systemName: "plus.circle").font(.title2) }
-                        }
-                        .frame(width: 44, height: 44)
+            let canSend = !sending && !uploading && !message.isEmpty && message.utf16.count <= 800
+            HStack(alignment: .bottom, spacing: 8) {
+                Menu {
+                    Button("Photo", systemImage: "photo.on.rectangle") {
+                        messageFocused = false
+                        pickingPhoto = true
                     }
-                    .accessibilityLabel("Add to message")
-                    .disabled(uploading)
+                    Button("GIF", systemImage: "play.rectangle") {
+                        messageFocused = false
+                        picker = .gif
+                    }
+                    Button("Emoji", systemImage: "face.smiling") {
+                        messageFocused = false
+                        picker = .emoji
+                    }
+                } label: {
+                    Group {
+                        if uploading { ProgressView() }
+                        else { Image(systemName: "plus").font(.body.weight(.semibold)) }
+                    }
+                    .foregroundStyle(slipPalette.text)
+                    .frame(width: 44, height: 46)
+                    .background(slipPalette.surface, in: .circle)
+                    .contentShape(.rect)
                 }
-                TextField("Message Game Room", text: $draft.text, axis: .vertical)
-                    .font(.subheadline).lineLimit(1...4).focused($messageFocused)
-                    .padding(.horizontal, 12).padding(.vertical, 9)
-                    .frame(minHeight: 44, alignment: .leading)
-                    .background(slipPalette.surface, in: .rect(cornerRadius: 16))
-                    .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(.secondary.opacity(0.19)) }
-                if messageFocused {
-                    Button("Hide keyboard", systemImage: "keyboard.chevron.compact.down") { messageFocused = false }
-                        .labelStyle(.iconOnly).frame(width: 44, height: 44)
-                        .foregroundStyle(.secondary)
+                .menuOrder(.fixed)
+                .buttonStyle(SlipSurgePressStyle())
+                .accessibilityLabel("Add to message")
+                .disabled(uploading || sending)
+                HStack(alignment: .bottom, spacing: 0) {
+                    TextField("Message", text: $draft.text, axis: .vertical)
+                        .font(.body).lineLimit(1...4).focused($messageFocused)
+                        .padding(.leading, 13).padding(.trailing, messageFocused ? 0 : 13)
+                        .padding(.vertical, 11)
+                        .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
+                        .accessibilityLabel("Message Game Room")
+                    if messageFocused {
+                        Button {
+                            messageFocused = false
+                        } label: {
+                            Image(systemName: "keyboard.chevron.compact.down")
+                                .foregroundStyle(.secondary)
+                                .frame(width: 44, height: 46)
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(SlipSurgePressStyle())
+                        .accessibilityLabel("Hide keyboard")
+                    }
                 }
-                Button("Send to Game Room", systemImage: "arrow.up.circle.fill", action: send)
-                    .labelStyle(.iconOnly).font(.title).frame(width: 44, height: 44)
-                    .foregroundStyle(slipPalette.accent)
-                    .disabled(sending || uploading || message.isEmpty || message.utf16.count > 800)
+                .background(slipPalette.surface, in: .rect(cornerRadius: 23))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 23)
+                        .strokeBorder(messageFocused ? slipPalette.accent.opacity(0.42) : .secondary.opacity(0.18))
+                        .allowsHitTesting(false)
+                }
+                Button(action: send) {
+                    Group {
+                        if sending { ProgressView() }
+                        else { Image(systemName: "arrow.up").font(.body.weight(.bold)) }
+                    }
+                    .frame(width: 46, height: 46)
+                    .foregroundStyle(canSend ? (slipPalette.colorScheme == .dark ? .black : .white) : .secondary)
+                    .background(canSend ? slipPalette.accent : slipPalette.surface, in: .circle)
+                    .contentShape(.circle)
+                }
+                .buttonStyle(SlipSurgePressStyle())
+                .accessibilityLabel("Send to Game Room")
+                .disabled(!canSend)
             }
-            .buttonStyle(.plain)
             if message.utf16.count > 800 {
                 Text("Message exceeds the 800-character limit.").font(.caption).foregroundStyle(.secondary)
                     .padding(.leading, 10).padding(.top, 4)
             }
         }
         .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(.bar)
+        .background { slipPalette.background.ignoresSafeArea(.container, edges: .bottom) }
         .overlay(alignment: .top) { Divider().allowsHitTesting(false) }
         .photosPicker(isPresented: $pickingPhoto, selection: $photo, matching: .images, preferredItemEncoding: .current)
         .modifier(NativePhotoSelection(photo: $photo, url: $draft.attachment, uploading: $uploading) { image in

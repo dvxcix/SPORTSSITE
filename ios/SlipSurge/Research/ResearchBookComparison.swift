@@ -162,10 +162,6 @@ struct ResearchBookComparison: View {
         }
         let pending = vendors.contains { outcomes[$0] == nil }
         let best = !pending && quoted.count > 1 ? quoted.map { $0.1 }.max() : nil
-        let ordered = quoted.sorted { first, second in
-            first.1 == second.1 ? bookName(first.0) < bookName(second.0) : first.1 > second.1
-        }.map { $0.0 }
-        let rows = pending ? vendors : ordered + vendors.filter { book in !ordered.contains(book) }
         let canRetry = outcomes.values.contains { outcome in
             switch outcome {
             case .quoted(let quote): quote.expiry.map { $0 <= now } == true
@@ -174,7 +170,7 @@ struct ResearchBookComparison: View {
             }
         }
         return List {
-            ForEach(rows, id: \.self) { vendor in
+            ForEach(vendors, id: \.self) { vendor in
                 bookRow(vendor, best: best, now: now)
             }
             if canRetry && !pending {

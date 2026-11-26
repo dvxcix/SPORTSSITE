@@ -20,7 +20,10 @@ enum AvatarArtwork {
     }
 
     nonisolated static let defaultColor = "#b6ff3b"
-    static let colors = ["#b6ff3b", "#39d9ff", "#a855f7", "#ff4d6a", "#f8c15c", "#ffffff"]
+    static let colors: [(hex: String, name: String)] = [
+        ("#b6ff3b", "Lime"), ("#39d9ff", "Cyan"), ("#a855f7", "Purple"),
+        ("#ff4d6a", "Pink"), ("#f8c15c", "Gold"), ("#ffffff", "White")
+    ]
     private static let catalog: Catalog? = {
         guard let url = Bundle.main.url(forResource: "AvatarDecorations", withExtension: "json"),
               let data = try? Data(contentsOf: url) else { return nil }
@@ -29,14 +32,15 @@ enum AvatarArtwork {
     static let items = catalog?.items ?? []
     private static let byId = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
 
-    private static let stillAtlas: CGImage? = {
+    private static var stillAtlas: CGImage?
+    private static let decodeStillAtlas = Task.detached(priority: .utility) { () -> CGImage? in
         guard let source = UIImage(named: "AvatarDecorations")?.cgImage,
               let bitmap = CGContext(data: nil, width: source.width, height: source.height, bitsPerComponent: 8,
                                     bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
                                     bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
         bitmap.draw(source, in: CGRect(x: 0, y: 0, width: source.width, height: source.height))
         return bitmap.makeImage()
-    }()
+    }
     private static let tileOffsets = Dictionary(uniqueKeysWithValues: items.enumerated().map { ($0.element.id, $0.offset) })
     private static var tiles: [String: CGImage] = [:]
 
@@ -47,6 +51,11 @@ enum AvatarArtwork {
 
     static func title(_ value: String?) -> String {
         decoration(value)?.name ?? (value.flatMap(Ring.init(rawValue:)) ?? .surge).title
+    }
+
+    static func loadStill(_ item: Decoration) async -> CGImage? {
+        if stillAtlas == nil { stillAtlas = await decodeStillAtlas.value }
+        return still(item)
     }
 
     static func still(_ item: Decoration) -> CGImage? {
@@ -105,8 +114,8 @@ struct NativeMemberAvatar: View {
             Group {
                 if wantsMotion {
                     MovingAvatarDecoration(item: item, size: decorationSize, playing: phase == .active)
-                } else if let still = AvatarArtwork.still(item) {
-                    Image(decorative: still, scale: 1).resizable().scaledToFit()
+                } else {
+                    AvatarStillDecoration(item: item)
                 }
             }
             .frame(width: decorationSize, height: decorationSize)
@@ -159,5 +168,25 @@ private struct AvatarRingMotion: ViewModifier {
                 let animation: Animation = pulse ? .easeInOut(duration: 1.1) : .linear(duration: ring == .orbit ? 3.2 : 4.8)
                 withAnimation(animation.repeatForever(autoreverses: pulse)) { progress = 1 }
             }
+    }
+}
+
+struct AvatarStillDecoration: View {
+    let item: AvatarArtwork.Decoration
+    @State private var rendered: (id: String, image: CGImage)?
+
+    var body: some View {
+        let image = rendered?.id == item.id ? rendered?.image : AvatarArtwork.still(item)
+        Group {
+            if let image { Image(decorative: image, scale: 1).resizable().scaledToFit() }
+        }
+        .task(id: item.id) {
+            let selected = item
+            if let loaded = await AvatarArtwork.loadStill(selected), !Task.isCancelled {
+                rendered = (selected.id, loaded)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }

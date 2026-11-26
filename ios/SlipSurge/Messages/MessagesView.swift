@@ -5,6 +5,7 @@ struct MessagesView: View {
     var startsComposing = false
     var inInbox = false
     var initialInbox: (() -> MessageInbox?)? = nil
+    var sharedInbox: InboxUnread? = nil
     var onUnreadChange: (Int) -> Void = { _ in }
     @Environment(\.slipPalette) private var slipPalette
     @State private var inbox: MessageInbox?
@@ -16,6 +17,7 @@ struct MessagesView: View {
     @State private var selection: MessageDestination?
     @State private var pending = Set<UUID>()
     @State private var actionError = false
+    @State private var activeRequest: UUID?
 
     private enum Conversation: Identifiable {
         case direct(MessageInbox.Direct)
@@ -39,6 +41,12 @@ struct MessagesView: View {
     var body: some View {
         List {
             if let inbox {
+                if error != nil {
+                    Button("Couldn’t refresh messages. Retry", systemImage: "arrow.clockwise") { revision += 1 }
+                        .font(.subheadline)
+                        .frame(minHeight: 44)
+                        .listRowBackground(slipPalette.surface)
+                }
                 if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { requestsEntry(inbox) }
                 conversations(inbox)
             } else {
@@ -72,6 +80,11 @@ struct MessagesView: View {
         .task(id: revision) {
             if inbox == nil { inbox = initialInbox?() }
             await load()
+        }
+        .onChange(of: sharedInbox?.refreshToken(for: .messages, memberID: api.userID)) {
+            guard activeRequest == nil, let refreshed = sharedInbox?.recentMessages(for: api.userID) else { return }
+            inbox = refreshed
+            error = nil
         }
         .onChange(of: startsComposing, initial: true) { if startsComposing { composing = true } }
         .refreshable { await load() }
@@ -206,14 +219,18 @@ struct MessagesView: View {
     }
 
     private func load() async {
+        let request = UUID()
+        activeRequest = request
+        defer { if activeRequest == request { activeRequest = nil } }
         do {
             let value = try await api.inbox()
             try Task.checkCancellation()
+            guard activeRequest == request else { return }
             inbox = value
             error = nil
             onUnreadChange(value.unreadCount)
         } catch {
-            if !Task.isCancelled {
+            if !Task.isCancelled, activeRequest == request {
                 if let response = error as? SlipSurgeHTTP.Status, [401, 403, 404].contains(response.code) {
                     inbox = nil
                     onUnreadChange(0)

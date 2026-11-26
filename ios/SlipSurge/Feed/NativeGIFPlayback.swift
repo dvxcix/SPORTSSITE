@@ -47,6 +47,7 @@ struct NativeGIFPlayback: View {
     var maxHeight: CGFloat = 220
     var maxWidth: CGFloat = 400
     var label = "GIF"
+    var autoplay = true
     var onLoaded: ((Bool) -> Void)? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scene
@@ -57,7 +58,7 @@ struct NativeGIFPlayback: View {
     var body: some View {
         Group {
             if let clip, clip.url == url {
-                AnimatedLayer(clip: clip, playing: !reduceMotion && scene == .active)
+                AnimatedLayer(clip: clip, playing: autoplay && !reduceMotion && scene == .active)
                     .aspectRatio(clip.aspect, contentMode: .fit)
                     .frame(maxWidth: maxWidth, maxHeight: maxHeight)
                     .accessibilityLabel(label)
@@ -184,14 +185,20 @@ struct NativeGIFPlayback: View {
         func updateUIView(_ view: UIView, context: Context) {
             let previous = context.coordinator
             guard clip.url != previous.url || playing != previous.playing else { return }
+            let changed = clip.url != previous.url
             previous.url = clip.url
             previous.playing = playing
 
             let key = "gifFrames"
             let layer = view.layer
-            layer.removeAnimation(forKey: key)
-            layer.contents = clip.frames.first?.image
-            if playing, clip.frames.count > 1, let first = clip.frames.first {
+            if changed {
+                layer.removeAnimation(forKey: key)
+                layer.speed = 1
+                layer.timeOffset = 0
+                layer.beginTime = 0
+                layer.contents = clip.frames.first?.image
+            }
+            if playing, layer.animation(forKey: key) == nil, clip.frames.count > 1, let first = clip.frames.first {
                 let schedule = CAKeyframeAnimation(keyPath: "contents")
                 let duration = clip.frames.reduce(0) { $0 + $1.duration }
                 var elapsed = 0.0
@@ -204,6 +211,16 @@ struct NativeGIFPlayback: View {
                 schedule.duration = duration
                 schedule.repeatCount = .infinity
                 layer.add(schedule, forKey: key)
+            } else if playing, layer.speed == 0 {
+                let pausedAt = layer.timeOffset
+                layer.speed = 1
+                layer.timeOffset = 0
+                layer.beginTime = 0
+                layer.beginTime = layer.convertTime(CACurrentMediaTime(), from: nil) - pausedAt
+            } else if !playing, layer.speed != 0, layer.animation(forKey: key) != nil {
+                let pausedAt = layer.convertTime(CACurrentMediaTime(), from: nil)
+                layer.speed = 0
+                layer.timeOffset = pausedAt
             }
         }
     }

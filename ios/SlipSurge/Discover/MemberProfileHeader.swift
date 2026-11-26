@@ -26,8 +26,15 @@ struct MemberProfileHeader: View {
                             } label: { Label("Message", systemImage: "bubble.left").labelStyle(.iconOnly) }
                                 .buttonStyle(.bordered).controlSize(.large)
                         }
-                        Button(profile.following ? "Following" : "Follow", action: follow)
-                            .buttonStyle(SlipSurgePrimaryButtonStyle()).disabled(changing)
+                        Button(action: follow) {
+                            HStack(spacing: 6) {
+                                if changing { ProgressView().controlSize(.small).accessibilityHidden(true) }
+                                Text(profile.following ? "Following" : "Follow")
+                            }
+                        }
+                        .buttonStyle(SlipSurgePrimaryButtonStyle())
+                        .disabled(changing)
+                        .accessibilityValue(changing ? "Updating" : "")
                     }
                 }
             }
@@ -85,23 +92,41 @@ struct MemberProfileHeader: View {
     }
 
     private var profileSummary: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            let counts = HStack(spacing: 14) {
-                metric((profile.followerCount ?? 0).formatted(.number.notation(.compactName)), "Followers")
-                metric((profile.followingCount ?? 0).formatted(.number.notation(.compactName)), "Following")
-            }
-            if let record = profile.record, let rate = record.rate {
-                let picks = HStack(spacing: 12) {
-                    metric("\(record.wins)–\(record.losses)", "Pick record")
-                    metric(rate.formatted(.percent.precision(.fractionLength(0))), "Win rate")
+        let counts = [
+            ((profile.followerCount ?? 0).formatted(.number.notation(.compactName)), "Followers"),
+            ((profile.followingCount ?? 0).formatted(.number.notation(.compactName)), "Following")
+        ]
+        let picks = if let record = profile.record, let rate = record.rate {
+            [("\(record.wins)–\(record.losses)", "Pick record"),
+             (rate.formatted(.percent.precision(.fractionLength(0))), "Win rate")]
+        } else {
+            [(String, String)]()
+        }
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 13) {
+                metrics(counts)
+                if !picks.isEmpty {
+                    Rectangle().fill(.secondary.opacity(0.24)).frame(width: 1, height: 13)
+                    metrics(picks)
                 }
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 13) { counts; Rectangle().fill(.secondary.opacity(0.24)).frame(width: 1, height: 13); picks }
-                    VStack(alignment: .leading, spacing: 7) { counts; picks }
-                }
-            } else {
-                counts
             }
+            VStack(alignment: .leading, spacing: 7) {
+                flexibleMetrics(counts)
+                if !picks.isEmpty { flexibleMetrics(picks) }
+            }
+        }
+    }
+
+    private func flexibleMetrics(_ items: [(String, String)]) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { metrics(items) }
+            VStack(alignment: .leading, spacing: 6) { metrics(items) }
+        }
+    }
+
+    private func metrics(_ items: [(String, String)]) -> some View {
+        ForEach(items.indices, id: \.self) { index in
+            metric(items[index].0, items[index].1)
         }
     }
 

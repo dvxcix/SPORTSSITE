@@ -73,7 +73,7 @@ struct SlipSurgeTabs: View {
     }
 
     private var showsLaunchReveal: Bool {
-        startupAvailable && launchReveal && !reduceMotion
+        startupAvailable && launchReveal && !reduceMotion && (replaysIntroduction || !hasSeenNativeIntroduction)
     }
 
     private var appSheet: Binding<SitePresentation?> {

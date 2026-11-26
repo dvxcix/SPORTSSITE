@@ -10,6 +10,7 @@ final class InboxUnread {
 
     private var memberID: UUID?
     private var counts: [InboxSection: Int] = [:]
+    private var refreshTokens: [InboxSection: UUID] = [:]
     @ObservationIgnored private var revisions: [InboxSection: Int] = [:]
     @ObservationIgnored private var activitySnapshot: Snapshot<[ActivityNotification]>?
     @ObservationIgnored private var messagesSnapshot: Snapshot<MessageInbox>?
@@ -26,6 +27,10 @@ final class InboxUnread {
 
     func recentMessages(for memberID: UUID) -> MessageInbox? {
         self.memberID == memberID ? messagesSnapshot?.recentValue : nil
+    }
+
+    func refreshToken(for section: InboxSection, memberID: UUID) -> UUID? {
+        self.memberID == memberID ? refreshTokens[section] : nil
     }
 
     func count(for section: InboxSection, memberID: UUID?) -> Int {
@@ -70,6 +75,7 @@ final class InboxUnread {
         revisions = [:]
         activitySnapshot = nil
         messagesSnapshot = nil
+        refreshTokens = [:]
     }
 
     private func refresh(_ section: InboxSection, account: AccountStore, memberID: UUID) async {
@@ -97,7 +103,13 @@ final class InboxUnread {
         guard !Task.isCancelled, account.memberID == memberID, self.memberID == memberID,
               revisions[section, default: 0] == revision else { return }
         update(count, for: section, memberID: memberID)
-        if let activity { activitySnapshot = Snapshot(value: activity) }
-        if let messages { messagesSnapshot = Snapshot(value: messages) }
+        if let activity {
+            activitySnapshot = Snapshot(value: activity)
+            refreshTokens[.activity] = UUID()
+        }
+        if let messages {
+            messagesSnapshot = Snapshot(value: messages)
+            refreshTokens[.messages] = UUID()
+        }
     }
 }

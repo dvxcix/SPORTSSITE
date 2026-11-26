@@ -164,6 +164,8 @@ struct ResearchOddsBoard: View {
     @Environment(\.slipPalette) private var slipPalette
     private var scheme: ColorScheme { slipPalette.colorScheme }
     @ScaledMetric(relativeTo: .subheadline) private var identityWidth = 153.0
+    @Environment(\.dynamicTypeSize) private var textSize
+    @Namespace private var priceViewport
     @ScaledMetric(relativeTo: .subheadline) private var priceWidth = 88.0
     @State private var filtersOpen = false
 
@@ -385,14 +387,16 @@ struct ResearchOddsBoard: View {
     }
 
     private func table(_ players: [ResearchOddsSlate.Player], columns: [Double], sortedLine: Double?) -> some View {
-        ScrollView(.horizontal) {
+        let playerColumn = PlayerColumn(width: identityWidth, surface: slipPalette.surface,
+                                        viewport: priceViewport, pinned: !textSize.isAccessibilitySize)
+        return ScrollView(.horizontal) {
             LazyVStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 2) {
+                PlayerPriceRow() {
                     ResearchSortHeader(title: "Player", selected: sortedLine == nil && selectedSort == .alphabetical, ascending: filter.ascendingName) {
                         if sortedLine == nil && selectedSort == .alphabetical { filter.ascendingName.toggle() }
                         else { filter.sort = .alphabetical; filter.sortedPriceLine = nil; filter.ascendingName = true }
                     }
-                    .frame(width: identityWidth, alignment: .leading).padding(.leading, 10)
+                    .modifier(playerColumn)
                     ForEach(columns, id: \.self) { line in
                         ResearchSortHeader(title: scorerLabel ?? "\(line.formatted())+", selected: sortedLine == line, ascending: filter.ascendingPrice) {
                             if sortedLine == line { filter.ascendingPrice.toggle() }
@@ -404,24 +408,66 @@ struct ResearchOddsBoard: View {
                 .background(slipPalette.surface)
                 ForEach(players) { player in
                     let byLine = Dictionary(uniqueKeysWithValues: player.prices.map { ($0.line, $0) })
-                    HStack(spacing: 2) {
-                        identity(player).frame(width: identityWidth, alignment: .leading).padding(.leading, 10)
+                    PlayerPriceRow(minimumHeight: 84) {
+                        identity(player)
+                            .modifier(playerColumn)
                         ForEach(columns, id: \.self) { line in
                             priceCell(byLine[line], player: player, milestone: scorerLabel ?? "\(line.formatted())+")
                                 .frame(width: priceWidth)
                         }
                     }
-                    .frame(minHeight: 84)
                     .background(slipPalette.surface)
                     Divider()
                 }
             }
         }
+        .coordinateSpace(.named(priceViewport))
         .background(slipPalette.surface, in: .rect(cornerRadius: 17))
         .clipShape(.rect(cornerRadius: 17))
-        .overlay { RoundedRectangle(cornerRadius: 17).strokeBorder(.secondary.opacity(0.22)) }
+        .overlay { RoundedRectangle(cornerRadius: 17).strokeBorder(.secondary.opacity(0.22)).allowsHitTesting(false) }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Player milestone prices")
+    }
+
+    private struct PlayerColumn: ViewModifier {
+        let width: CGFloat
+        let surface: Color
+        let viewport: Namespace.ID
+        let pinned: Bool
+
+        func body(content: Content) -> some View {
+            content
+                .frame(width: width, alignment: .leading)
+                .frame(maxHeight: .infinity)
+                .padding(.leading, 10)
+                .background(surface)
+                .overlay(alignment: .trailing) { Divider().allowsHitTesting(false) }
+                .visualEffect { content, geometry in
+                    content.offset(x: pinned ? max(0, -geometry.frame(in: .named(viewport)).minX) : 0)
+                }
+                .zIndex(1)
+        }
+    }
+
+    private struct PlayerPriceRow: Layout {
+        var minimumHeight: CGFloat = 44
+        private let spacing: CGFloat = 2
+
+        func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+            let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+            return CGSize(width: sizes.map(\.width).reduce(0, +) + CGFloat(max(0, sizes.count - 1)) * spacing,
+                          height: max(minimumHeight, sizes.map(\.height).max() ?? 0))
+        }
+
+        func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+            var x = bounds.minX
+            for subview in subviews {
+                let width = subview.sizeThatFits(.unspecified).width
+                subview.place(at: CGPoint(x: x, y: bounds.midY), anchor: .leading,
+                              proposal: ProposedViewSize(width: width, height: bounds.height))
+                x += width + spacing
+            }
+        }
     }
 
     private func identity(_ player: ResearchOddsSlate.Player) -> some View {

@@ -4,6 +4,7 @@ struct ActivityView: View {
     let api: ActivityAPI
     var inInbox = false
     var initialActivity: (() -> [ActivityNotification]?)? = nil
+    var sharedInbox: InboxUnread? = nil
     var onUnreadChange: (Int) -> Void = { _ in }
     @Environment(\.slipPalette) private var slipPalette
     @State private var selection = Filter.all
@@ -15,6 +16,7 @@ struct ActivityView: View {
     @State private var mutationFailed = false
     @State private var refreshFailed = false
     @State private var revision = 0
+    @State private var activeRequest: UUID?
 
     private enum State {
         case loading, ready, unavailable, denied
@@ -84,6 +86,12 @@ struct ActivityView: View {
                 state = .ready
             }
             await load()
+        }
+        .onChange(of: sharedInbox?.refreshToken(for: .activity, memberID: api.userID)) {
+            guard !busy, activeRequest == nil, let refreshed = sharedInbox?.recentActivity(for: api.userID) else { return }
+            rows = refreshed
+            state = .ready
+            refreshFailed = false
         }
         .onReceive(NotificationCenter.default.publisher(for: .slipSurgeActivityChanged)) { _ in
             if !busy { revision += 1 }
@@ -224,21 +232,25 @@ struct ActivityView: View {
     }
 
     private func load() async {
+        let request = UUID()
+        activeRequest = request
+        defer { if activeRequest == request { activeRequest = nil } }
         refreshFailed = false
         do {
             let loaded = try await api.load()
             try Task.checkCancellation()
+            guard activeRequest == request else { return }
             rows = loaded
             state = .ready
             onUnreadChange(loaded.unreadCount)
         } catch let response as SlipSurgeHTTP.Status where [401, 403, 404].contains(response.code) {
-            if !Task.isCancelled {
+            if !Task.isCancelled, activeRequest == request {
                 rows = []
                 state = .denied
                 onUnreadChange(0)
             }
         } catch {
-            if !Task.isCancelled {
+            if !Task.isCancelled, activeRequest == request {
                 if rows.isEmpty { state = .unavailable }
                 else { refreshFailed = true }
             }
