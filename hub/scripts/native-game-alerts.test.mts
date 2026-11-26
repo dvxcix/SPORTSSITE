@@ -148,3 +148,19 @@ test('NFL receiving touchdowns feature the named receiver ahead of the passer', 
   assert.equal(event.artwork.player, 'Sam LaPorta')
   assert.equal(event.artwork.portrait, portrait('4430027'))
 })
+
+test('NFL interception artwork features the named defender ahead of the throwing quarterback', () => {
+  const portrait = (id: string) => `https://a.espncdn.com/i/headshots/nfl/players/full/${id}.png`
+  const turnover = play('4', 'Pass Interception Return', {
+    text: 'J.Goff pass short left intended for J.Williams INTERCEPTED by D.Thieneman (T.Edwards) at CHI 21.',
+    athletes: [
+      { athlete: { id: '3046779', displayName: 'Jared Goff', headshot: { href: portrait('3046779') } } },
+      { athlete: { id: '33936596', displayName: 'Dillon Thieneman', headshot: { href: portrait('33936596') } } },
+    ],
+  })
+  const event = gameAlertEvents(nfl, summary(nfl.gameId, [turnover]), now)[0]
+  assert.equal(event.title, 'Interception')
+  if (event.artwork?.kind !== 'game') assert.fail('expected a portrait for the named defender')
+  assert.equal(event.artwork.player, 'Dillon Thieneman')
+  assert.equal(event.artwork.portraitSide, undefined)
+})

@@ -85,11 +85,15 @@ export function appleFeaturedPlayer(
   const normalize = (value: string) => value.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
     .replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
   const playText = (play.text ?? '').replace(/^(?:\([^)]{1,50}\)\s*)+/, '')
-  // An NFL passing touchdown starts with the quarterback, then identifies
-  // the receiver after "pass ... to". Play text often uses "K.Monangai".
-  const passTarget = sport === 'nfl' && scoringSide && /\btouchdown\b/i.test(playText)
+  // NFL play text often uses "K.Monangai" and starts passing plays
+  // with the quarterback, even when the receiver or defender made the play.
+  const turnoverTarget = sport === 'nfl' ? /\bintercepted by\s+(.+)/i.exec(playText)?.[1] : undefined
+  const touchdown = sport === 'nfl' && play.scoringPlay && /\btouchdown\b/i.test(playText)
+  const touchdownTarget = touchdown
     ? /\bpass\b[^.!?]{0,100}?\s+to\s+(.+)/i.exec(playText)?.[1] : undefined
-  const description = normalize(passTarget ?? playText)
+  const target = turnoverTarget ?? touchdownTarget
+  const participantTeam = turnoverTarget && !touchdown ? undefined : scoringSide
+  const description = normalize(target ?? playText)
   const nameMatch = (name: string) => {
     const [first, ...rest] = name.trim().split(/\s+/)
     const initials = first.replace(/[^A-Z]/g, '')
@@ -110,14 +114,14 @@ export function appleFeaturedPlayer(
 
   const matches = [
     ...participants.flatMap(({ athlete }) =>
-      nameMatch(athlete.displayName) ? player(athlete.displayName, athlete.headshot?.href, scoringSide) : []),
+      nameMatch(athlete.displayName) ? player(athlete.displayName, athlete.headshot?.href, participantTeam) : []),
     ...(summary.boxscore?.players ?? []).flatMap(({ team, statistics }) => statistics.flatMap(group =>
       group.athletes.flatMap(({ athlete }) =>
         nameMatch(athlete.displayName) ? player(athlete.displayName, athlete.headshot?.href, team.abbreviation) : []))),
   ]
   const identities = new Set(matches.map(match => match.name.toLowerCase()))
   if (identities.size === 1) return matches.find(match => match.team) ?? matches[0]
-  if (!passTarget && !matches.length && participants.length === 1) {
+  if (!target && !matches.length && participants.length === 1) {
     const { displayName, headshot } = participants[0].athlete
     return player(displayName, headshot?.href, scoringSide)[0]
   }
