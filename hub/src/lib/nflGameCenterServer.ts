@@ -40,4 +40,4 @@ export const getNflGameCenter = unstable_cache(async (gameId: string) => {
       .abortSignal(AbortSignal.timeout(2500))))
   const directory = portraits.flatMap(result => result.error ? [] : result.data ?? [])
   return { game, ...buildNflGameCenter(game, feed, directory), complete, updatedAt: feedResult.data?.fetched_at ?? null, date: schedule.gameday }
-}, ['nfl-game-center-v2'], { revalidate: 30, tags: ['sideline:nfl-live'] })
+}, ['nfl-game-center-v3'], { revalidate: 30, tags: ['sideline:nfl-live'] })

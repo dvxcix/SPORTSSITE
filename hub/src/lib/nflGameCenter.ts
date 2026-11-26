@@ -1,5 +1,6 @@
 import type { ESPNGame, ESPNPlay, ESPNSummary } from '@slipsurge/core/espn-api'
 import { nflPlayerPortrait } from './nflPlayerPortrait'
+import { normalizeNflPlayerName } from './nflPlayerName'
 
 type Row = Record<string, unknown>
 type Team = { id?: number; abbreviation: string }
@@ -33,7 +34,9 @@ const GROUPS = [
 
 type DirectoryPlayer = { display_name: string; latest_team: string | null; headshot: string | null; espn_id: string | number | null }
 const playerName = (row: NflCenterStat) => `${row.player.first_name} ${row.player.last_name}`.trim()
-const playerKey = (name: string) => name.normalize('NFC').toLowerCase()
+const directoryAliases = new Map([['Josh Uche', 'Joshua Uche'], ['JuJu Brents', 'Julius Brents']])
+const directoryName = (name: string) => directoryAliases.get(name) ?? name.replace(/\s+(?:Jr\.?|Sr\.?|II|III|IV|V)$/i, '')
+const playerKey = (name: string) => normalizeNflPlayerName(directoryName(name.trim()))
 const trustedHeadshot = (url: string | null | undefined) => url?.startsWith('https://') ? url : null
 
 export function nflCenterStats(game: ESPNGame, feed: NflCenterFeed | null) {
@@ -44,17 +47,20 @@ export function nflCenterStats(game: ESPNGame, feed: NflCenterFeed | null) {
 }
 
 export function nflCenterPortraitNames(stats: NflCenterStat[]) {
-  return [...new Set(stats.filter(row => !trustedHeadshot(row.player.headshot_url)).map(playerName)
-    .filter(name => name.length >= 3 && name.length <= 100))].slice(0, 150)
+  const names = stats.filter(row => !trustedHeadshot(row.player.headshot_url)).map(playerName)
+    .filter(name => name.length >= 3 && name.length <= 100)
+  return [...new Set([...new Set(names)].slice(0, 150).flatMap(name => [name, directoryName(name)]))]
 }
 
 function directoryPortrait(row: NflCenterStat, byName: Map<string, DirectoryPlayer[]>) {
   const candidates = byName.get(playerKey(playerName(row))) ?? []
-  // The retained game team disambiguates exact names. Skip uncertain matches
-  // rather than showing another player, including after historical team changes.
+  // The retained game team disambiguates spelling variants. Unknown and
+  // ambiguous identities, including after team changes, stay without a portrait.
   const team = canonicalNflTeam(row.team.abbreviation)
   const matches = candidates.filter(player => player.latest_team && canonicalNflTeam(player.latest_team) === team)
-  return matches.length === 1 ? nflPlayerPortrait(matches[0]) : null
+  const exact = matches.filter(player => player.display_name === playerName(row))
+  const reliable = exact.length === 1 ? exact : matches
+  return reliable.length === 1 ? nflPlayerPortrait(reliable[0]) : null
 }
 
 /** Presentation adapter only. Missing observations stay missing, not zero. */
