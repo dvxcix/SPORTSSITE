@@ -1,4 +1,6 @@
 import type { ESPNPlay, ESPNSummary } from '@slipsurge/core/espn-api'
+import { mlbHeadshot } from '@slipsurge/core/mlb-api'
+import { appleFeaturedPlayer, appleGameArtwork, type AppleGameArtwork, type AppleImageArtwork } from './appleNotificationArtwork'
 import type { DailyContactEvent } from './contactRecapTypes'
 
 export const gameAlertSports = ['nfl', 'nba', 'mlb'] as const
@@ -14,6 +16,7 @@ export type GameAlertEvent = {
   path: string
   occurredAt: number
   expiresAt: number
+  artwork?: AppleGameArtwork | AppleImageArtwork
 }
 
 export function gameAlertScope(sport: string, gameId: string, date: string): GameAlertScope | null {
@@ -90,13 +93,17 @@ export function gameAlertEvents(scope: GameAlertScope, summary: ESPNSummary, now
   const path = `/sports/${scope.sport}/${scope.gameId}`
   const formatScore = (a: number, h: number) => `${awayTeam} ${a} · ${homeTeam} ${h}`
   const events = new Map<string, GameAlertEvent>()
-  const append = (key: string, kind: GameAlertKind, title: string, subtitle: string, body: string, occurredAt: number, playId?: string) => {
+  const append = (key: string, kind: GameAlertKind, title: string, subtitle: string, body: string, occurredAt: number, awayScore: number, homeScore: number, play?: ESPNPlay, scoringSide?: string) => {
     // NFL play-by-play is imported every two minutes. Allow another
     // scheduled delivery pass if the first one saw the previous snapshot.
     const expiresAt = occurredAt + (key === 'final' || scope.sport === 'nfl' ? 300_000 : 150_000)
     if (!Number.isFinite(occurredAt) || occurredAt > now || expiresAt <= now) return
-    if (!events.has(key)) events.set(key, { key, kind, title, subtitle, body, occurredAt, expiresAt,
-      path: playId ? `${path}?play=${encodeURIComponent(playId)}` : path })
+    if (events.has(key)) return
+    const featured = play && kind !== 'milestone' ? appleFeaturedPlayer(play, summary, scope.sport, scoringSide ?? play.team?.id) : undefined
+    const artwork = away && home
+      ? appleGameArtwork(scope.sport, away.team, home.team, awayTeam, homeTeam, awayScore, homeScore, featured) : undefined
+    events.set(key, { key, kind, title, subtitle, body, occurredAt, expiresAt, artwork,
+      path: play ? `${path}?play=${encodeURIComponent(play.id)}` : path })
   }
   let lastAt = -Infinity
   let previous: [number, number] = [0, 0]
@@ -108,15 +115,15 @@ export function gameAlertEvents(scope: GameAlertScope, summary: ESPNSummary, now
     const scoreboard = formatScore(a, h)
     const quarter = periodEnd(scope.sport, play)
     if (quarter && !(state.completed && play.period.number >= 4)) {
-      append(`period:${play.period.number}`, 'milestone', quarter, scoreboard, '', timestamp, play.id)
+      append(`period:${play.period.number}`, 'milestone', quarter, scoreboard, '', timestamp, a, h, play)
     }
     const changed = a >= previous[0] && h >= previous[1] && (a > previous[0] || h > previous[1])
     const description = clean(play.text) || clean(play.type?.text)
     if (play.scoringPlay && changed) {
-      append(`play:${play.id}`, 'scoring', pointsTitle(scope.sport, play), scoreboard, description, timestamp, play.id)
+      append(`play:${play.id}`, 'scoring', pointsTitle(scope.sport, play), scoreboard, description, timestamp, a, h, play, a > previous[0] ? awayTeam : homeTeam)
     } else if (!quarter) {
       const major = majorPlay(scope.sport, play)
-      if (major) append(`play:${play.id}`, 'major', major, scoreboard, description, timestamp, play.id)
+      if (major) append(`play:${play.id}`, 'major', major, scoreboard, description, timestamp, a, h, play)
     }
     previous = [a, h]
   }
@@ -127,7 +134,7 @@ export function gameAlertEvents(scope: GameAlertScope, summary: ESPNSummary, now
       const row = team.leaders[0]?.leaders[0]
       return row ? [clean(`${row.athlete.displayName}: ${row.displayValue}`, 75)] : []
     })
-    append('final', 'milestone', 'Final', formatScore(a, h), [winner, ...leaders].join(' · '), lastAt)
+    append('final', 'milestone', 'Final', formatScore(a, h), [winner, ...leaders].join(' · '), lastAt, a, h)
   }
   return [...events.values()].sort((a, b) => a.occurredAt - b.occurredAt)
 }
@@ -135,7 +142,7 @@ export function gameAlertEvents(scope: GameAlertScope, summary: ESPNSummary, now
 export function nearHomeRunGameAlert(scope: GameAlertScope, contact: DailyContactEvent | undefined, now: number): GameAlertEvent | null {
   if (scope.sport !== 'mlb' || contact?.kind !== 'near_hr' || String(contact.gamePk) !== scope.gameId ||
       contact.gameDate !== scope.date || !Number.isInteger(contact.atBatIndex) || contact.atBatIndex < 0 ||
-      !Number.isInteger(contact.batterId) || !Number.isInteger(contact.pitchNumber)) return null
+      !Number.isInteger(contact.batterId) || contact.batterId <= 0 || !Number.isInteger(contact.pitchNumber)) return null
   const occurredAt = Date.parse(contact.eventTime ?? '')
   const expiresAt = occurredAt + 150_000
   if (!Number.isFinite(occurredAt) || occurredAt > now || expiresAt <= now) return null
@@ -146,7 +153,17 @@ export function nearHomeRunGameAlert(scope: GameAlertScope, contact: DailyContac
     contact.exitVelocity != null && Number.isFinite(contact.exitVelocity) ? `${contact.exitVelocity.toFixed(1)} mph exit velocity` : '',
     contact.parksHrCount != null && Number.isInteger(contact.parksHrCount) ? `HR in ${contact.parksHrCount} parks` : '',
   ]
+  const portrait = mlbHeadshot(contact.batterId)
+  const game = contact.game
+  const a = score(game?.awayScore), h = score(game?.homeScore)
+  const awayAbbr = clean(game?.awayTeam, 12), homeAbbr = clean(game?.homeTeam, 12)
+  const gameArtwork = game?.gamePk === contact.gamePk && a != null && h != null && awayAbbr && homeAbbr
+    ? appleGameArtwork('mlb',
+      { abbreviation: awayAbbr, displayName: game.awayName, logo: '', color: '', alternateColor: '' },
+      { abbreviation: homeAbbr, displayName: game.homeName, logo: '', color: '', alternateColor: '' },
+      awayAbbr, homeAbbr, a, h, { image: portrait, name: clean(contact.batterName, 70), team: contact.batterTeam }) : undefined
   return {
+    artwork: gameArtwork ?? { version: 1, kind: 'image', image: portrait },
     key: `near-hr:${contact.batterId}:${contact.atBatIndex}:${contact.pitchNumber}`,
     kind: 'major', title: 'Near home run', subtitle: clean(contact.batterName, 70),
     body: metrics.filter(Boolean).join(' · ') || clean(contact.description),
@@ -154,14 +171,22 @@ export function nearHomeRunGameAlert(scope: GameAlertScope, contact: DailyContac
   }
 }
 
+const gameEventEmoji: Readonly<Record<string, string>> = {
+  Touchdown: '🏈', 'Three-pointer': '🏀', 'Home run': '⚾', 'Near home run': '⚾',
+}
+
 export function gameAlertPayload(scope: GameAlertScope, event: GameAlertEvent) {
+  const emoji = gameEventEmoji[event.title]
+  const title = emoji ? `${emoji} ${event.title}` : event.title
   return {
     aps: {
-      alert: { title: event.title, subtitle: event.subtitle, body: event.body || 'Open Game Center for the full play-by-play.' },
+      alert: { title, subtitle: event.subtitle, body: event.body || 'Open Game Center for the full play-by-play.' },
       category: 'SLIPSURGE_LIVE_GAME',
       'thread-id': `game:${scope.sport}:${scope.gameId}`,
       sound: 'default',
+      ...(event.artwork ? { 'mutable-content': 1 } : {}),
     },
     gamePath: event.path,
+    ...(event.artwork ? { artwork: event.artwork } : {}),
   }
 }

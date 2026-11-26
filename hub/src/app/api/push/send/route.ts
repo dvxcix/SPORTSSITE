@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 
   const { data: notification } = await admin
     .from('notifications')
-    .select('id, user_id, type, message, link, data, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url)')
+    .select('id, user_id, type, message, link, data, actor_id, actor:users!notifications_actor_id_fkey(username, display_name, avatar_url, is_private)')
     .eq('id', notificationId)
     .maybeSingle()
   if (!notification) return NextResponse.json({ ok: true, skipped: 'notification not found' })
@@ -68,7 +68,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, skipped: 'quiet hours' })
   }
 
-  after(() => sendApplePush(notification.user_id, notification.id, notification.type))
+  const actor = notification.actor as { display_name?: string | null; username?: string | null; avatar_url?: string | null; is_private?: boolean | null } | null
+  const notificationData = (notification.data ?? {}) as Record<string, unknown>
+  after(() => sendApplePush(notification.user_id, notification.id, notification.type, {
+    actor, hasActor: notification.actor_id !== null, message: notification.message, data: notificationData,
+  }))
 
   const { data: subscriptions } = await admin
     .from('push_subscriptions')
@@ -94,14 +98,12 @@ export async function POST(request: Request) {
   const pendingSubscriptions = trustedSubscriptions.filter(subscription => !deliveredSubscriptionIds.has(subscription.id))
   if (!pendingSubscriptions.length) return NextResponse.json({ ok: true, skipped: 'push already delivered', sent: 0, failed: 0 })
 
-  const actor = notification.actor as { display_name?: string | null; username?: string | null } | null
   const actorName = actor?.display_name || actor?.username
   // Notifications that carry a rich image (a player headshot, a team logo —
   // see notifications.data across the various insert sites) show it as the
   // OS push icon too — the same image NotificationsList already renders as
   // the main circle in-app. Falls back to the static app icon exactly as
   // before for every notification type that doesn't set data.avatar_url.
-  const notificationData = (notification.data ?? {}) as Record<string, unknown>
   const richImage = typeof notificationData.avatar_url === 'string' ? notificationData.avatar_url : undefined
   const notificationPath = safeInternalPath(notification.link, '/notifications')
   const groupingKey = notification.type === 'lineup_confirmed'
