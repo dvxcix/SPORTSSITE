@@ -94,7 +94,8 @@ struct ResearchArtworkPicker: View {
     @ViewBuilder
     private func artwork(_ option: Option, size: CGFloat) -> some View {
         if let primary = option.playerColors.first {
-            ResearchArtwork(urls: option.url.map { [$0] } ?? [], fallback: option.icon, pointSize: size)
+            ResearchArtwork(urls: option.url.map { [$0] } ?? [], fallback: option.icon,
+                            pointSize: size * 1.4, playerPortrait: true)
                 .foregroundStyle(.white)
                 .frame(width: size, height: size)
                 .background(LinearGradient(colors: [primary, option.playerColors.dropFirst().first ?? primary],

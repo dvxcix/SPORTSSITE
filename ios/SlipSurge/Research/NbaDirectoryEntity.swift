@@ -274,7 +274,8 @@ struct NbaDirectoryEntityView: View {
 
     private func hero(title: String, subtitle: String, logo: URL?, portrait: URL?, color: Color, secondary: Color) -> some View {
         HStack(spacing: 14) {
-            ResearchArtwork(urls: [portrait, logo].compactMap { $0 }, fallback: "basketball")
+            ResearchArtwork(urls: [portrait, logo].compactMap { $0 }, fallback: "basketball",
+                            pointSize: 108, playerPortrait: portrait != nil)
                 .frame(width: 78, height: 78).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 6) {
                 Text(verbatim: title).font(.title.bold()).accessibilityAddTraits(.isHeader).foregroundStyle(.white)

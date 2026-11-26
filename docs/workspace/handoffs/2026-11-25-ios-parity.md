@@ -2795,3 +2795,11 @@ physical-device push are still open.
   Simulator. Both signed Xcode Debug builds passed, and the final build
   was installed on Miranda’s iPhone 16 Plus. The phone opened Feed with
   Scores in the rail. All 288 native and production source checks passed.
+- Follow-up applied the same portrait framing in player directory banners,
+  the player picker and Game Center. Both Debug builds passed and were
+  installed with the same native Feed entry. The shared workspace context
+  now carries the current Community direction.
+- Web PR #88 merged as `2a8749e0`. Vercel production reported READY.
+  On www.slipsurge.com the old forum, event, page, article and blog routes
+  returned 307 to Communities, and Communities returned 200. The two
+  already-failing web fixtures are recorded in the web handoff.

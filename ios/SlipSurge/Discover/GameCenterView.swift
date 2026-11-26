@@ -410,7 +410,9 @@ struct GameCenterView: View {
             ForEach(Array((data.leaders ?? []).enumerated()), id: \.offset) { _, leader in
                 ResearchToolCard(color: color) {
                     HStack {
-                        ResearchArtwork(urls: leader.headshot.map { [$0] } ?? [], fallback: "person.fill").frame(width: 36, height: 36)
+                        ResearchArtwork(urls: leader.headshot.map { [$0] } ?? [], fallback: "person.fill",
+                                        pointSize: 52, playerPortrait: true)
+                            .frame(width: 36, height: 36)
                         VStack(alignment: .leading, spacing: 4) {
                             Text(leader.name).font(.subheadline.bold())
                             Text("\(leader.team) · \(leader.label)").font(.caption).foregroundStyle(.secondary)
@@ -581,7 +583,9 @@ struct GameCenterView: View {
                 ForEach(group.players) { player in
                     VStack(alignment: .leading, spacing: 7) {
                         HStack {
-                            ResearchArtwork(urls: player.headshot.map { [$0] } ?? [], fallback: "person.fill").frame(width: 27, height: 27)
+                            ResearchArtwork(urls: player.headshot.map { [$0] } ?? [], fallback: "person.fill",
+                                            pointSize: 40, playerPortrait: true)
+                                .frame(width: 27, height: 27)
                             Text(player.name).font(.subheadline.weight(.semibold))
                             if let position = player.position { Text(position).font(.caption).foregroundStyle(.secondary) }
                         }

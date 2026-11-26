@@ -14,7 +14,7 @@ struct GameLiveCue: View {
         let secondary = Color(hex: team?.secondary) ?? primary
         HStack(spacing: 9) {
             if let person = cue.person, let portrait = person.portrait {
-                ResearchArtwork(urls: [portrait], fallback: "person.fill", pointSize: 33)
+                ResearchArtwork(urls: [portrait], fallback: "person.fill", pointSize: 48, playerPortrait: true)
                     .frame(width: 33, height: 33)
                     .background(.linearGradient(colors: [primary, secondary], startPoint: .topLeading, endPoint: .bottomTrailing),
                                 in: .rect(cornerRadius: 8))

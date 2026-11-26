@@ -329,7 +329,8 @@ struct NflDirectoryEntityView: View {
 
     private func banner(title: String, detail: String, portrait: URL?, logo: URL?, colors: (primary: Color, secondary: Color)) -> some View {
         HStack(spacing: 14) {
-            ResearchArtwork(urls: [portrait, logo].compactMap { $0 }, fallback: "football")
+            ResearchArtwork(urls: [portrait, logo].compactMap { $0 }, fallback: "football",
+                            pointSize: 108, playerPortrait: portrait != nil)
                 .frame(width: 78, height: 78).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 6) {
                 Text(verbatim: title).font(.title.bold()).accessibilityAddTraits(.isHeader).foregroundStyle(.white)
