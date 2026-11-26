@@ -102,7 +102,8 @@ test('game alerts respect quiet hours unless the account enabled live-game prior
 })
 
 test('native game artwork uses the play score, both team logos and the identifiable player', () => {
-  const legitimatePortrait = 'https://a.espncdn.com/i/headshots/nfl/players/full/4608686.png'
+  const legitimatePortrait = 'https://static.www.nfl.com/image/upload/f_auto,q_auto/league/sdrq7yje01g4fvsikoga'
+  const compactPortrait = 'https://static.www.nfl.com/image/upload/f_auto,q_auto/c_limit,w_480,h_480/league/sdrq7yje01g4fvsikoga'
   const scoring = play('1', 'Rushing Touchdown', {
     text: '(Shotgun) K.Monangai right tackle for 2 yards, TOUCHDOWN. C.Santos extra point is GOOD.',
     awayScore: 6, scoringPlay: true,
@@ -125,7 +126,7 @@ test('native game artwork uses the play score, both team logos and the identifia
   assert.equal(first.artwork.away.score, 6)
   assert.equal(first.artwork.away.primary, '0B162A')
   assert.equal(first.artwork.home.logo, 'https://a.espncdn.com/i/teamlogos/nfl/500/det.png')
-  assert.equal(first.artwork.portrait, legitimatePortrait)
+  assert.equal(first.artwork.portrait, compactPortrait)
   assert.equal(first.artwork.portraitSide, 'away')
   assert.equal(second.artwork.portrait, undefined)
   assert.equal(second.artwork.away.score, 7)

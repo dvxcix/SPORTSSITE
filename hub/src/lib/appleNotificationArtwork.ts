@@ -30,6 +30,10 @@ export function applePlayerPortrait(source: unknown) {
   // The headshot itself identifies the athlete. Drop provider transform parameters.
   url.search = ''
   url.hash = ''
+  // The NFL CDN's full-size PNGs can exceed the service extension's budget.
+  if (url.hostname === 'static.www.nfl.com' && /^\/image\/upload\/[A-Za-z0-9_.,/-]+\/league\/[\w-]+$/.test(url.pathname)) {
+    url.pathname = url.pathname.replace('/league/', '/c_limit,w_480,h_480/league/')
+  }
   return nativeNotificationArtwork('pick_result', null, url.href)
 }
 
