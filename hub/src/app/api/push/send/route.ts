@@ -29,13 +29,6 @@ export async function POST(request: Request) {
   const authError = requirePushAuth(request)
   if (authError) return authError
 
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-  const privateKey = process.env.VAPID_PRIVATE_KEY
-  if (!publicKey || !privateKey) {
-    return NextResponse.json({ error: 'VAPID keys are not configured' }, { status: 500 })
-  }
-  webpush.setVapidDetails('mailto:support@slipsurge.com', publicKey, privateKey)
-
   const body = await request.json().catch(() => null)
   const notificationId = body?.notification_id as string | undefined
   if (!notificationId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(notificationId)) {
@@ -58,6 +51,10 @@ export async function POST(request: Request) {
     .maybeSingle()
   const settings = (recipient?.notification_settings as Record<string, boolean> | null) ?? {}
   const deliverySettings = recipient?.notification_delivery_settings as NotificationDeliverySettings | null
+  const playerNews = notification.type === 'injury_update' || notification.type === 'roster_move'
+  if (playerNews && (settings.player_news !== true || notification.actor_id !== null)) {
+    return NextResponse.json({ ok: true, skipped: 'player news push disabled or invalid' })
+  }
   const settingsKey = SETTINGS_KEY_BY_TYPE[notification.type as NotificationType]
   // Push defaults to ON (matches NotificationSettingsForm) — only an
   // explicit `false` turns it off for this type.
@@ -74,11 +71,20 @@ export async function POST(request: Request) {
     actor, hasActor: notification.actor_id !== null, message: notification.message, data: notificationData,
   }))
 
+  if (playerNews) return NextResponse.json({ ok: true, native: true })
+
   const { data: subscriptions } = await admin
     .from('push_subscriptions')
     .select('id, endpoint, p256dh, auth')
     .eq('user_id', notification.user_id)
   if (!subscriptions?.length) return NextResponse.json({ ok: true, skipped: 'no push subscriptions' })
+
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const privateKey = process.env.VAPID_PRIVATE_KEY
+  if (!publicKey || !privateKey) {
+    return NextResponse.json({ error: 'VAPID keys are not configured' }, { status: 500 })
+  }
+  webpush.setVapidDetails('mailto:support@slipsurge.com', publicKey, privateKey)
 
   const invalidSubscriptions = subscriptions.filter(subscription => !isTrustedPushEndpoint(subscription.endpoint))
   if (invalidSubscriptions.length) {

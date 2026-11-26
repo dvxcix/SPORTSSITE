@@ -7,7 +7,10 @@ type Team = { id?: string; logos?: { href?: string }[] } & ESPNSummary['header']
 type Sport = 'nfl' | 'nba' | 'mlb'
 type Player = { name: string; image: string; team?: string }
 type Side = { abbreviation: string; score: number; logo?: string; primary?: string; secondary?: string }
-export type AppleImageArtwork = { version: 1; kind: 'image' | 'profile'; image: string }
+export type AppleImageArtwork = {
+  version: 1; kind: 'image' | 'profile'; image: string
+  badge?: string; secondaryBadge?: string; player?: string; team?: string; primary?: string; secondary?: string
+}
 export type AppleGameArtwork = {
   version: 1; kind: 'game'; away: Side; home: Side; portrait?: string;
   player?: string; portraitSide?: 'away' | 'home';
@@ -32,7 +35,7 @@ export function applePlayerPortrait(source: unknown) {
   url.hash = ''
   // The NFL CDN's full-size PNGs can exceed the service extension's budget.
   if (url.hostname === 'static.www.nfl.com' && /^\/image\/upload\/[A-Za-z0-9_.,/-]+\/league\/[\w-]+$/.test(url.pathname)) {
-    url.pathname = url.pathname.replace('/league/', '/c_limit,w_480,h_480/league/')
+    url.pathname = url.pathname.includes('/c_limit,w_480,h_480/') ? url.pathname : url.pathname.replace('/league/', '/c_limit,w_480,h_480/league/')
   }
   return nativeNotificationArtwork('pick_result', null, url.href)
 }
@@ -54,14 +57,20 @@ export function appleProfileAvatar(source: unknown) {
   return null
 }
 
-function teamSide(sport: Sport, team: Team, score: number, abbreviation: string): Side {
+export function appleTeamLogo(sport: Sport, values: unknown[]) {
   const logoPath = new RegExp(`^/i/teamlogos/${sport}/500(?:-dark)?/(?:scoreboard/)?[a-z0-9_-]+\\.png$`)
-  const source = (sport === 'mlb' ? [getTeamLogoPngUrl(abbreviation)] : [team.logo, ...team.logos?.map(logo => logo.href) ?? []])
-    .map(assetUrl).find(url => url?.hostname === 'a.espncdn.com' && logoPath.test(url.pathname))
-  const logo = source ? source.origin + source.pathname : undefined
-  const color = (value: string | undefined) => /^#?[\da-f]{6}$/i.test(value ?? '') ? value?.replace(/^#/, '') : undefined
-  const primary = color(sport === 'mlb' ? getTeamColor(abbreviation) : team.color)
-  const secondary = color(sport === 'mlb' ? getTeamSecondaryColor(abbreviation) : team.alternateColor)
+  const source = values.map(assetUrl).find(url => url?.hostname === 'a.espncdn.com' && logoPath.test(url.pathname))
+  return source ? source.origin + source.pathname : undefined
+}
+
+export function appleTeamColor(value: unknown) {
+  return typeof value === 'string' && /^#?[\da-f]{6}$/i.test(value) ? value.replace(/^#/, '') : undefined
+}
+
+function teamSide(sport: Sport, team: Team, score: number, abbreviation: string): Side {
+  const logo = appleTeamLogo(sport, sport === 'mlb' ? [getTeamLogoPngUrl(abbreviation)] : [team.logo, ...team.logos?.map(logo => logo.href) ?? []])
+  const primary = appleTeamColor(sport === 'mlb' ? getTeamColor(abbreviation) : team.color)
+  const secondary = appleTeamColor(sport === 'mlb' ? getTeamSecondaryColor(abbreviation) : team.alternateColor)
   return { abbreviation, score, logo, primary, secondary }
 }
 

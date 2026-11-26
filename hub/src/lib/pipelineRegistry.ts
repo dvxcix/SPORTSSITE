@@ -31,6 +31,7 @@ export const TRACKED_PIPELINES: PipelineDefinition[] = [
   ...(process.env.SLIPSURGE_NATIVE_GAME_ALERTS === '1'
     ? [{ name: 'native-game-alerts', label: 'iOS live game alerts', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Alerts' as const }]
     : []),
+  { name: 'native-player-news', label: 'iOS injury and roster alerts', schedule: 'Every 5 minutes', staleAfterMinutes: everyFiveMinutes, area: 'Alerts' },
   { name: 'slate-drop', label: 'Daily slate alert', schedule: 'Daily', staleAfterMinutes: daily, area: 'Alerts' },
   { name: 'mlb-sync-bio', label: 'MLB player biographies', schedule: 'Every 15 minutes', staleAfterMinutes: everyFifteenMinutes, area: 'MLB data' },
   { name: 'mlb-sync-season-stats', label: 'MLB season statistics', schedule: 'Every 15 minutes', staleAfterMinutes: everyFifteenMinutes, area: 'MLB data' },
