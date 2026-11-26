@@ -2872,3 +2872,9 @@ physical-device push are still open.
   Later live QA recorded the custom burst after a fire reaction on Chris Brooks’s
   reception. The public play count changed from 0 to 1 and returned to 0 after
   removing the test. Cross-account delivery and animation timing remain unmeasured.
+- Follow-up on native source `ad5bee0b`: changed the medium Home Screen
+  widget to NFL using the system edit UI. It displayed the live 13–13
+  GB–LAR game and opened that exact matchup. Sideline Usage switched from
+  descending to ascending Opportunities and reordered the signed-in board
+  while preserving the pregame cutoff. The Simulator's Lock Screen editor
+  did not expose widget placement in this session.
