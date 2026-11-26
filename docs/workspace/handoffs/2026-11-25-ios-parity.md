@@ -3587,3 +3587,37 @@ archive under SlipSurge LLC. A simulator push displayed the notification text.
 Release and physical artwork presentation verification are tracked below.
 The Mac's existing project and scheme edits are preserved in its primary
 checkout. The native release was built in an isolated worktree.
+
+Build 7 source is `975a4cec`. Xcode archived, exported, and uploaded the
+production APNs app with the embedded Notification Service and Scoreboard
+widget. App Store Connect shows build 7 Testing in SlipSurge Internal QA
+(one tester), and Devin’s physical iPad installed 1.0 (7). Apple still
+reported the missing vendor GIPHY dSYM and accepted the build.
+
+The iPad expanded a real production APNs preview using Chicago 17–Detroit 19
+at Kyle Monangai’s touchdown. It showed the SlipSurge app icon, both team
+marks, the score, and the original player portrait. Tapping opened play
+`4018730812743` in Game Center. The separately labeled public-follower
+preview showed the real avatar in both the thumbnail and expanded alert.
+The scheduled Chicago–Detroit interception `4018730814061` later rendered
+both logos and its 32–35 score on the device at 22:05 CET. That scheduled
+example predates the final defender selection and size corrections.
+
+The scoped Hub release is on main. PR 95 (`3b6c62ed`) added push metadata,
+PR 96 (`8ac8f85c`) resolved actual shortened NFL names and the receiving
+player on touchdowns, PR 97 (`777f1490`) requests the official 480px NFL
+portrait rendition, and PR 98 (`d2d2969e`) resolves the intercepting
+defender. The public NFL source delivered Kyle’s original image at 4.26 MB.
+The capped rendition restored the headshot on the installed build with no
+app rebuild. The system retains text and its existing tap route when
+artwork is unavailable.
+
+The 15 focused artwork, push and activity checks passed. The final broad
+run passed 295 of 297 and reproduced the two known main-only Court and MLB
+test harness failures. The backend uses existing scoring, turning points,
+period/final, MLB near-home-run, lineup, pick-result, and public-follow
+streams. Physical live NBA and MLB alerts and a new real follow are still
+unverified. General injuries and transactions have no new push stream in
+this checkpoint. Browser push, delivery preferences, database schema,
+and collector schedules retain their existing behavior. No historic alerts
+were replayed.
