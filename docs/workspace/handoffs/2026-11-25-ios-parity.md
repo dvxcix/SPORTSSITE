@@ -3571,3 +3571,19 @@ expanded NBA game log. An Instruments Animation Hitches capture was
 unavailable on the simulator, so this checkpoint provides no frame
 timing measurement. Apple and device verification here was private
 TestFlight. No desktop deployment, data migration or collectors changed.
+
+### 26 November 2026 — Native push artwork
+
+On branch `codex/ios-parity-20261125`, an embedded iPhone/iPad notification
+service assembles the score at the play, both source team marks, and the
+identified player's headshot and team colors. Social artwork uses the public
+follower's avatar. Apple keeps the main SlipSurge app icon. Image downloads
+use vetted public paths, bounded sizes and short timeouts. The original
+notification and route are available when art cannot load. Private profiles
+and direct messages retain generic push previews.
+
+Xcode 27.2 built the iPhone simulator app and produced a signed 1.0 (7)
+archive under SlipSurge LLC. A simulator push displayed the notification text.
+Release and physical artwork presentation verification are tracked below.
+The Mac's existing project and scheme edits are preserved in its primary
+checkout. The native release was built in an isolated worktree.

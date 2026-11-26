@@ -1,0 +1,7 @@
+#include "Auth.xcconfig"
+
+INFOPLIST_FILE = SlipSurgeNotificationServiceInfo.plist
+CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*] =
+CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*] =
+PRODUCT_BUNDLE_IDENTIFIER = com.slipsurge.ios.development.notification-service
+PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*] = $(SLIPSURGE_IOS_BUNDLE_IDENTIFIER).notification-service
