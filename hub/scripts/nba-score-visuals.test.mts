@@ -89,7 +89,7 @@ test('NBA score uses the canonical bolt dial and never converts missing or inval
     assert.equal(ring.getAttribute('data-tone'), 'elite')
     assert.equal(ring.getAttribute('aria-label'), 'SlipSurge Score 71 out of 100')
     assert.equal(ring.querySelector('strong')?.textContent, '71')
-    assert.equal(ring.querySelector('img')?.getAttribute('src'), '/logo.png')
+    assert.equal(ring.querySelector('img')?.getAttribute('src'), '/brand/2027/symbol-small-on-dark.svg')
     for (const score of [null, undefined, NaN, Infinity]) {
       await ui.render({ score })
       const missing = ui.host.querySelector('[aria-label="SlipSurge Score unavailable"]')!

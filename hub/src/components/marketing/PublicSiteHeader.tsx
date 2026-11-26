@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import Link from 'next/link'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import styles from './PublicSiteHeader.module.css'
@@ -20,8 +20,7 @@ export function PublicSiteHeader({ returnTo, mode = 'marketing', pathname }: { r
     <a className={styles.skip} href="#main-content">Skip to content</a>
     <div className={styles.inner}>
       <Link href="/" className={styles.brand} aria-label="SlipSurge home">
-        <Image src="/logo.png" alt="" width={30} height={30} preload />
-        <span>Slip<span>Surge</span></span>
+        <SlipSurgeLogo width={144} decorative priority />
       </Link>
       <nav className={styles.navigation} data-mode={mode} aria-label={mode === 'browse' ? 'Public browsing' : 'Product navigation'}>
         {mode === 'browse' ? browseLinks.map(({ href, label }) => <Link key={href} href={href}

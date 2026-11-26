@@ -24,7 +24,7 @@ function apply(theme: Theme) {
   html.classList.toggle('dark', theme === 'dark')
   html.classList.toggle('light', theme === 'light')
   html.style.colorScheme = theme
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0c1118' : '#edf0f4')
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#b4ff4d')
 }
 function setTheme(theme: Theme) {
   current = theme

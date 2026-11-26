@@ -1,0 +1,21 @@
+{
+  "files": 32,
+  "addedDiagnostics": [],
+  "filesWithExistingErrors": [
+    {
+      "file": "src/app/api/share-image/[postId]/route.tsx",
+      "baselineErrors": 4,
+      "currentErrors": 4
+    },
+    {
+      "file": "src/app/api/share-image/watchlist/route.tsx",
+      "baselineErrors": 2,
+      "currentErrors": 2
+    },
+    {
+      "file": "src/components/dugout/DugoutClient.tsx",
+      "baselineErrors": 93,
+      "currentErrors": 93
+    }
+  ]
+}

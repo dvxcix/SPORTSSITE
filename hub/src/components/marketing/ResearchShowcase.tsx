@@ -1,5 +1,6 @@
 'use client'
 
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import { useState } from 'react'
 import { ArrowRight, ChevronDown, ChevronRight, Layers3, LockKeyhole, Minus, Star, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { BookLogo } from '@/components/BookLogo'
@@ -82,7 +83,7 @@ export function ResearchShowcase({previews}:{previews?:Record<PreviewSport,Resea
 
   return <div className={styles.workspace} data-preview-sport={sport}>
     <div className={styles.frameTop}>
-      <span className={styles.frameBrand}><SafeImage src="/logo.png" alt="" width={18} height={25}/><strong>SlipSurge</strong><span>Research preview</span></span>
+      <span className={styles.frameBrand}><SlipSurgeLogo width={120} decorative/><span>Research preview</span></span>
       <DiscoveryLink href={fullPreview} destination={sport+'_preview'} className={styles.frameOpen}>Full preview <ArrowRight size={14} aria-hidden="true"/></DiscoveryLink>
     </div>
     <div className={styles.frameBody}>

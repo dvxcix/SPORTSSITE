@@ -1,14 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#111827"/>
-      <stop offset="1" stop-color="#020617"/>
-    </linearGradient>
-    <linearGradient id="bolt" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#67e8f9"/>
-      <stop offset="1" stop-color="#22c55e"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <path d="M322 54 126 284h113l-47 174 194-247H273z" fill="url(#bolt)"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="t d"><title id="t">SlipSurge logo</title><desc id="d">An angular letter S struck by a lightning bolt, like a dollar sign</desc><rect width="1024" height="1024" fill="#b4ff4d"/><path id="symbol" fill="#0a0a0b" fill-rule="evenodd" d="M319.2 286.12 L737.74 286.12 L737.74 399.06 L681.27 455.53 L624.8 455.53 L624.8 399.06 L478.92 399.06 L704.8 624.94 L704.8 737.88 L286.26 737.88 L286.26 624.94 L342.73 568.47 L399.2 568.47 L399.2 624.94 L545.08 624.94 L319.2 399.06 Z M493.31 286.12 L606.26 286.12 L700.37 192 L587.43 192 Z M530.96 737.88 L418.02 737.88 L323.9 832 L436.84 832 Z"/></svg>

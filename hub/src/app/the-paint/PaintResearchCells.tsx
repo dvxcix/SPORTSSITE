@@ -1,7 +1,7 @@
 'use client'
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import { TeamLogo } from './PaintVisuals'
 import { MechanicsScoreRing } from '@/components/ui/MechanicsScoreRing'
-import Image from 'next/image'
 import type { PaintGame } from '@/lib/nbaPaint'
 import { nbaMmDescription } from '@/lib/nbaMarketMetrics'
 import polish from './research-polish.module.css'
@@ -15,7 +15,7 @@ export function compareResearch(a: number | string | null | undefined, b: number
   return (typeof a === 'string' && typeof b === 'string' ? a.localeCompare(b) : Number(a) - Number(b)) * (ascending ? 1 : -1)
 }
 export function PaintScoreCell({ score }: { score: number | null | undefined }) {
-  if (score == null || !Number.isFinite(score)) return <span className={dials.scoreUnavailable} aria-label="SlipSurge Score unavailable"><strong>—</strong><small><Image src="/logo.png" alt="" width={7} height={7} aria-hidden="true"/><em>SCORE</em></small></span>
+  if (score == null || !Number.isFinite(score)) return <span className={dials.scoreUnavailable} aria-label="SlipSurge Score unavailable"><strong>—</strong><small><SlipSurgeLogo variant="symbol" width={16} decorative/><em>SCORE</em></small></span>
   return <MechanicsScoreRing score={score} label="SlipSurge Score" size="small" />
 }
 export function PaintMmCell({ mm }: { mm: number | null | undefined }) {

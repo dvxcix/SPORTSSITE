@@ -3,7 +3,7 @@
 .frameBrand { display:flex; min-width:0; align-items:center; gap:9px; }
 .frameBrand>img { flex-shrink:0; object-fit:contain; }
 .frameBrand>strong { font-size:14px; font-weight:700; letter-spacing:-.03em; }
-.frameBrand>span { margin-left:8px; color:var(--text-2); font-size:11px; }
+.frameBrand>span:not([data-brand-logo]) { margin-left:8px; color:var(--text-2); font-size:11px; }
 .frameOpen { display:inline-flex; min-height:36px; align-items:center; gap:8px; color:var(--text-1); font-size:12px; font-weight:600; text-decoration:none; }
 .frameOpen:hover { color:var(--accent); }
 .frameBody { display:grid; grid-template-columns:152px minmax(0,1fr); min-width:0; }
@@ -147,7 +147,7 @@
   .inspector { display:none; }
   .recentColumn { display:table-cell; }
   .deskHeading h2 { font-size:21px; }
-  .frameBrand>span { display:none; }
+  .frameBrand>span:not([data-brand-logo]) { display:none; }
   .gameStrip { margin-top:12px; }
   .toolbar { align-items:flex-start; flex-direction:column; }
   .views { width:100%; }

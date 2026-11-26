@@ -1,4 +1,5 @@
 'use client'
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import { publicWorkspaceFetch as fetch, publicWorkspaceHref, currentPublicWorkspace, publicWorkspaceAccessOr } from '@/lib/publicWorkspaceClient'
 
 import { ResearchBookFilter, useResearchBooks } from '@/components/research/ResearchBookFilter'
@@ -1147,7 +1148,7 @@ function PlayerModal({ player, players, team, lens, board, game, initialWindow, 
             <>
               <div className={styles.modalHero}>
                 <div className={styles.scoreRing}>
-                  <Image src="/brand-bolt.png" alt="" width={13} height={18} />
+                  <SlipSurgeLogo variant="symbol" width={18} decorative />
                   <b>{player.eligible !== false && activePlayer.hasTracking && !activePlayer.unavailableMetrics?.includes('index') ? activePlayer.index : '—'}</b>
                   <span>{activePlayer.contextLabel ?? 'ROLE'} SCORE</span>
                 </div>
@@ -2017,7 +2018,7 @@ export function SidelineBoardClient({ games, selectedId, sample, lens, odds, gam
                             }}
                           >
                             <button type="button" aria-label={column.title} onClick={() => changeSort(column.id)}>
-                              {column.brand ? <Image className={styles.scoreLogo} src="/brand-bolt.png" alt="SlipSurge" width={9} height={13} /> : column.vendor ? <BookLogo vendor={column.vendor} size={14} /> : isPublicPicks ? <PicksMark/> : null}
+                              {column.brand ? <SlipSurgeLogo className={styles.scoreLogo} variant="symbol" width={16} /> : column.vendor ? <BookLogo vendor={column.vendor} size={14} /> : isPublicPicks ? <PicksMark/> : null}
                               <span>{isPublicPicks?column.label.replace(/ PICKS$/,''):column.label}</span>
                               {sort ? (
                                 <em>

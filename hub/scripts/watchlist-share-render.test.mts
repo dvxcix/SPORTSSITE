@@ -30,10 +30,10 @@ const compiled = { exports: {} as { GET: (request: Request) => Promise<Response>
 new Function('require', 'module', 'exports', bundle.outputFiles[0].text)(require, compiled, compiled.exports)
 
 test('a full page generates an actual bounded PNG without external requests', async () => {
-  const icon = await readFile('public/icon-512.png')
+  const icon = await readFile('public/brand/2027/logo-header-on-light.png')
   const oldFetch = globalThis.fetch
   globalThis.fetch = async input => {
-    assert.equal(String(input), 'https://www.slipsurge.com/icon-512.png')
+    assert.equal(String(input), 'https://www.slipsurge.com/brand/2027/logo-header-on-light.png')
     return new Response(icon, { headers: { 'content-type': 'image/png' } })
   }
   try {

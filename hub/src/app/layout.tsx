@@ -38,18 +38,21 @@ export const metadata: Metadata = {
     siteName: 'SlipSurge',
     title: 'SlipSurge | Sports Research, Picks and Community',
     description: 'Sports research, live market movement, verified picks, creator communities, and real-time scores in one platform.',
-    images: [{ url: '/og.png', width: 1731, height: 909, alt: 'SlipSurge sports research platform' }],
+    images: [{ url: 'https://www.slipsurge.com/og-image-1200x630.png', width: 1200, height: 630, alt: 'SlipSurge sports research platform' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'SlipSurge | Sports Research, Picks and Community',
     description: 'Sports research, live market movement, verified picks, creator communities, and real-time scores in one platform.',
-    images: ['/og.png'],
+    images: ['https://www.slipsurge.com/og-image-1200x630.png'],
   },
   robots: { index: true, follow: true },
   icons: {
-    icon: [{ url: '/icon-192.png', type: 'image/png' }],
-    apple: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    icon: [
+      { url: '/favicon.ico?v=2027', sizes: '48x48' },
+      { url: '/favicon.svg?v=2027', type: 'image/svg+xml' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png?v=2027', sizes: '180x180', type: 'image/png' }],
   },
   manifest: '/manifest.webmanifest',
 }

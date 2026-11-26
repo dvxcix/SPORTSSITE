@@ -94,8 +94,7 @@ ${safePreheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity
 <table role="presentation" class="email-shell" width="520" cellpadding="0" cellspacing="0" style="width:520px;max-width:100%;background:#0B0D12;border:1px solid #242A33;border-radius:20px;overflow:hidden;box-shadow:0 18px 60px rgba(0,0,0,.42);">
 <tr><td style="height:3px;background:linear-gradient(90deg,#B4FF4D 0%,#5EEAD4 55%,#22D3EE 100%);font-size:0;line-height:0;">&nbsp;</td></tr>
 <tr><td class="email-pad" style="padding:32px 34px 0;text-align:center;">
-<img src="https://www.slipsurge.com/logo.png" width="46" height="46" style="display:block;margin:0 auto 12px;border:0;border-radius:14px;" alt="SlipSurge" />
-<div style="font-size:19px;font-weight:900;color:#F8FAFC;letter-spacing:-.02em;">Slip<span style="color:#B4FF4D;">Surge</span></div>
+<img src="https://www.slipsurge.com/brand/2027/logo-header-on-dark.png" width="174" height="51" style="display:block;width:174px;max-width:100%;height:auto;margin:0 auto;border:0;" alt="SlipSurge" />
 </td></tr>
 <tr><td class="email-pad" style="padding:28px 34px 10px;text-align:center;">
 ${safeEyebrow ? `<div style="margin:0 0 10px;font-size:11px;line-height:1.4;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#B4FF4D;">${safeEyebrow}</div>` : ''}

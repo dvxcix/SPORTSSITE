@@ -1,12 +1,12 @@
 'use client'
 
+import { SlipSurgeLogo } from '@/components/brand/SlipSurgeLogo'
 import Link from 'next/link'
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { ModalSurface } from '@/components/ui/ModalSurface'
-import { SafeImage } from '@/components/ui/SafeImage'
 import { PUBLIC_WORKSPACE_ACCESS_EVENT, publicWorkspaceHref } from '@/lib/publicWorkspaceClient'
 import type { PreviewSport } from '@/lib/publicResearchPreview'
 import styles from './PublicWorkspaceFrame.module.css'
@@ -25,7 +25,7 @@ export function PublicWorkspaceFrame({ sport, game, date, children }: { sport: P
   }
   const pricing = '/pricing?' + new URLSearchParams({ preview: sport, game, date })
   return <div className={styles.page} onClickCapture={navigate}>
-    <header className={styles.header}><Link className={styles.brand} href="/" aria-label="SlipSurge home"><SafeImage src="/logo.png" width="28" height="28" alt=""/><strong>SlipSurge</strong></Link><nav aria-label="Research previews"><Link href="/preview/nba" aria-current={sport === 'nba' ? 'page' : undefined}>NBA</Link><Link href="/preview/nfl" aria-current={sport === 'nfl' ? 'page' : undefined}>NFL</Link></nav><div className={styles.actions}><ThemeToggle/><Link href="/auth/login">Sign in</Link></div></header>
+    <header className={styles.header}><Link className={styles.brand} href="/" aria-label="SlipSurge home"><SlipSurgeLogo width={130} decorative priority/></Link><nav aria-label="Research previews"><Link href="/preview/nba" aria-current={sport === 'nba' ? 'page' : undefined}>NBA</Link><Link href="/preview/nfl" aria-current={sport === 'nfl' ? 'page' : undefined}>NFL</Link></nav><div className={styles.actions}><ThemeToggle/><Link href="/auth/login">Sign in</Link></div></header>
     <div className={styles.notice}><span><strong>One game unlocked</strong><span>Use the actual {sport === 'nba' ? 'Court' : 'Sideline'} boards and player research.</span></span><Link href={pricing}>Unlock the full slate</Link></div>
     <main id="main-content" className={styles.workspace}>{children}</main>
     <ModalSurface open={access} onClose={() => setAccess(false)} labelledBy="preview-access-title" backdropClassName={styles.backdrop}>

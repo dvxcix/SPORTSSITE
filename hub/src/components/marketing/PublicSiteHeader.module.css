@@ -24,7 +24,7 @@
 @media (max-width: 480px) {
   .inner { width: calc(100% - 32px); gap: 0 8px; }
   .brand { gap: 6px; font-size: 17px; }
-  .brand img { width: 25px; height: 25px; }
+
   .actions { gap: 6px; }
   .navigation { justify-content: space-between; gap: 8px; }
   .navigation[data-mode='browse'] { gap: 12px; }
