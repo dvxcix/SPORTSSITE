@@ -86,6 +86,7 @@ struct NativeOnboarding: View {
     }
 
     let account: AccountStore
+    var completed: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.slipPalette) private var slipPalette
     private var scheme: ColorScheme { slipPalette.colorScheme }
@@ -290,7 +291,7 @@ struct NativeOnboarding: View {
             guard !Task.isCancelled else { return }
             if source.complete {
                 await account.recheckOnboarding()
-                dismiss()
+                finish()
             } else {
                 initial = source
                 draft = .init(source)
@@ -304,9 +305,14 @@ struct NativeOnboarding: View {
         failed = false
         do {
             try await account.finishOnboarding(draft)
-            dismiss()
+            finish()
         } catch {
             failed = true
         }
+    }
+
+    private func finish() {
+        if let completed { completed() }
+        else { dismiss() }
     }
 }

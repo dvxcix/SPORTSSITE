@@ -86,7 +86,15 @@ struct CourtOddsBoardView: View {
                     loading
                 }
             case .denied:
-                ContentUnavailableView("Ultimate research", systemImage: "lock", description: Text("Ultimate includes the full Odds Board."))
+                ContentUnavailableView {
+                    Label("Ultimate research", systemImage: "lock")
+                } description: {
+                    Text("Ultimate includes the full Odds Board.")
+                } actions: {
+                    if case .member(let account, _) = scope {
+                        UltimateSpotlightButton(account: account, spotlight: .court)
+                    }
+                }
             case .failed:
                 ContentUnavailableView {
                     Label("Odds Board couldn’t load", systemImage: "wifi.exclamationmark")

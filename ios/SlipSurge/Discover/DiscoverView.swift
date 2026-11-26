@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum DiscoverDestination: Hashable {
-    case communities, creators, leaderboard, scores(date: Date?, league: String)
+    case communities, browseCommunities, creators, leaderboard, scores(date: Date?, league: String)
     case community(String, NativeSiteLink.CommunitySection)
     case liveRooms, liveRoom(String)
 }
@@ -14,6 +14,7 @@ struct DiscoverView: View {
     var opensCommunity: UUID? = nil
     @Binding var opensDestination: DiscoverDestination?
     @Environment(\.slipPalette) private var slipPalette
+    @Environment(\.presentNativeSpotlight) private var presentSpotlight
     private var scheme: ColorScheme { slipPalette.colorScheme }
     @State private var section = Section.communities
     @State private var communities: DiscoverAPI.Communities?
@@ -112,6 +113,10 @@ struct DiscoverView: View {
                 destination = nil
                 section = .communities
                 if opensJoined { yours = true }
+            case .browseCommunities:
+                destination = nil
+                section = .communities
+                yours = false
             case .creators:
                 destination = nil
                 if opensJoined { yours = false }
@@ -161,15 +166,24 @@ struct DiscoverView: View {
             }
             .buttonStyle(SlipSurgePressStyle())
         }
+        if let presentSpotlight {
+            Button {
+                presentSpotlight(.creators)
+            } label: {
+                shortcut("Start a community", symbol: "person.crop.circle.badge.plus")
+            }
+            .buttonStyle(SlipSurgePressStyle())
+        }
     }
 
     private func shortcut(_ title: String, symbol: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: symbol).foregroundStyle(slipPalette.accent).accessibilityHidden(true)
-            Text(title).fixedSize(horizontal: true, vertical: false)
+            Text(title).fixedSize(horizontal: false, vertical: true)
         }
         .font(.subheadline.weight(.semibold))
         .padding(.horizontal, 11)
+        .padding(.vertical, 6)
         .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
         .background(slipPalette.surface, in: .rect(cornerRadius: 13))
         .contentShape(.rect)

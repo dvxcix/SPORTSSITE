@@ -24,6 +24,8 @@ struct FeedView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.nativeResume) private var resume
     @Environment(\.nativeResumeActive) private var resumeActive
+    @Environment(\.presentNativeSpotlight) private var presentSpotlight
+    @AppStorage private var dismissedUltimateOffer: Bool
     @State private var filter = FeedFilter.latest
     @State private var sport = ""
     @State private var posts: [FeedPost] = []
@@ -78,6 +80,8 @@ struct FeedView: View {
         _opensSelection = opensSelection
         self.scrollToTopRequest = scrollToTopRequest
         self.resumeOffer = resumeOffer
+        let viewer = api.userID?.uuidString ?? "guest"
+        _dismissedUltimateOffer = AppStorage(wrappedValue: false, "nativeUltimateOfferDismissed.v1.\(viewer)")
     }
 
     var body: some View {
@@ -216,6 +220,12 @@ struct FeedView: View {
                     .padding(.horizontal, 14)
                     .padding(.bottom, 4)
                 LiveGamesStrip(api: scoresAPI, active: resumeActive && visible)
+                if filter == .latest, load == .ready, !dismissedUltimateOffer, api.account.showsUltimateOffer,
+                   let presentSpotlight {
+                    ultimateOffer { presentSpotlight(.ultimate) }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                }
 
                 switch load {
                 case .loading:
@@ -241,6 +251,41 @@ struct FeedView: View {
             }
             .frame(maxWidth: .infinity)
         }
+    }
+
+    private func ultimateOffer(open: @escaping () -> Void) -> some View {
+        HStack(spacing: 4) {
+            Button(action: open) {
+                HStack(spacing: 10) {
+                    Image(systemName: "bolt.fill").foregroundStyle(slipPalette.accent)
+                        .frame(width: 32, height: 32)
+                        .background(slipPalette.accent.opacity(0.13), in: .rect(cornerRadius: 9))
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Explore Ultimate").font(.subheadline.weight(.bold))
+                        Text("Full NBA and NFL research").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
+                .padding(.leading, 10)
+                .padding(.vertical, 8)
+                .frame(minHeight: 48)
+                .contentShape(.rect)
+            }
+            .buttonStyle(SlipSurgePressStyle())
+            Button("Hide Ultimate offer", systemImage: "xmark") {
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.17)) { dismissedUltimateOffer = true }
+            }
+            .labelStyle(.iconOnly)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .frame(width: 44, height: 44)
+            .contentShape(.rect)
+            .buttonStyle(.plain)
+        }
+        .background(slipPalette.selectionGradient, in: .rect(cornerRadius: 13))
     }
 
     private var scopes: some View {

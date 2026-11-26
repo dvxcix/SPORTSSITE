@@ -40,6 +40,7 @@ struct MembershipBillingView: View {
     @State private var offer = Offer.monthly
     @State private var expectedState: String?
     @State private var operation = false
+    @State private var checkingCheckout = false
     @State private var confirmCancel = false
     @State private var notice: String?
     @State private var error: (any Error)?
@@ -68,6 +69,9 @@ struct MembershipBillingView: View {
                     }
                     if storefront == "USA", let options = snapshot.membership.billingOptions, !options.isEmpty {
                         choosePlan(options)
+                    } else if snapshot.accessTier != "ultimate", snapshot.membership.billingOptions?.isEmpty == false {
+                        Label("New subscriptions are currently unavailable in your App Store region.", systemImage: "info.circle")
+                            .font(.subheadline).foregroundStyle(.secondary)
                     }
                     NavigationLink {
                         CreatorMembershipsView(api: .init(client: .init(account: account, userID: userID)))
@@ -79,6 +83,7 @@ struct MembershipBillingView: View {
                 if let notice {
                     Text(notice).font(.subheadline).foregroundStyle(.secondary)
                 }
+                if checkingCheckout { ProgressView("Checking your membership") }
             }
             .padding(16)
         }
@@ -87,16 +92,21 @@ struct MembershipBillingView: View {
         .background(slipPalette.background)
         .foregroundStyle(slipPalette.text)
         .task(id: retry) { await load() }
-        .refreshable { await load() }
+        .task {
+            for await current in Storefront.updates { storefront = current.countryCode }
+        }
+        .refreshable { await load(); await refreshAccount() }
         .onChange(of: phase) { _, current in
-            if current == .active, expectedState != nil { Task { await load() } }
+            if current == .active, expectedState != nil {
+                Task { await load(); await refreshAccount() }
+            }
         }
         .onOpenURL { url in
             guard url.scheme == ProviderSignIn.scheme, url.host == "checkout", url.path == "/complete",
                   let state = expectedState, url.fragment == nil, url.user == nil, url.password == nil, url.port == nil,
                   URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems == [.init(name: "state", value: state)] else { return }
             expectedState = nil
-            Task { await load(); await refreshAccount() }
+            Task { await confirmCheckout() }
         }
         .confirmationDialog("Cancel renewal?", isPresented: $confirmCancel, titleVisibility: .visible) {
             Button("Cancel renewal", role: .destructive) { Task { await cancel() } }
@@ -165,7 +175,7 @@ struct MembershipBillingView: View {
                 .padding(.horizontal, 12).frame(minHeight: 47)
                 .foregroundStyle(Color(rgb: 0x150E0C)).background(Color(rgb: 0xFA4616), in: .rect(cornerRadius: 12))
             }
-            .buttonStyle(SlipSurgePressStyle()).disabled(operation || options[offer.rawValue] == nil)
+            .buttonStyle(SlipSurgePressStyle()).disabled(operation || checkingCheckout || options[offer.rawValue] == nil)
         }
     }
 
@@ -186,11 +196,38 @@ struct MembershipBillingView: View {
         }
     }
 
+    private func confirmCheckout() async {
+        guard !checkingCheckout else { return }
+        checkingCheckout = true
+        notice = nil
+        defer { checkingCheckout = false }
+        for attempt in 0..<5 {
+            await load()
+            guard account.memberID == userID, !Task.isCancelled else { return }
+            if snapshot?.accessTier == "ultimate" {
+                await refreshAccount()
+                notice = "Ultimate is active."
+                return
+            }
+            if attempt < 4 {
+                do { try await Task.sleep(for: .seconds(2)) }
+                catch { return }
+            }
+        }
+        notice = "Your access hasn’t updated yet. Pull to refresh after checkout is confirmed."
+    }
+
     private func checkout() async {
-        guard !operation, storefront == "USA", let quote = snapshot?.membership.billingOptions?[offer.rawValue] else { return }
+        guard !operation, !checkingCheckout, storefront == "USA",
+              let quote = snapshot?.membership.billingOptions?[offer.rawValue] else { return }
         operation = true
         notice = nil
         defer { operation = false }
+        let currentStorefront = await Storefront.current?.countryCode
+        guard currentStorefront == "USA" else {
+            storefront = currentStorefront
+            return
+        }
         do {
             struct Checkout: Decodable { let purchaseUrl: URL }
             let state = try ProviderSignIn.randomValue()

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CommunityCreateView: View {
+    private enum Field { case name, description }
     private struct Draft: Encodable {
         let name: String
         let description: String
@@ -21,8 +22,10 @@ struct CommunityCreateView: View {
 
     let api: CreatorStoreAPI
     var initialOffer: UUID? = nil
+    var freeOnly = false
     var completed: (() async -> Void)? = nil
     @Environment(\.slipPalette) private var slipPalette
+    @FocusState private var focus: Field?
     @State private var page: CreatorStorePage?
     @State private var status: Receipt?
     @State private var problem: String?
@@ -61,8 +64,10 @@ struct CommunityCreateView: View {
                         Label("Setup couldn’t load", systemImage: "exclamationmark.circle")
                     } description: { Text(problem) } actions: { Button("Retry") { revision += 1 } }
                 } else { ProgressView("Loading community setup").frame(maxWidth: .infinity) }
-            }.padding(16)
+            }.frame(maxWidth: 560).padding(16).frame(maxWidth: .infinity)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .keyboardDone { focus = nil }
         .navigationTitle("New Community")
         .navigationBarTitleDisplayMode(.inline)
         .background(slipPalette.background)
@@ -76,9 +81,16 @@ struct CommunityCreateView: View {
             DiscoverIdentityCard(title: name.isEmpty ? "Community name" : name, subtitle: sport.isEmpty ? "General" : LeagueArtwork.label(sport),
                 detail: description.isEmpty ? nil : description, avatar: avatar, banner: banner, symbol: "person.2", count: nil)
         } content: {
-            TextField("Name", text: $name).textFieldStyle(.roundedBorder)
+            TextField("Name", text: $name)
+                .focused($focus, equals: .name)
+                .submitLabel(.next)
+                .onSubmit { focus = .description }
+                .modifier(CommunityEditorField())
                 .onChange(of: name) { if name.count > 60 { name = String(name.prefix(60)) } }
-            TextField("What is this community about?", text: $description, axis: .vertical).lineLimit(3...6).textFieldStyle(.roundedBorder)
+            TextField("What is this community about?", text: $description, axis: .vertical)
+                .focused($focus, equals: .description)
+                .lineLimit(3...6)
+                .modifier(CommunityEditorField())
                 .onChange(of: description) { if description.count > 280 { description = String(description.prefix(280)) } }
             ViewThatFits(in: .horizontal) {
                 HStack { photos }
@@ -124,7 +136,7 @@ struct CommunityCreateView: View {
             ResearchSectionTitle(title: "Audience")
         } content: {
             ResearchArtworkPicker(title: "Sport", options: choices, selection: $sport)
-            let available = offers(page)
+            let available = freeOnly ? [] : offers(page)
             if !available.isEmpty {
                 Picker("Member access", selection: $offer) {
                     Text("Free community").tag(nil as UUID?)
@@ -134,7 +146,9 @@ struct CommunityCreateView: View {
                 }
             }
             if offer == nil {
-                Toggle("Public community", isOn: $visible)
+                Toggle("Listed in Browse", isOn: $visible)
+                Text(visible ? "Anyone can find your community in Browse." : "Invite people from community settings.")
+                    .font(.caption).foregroundStyle(.secondary)
             } else {
                 Label("Requires the selected membership", systemImage: "lock").font(.caption).foregroundStyle(.secondary)
             }
@@ -162,7 +176,7 @@ struct CommunityCreateView: View {
         do {
             let result = try await api.load()
             try Task.checkCancellation()
-            if let initialOffer {
+            if let initialOffer, !freeOnly {
                 if offers(result).contains(where: { $0.id == initialOffer }) { offer = initialOffer }
                 else { problem = "That membership isn’t available for a new community." }
             }
@@ -186,5 +200,19 @@ struct CommunityCreateView: View {
             struct Details: Decodable { let error: String }
             problem = (try? JSONDecoder().decode(Details.self, from: failure.data))?.error ?? "The community couldn’t be confirmed."
         } catch { problem = "The community couldn’t be confirmed. Check your communities before retrying." }
+    }
+}
+
+private struct CommunityEditorField: ViewModifier {
+    @Environment(\.slipPalette) private var slipPalette
+
+    func body(content: Content) -> some View {
+        content
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(minHeight: 44)
+            .background(slipPalette.background.opacity(0.75), in: .rect(cornerRadius: 11))
+            .overlay { RoundedRectangle(cornerRadius: 11).strokeBorder(.secondary.opacity(0.28)) }
     }
 }

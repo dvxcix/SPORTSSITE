@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct NativeWelcome: View {
-    enum Action { case feed, research, signIn, createAccount }
+    enum Action { case feed, research, community, creators, signIn, createAccount }
 
     enum Scene: Int, CaseIterable, Identifiable {
-        case research, games, community
+        case research, games, community, creators
 
         var id: Int { rawValue }
         var label: String {
@@ -12,6 +12,7 @@ struct NativeWelcome: View {
             case .research: "Research"
             case .games: "Live Games"
             case .community: "Community"
+            case .creators: "For creators"
             }
         }
 
@@ -20,6 +21,7 @@ struct NativeWelcome: View {
             case .research: "See the matchup clearly."
             case .games: "Stay with the action."
             case .community: "Game day is better together."
+            case .creators: "Build a community around your picks."
             }
         }
 
@@ -27,7 +29,17 @@ struct NativeWelcome: View {
             switch self {
             case .research: "Compare lines and read player trends before tipoff or kickoff."
             case .games: "Follow the score and watch the game unfold play by play."
-            case .community: "Share picks, react to plays, and talk in your rooms."
+            case .community: "Find your rooms, follow members-only picks, and react as games unfold."
+            case .creators: "Start a free or paid community on SlipSurge. Connect a Discord server and manage member roles."
+            }
+        }
+
+        var link: (String, Action) {
+            switch self {
+            case .research: ("Explore Research", .research)
+            case .games: ("See the Feed", .feed)
+            case .community: ("Browse communities", .community)
+            case .creators: ("See creator tools", .creators)
             }
         }
     }
@@ -42,7 +54,7 @@ struct NativeWelcome: View {
     @State private var playing = true
 
     private var canAdvance: Bool {
-        playing && !reduceMotion && !voiceOverEnabled && !textSize.isAccessibilitySize && phase == .active && scene != .community
+        playing && !reduceMotion && !voiceOverEnabled && !textSize.isAccessibilitySize && phase == .active && scene != .creators
     }
 
     var body: some View {
@@ -55,7 +67,7 @@ struct NativeWelcome: View {
                         header
                         guideCopy
                         preview(height: min(200, geometry.size.height * 0.3))
-                        exploreResearch
+                        exploreScene
                     }
                     .frame(maxWidth: 510)
                     .padding(.horizontal, 22)
@@ -157,9 +169,9 @@ struct NativeWelcome: View {
                 }
                 Spacer(minLength: 4)
                 if !reduceMotion && !voiceOverEnabled && !textSize.isAccessibilitySize {
-                    Button(scene == .community ? "Replay preview" : playing ? "Pause preview" : "Play preview",
-                           systemImage: scene == .community ? "arrow.counterclockwise" : playing ? "pause.fill" : "play.fill") {
-                        if scene == .community {
+                    Button(scene == .creators ? "Replay preview" : playing ? "Pause preview" : "Play preview",
+                           systemImage: scene == .creators ? "arrow.counterclockwise" : playing ? "pause.fill" : "play.fill") {
+                        if scene == .creators {
                             withAnimation(.easeInOut(duration: 0.3)) { scene = .research }
                             playing = true
                         } else { playing.toggle() }
@@ -176,7 +188,7 @@ struct NativeWelcome: View {
         VStack(alignment: .leading, spacing: 18) {
             guideCopy
             primaryActions
-            exploreResearch
+            exploreScene
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -210,9 +222,22 @@ struct NativeWelcome: View {
         }
     }
 
-    private var exploreResearch: some View {
-        Button("Explore Research") { choose(.research) }
-            .frame(maxWidth: .infinity, minHeight: 44)
+    private var exploreScene: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 18) { sceneLinks }
+                .fixedSize(horizontal: true, vertical: false)
+            VStack(spacing: 0) { sceneLinks }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder private var sceneLinks: some View {
+        Button(scene.link.0) { choose(scene.link.1) }
+            .frame(minHeight: 44)
+        if scene != .creators {
+            Button("Creator tools") { choose(.creators) }
+                .frame(minHeight: 44)
+        }
     }
 
     private var signIn: some View {
@@ -230,7 +255,7 @@ struct NativeWelcome: View {
     }
 
     private var signUp: some View {
-        callToAction("Create account") { choose(.createAccount) }
+        callToAction("Join free") { choose(.createAccount) }
     }
 
     private func callToAction(_ title: String, action: @escaping () -> Void) -> some View {

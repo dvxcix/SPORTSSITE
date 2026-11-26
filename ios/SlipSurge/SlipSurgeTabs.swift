@@ -30,6 +30,7 @@ struct SlipSurgeTabs: View {
     @State private var closingRelease = false
     @State private var releaseOwner: UUID?
     @State private var sitePresentation: SitePresentation?
+    @State private var spotlight: NativeSpotlight?
     @State private var profilePresentation: SitePresentation?
     @State private var pendingProfilePresentation: SitePresentation?
     @State private var researchPath: [ResearchPresentation] = []
@@ -81,7 +82,8 @@ struct SlipSurgeTabs: View {
     }
 
     private var resumeBanner: NativeResumeOffer? {
-        guard release == nil, sitePresentation == nil, profilePresentation == nil, let offer = resume.offer else { return nil }
+        guard release == nil, sitePresentation == nil, profilePresentation == nil, spotlight == nil,
+              let offer = resume.offer else { return nil }
         return NativeResumeOffer(offer: offer, open: {
             resume.select(offer)
             _ = routeLink(offer.url, track: false)
@@ -180,6 +182,7 @@ struct SlipSurgeTabs: View {
         .environment(\.nativeEmojiLibrary, emojiLibrary)
         .environment(\.memberResearchPreferences, researchPreferences)
         .environment(\.nativeResume, resume)
+        .environment(\.presentNativeSpotlight, presentSpotlight)
         .environment(\.openURL, OpenURLAction(handler: openLink))
         .task { await emojiLibrary.refresh() }
         .onChange(of: phase) { _, current in if current == .active { Task { await emojiLibrary.refresh() } } }
@@ -226,6 +229,14 @@ struct SlipSurgeTabs: View {
             .sheet(item: $sitePresentation) { site in siteSheet(site) }
         }
         .sheet(item: appSheet, onDismiss: presentQueuedProfileOrRelease) { site in siteSheet(site) }
+        .sheet(item: $spotlight, onDismiss: presentNextRelease) { feature in
+            NativeFeatureSpotlight(spotlight: feature, account: account, appearance: $appearance) {
+                spotlight = nil
+                selectTab(.community)
+                discoverDestination = .creators
+            }
+            .environment(\.presentNativeSpotlight, nil)
+        }
         .fullScreenCover(item: $profilePresentation, onDismiss: presentNextRelease) { site in
             NavigationStack {
                 NativeLinkedSiteView(account: account, target: site.target, appearance: $appearance)
@@ -252,6 +263,7 @@ struct SlipSurgeTabs: View {
             endLaunchReveal()
         }
         .task(id: account.memberID) { await account.refreshProfileIdentity() }
+        .task(id: account.memberID) { await account.refreshMembershipAccess() }
         .task(id: account.memberID) { await resume.refresh(account: account, userID: account.memberID) }
         .task(id: account.memberID) { await applyLaunchPreference() }
         .task(id: InboxUnread.Scope(memberID: account.memberID, active: phase == .active)) {
@@ -277,7 +289,7 @@ struct SlipSurgeTabs: View {
         }
         .onChange(of: account.user?.id) { _, signedIn in
             if signedIn != nil { opensIntroductionRegistration = false }
-            if signedIn != nil, !account.onboardingComplete, !account.needsNewPassword, !account.needsVerification {
+            if signedIn != nil, spotlight == nil, !account.onboardingComplete, !account.needsNewPassword, !account.needsVerification {
                 bypassIntroduction()
                 selected = .you
                 opensAccountSetup = true
@@ -285,11 +297,13 @@ struct SlipSurgeTabs: View {
         }
         .onChange(of: notificationOpen, initial: true) { _, request in
             guard request != nil else { return }
+            spotlight = nil
             bypassIntroduction()
             presentInbox(section: .activity)
         }
         .onChange(of: incomingURL, initial: true) {
             guard let url = incomingURL else { return }
+            spotlight = nil
             bypassIntroduction()
             incomingURL = nil
             _ = openLink(url)
@@ -298,6 +312,7 @@ struct SlipSurgeTabs: View {
             if phase == .active {
                 Task {
                     await account.restore()
+                    await account.refreshMembershipAccess()
                     await account.refreshProfileIdentity()
                     await refreshAnnouncements(for: account.memberID)
                     await resume.refresh(account: account, userID: account.memberID)
@@ -334,12 +349,24 @@ struct SlipSurgeTabs: View {
         switch action {
         case .feed: selectTab(.feed)
         case .research: selectTab(.research)
+        case .community:
+            selectTab(.community)
+            discoverDestination = .browseCommunities
+        case .creators:
+            selectTab(.community)
+            presentSpotlight(.creators)
         case .signIn: selectTab(.you)
         case .createAccount:
             selectTab(.you)
             opensIntroductionRegistration = account.user == nil
         }
         presentNextRelease()
+    }
+
+    private func presentSpotlight(_ feature: NativeSpotlight) {
+        guard release == nil, !closingRelease, sitePresentation == nil, profilePresentation == nil,
+              spotlight == nil, !opensIntroductionRegistration else { return }
+        spotlight = feature
     }
 
     private func selectTab(_ tab: Destination) {
@@ -388,7 +415,8 @@ struct SlipSurgeTabs: View {
 
     private func presentNextRelease() {
         guard release == nil, !closingRelease, account.memberID != nil, account.memberID == releaseOwner,
-              sitePresentation == nil, profilePresentation == nil, !showsNativeWelcome, !showsLaunchReveal else { return }
+              sitePresentation == nil, profilePresentation == nil, spotlight == nil,
+              !opensIntroductionRegistration, !showsNativeWelcome, !showsLaunchReveal else { return }
         release = remainingReleases.first
     }
 
@@ -543,6 +571,7 @@ struct SlipSurgeTabs: View {
             .environment(\.openURL, OpenURLAction(handler: openLink))
             .environment(\.nativeEmojiLibrary, emojiLibrary)
             .environment(\.memberResearchPreferences, researchPreferences)
+            .environment(\.presentNativeSpotlight, nil)
         }
     }
 
@@ -600,11 +629,8 @@ private struct ResearchHome: View {
                 LazyVGrid(columns: columns, spacing: 12) {
                     researchCards
                 }
-                if account.memberID == nil {
-                    NavigationLink {
-                        NativeMembershipOverview(account: account)
-                    } label: { Label("Compare memberships", systemImage: "bolt.circle") }
-                        .buttonStyle(.bordered)
+                if account.showsUltimateOffer {
+                    UltimateSpotlightButton(account: account)
                 }
             }
             .padding()

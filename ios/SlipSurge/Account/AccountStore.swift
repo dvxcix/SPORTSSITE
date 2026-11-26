@@ -15,6 +15,12 @@ final class AccountStore {
         var name: String { displayName ?? username }
     }
 
+    private struct MembershipAccess: Decodable {
+        let id: UUID
+        let accessTier: String
+        let role: String?
+    }
+
     private let api = AccountAPI()
     let postReactions = FeedReactionStore()
     private var session: AccountSession?
@@ -28,12 +34,23 @@ final class AccountStore {
     private(set) var providersAvailable = false
     private(set) var onboardingComplete = false
     private(set) var profileIdentity: ProfileIdentity?
+    private var membershipAccess: MembershipAccess?
     private var restored = false
 
     var isConfigured: Bool { api.isConfigured }
     var didRestoreAccount: Bool { restored || !isConfigured }
     var user: AccountSession.User? { session?.user }
     var memberID: UUID? { onboardingComplete && !isSigningOut ? user?.id : nil }
+    var confirmedAccessTier: String? {
+        guard let memberID, membershipAccess?.id == memberID else { return nil }
+        return membershipAccess?.accessTier
+    }
+    var showsUltimateOffer: Bool {
+        guard !needsVerification, !needsNewPassword else { return false }
+        guard let memberID else { return didRestoreAccount && user == nil }
+        guard let membershipAccess, membershipAccess.id == memberID else { return false }
+        return membershipAccess.role != "admin" && membershipAccess.accessTier != "ultimate"
+    }
     var needsVerification: Bool { pendingVerification != nil }
     var needsNewPassword: Bool { recoverySession != nil }
     var recoveryNeedsAuthenticator: Bool {
@@ -52,6 +69,17 @@ final class AccountStore {
             let response = try JSONDecoder().decode(Settings.self, from: data)
             if memberID == id, !Task.isCancelled { profileIdentity = response.profile }
         } catch { }
+    }
+
+    func refreshMembershipAccess() async {
+        guard let id = memberID else { membershipAccess = nil; return }
+        do {
+            let data = try await SlipSurgeHTTP.memberData("/api/mobile/account", account: self, userID: id)
+            let result = try JSONDecoder().decode(MembershipAccess.self, from: data)
+            if !Task.isCancelled, memberID == id, result.id == id { membershipAccess = result }
+        } catch {
+            if !Task.isCancelled, memberID == id { membershipAccess = nil }
+        }
     }
 
     func beginEmail(_ registration: AccountAPI.Registration) async -> Bool {

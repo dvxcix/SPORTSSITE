@@ -139,6 +139,11 @@ struct SidelineView: View {
 
     private var dayRequest: DayRequest { .init(date: SlateDate.key(date), revision: revision) }
 
+    private var accessTier: String? {
+        guard case .member(let account, _) = api.scope else { return nil }
+        return account.confirmedAccessTier
+    }
+
     private var requestKey: RequestKey {
         RequestKey(date: dayRequest.date, selection: selection, revision: revision, fetchQuotes: api.isFeatured || tool == .matchup && section.quotes)
     }
@@ -203,6 +208,9 @@ struct SidelineView: View {
         }
         .onChange(of: selection.market) { _, _ in oddsFilters.clearLineSelection() }
         .onChange(of: selection) { _, _ in oddsDetail = nil }
+        .onChange(of: accessTier) { _, tier in
+            if tier == "ultimate" { revision += 1 }
+        }
         .refreshable { revision += 1 }
         .sheet(isPresented: $matrices) {
             if case .member(let account, let userID) = api.scope {
@@ -475,6 +483,9 @@ struct SidelineView: View {
         } description: {
             Text("The full slate requires Ultimate or NFL early access.")
         } actions: {
+            if case .member(let account, _) = api.scope {
+                UltimateSpotlightButton(account: account, spotlight: .sideline)
+            }
             NavigationLink("Open Preview") { SidelineView(api: SidelineAPI()) }
         }
     }

@@ -11,6 +11,7 @@ struct WelcomeFeaturePreview: View {
         case .research: Color(rgb: 0xB9F490)
         case .games: Color(rgb: 0x8AC9FC)
         case .community: Color(rgb: 0xD3B6FF)
+        case .creators: Color(rgb: 0xB9F490)
         }
     }
 
@@ -24,6 +25,7 @@ struct WelcomeFeaturePreview: View {
                 case .research: research
                 case .games: game
                 case .community: community
+                case .creators: creators
                 }
             }
             .font(.subheadline.weight(.semibold))
@@ -155,6 +157,22 @@ struct WelcomeFeaturePreview: View {
         RoundedRectangle(cornerRadius: 18)
             .fill(Color(rgb: 0x15271E))
             .overlay { RoundedRectangle(cornerRadius: 18).strokeBorder(accent.opacity(0.2)) }
+    }
+
+    private var creators: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            cardHeader("Creator Studio", glyph: "storefront.fill")
+            Label("Free groups and paid memberships", systemImage: "person.2.fill")
+            Label("Members-only picks", systemImage: "lock.doc")
+            Label {
+                Text("Discord roles")
+            } icon: {
+                Image("sign-in-discord").resizable().scaledToFit().frame(width: 19, height: 19)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(15)
+        .background(panel)
     }
 
     private func cardHeader(_ title: String, glyph: String) -> some View {

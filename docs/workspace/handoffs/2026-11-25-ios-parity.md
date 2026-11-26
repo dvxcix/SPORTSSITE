@@ -3675,3 +3675,10 @@ offseason. At a live game, verify the expanded artwork and tap destination
 from Notification Center. Verify player news separately when an opted-in
 favorite has a fresh report. The Mac’s pre-existing Xcode project and
 scheme changes remain in its original checkout.
+
+### 27 November 2026 — Launch pipeline
+
+See [the launch pipeline](2026-11-26-ios-launch-pipeline.md) for the native
+welcome, Ultimate and creator offers, device verification, and remaining
+release gates. SlipSurge Launch QA is a development app on Devin’s iPad
+alongside the signed-in TestFlight build 9.

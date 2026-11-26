@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CreatorStoreView: View {
     let api: CreatorStoreAPI
+    var startsPaid = false
     @Environment(\.slipPalette) private var slipPalette
     @State private var page: CreatorStorePage?
     @State private var error: (any Error)?
@@ -9,7 +10,7 @@ struct CreatorStoreView: View {
 
     var body: some View {
         Group {
-            if let page { CreatorStoreEditor(api: api, page: page) }
+            if let page { CreatorStoreEditor(api: api, page: page, startsPaid: startsPaid) }
             else { ResearchToolMessage(title: "Storefront couldn’t load", error: error) { retry += 1 } }
         }
         .navigationTitle("Storefront")
@@ -63,12 +64,15 @@ private struct CreatorStoreEditor: View {
     @State private var feedback: String?
     @State private var issue = false
 
-    init(api: CreatorStoreAPI, page: CreatorStorePage) {
+    init(api: CreatorStoreAPI, page: CreatorStorePage, startsPaid: Bool) {
         self.api = api
         _page = State(initialValue: page)
         _saved = State(initialValue: page.store)
-        _draft = State(initialValue: .init(page))
-        _section = State(initialValue: SectionName(rawValue: page.store?.setupStep ?? 0) ?? .publish)
+        var initialDraft = CreatorStoreDraft(page)
+        if startsPaid, page.store == nil { initialDraft.access = "paid" }
+        _draft = State(initialValue: initialDraft)
+        _section = State(initialValue: startsPaid && page.store != nil
+            ? .access : SectionName(rawValue: page.store?.setupStep ?? 0) ?? .brand)
     }
 
     private var blocked: Bool { busy || uploadingLogo || uploadingCover }

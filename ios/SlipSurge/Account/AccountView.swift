@@ -5,6 +5,7 @@ struct AccountView: View {
     @Binding var appearance: Appearance
     var isYou = false
     var replayIntroduction: (() -> Void)? = nil
+    var signInPurpose: String? = nil
     @EnvironmentObject private var push: PushNotifications
     @Environment(\.slipPalette) private var slipPalette
     @State private var code = ""
@@ -16,7 +17,7 @@ struct AccountView: View {
             } else if account.needsVerification || account.user != nil {
                 signedInForm
             } else {
-                AccountSignInView(account: account, appearance: $appearance)
+                AccountSignInView(account: account, appearance: $appearance, purpose: signInPurpose)
             }
         }
         .navigationTitle(isYou ? "You" : "Account")

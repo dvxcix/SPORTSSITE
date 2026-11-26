@@ -223,6 +223,11 @@ struct CourtView: View {
 
     private var showsOddsBoard: Bool { tool == nil && section == .odds }
 
+    private var accessTier: String? {
+        guard case .member(let account, _) = scope else { return nil }
+        return account.confirmedAccessTier
+    }
+
     private var playerBoardRequest: BoardRequest? {
         if !isPreview, showsOddsBoard, link.player == nil { return nil }
         return boardRequest
@@ -299,6 +304,9 @@ struct CourtView: View {
         }
         .onChange(of: slateRequest.date) { _, _ in oddsFilters = ResearchOddsFilters() }
         .onChange(of: oddsMarket) { _, _ in oddsFilters.clearLineSelection() }
+        .onChange(of: accessTier) { _, tier in
+            if tier == "ultimate" { revision += 1 }
+        }
         .onChange(of: resumeLocation, initial: true) { old, location in
             if let location, case .member(let account, _) = scope {
                 resume?.record(location, account: account, interaction: old != nil && old != location)
@@ -834,6 +842,9 @@ struct CourtView: View {
         } description: {
             Text("Ultimate includes the full Court slate.")
         } actions: {
+            if case .member(let account, _) = scope {
+                UltimateSpotlightButton(account: account, spotlight: .court)
+            }
             NavigationLink("Open Preview") { CourtView(scope: .preview) }
         }
     }

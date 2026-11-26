@@ -4,6 +4,7 @@ import SwiftUI
 struct AccountSignInView: View {
     let account: AccountStore
     @Binding var appearance: Appearance
+    var purpose: String? = nil
 
     @Environment(\.slipPalette) private var slipPalette
     private var scheme: ColorScheme { slipPalette.colorScheme }
@@ -79,7 +80,7 @@ struct AccountSignInView: View {
             Text("Welcome back")
                 .font(.largeTitle.weight(.bold))
                 .accessibilityAddTraits(.isHeader)
-            Text("Sign in to join the conversation and get back to your research.")
+            Text(purpose ?? "Sign in to join the conversation and get back to your research.")
                 .font(.subheadline).foregroundStyle(.secondary)
         }
         .opacity(appeared || reduceMotion ? 1 : 0)
