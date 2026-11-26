@@ -7,6 +7,7 @@ struct SlipSurgeTabs: View {
     @Binding var notificationOpen: InboxNotificationOpen?
     @Environment(\.slipPalette) private var slipPalette
     @Environment(\.scenePhase) private var phase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     enum Destination: String, CaseIterable {
         case feed = "Feed", research = "Research", community = "Community", inbox = "Inbox", you = "You"
 
@@ -37,8 +38,11 @@ struct SlipSurgeTabs: View {
     @State private var inboxNavigationRevision = 0
     @State private var opensAccountSettings = false
     @State private var opensAccountSetup = false
-    @AppStorage("hasSeenNativeWelcome") private var hasSeenNativeWelcome = false
-    @State private var showsNativeWelcome = false
+    @AppStorage("hasSeenNativeIntroduction") private var hasSeenNativeIntroduction = false
+    @State private var launchReveal = true
+    @State private var suppressIntroduction = false
+    @State private var replaysIntroduction = false
+    @State private var opensIntroductionRegistration = false
     @State private var inboxUnread = InboxUnread()
     @State private var feedSelection: NativeFeedSelection?
     @State private var feedTopRequest = 0
@@ -57,6 +61,19 @@ struct SlipSurgeTabs: View {
     private struct ResearchPresentation: Hashable {
         let id = UUID()
         let link: ResearchDeepLink
+    }
+
+    private var startupAvailable: Bool {
+        !suppressIntroduction && incomingURL == nil && notificationOpen == nil &&
+            !account.needsNewPassword && !account.needsVerification
+    }
+
+    private var showsNativeWelcome: Bool {
+        startupAvailable && (replaysIntroduction || !hasSeenNativeIntroduction)
+    }
+
+    private var showsLaunchReveal: Bool {
+        startupAvailable && launchReveal && !reduceMotion
     }
 
     private var appSheet: Binding<SitePresentation?> {
@@ -128,7 +145,7 @@ struct SlipSurgeTabs: View {
                     if let userID = account.memberID, !account.needsNewPassword, !account.needsVerification {
                         MemberProfileView(api: .init(account: account, userID: userID), target: userID.uuidString, isYouTab: true)
                             .navigationDestination(isPresented: $opensAccountSettings) {
-                                AccountView(account: account, appearance: $appearance)
+                                AccountView(account: account, appearance: $appearance, replayIntroduction: replayIntroduction)
                             }
                             .toolbar {
                                 ToolbarItem(placement: .topBarLeading) {
@@ -175,6 +192,19 @@ struct SlipSurgeTabs: View {
                 }
             }
         }
+        .accessibilityHidden(showsLaunchReveal || showsNativeWelcome)
+        .allowsHitTesting(!showsLaunchReveal && !showsNativeWelcome)
+        .overlay {
+            if showsNativeWelcome {
+                NativeWelcome(isSignedIn: account.user != nil, choose: finishIntroduction)
+                    .accessibilityHidden(showsLaunchReveal)
+                    .allowsHitTesting(!showsLaunchReveal)
+                    .transition(.opacity)
+            }
+        }
+        .overlay {
+            if showsLaunchReveal { SlipLaunchReveal(dismiss: endLaunchReveal).transition(.opacity) }
+        }
         .sheet(item: releaseSheet, onDismiss: {
             closingRelease = false
             presentQueuedProfileOrRelease()
@@ -208,19 +238,18 @@ struct SlipSurgeTabs: View {
             .environment(\.openURL, OpenURLAction(handler: openLink))
             .environment(\.nativeEmojiLibrary, emojiLibrary)
         }
-        .sheet(isPresented: $showsNativeWelcome) {
-            NativeWelcome { destination in
-                showsNativeWelcome = false
-                selectTab(destination)
-            }
+        .sheet(isPresented: $opensIntroductionRegistration) {
+            NavigationStack { EmailAccountForm(account: account, flow: .registration) }
+                .environment(\.openURL, OpenURLAction(handler: openLink))
         }
-        .task {
-            await account.restore()
-            if account.didRestoreAccount, account.user == nil, !account.needsNewPassword, !account.needsVerification,
-               !hasSeenNativeWelcome, !choseDestination, incomingURL == nil, notificationOpen == nil {
-                hasSeenNativeWelcome = true
-                showsNativeWelcome = true
-            }
+        .task { await account.restore() }
+        .onChange(of: reduceMotion, initial: true) { _, reduced in
+            if reduced { launchReveal = false }
+        }
+        .task(id: showsLaunchReveal) {
+            guard showsLaunchReveal else { return }
+            do { try await Task.sleep(for: .milliseconds(560)) } catch { return }
+            endLaunchReveal()
         }
         .task(id: account.memberID) { await account.refreshProfileIdentity() }
         .task(id: account.memberID) { await resume.refresh(account: account, userID: account.memberID) }
@@ -242,25 +271,26 @@ struct SlipSurgeTabs: View {
         }
         .onChange(of: account.needsNewPassword) { _, ready in
             if ready {
-                showsNativeWelcome = false
+                bypassIntroduction()
                 selected = .you
             }
         }
         .onChange(of: account.user?.id) { _, signedIn in
-            if signedIn != nil { showsNativeWelcome = false }
+            if signedIn != nil { opensIntroductionRegistration = false }
             if signedIn != nil, !account.onboardingComplete, !account.needsNewPassword, !account.needsVerification {
+                bypassIntroduction()
                 selected = .you
                 opensAccountSetup = true
             }
         }
         .onChange(of: notificationOpen, initial: true) { _, request in
             guard request != nil else { return }
-            showsNativeWelcome = false
+            bypassIntroduction()
             presentInbox(section: .activity)
         }
         .onChange(of: incomingURL, initial: true) {
             guard let url = incomingURL else { return }
-            showsNativeWelcome = false
+            bypassIntroduction()
             incomingURL = nil
             _ = openLink(url)
         }
@@ -276,6 +306,40 @@ struct SlipSurgeTabs: View {
                 Task { await resume.flush(account: account) }
             }
         }
+    }
+
+    private func endLaunchReveal() {
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.22)) { launchReveal = false }
+        presentNextRelease()
+    }
+
+    private func bypassIntroduction() {
+        suppressIntroduction = true
+        launchReveal = false
+        replaysIntroduction = false
+    }
+
+    private func replayIntroduction() {
+        suppressIntroduction = false
+        replaysIntroduction = true
+        launchReveal = true
+    }
+
+    private func finishIntroduction(_ action: NativeWelcome.Action) {
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.22)) {
+            hasSeenNativeIntroduction = true
+            replaysIntroduction = false
+            launchReveal = false
+        }
+        switch action {
+        case .feed: selectTab(.feed)
+        case .research: selectTab(.research)
+        case .signIn: selectTab(.you)
+        case .createAccount:
+            selectTab(.you)
+            opensIntroductionRegistration = account.user == nil
+        }
+        presentNextRelease()
     }
 
     private func selectTab(_ tab: Destination) {
@@ -324,7 +388,7 @@ struct SlipSurgeTabs: View {
 
     private func presentNextRelease() {
         guard release == nil, !closingRelease, account.memberID != nil, account.memberID == releaseOwner,
-              sitePresentation == nil, profilePresentation == nil else { return }
+              sitePresentation == nil, profilePresentation == nil, !showsNativeWelcome, !showsLaunchReveal else { return }
         release = remainingReleases.first
     }
 

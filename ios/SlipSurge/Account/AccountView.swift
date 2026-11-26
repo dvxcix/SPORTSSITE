@@ -4,6 +4,7 @@ struct AccountView: View {
     let account: AccountStore
     @Binding var appearance: Appearance
     var isYou = false
+    var replayIntroduction: (() -> Void)? = nil
     @EnvironmentObject private var push: PushNotifications
     @Environment(\.slipPalette) private var slipPalette
     @State private var code = ""
@@ -111,6 +112,9 @@ struct AccountView: View {
                     }
                 } label: {
                     Label("Appearance", systemImage: "paintpalette")
+                }
+                if let replayIntroduction {
+                    Button("Replay introduction", systemImage: "play.rectangle", action: replayIntroduction)
                 }
             }
             .listRowBackground(slipPalette.surface)

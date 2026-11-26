@@ -92,10 +92,7 @@ struct FeedView: View {
                 .onChange(of: scope) { proxy.scrollTo("feed-start", anchor: .top) }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            scopes
-                .frame(maxWidth: readingWidth)
-                .frame(maxWidth: .infinity)
-                .background(slipPalette.background)
+            feedHeader
         }
         .safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) {
             if canCompose {
@@ -121,22 +118,7 @@ struct FeedView: View {
         .navigationDestination(item: $member) { name in
             MemberProfileView(api: DiscoverAPI(account: api.account, userID: api.userID), target: name)
         }
-        .toolbar {
-            if #available(iOS 26, *) {
-                ToolbarItem(placement: .topBarLeading) { wordmark }
-                    .sharedBackgroundVisibility(.hidden)
-            } else {
-                ToolbarItem(placement: .topBarLeading) { wordmark }
-            }
-            if api.userID != nil {
-                if #available(iOS 26, *) {
-                    ToolbarItem(placement: .topBarTrailing) { searchLink }
-                        .sharedBackgroundVisibility(.hidden)
-                } else {
-                    ToolbarItem(placement: .topBarTrailing) { searchLink }
-                }
-            }
-        }
+        .toolbar(.hidden, for: .navigationBar)
         .navigationDestination(item: $discussion) { id in
             FeedThreadView(api: api, id: id, original: postUpdates[id] ?? posts.first { $0.postID == id },
                 onPostChange: { postUpdates[id] = $0 }, onPostRemoved: { removePost(id) })
@@ -182,9 +164,28 @@ struct FeedView: View {
         .onDisappear { visible = false }
     }
 
-    private var wordmark: some View {
-        SlipBrandLockup(width: 108)
-            .accessibilityAddTraits(.isHeader)
+    private var feedHeader: some View {
+        VStack(spacing: 1) {
+            HStack {
+                SlipBrandLockup(width: 114)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 12)
+                if api.userID != nil { searchLink }
+            }
+            .frame(minHeight: 47)
+            .padding(.horizontal, 15)
+            scopes
+        }
+        .frame(maxWidth: readingWidth)
+        .frame(maxWidth: .infinity)
+        .background {
+            if slipPalette == .color {
+                slipPalette.background.opacity(0.68)
+                    .background(.ultraThinMaterial)
+            } else {
+                slipPalette.background
+            }
+        }
     }
 
     private var searchLink: some View {
@@ -194,8 +195,9 @@ struct FeedView: View {
             Image(systemName: "magnifyingglass")
                 .font(.body.weight(.semibold))
                 .foregroundStyle(slipPalette.text)
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(.rect)
+                .frame(width: 44, height: 44)
+                .background(slipPalette.surface.opacity(0.75), in: .circle)
+                .contentShape(.circle)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Search")
@@ -231,10 +233,11 @@ struct FeedView: View {
             }
             .scrollTargetLayout()
             .frame(maxWidth: readingWidth)
-            .background(slipPalette.surface)
+            .background {
+                if slipPalette != .color { slipPalette.surface }
+            }
             .frame(maxWidth: .infinity)
         }
-        .background(slipPalette.background)
     }
 
     private var scopes: some View {

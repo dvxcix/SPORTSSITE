@@ -3286,3 +3286,27 @@ The TestFlight copy showed its first-run sheet over Feed and the live score
 strip, then opened the native **You** sign-in screen with Whop, Discord, X,
 and email. Member testing is awaiting Devin’s sign-in to SlipSurge in this
 copy. No new app build or web deployment was made for enrollment.
+
+### 2026-11-26 · Native launch, introduction and iPad Feed alignment
+
+- Reproduced on Devin’s signed-in TestFlight iPad. Build 1 placed Feed’s
+  wordmark and search at the window edges while the timeline used a centered
+  reading column. Build 2 gives the wordmark, Search and filters the timeline’s
+  width and carries the Color backdrop across the entire window.
+- The iOS launch artwork hands off to a tappable SwiftUI brand reveal, then a
+  full-window introduction the first time this version opens. The three preview
+  scenes show Research, live games and Community. They use SlipSurge artwork,
+  the existing ESPN NFL team logos for Chicago and Detroit, and
+  the verified ESPN Amon-Ra St. Brown portrait. Previews are bundled for offline
+  launch. Guests can open the existing Sign in or Create account flow immediately.
+  Returning members keep their sessions and can replay the intro under Account
+  settings. Reduce Motion and VoiceOver stop automatic advancement.
+- Installed Stageshow at `299140fa`. The installed Animation Vocabulary and
+  Animate Expo skills match `64eb3deb`. Applied their preview and motion guidance
+  in SwiftUI.
+- Verified the Research and Community previews, direct Create account on the
+  iPhone 18 Pro Max Simulator, and direct Sign in on the landscape iPad mini
+  Simulator. On the signed-in iPhone 18 Pro Simulator, opening Feed from the
+  intro preserved the session, showed live scores, and opened Search with a
+  native back button. All 289 native and source checks passed. Build 2 carries
+  the same Apple encryption declaration as build 1.
