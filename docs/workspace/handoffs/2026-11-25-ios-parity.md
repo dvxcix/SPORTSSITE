@@ -3621,3 +3621,17 @@ unverified. General injuries and transactions have no new push stream in
 this checkpoint. Browser push, delivery preferences, database schema,
 and collector schedules retain their existing behavior. No historic alerts
 were replayed.
+
+### 26 November 2026 — Injury and roster alerts
+
+Build 8 adds an opt-in setting for saved teams and players under You →
+Alert preferences, in-app injury and roster labels, and a native
+notification attachment that pairs the portrait with team marks.
+The signed App Store export verified build 8 for the app, embedded
+notification extension and widget under SlipSurge LLC.
+
+Production discovery found a real new follow on Devin’s account at
+22:13 CET. The legacy insert trigger required a browser subscription,
+so the existing TestFlight-only device was never handed the event.
+The follow and player-news release addresses the native registration
+guard, while the original artwork delivery remains separately verified.

@@ -19,6 +19,11 @@ struct NotificationArtwork: Decodable {
     let version: Int
     let kind: Kind
     let image: String?
+    let badge: String?
+    let secondaryBadge: String?
+    let team: String?
+    let primary: String?
+    let secondary: String?
     let away: Side?
     let home: Side?
     let portrait: String?
@@ -40,9 +45,23 @@ struct NotificationArtwork: Decodable {
 
         let output: UIImage?
         switch kind {
-        case .profile, .image:
+        case .profile:
             guard let source = await loader.image(at: image) else { return nil }
-            output = kind == .profile ? Self.profileImage(source) : source
+            output = Self.profileImage(source)
+
+        case .image:
+            async let source = loader.image(at: image)
+            async let teamMark = loader.image(at: badge)
+            async let previousTeamMark = loader.image(at: secondaryBadge)
+            let (portrait, logo, previousLogo) = await (source, teamMark, previousTeamMark)
+            if let portrait, let logo {
+                output = Self.playerImage(
+                    portrait, logo: logo, previousLogo: previousLogo, name: player,
+                    team: team, primary: primary, secondary: secondary
+                )
+            } else {
+                output = portrait ?? logo ?? previousLogo
+            }
 
         case .game:
             guard let away, let home else { return nil }
@@ -83,6 +102,53 @@ struct NotificationArtwork: Decodable {
             context.cgContext.fill(rect)
             image.draw(in: fitted(image.size, in: rect, fill: true))
         }
+    }
+
+    private static func playerImage(
+        _ portrait: UIImage, logo: UIImage, previousLogo: UIImage?, name: String?,
+        team: String?, primary: String?, secondary: String?
+    ) -> UIImage {
+        let size = CGSize(width: 560, height: 310)
+        return renderer(size).image { renderer in
+            let context = renderer.cgContext
+            context.setFillColor(UIColor(red: 0.035, green: 0.06, blue: 0.05, alpha: 1).cgColor)
+            context.fill(CGRect(origin: .zero, size: size))
+            if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                         colors: [UIColor.teamColor(primary).cgColor, UIColor.teamColor(secondary).cgColor] as CFArray,
+                                         locations: [0, 1]) {
+                context.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: size.width, y: size.height), options: [])
+            }
+
+            let photo = CGRect(x: 254, y: 8, width: 306, height: 302)
+            context.saveGState()
+            context.clip(to: photo)
+            portrait.draw(in: fitted(portrait.size, in: photo, fill: true))
+            context.restoreGState()
+
+            let info = CGRect(x: 20, y: 23, width: 224, height: 264)
+            UIColor.black.withAlphaComponent(0.53).setFill()
+            UIBezierPath(roundedRect: info, cornerRadius: 26).fill()
+            if let previousLogo {
+                drawBadge(previousLogo, in: CGRect(x: 45, y: 62, width: 62, height: 62))
+                drawText("→", in: CGRect(x: 111, y: 79, width: 29, height: 28), size: 24, weight: .medium)
+                drawBadge(logo, in: CGRect(x: 145, y: 62, width: 70, height: 70))
+            } else {
+                drawBadge(logo, in: CGRect(x: 79, y: 49, width: 106, height: 106))
+            }
+            if let name, !name.isEmpty {
+                drawText(name, in: CGRect(x: 31, y: 174, width: 202, height: 68), size: 27, weight: .bold)
+            }
+            if let team {
+                drawText(team, in: CGRect(x: 44, y: 248, width: 176, height: 28), size: 19, weight: .semibold)
+            }
+        }
+    }
+
+    private static func drawBadge(_ logo: UIImage, in box: CGRect) {
+        UIColor.white.withAlphaComponent(0.94).setFill()
+        UIBezierPath(roundedRect: box, cornerRadius: box.width * 0.24).fill()
+        let padding = box.width * 0.10
+        logo.draw(in: fitted(logo.size, in: box.insetBy(dx: padding, dy: padding)))
     }
 
     private static func gameImage(
@@ -140,9 +206,7 @@ struct NotificationArtwork: Decodable {
     private static func drawSide(_ side: Side, logo: UIImage?, center: CGFloat) {
         let chip = CGRect(x: center - 53, y: 61, width: 106, height: 106)
         if let logo {
-            UIColor.white.withAlphaComponent(0.94).setFill()
-            UIBezierPath(roundedRect: chip, cornerRadius: 26).fill()
-            logo.draw(in: fitted(logo.size, in: chip.insetBy(dx: 9, dy: 9)))
+            drawBadge(logo, in: chip)
         }
         drawText(String(side.score), in: CGRect(x: center - 75, y: 180, width: 150, height: 71), size: 58, weight: .bold)
         drawText(side.abbreviation, in: CGRect(x: center - 60, y: 258, width: 120, height: 32), size: 23, weight: .semibold)

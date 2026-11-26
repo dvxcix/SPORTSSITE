@@ -365,6 +365,14 @@ struct NativeSettings: View {
             Toggle("Keep game alerts live", isOn: Binding(get: { delivery.live_game_priority ?? true }, set: { delivery.live_game_priority = $0 }))
         }
         .listRowBackground(slipPalette.surface)
+        SwiftUI.Section {
+            Toggle("Push", isOn: channel("player_news", defaultValue: false))
+        } header: {
+            Text("Injuries and roster moves")
+        } footer: {
+            Text("Get official updates for the teams and players you’ve saved.")
+        }
+        .listRowBackground(slipPalette.surface)
         ForEach(Self.notificationKeys, id: \.0) { key, label in
             SwiftUI.Section(label) {
                 Toggle("Push", isOn: channel(key, defaultValue: true))
@@ -409,7 +417,7 @@ struct NativeSettings: View {
             privacy = .init(isPrivate: value.privacy.isPrivate ?? false, allowMessages: value.privacy.allowMessages ?? true,
                 hideWinRate: value.privacy.hideWinRate ?? false)
             delivery = value.notifications.delivery.defaults
-            let known = Set(Self.notificationKeys.flatMap { [$0.0, $0.0 + "_email"] })
+            let known = Set(Self.notificationKeys.flatMap { [$0.0, $0.0 + "_email"] } + ["player_news"])
             notifications = value.notifications.settings.filter { known.contains($0.key) }
             baseline = .init(notification_settings: notifications, notification_delivery_settings: value.notifications.delivery)
         } catch {

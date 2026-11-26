@@ -66,6 +66,8 @@ struct ActivityNotification: Decodable, Identifiable {
         case "group_invite": "Community invite"
         case "new_pick": "New pick"
         case "lineup_confirmed": "Lineup confirmed"
+        case "injury_update": "Injury update"
+        case "roster_move": "Roster move"
         default: "Activity"
         }
     }
@@ -82,6 +84,8 @@ struct ActivityNotification: Decodable, Identifiable {
         case "group_invite": "person.2"
         case "new_pick": "chart.line.uptrend.xyaxis"
         case "lineup_confirmed": "checkmark.seal"
+        case "injury_update": "cross.case.fill"
+        case "roster_move": "arrow.left.arrow.right"
         default: "bell"
         }
     }
