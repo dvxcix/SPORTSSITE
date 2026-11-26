@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCronAuth } from '@/lib/cron-auth'
+import { mlbHeadshot } from '@slipsurge/core/mlb-api'
 import { getTodaysMatchups, isPregame, type LineupPlayer } from '@slipsurge/core/mlbSchedule'
 import { getTeamLogoUrl, getTeamLogoPngUrl, getTeamName } from '@slipsurge/core/mlbTeamColors'
 import { normName } from '@slipsurge/core/nameNorm'
@@ -176,8 +177,10 @@ async function run(req: Request) {
         })
       } else if (prev.confirmed && s.confirmed && prev.lineup_signature && signature && prev.lineup_signature !== signature) {
         lineupEvents++
-        const change = describeLineupChange(prev.lineup_signature, signature, s.lineup)
-        notified += await broadcast(admin, recipientIds, `${getTeamName(s.abbr)} — Lineup Change${change ? `: ${change}` : ''}`, `/dugout?date=${date}`, getTeamLogoUrl(s.abbr))
+        const incoming = lineupReplacement(prev.lineup_signature, signature, s.lineup)
+        const change = incoming ? `${incoming.name} added to the lineup` : null
+        notified += await broadcast(admin, recipientIds, `${getTeamName(s.abbr)} — Lineup Change${change ? `: ${change}` : ''}`,
+          `/dugout?date=${date}`, getTeamLogoUrl(s.abbr), incoming ? mlbHeadshot(incoming.mlb_id) : undefined)
         await postAlert(admin, 'lineup_confirmed', {
           embeds: [{
             author: { name: getTeamName(s.abbr), icon_url: getTeamLogoPngUrl(s.abbr) },
@@ -238,26 +241,25 @@ const isNotableStatus = (status: string) => /postpon|delay|suspend|cancel/i.test
 // Names the specific player(s) that changed when it's a clean 1-for-1 swap
 // (the common case — a late scratch); falls back to a generic message for
 // anything messier (a full lineup reshuffle) rather than guessing wrong.
-function describeLineupChange(prevSig: string, nextSig: string, nextLineup: LineupPlayer[]): string | null {
+function lineupReplacement(prevSig: string, nextSig: string, nextLineup: LineupPlayer[]) {
   const prevIds = new Set(prevSig.split(',').filter(Boolean).map(Number))
   const nextIds = new Set(nextSig.split(',').filter(Boolean).map(Number))
   const added = [...nextIds].filter(id => !prevIds.has(id))
   const removed = [...prevIds].filter(id => !nextIds.has(id))
   if (added.length === 1 && removed.length === 1) {
-    const inName = nextLineup.find(p => p.mlb_id === added[0])?.name
-    if (inName) return `${inName} added to the lineup`
+    return nextLineup.find(p => p.mlb_id === added[0]) ?? null
   }
   return null
 }
 
-async function broadcast(admin: Admin, recipientIds: string[], message: string, link: string, teamLogo: string | undefined): Promise<number> {
+async function broadcast(admin: Admin, recipientIds: string[], message: string, link: string, teamLogo: string | undefined, headshot?: string): Promise<number> {
   if (!recipientIds.length) return 0
   const rows = recipientIds.map(id => ({
     user_id: id,
     type: 'lineup_confirmed',
     message,
     link,
-    data: teamLogo ? { avatar_url: teamLogo } : null,
+    data: teamLogo ? { avatar_url: teamLogo, ...(headshot ? { native_player_headshot: headshot } : {}) } : null,
   }))
   const { error } = await admin.from('notifications').insert(rows)
   if (error) { console.error('[lineup-confirmed] broadcast insert failed', { code: error.code }); return 0 }

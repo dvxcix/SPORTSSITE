@@ -100,3 +100,33 @@ test('game alerts respect quiet hours unless the account enabled live-game prior
   assert.equal(shouldSuppressNotificationDelivery({ ...quiet, live_game_priority: false }, 'game_alert', null, night), true)
   assert.equal(shouldSuppressNotificationDelivery({ ...quiet, live_game_priority: true }, 'game_alert', null, night), false)
 })
+
+test('native game artwork uses the play score, both team logos and the identifiable player', () => {
+  const legitimatePortrait = 'https://a.espncdn.com/i/headshots/nfl/players/full/4608686.png'
+  const scoring = play('1', 'Rushing Touchdown', {
+    text: 'Kyle Monangai rushes for a touchdown.', awayScore: 6, scoringPlay: true,
+    athletes: [
+      { athlete: { id: '2', displayName: 'Another Player', headshot: { href: 'https://a.espncdn.com/i/headshots/nfl/players/full/1234.png' } } },
+      { athlete: { id: '4608686', displayName: 'Kyle Monangai', headshot: { href: legitimatePortrait } } },
+    ],
+  })
+  const match = summary(nfl.gameId, [scoring,
+    play('2', 'End of 1st quarter', { awayScore: 7, homeScore: 0 })])
+  const competition = match.header.competitions[0]
+  const [away, home] = competition.competitors
+  away.team = { ...away.team, logo: 'https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/chi.png', color: '#0B162A' }
+  home.team = Object.assign(home.team, { logos: [{ href: 'https://a.espncdn.com/i/teamlogos/nfl/500/det.png' }] })
+  const [first, second] = gameAlertEvents(nfl, match, now).map(event => gameAlertPayload(nfl, event))
+  assert.equal(first.aps.alert.title, '🏈 Touchdown')
+  assert.equal(first.aps['mutable-content'], 1)
+  assert.equal(first.artwork?.kind, 'game')
+  if (first.artwork?.kind !== 'game' || second.artwork?.kind !== 'game') assert.fail('expected native game artwork')
+  assert.equal(first.artwork.away.score, 6)
+  assert.equal(first.artwork.away.primary, '0B162A')
+  assert.equal(first.artwork.home.logo, 'https://a.espncdn.com/i/teamlogos/nfl/500/det.png')
+  assert.equal(first.artwork.portrait, legitimatePortrait)
+  assert.equal(first.artwork.portraitSide, 'away')
+  assert.equal(second.artwork.portrait, undefined)
+  assert.equal(second.artwork.away.score, 7)
+  assert.ok(Buffer.byteLength(JSON.stringify(first)) < 4096)
+})
