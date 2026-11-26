@@ -3310,3 +3310,15 @@ copy. No new app build or web deployment was made for enrollment.
   intro preserved the session, showed live scores, and opened Search with a
   native back button. All 289 native and source checks passed. Build 2 carries
   the same Apple encryption declaration as build 1.
+
+#### Build 2 physical TestFlight verification
+
+Xcode archived and uploaded `com.slipsurge.ios` 1.0 (2) under SlipSurge LLC.
+Apple processed it and the existing private group shows **Testing**. Updated
+Devin’s physical iPad through TestFlight. Device tooling confirmed build 2.
+The full-window intro opened after that update with the existing member session,
+and Open Feed showed the full-window Color backdrop, aligned wordmark and
+Search, live scores, and the member avatar. Search opened from the new header.
+Relaunch returned to the member’s app without requiring the introduction again.
+The build is available to the existing private tester. The upload retained the
+existing GIPHY debug-symbol warning. Source and testing are limited to native iOS.
