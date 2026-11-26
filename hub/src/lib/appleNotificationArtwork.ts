@@ -78,10 +78,21 @@ export function appleGameArtwork(
 export function appleFeaturedPlayer(
   play: ESPNPlay, summary: ESPNSummary, sport: Sport, scoringSide?: string,
 ): Player | undefined {
+  const normalize = (value: string) => value.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+  const playText = (play.text ?? '').replace(/^(?:\([^)]{1,50}\)\s*)+/, '')
+  // An NFL passing touchdown starts with the quarterback, then identifies
+  // the receiver after "pass ... to". Play text often uses "K.Monangai".
+  const passTarget = sport === 'nfl' && scoringSide && /\btouchdown\b/i.test(playText)
+    ? /\bpass\b[^.!?]{0,100}?\s+to\s+(.+)/i.exec(playText)?.[1] : undefined
+  const description = normalize(passTarget ?? playText)
   const nameMatch = (name: string) => {
-    const description = play.text?.trim().toLowerCase() ?? ''
-    const normalized = name.trim().toLowerCase()
-    return normalized.length >= 3 && (description.startsWith(normalized + ' ') || description.startsWith(normalized + ','))
+    const [first, ...rest] = name.trim().split(/\s+/)
+    const initials = first.replace(/[^A-Z]/g, '')
+    const variants = sport === 'nfl' && rest.length
+      ? [name, `${first[0]} ${rest.join(' ')}`, `${initials} ${rest.join(' ')}`] : [name]
+    return variants.map(normalize).some(value => value.length >= 3 &&
+      (description === value || description.startsWith(value + ' ')))
   }
   const player = (name: string, headshot: unknown, team?: string): Player[] => {
     const image = applePlayerPortrait(headshot)
@@ -102,7 +113,7 @@ export function appleFeaturedPlayer(
   ]
   const identities = new Set(matches.map(match => match.name.toLowerCase()))
   if (identities.size === 1) return matches.find(match => match.team) ?? matches[0]
-  if (!matches.length && participants.length === 1) {
+  if (!passTarget && !matches.length && participants.length === 1) {
     const { displayName, headshot } = participants[0].athlete
     return player(displayName, headshot?.href, scoringSide)[0]
   }
