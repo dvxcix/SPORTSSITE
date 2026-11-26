@@ -104,9 +104,10 @@ test('game alerts respect quiet hours unless the account enabled live-game prior
 test('native game artwork uses the play score, both team logos and the identifiable player', () => {
   const legitimatePortrait = 'https://a.espncdn.com/i/headshots/nfl/players/full/4608686.png'
   const scoring = play('1', 'Rushing Touchdown', {
-    text: 'Kyle Monangai rushes for a touchdown.', awayScore: 6, scoringPlay: true,
+    text: '(Shotgun) K.Monangai right tackle for 2 yards, TOUCHDOWN. C.Santos extra point is GOOD.',
+    awayScore: 6, scoringPlay: true,
     athletes: [
-      { athlete: { id: '2', displayName: 'Another Player', headshot: { href: 'https://a.espncdn.com/i/headshots/nfl/players/full/1234.png' } } },
+      { athlete: { id: '2', displayName: 'Cairo Santos', headshot: { href: 'https://a.espncdn.com/i/headshots/nfl/players/full/1234.png' } } },
       { athlete: { id: '4608686', displayName: 'Kyle Monangai', headshot: { href: legitimatePortrait } } },
     ],
   })
@@ -129,4 +130,20 @@ test('native game artwork uses the play score, both team logos and the identifia
   assert.equal(second.artwork.portrait, undefined)
   assert.equal(second.artwork.away.score, 7)
   assert.ok(Buffer.byteLength(JSON.stringify(first)) < 4096)
+})
+
+test('NFL receiving touchdowns feature the named receiver ahead of the passer', () => {
+  const portrait = (id: string) => `https://a.espncdn.com/i/headshots/nfl/players/full/${id}.png`
+  const scoring = play('3', 'Passing Touchdown', {
+    text: '(Shotgun) J.Goff pass short right to S.LaPorta for 12 yards, TOUCHDOWN.', homeScore: 6, scoringPlay: true,
+    athletes: [
+      { athlete: { id: '3046779', displayName: 'Jared Goff', headshot: { href: portrait('3046779') } } },
+      { athlete: { id: '4430027', displayName: 'Sam LaPorta', headshot: { href: portrait('4430027') } } },
+    ],
+  })
+  const event = gameAlertEvents(nfl, summary(nfl.gameId, [scoring]), now)[0]
+  assert.equal(event.artwork?.kind, 'game')
+  if (event.artwork?.kind !== 'game') assert.fail('expected a portrait for the named receiver')
+  assert.equal(event.artwork.player, 'Sam LaPorta')
+  assert.equal(event.artwork.portrait, portrait('4430027'))
 })
