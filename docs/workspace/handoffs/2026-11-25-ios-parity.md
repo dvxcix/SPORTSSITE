@@ -2930,3 +2930,44 @@ physical-device push are still open.
   Chat composer interactions, widgets, and deliberately resized iPad windows
   still need device QA. Apple enrollment is with Apple Support and does not
   block these local development builds.
+
+### 2026-11-26 · iPhone navigation at iPad widths and Odds Board response time
+
+- The five destinations use the same tab bar at all widths. The iPad window
+  keeps Feed, Research, Community, Inbox and You with icons, unread badge
+  support and the signed-in decorated avatar. Expanding or tiling the app
+  keeps its selected tab. The Research resume offer appears at the landing
+  screen so it leaves the board toolbar and Back control clear.
+- The Court starts its slate and Odds Board requests together. Opening the
+  Odds Board alone avoids fetching the full player board or its results.
+  Both boards reuse the already-built rows and keep exact, still-valid
+  prices during eligible in-place refreshes. Both fit the market and
+  sportsbook logo on one row at ordinary phone widths. Price history leads
+  with the current price and timestamp and charts only recorded observations.
+- In signed-in iPhone 18 Pro samples, the 25 November NBA schedule took
+  0.7–0.8 seconds and its Odds Board took 4.9–5.2 seconds. NFL schedule
+  requests on 26 November mostly took 0.4–0.8 seconds and Odds Board
+  responses took 2.0–6.9 seconds. These are HTTP timings, separate from app
+  launch, painting and the previous coarse iPad captures.
+- Server work is in draft PR #92 at `a9d9e8cfca7372690536d10d8051b6140b8a119d`.
+  It batches NFL legacy view lookups, overlaps durable clock reads, and
+  reduces serial NBA schedule and data reads. All 303 focused route and
+  production checks and the Hub typecheck passed. Vercel Preview built
+  the exact source. Protected fetch returned 401, so authenticated preview
+  timings and the production rollout remain open.
+- On Devin’s physical iPad, the signed build showed the same decorated You
+  tab in a floating window, fullscreen, and a half-width portrait tile.
+  In the narrow tile, changing to the 25 November slate returned NBA
+  prices and retained the sports artwork and logo picker. Opened a DM,
+  focused the composer, loaded GIPHY results, attached a GIF and removed
+  it from the draft. Nothing was sent. Added the medium Scoreboard on the
+  Home Screen and opened the correct Bears–Lions Game Center from its tile.
+  The widget stays installed for device review.
+- Signed-in iPhone 18 Pro Simulator verified the board, avatar, filter row,
+  and quote timestamp. iPhone 18 Pro Max launched with Feed and the compact
+  five-tab bar. The native and production source suite passed 288 checks.
+- Compared Action Network’s responsive market switch and line-movement
+  controls and Sofascore’s real matchup box score interactively. AppLlama
+  provided Real stats and Action odds references. UIZZE’s rendered critique
+  improved the board control density and price history order and height.
+  The competitor iPad apps were absent from the device inventory.

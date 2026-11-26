@@ -201,6 +201,13 @@ struct CourtView: View {
 
     private var boardRequest: BoardRequest { .init(slate: slateRequest, gameID: selectedGame?.id, mode: mode) }
 
+    private var showsOddsBoard: Bool { tool == nil && section == .odds }
+
+    private var playerBoardRequest: BoardRequest? {
+        if !isPreview, showsOddsBoard, link.player == nil { return nil }
+        return boardRequest
+    }
+
     private var resultGame: CourtBoard.Game? {
         if let selectedGame { return selectedGame }
         if isPreview, case .loaded(let board, _) = state { return board.game }
@@ -208,7 +215,8 @@ struct CourtView: View {
     }
 
     private var resultRequest: ResultRequest? {
-        guard let game = resultGame, CourtObservedResults.allowed(game: game, mode: mode) else { return nil }
+        guard playerBoardRequest != nil, let game = resultGame,
+              CourtObservedResults.allowed(game: game, mode: mode) else { return nil }
         return .init(gameID: game.id, mode: mode, final: game.isFinal, revision: revision)
     }
 
@@ -220,6 +228,10 @@ struct CourtView: View {
                 } else {
                     ResearchSlateControls(date: $date)
                     memberContent()
+                    if showsOddsBoard {
+                        if selectedGame != nil { selectors }
+                        oddsBoard(showsContent: selectedGame != nil)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -243,7 +255,9 @@ struct CourtView: View {
         .foregroundStyle(Brand.text(for: scheme))
         .tint(Brand.accent(for: scheme))
         .task(id: slateRequest) { await loadSlate() }
-        .task(id: boardRequest) { await loadBoard() }
+        .task(id: playerBoardRequest) {
+            if let request = playerBoardRequest { await loadBoard(request) }
+        }
         .task(id: resultRequest) { await updateResults() }
         .refreshable { revision += 1 }
         .navigationDestination(isPresented: $showLinkedPlayer) { linkedPlayer }
@@ -388,7 +402,7 @@ struct CourtView: View {
                     .scrollIndicators(.hidden)
                     .sensoryFeedback(.selection, trigger: selectedGameID)
                 }
-                boardContent()
+                if !showsOddsBoard { boardContent() }
             }
         }
     }
@@ -419,12 +433,16 @@ struct CourtView: View {
         if tool == .slateEdge {
             CourtSlateEdgeView(scope: scope, date: slateRequest.date, mode: mode, games: games, reload: revision,
                 initialGame: linkedGame, initialBook: preferredBook)
-        } else if tool == nil, section == .odds {
-            CourtOddsBoardView(scope: scope, date: slateRequest.date, gameID: selectedGame?.id, mode: mode,
-                reload: revision, initialBook: preferredBook, initialMarket: oddsMarket)
+        } else if showsOddsBoard {
+            oddsBoard(showsContent: true)
         } else {
             playerOrMarketContent()
         }
+    }
+
+    private func oddsBoard(showsContent: Bool) -> some View {
+        CourtOddsBoardView(scope: scope, date: slateRequest.date, gameID: selectedGame?.id, mode: mode,
+            reload: revision, showsContent: showsContent, initialBook: preferredBook, initialMarket: oddsMarket)
     }
 
     @ViewBuilder
@@ -802,8 +820,7 @@ struct CourtView: View {
         }
     }
 
-    private func loadBoard() async {
-        let request = boardRequest
+    private func loadBoard(_ request: BoardRequest) async {
         let game = selectedGame
         if !isPreview, game == nil { return }
         if !isPreview { state = .loading }
@@ -817,7 +834,7 @@ struct CourtView: View {
                 board = try await api.memberBoard(game: game, mode: request.mode, account: account, userID: userID)
             }
             try Task.checkCancellation()
-            guard request == boardRequest else { return }
+            guard request == playerBoardRequest else { return }
             let observedAt = Date.now
             state = .loaded(board, observedAt)
             if !didOpenLinkedPlayer, link.player != nil, request.slate.date == linkedDate,
@@ -834,9 +851,9 @@ struct CourtView: View {
                 revision += 1
             }
         } catch let error as SlipSurgeHTTP.Status where error.code == 403 && !isPreview {
-            if !Task.isCancelled, request == boardRequest { state = .denied }
+            if !Task.isCancelled, request == playerBoardRequest { state = .denied }
         } catch {
-            if !Task.isCancelled, request == boardRequest { state = .failed }
+            if !Task.isCancelled, request == playerBoardRequest { state = .failed }
         }
     }
 }

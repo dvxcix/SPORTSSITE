@@ -7,7 +7,6 @@ struct SlipSurgeTabs: View {
     @Binding var notificationOpen: InboxNotificationOpen?
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var phase
-    @Environment(\.horizontalSizeClass) private var horizontalSize
     enum Destination: String, CaseIterable {
         case feed = "Feed", research = "Research", community = "Community", inbox = "Inbox", you = "You"
 
@@ -46,8 +45,6 @@ struct SlipSurgeTabs: View {
     @State private var keyboardVisible = false
     @State private var socialDetails = SocialDetailVisibility()
 
-    private var compactTabs: Bool { horizontalSize == .compact }
-
     private struct SitePresentation: Identifiable {
         let id = UUID()
         let target: NativeSiteLink
@@ -78,20 +75,23 @@ struct SlipSurgeTabs: View {
                     .environment(\.nativeResumeActive, selected == .feed && sitePresentation == nil)
             }
             .environment(\.socialTab, .feed)
-            .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
+            .toolbar(.hidden, for: .tabBar)
             .id(account.memberID)
             .tabItem { Label("Feed", systemImage: "bubble.left.and.bubble.right") }
             .tag(Destination.feed)
 
             NavigationStack(path: $researchPath) {
                 ResearchHome(account: account)
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        if selected == .research, let resumeBanner { resumeBanner }
+                    }
                     .navigationDestination(for: ResearchPresentation.self) { route in
                         let book = researchPreferences.read(for: account.memberID)?.preferences.primaryBook
                         LinkedResearchView(account: account, link: route.link, preferredBook: book)
                             .id(route.id)
                     }
             }
-            .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
+            .toolbar(.hidden, for: .tabBar)
             .id(account.memberID)
             .environment(\.nativeResumeActive, selected == .research && sitePresentation == nil)
             .tabItem { Label("Research", systemImage: "chart.bar.xaxis") }
@@ -102,7 +102,7 @@ struct SlipSurgeTabs: View {
                     opensDestination: $discoverDestination, opensJoined: true)
             }
             .environment(\.socialTab, .community)
-            .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
+            .toolbar(.hidden, for: .tabBar)
             .id(account.memberID)
             .tabItem { Label(Destination.community.rawValue, systemImage: Destination.community.symbol) }
             .tag(Destination.community)
@@ -112,7 +112,7 @@ struct SlipSurgeTabs: View {
                     active: selected == .inbox, unread: inboxUnread) { selectTab(.you) }
             }
             .environment(\.socialTab, .inbox)
-            .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
+            .toolbar(.hidden, for: .tabBar)
             .id(account.memberID)
             .id(inboxNavigationRevision)
             .tabItem { Label(Destination.inbox.rawValue, systemImage: Destination.inbox.symbol) }
@@ -135,7 +135,7 @@ struct SlipSurgeTabs: View {
                 }
             }
             .environment(\.socialTab, .you)
-            .toolbar(compactTabs ? .hidden : .automatic, for: .tabBar)
+            .toolbar(.hidden, for: .tabBar)
             .id(account.user?.id)
             .tabItem { Label(Destination.you.rawValue, systemImage: Destination.you.symbol) }
             .tag(Destination.you)
@@ -143,7 +143,7 @@ struct SlipSurgeTabs: View {
         .tint(Brand.accent(for: scheme))
         .environment(socialDetails)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if compactTabs && !keyboardVisible && !socialDetails.showsDetail(in: selected) {
+            if !keyboardVisible && !socialDetails.showsDetail(in: selected) {
                 SlipSurgeTabBar(selection: selected, profile: account.memberID == nil ? nil : account.profileIdentity,
                     unread: inboxUnread.total(for: account.memberID), select: selectTab)
             }
@@ -163,7 +163,6 @@ struct SlipSurgeTabs: View {
                     SiteAnnouncementBanner(banner: banner) { dismissedBannerVersion = banner.updatedAt }
                         .environment(\.openURL, OpenURLAction(handler: openLink))
                 }
-                if selected == .research, let resumeBanner { resumeBanner }
             }
         }
         .sheet(item: $release, onDismiss: presentNextRelease) { current in

@@ -1,7 +1,17 @@
 import Foundation
+#if DEBUG
+import OSLog
+#endif
 
 enum SlipSurgeHTTP {
     static let site = "www.slipsurge.com"
+    #if DEBUG
+    private static let researchLog = Logger(subsystem: "com.slipsurge.ios", category: "OddsTiming")
+    private static let timingPaths: Set<String> = [
+        "/api/mobile/court/schedule", "/api/mobile/court/odds-board", "/api/mobile/court/board",
+        "/api/mobile/sideline/schedule", "/api/the-sideline/odds-board"
+    ]
+    #endif
     private static let session: URLSession = {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.httpShouldSetCookies = false
@@ -66,8 +76,17 @@ enum SlipSurgeHTTP {
     }
 
     static func send(_ request: URLRequest) async throws -> Data {
+        #if DEBUG
+        let started = Date.now
+        #endif
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        #if DEBUG
+        if let path = request.url?.path, timingPaths.contains(path) {
+            let elapsed = Int(Date.now.timeIntervalSince(started) * 1_000)
+            researchLog.notice("\(path, privacy: .public) \(http.statusCode) \(elapsed)ms \(data.count) bytes")
+        }
+        #endif
         guard (200..<300).contains(http.statusCode) else { throw Status(code: http.statusCode, data: data) }
         return data
     }

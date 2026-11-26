@@ -34,7 +34,7 @@ struct SidelineView: View {
     }
 
     private enum LoadState {
-        case loading, loaded(SidelineBoard), failed, denied
+        case loading, loaded(SidelineBoard, ResearchOddsSlate), failed, denied
     }
 
     private enum ScheduleState {
@@ -387,7 +387,7 @@ struct SidelineView: View {
             unavailable("Board couldn’t load")
         case .denied:
             accessRequired
-        case .loaded(let board):
+        case .loaded(let board, let oddsSlate):
             if !api.isFeatured, board.date != dayRequest.date {
                 loading("Loading board")
             } else if api.isFeatured, section == .gameDay, let game = board.games.first {
@@ -403,7 +403,7 @@ struct SidelineView: View {
                         Text("Odds unavailable for this matchup.").font(.subheadline).foregroundStyle(.secondary)
                     }
                 } else {
-                    ResearchOddsBoard(slate: board.oddsSlate, selectedGame: selectedGameID,
+                    ResearchOddsBoard(slate: oddsSlate, selectedGame: selectedGameID,
                         scorerLabel: board.scorerLabel, defaultSort: .shortened)
                 }
             } else {
@@ -438,16 +438,26 @@ struct SidelineView: View {
     }
 
     private func quoteFilters(_ board: SidelineBoard) -> some View {
-        VStack(spacing: 5) {
-            Picker("Market", selection: $selection.market) {
-                ForEach(Array(Set(board.markets + [selection.market, "anytime_td", "first_td"])).sorted(), id: \.self) {
-                    Text(marketName($0)).tag($0)
-                }
+        let markets = Array(Set(board.markets + [selection.market, "anytime_td", "first_td"])).sorted()
+        let market = Picker("Market", selection: $selection.market) {
+            ForEach(markets, id: \.self) { Text(marketName($0)).tag($0) }
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .frame(minHeight: 44)
+        let sportsbook = SportsbookPicker(books: Array(Set(board.books + [selection.book])).sorted(), selection: $selection.book)
+            .fixedSize(horizontal: true, vertical: false)
+            .frame(minHeight: 44)
+
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                market
+                Spacer(minLength: 0)
+                sportsbook
             }
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            Divider()
-            SportsbookPicker(books: Array(Set(board.books + [selection.book])).sorted(), selection: $selection.book)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            VStack(alignment: .leading, spacing: 0) {
+                market
+                sportsbook
+            }
         }
         .padding(.horizontal, 12)
         .background(Brand.surface(for: scheme), in: .rect(cornerRadius: 12))
@@ -515,14 +525,14 @@ struct SidelineView: View {
     private func load() async {
         let requested = requestKey
         guard requested.fetchQuotes else { return }
-        state = .loading
+        if !canKeepQuotes(for: requested) { state = .loading }
         do {
             let board = try await api.board(for: requested.selection, date: requested.date)
             try Task.checkCancellation()
             guard requested == requestKey else { return }
             let deadline = try board.refreshDeadline()
             lastBoard = board
-            state = .loaded(board)
+            state = .loaded(board, board.oddsSlate)
             if let deadline {
                 try await Task.sleep(for: .seconds(max(0, deadline.timeIntervalSinceNow)))
                 revision += 1
@@ -535,6 +545,13 @@ struct SidelineView: View {
         } catch {
             if !Task.isCancelled, requested == requestKey { state = .failed }
         }
+    }
+
+    private func canKeepQuotes(for request: RequestKey) -> Bool {
+        guard case .loaded(let board, _) = state, board.date == request.date,
+              board.market == request.selection.market, board.book == request.selection.book else { return false }
+        // A verified snapshot can remain visible until its existing clock deadline.
+        return (try? (board.refreshDeadline() ?? .distantFuture)) != nil
     }
 
     private func marketName(_ value: String) -> String {

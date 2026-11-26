@@ -1,3 +1,4 @@
+import Charts
 import SwiftUI
 
 struct ResearchOddsSlate {
@@ -36,7 +37,7 @@ struct ResearchOddsSlate {
             return (Self.implied(current) - Self.implied(baseline)) * 100
         }
 
-        private static func implied(_ price: Int) -> Double {
+        static func implied(_ price: Int) -> Double {
             let value = Double(price)
             return value > 0 ? 100 / (value + 100) : -value / (100 - value)
         }
@@ -92,6 +93,14 @@ struct ResearchOddsBoard: View {
         var id: String { "\(player.id):\(price.id)" }
     }
 
+    private struct PriceObservation: Identifiable {
+        let label: String
+        let odds: Int?
+        let date: Date?
+
+        var id: String { label }
+    }
+
     let slate: ResearchOddsSlate
     let selectedGame: String?
     let scorerLabel: String?
@@ -114,8 +123,6 @@ struct ResearchOddsBoard: View {
     @State private var selectedPrice: SelectedPrice?
 
     private var selectedSort: OddsSort { sort ?? defaultSort }
-    private var sortedLine: Double? { sortedPriceLine.flatMap { milestones.contains($0) && (target == nil || target == $0) ? $0 : nil } }
-
     private var teams: [ResearchOddsSlate.Team] {
         Array(Set(slate.players.filter { game == nil || $0.gameID == game }.map(\.team)))
             .sorted { $0.name < $1.name }
@@ -129,27 +136,29 @@ struct ResearchOddsBoard: View {
         }
     }
 
-    private var milestones: [Double] { Array(Set(players.flatMap(\.prices).map(\.line))).sorted() }
-
-    private var rows: [ResearchOddsSlate.Player] {
-        let line = sortedLine
+    private func rows(for players: [ResearchOddsSlate.Player], sortedLine line: Double?) -> [ResearchOddsSlate.Player] {
         let nameAscending = line != nil || selectedSort != .alphabetical || ascendingName
+        let valueAscending = line != nil ? ascendingPrice : selectedSort == .lengthened
         return players.filter { player in target == nil || player.prices.contains { $0.line == target } }
-            .sorted { left, right in
+            .map { player in
+                let value: Double?
                 if let line {
-                    let first = left.prices.first { $0.line == line }?.current
-                    let second = right.prices.first { $0.line == line }?.current
-                    if let first, let second, first != second { return ascendingPrice ? first < second : first > second }
-                    if (first == nil) != (second == nil) { return first != nil }
-                } else if selectedSort != .alphabetical {
-                    let first = movement(left), second = movement(right)
-                    if let first, let second, first != second { return selectedSort == .shortened ? first > second : first < second }
-                    if (first == nil) != (second == nil) { return first != nil }
+                    value = player.prices.first { $0.line == line }.map { Double($0.current) }
+                } else {
+                    value = selectedSort == .alphabetical ? nil : movement(player)
                 }
-                let nameOrder = left.name.localizedStandardCompare(right.name)
-                if nameOrder == .orderedSame { return left.id < right.id }
+                return (player: player, value: value)
+            }
+            .sorted { left, right in
+                if let first = left.value, let second = right.value, first != second {
+                    return valueAscending ? first < second : first > second
+                }
+                if (left.value == nil) != (right.value == nil) { return left.value != nil }
+                let nameOrder = left.player.name.localizedStandardCompare(right.player.name)
+                if nameOrder == .orderedSame { return left.player.id < right.player.id }
                 return nameAscending ? nameOrder == .orderedAscending : nameOrder == .orderedDescending
             }
+            .map(\.player)
     }
 
     private func movement(_ player: ResearchOddsSlate.Player) -> Double? {
@@ -158,6 +167,10 @@ struct ResearchOddsBoard: View {
     }
 
     var body: some View {
+        let players = players
+        let milestones = Array(Set(players.lazy.flatMap(\.prices).map(\.line))).sorted()
+        let sortedLine = sortedPriceLine.flatMap { milestones.contains($0) && (target == nil || target == $0) ? $0 : nil }
+        let rows = rows(for: players, sortedLine: sortedLine)
         VStack(alignment: .leading, spacing: 12) {
             navigation
             ForEach(slate.notices, id: \.self) { notice in
@@ -167,7 +180,7 @@ struct ResearchOddsBoard: View {
             if rows.isEmpty {
                 ContentUnavailableView("No prices for these filters", systemImage: "chart.bar.xaxis")
             } else {
-                table(rows, columns: target.map { [$0] } ?? milestones)
+                table(rows, columns: target.map { [$0] } ?? milestones, sortedLine: sortedLine)
             }
         }
         .onChange(of: selectedGame, initial: true) { _, value in
@@ -181,7 +194,7 @@ struct ResearchOddsBoard: View {
         .onChange(of: milestones) { _, visible in
             if let target, !visible.contains(target) { self.target = nil }
         }
-        .sheet(isPresented: $filtersOpen) { filters }
+        .sheet(isPresented: $filtersOpen) { filters(milestones: milestones) }
         .sheet(item: $selectedPrice) { selection in quoteDetail(selection) }
     }
 
@@ -217,7 +230,7 @@ struct ResearchOddsBoard: View {
         .accessibilityLabel("Odds Board filters")
     }
 
-    private var filters: some View {
+    private func filters(milestones: [Double]) -> some View {
         NavigationStack {
             Form {
                 Section("Matchup") {
@@ -275,7 +288,7 @@ struct ResearchOddsBoard: View {
         .tint(Brand.accent(for: scheme))
     }
 
-    private func table(_ players: [ResearchOddsSlate.Player], columns: [Double]) -> some View {
+    private func table(_ players: [ResearchOddsSlate.Player], columns: [Double], sortedLine: Double?) -> some View {
         ScrollView(.horizontal) {
             LazyVStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 2) {
@@ -373,15 +386,33 @@ struct ResearchOddsBoard: View {
     }
 
     private func quoteDetail(_ selection: SelectedPrice) -> some View {
-        NavigationStack {
+        let price = selection.price
+        let observations = [
+            PriceObservation(label: "Last observed", odds: price.current, date: price.observedAt),
+            PriceObservation(label: "Earlier", odds: price.earlier, date: price.earlierAt),
+            PriceObservation(label: OddsComparison.opening.label(live: live), odds: price.opening, date: price.openingAt)
+        ]
+        let samples = observations.compactMap { observation -> (Date, Int)? in
+            guard let date = observation.date, let odds = observation.odds else { return nil }
+            return (date, odds)
+        }
+        let unique = Dictionary(samples, uniquingKeysWith: { latest, _ in latest })
+        let timeline = unique.keys.sorted()
+        let detents: Set<PresentationDetent> = timeline.count > 1 ? [.fraction(0.62), .large] : [.medium, .large]
+        return NavigationStack {
             List {
                 Section {
                     identity(selection.player)
                 }
                 Section(selection.target) {
-                    quoteObservation("Last observed", value: selection.price.current, at: selection.price.observedAt)
-                    quoteObservation("Earlier", value: selection.price.earlier, at: selection.price.earlierAt)
-                    quoteObservation(OddsComparison.opening.label(live: live), value: selection.price.opening, at: selection.price.openingAt)
+                    quoteObservation("Last observed", value: price.current, at: price.observedAt)
+                    if timeline.count > 1 {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Implied probability").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                            priceChart(timeline: timeline, prices: unique)
+                        }
+                    }
+                    ForEach(observations.dropFirst()) { quoteObservation($0.label, value: $0.odds, at: $0.date) }
                 }
             }
             .navigationTitle("Price history")
@@ -392,8 +423,50 @@ struct ResearchOddsBoard: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents(detents)
         .tint(Brand.accent(for: scheme))
+    }
+
+    private func priceChart(timeline: [Date], prices: [Date: Int]) -> some View {
+        let probabilities = prices.values.map(ResearchOddsSlate.Price.implied)
+        let lower = max(0, (probabilities.min() ?? 0) - 0.06)
+        let upper = min(1, (probabilities.max() ?? 1) + 0.06)
+        let dateFormat: Date.FormatStyle = if let first = timeline.first, let last = timeline.last,
+            Calendar.current.isDate(first, inSameDayAs: last) {
+            .dateTime.hour().minute()
+        } else {
+            .dateTime.month(.abbreviated).day()
+        }
+
+        return Chart(timeline, id: \.self) { date in
+            if let price = prices[date] {
+                let probability = ResearchOddsSlate.Price.implied(price)
+                LineMark(x: .value("Observed at", date), y: .value("Implied probability", probability))
+                    .foregroundStyle(Brand.accent(for: scheme))
+                PointMark(x: .value("Observed at", date), y: .value("Implied probability", probability))
+                    .foregroundStyle(Brand.accent(for: scheme))
+            }
+        }
+        .chartYScale(domain: lower...upper)
+        .chartYAxis {
+            AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { value in
+                AxisGridLine()
+                AxisValueLabel {
+                    if let fraction = value.as(Double.self) { Text(fraction, format: .percent.precision(.fractionLength(0))) }
+                }
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: .automatic(desiredCount: 3)) { value in
+                AxisGridLine()
+                AxisValueLabel {
+                    if let date = value.as(Date.self) { Text(date, format: dateFormat) }
+                }
+            }
+        }
+        .frame(height: 108)
+        .padding(.vertical, 8)
+        .accessibilityHidden(true)
     }
 
     private func quoteObservation(_ label: String, value: Int?, at: Date?) -> some View {
