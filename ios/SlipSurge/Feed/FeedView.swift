@@ -173,7 +173,10 @@ struct FeedView: View {
                 if api.userID != nil { searchLink }
             }
             .frame(minHeight: 47)
-            .padding(.horizontal, 15)
+            // Compact iPad windows place system window controls in the leading
+            // part of the custom header. Keep the mark clear of those controls.
+            .padding(.leading, sizeClass == .compact && UIDevice.current.userInterfaceIdiom == .pad ? 66 : 15)
+            .padding(.trailing, 15)
             scopes
         }
         .frame(maxWidth: readingWidth)

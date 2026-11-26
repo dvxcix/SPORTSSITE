@@ -3367,9 +3367,8 @@ On Devin’s physical iPad mini, iPadOS 27.2.1, verified TestFlight
   Center, honors account quiet-hours/game priority, and expires stale or
   pre-subscription events. NFL/NBA adapt the Game Center play feeds. MLB
   reuses official scoring data and the primary database’s existing
-  near-home-run outbox. This checkpoint contains text and score enrichment.
-  The migration, schedule and feature are inactive in production.
-  For the pilot use one opted-in device and a live game. An APNs
+  near-home-run outbox. These alerts include text and score enrichment.
+  The pilot uses one opted-in device and a live game. An APNs
   acceptance does not prove an iPad displayed the notification.
 
 Emil skill pass for this slice:
@@ -3400,6 +3399,32 @@ Emil skill pass for this slice:
 Xcode built the signed iPhone 18 Pro simulator target and archived 1.0 (3)
 under SlipSurge LLC. Local App Store export verification confirmed
 `com.slipsurge.ios`, build 3, the widget extension and matching runtime
-and signed production APNs environments. Live APNs delivery is still
-pending the production provider credential, registration repair rollout,
-iPad permission and the single-device canary.
+and signed production APNs environments. Apple processed build 3 and it
+was added to the same private one-tester TestFlight group. Device tools
+confirmed build 3 on Devin’s iPad. The upcoming Philadelphia–Dallas
+Odds Board showed prices without the false final-settlement message.
+
+After the owner authorized the native APNs credential, registered a
+production-only Apple key limited to the App Store bundle and stored
+its configuration as sensitive production variables in Vercel. Applied
+only the reviewed registration repair and game alert migration to
+Supabase. Its recorded migration version is `20261126192811`. The task
+branch filename is aligned with that version. The focused backend release
+merged in PR 93 as `6d5e37a7` and is live on Vercel. Existing browser push
+and standard provider reads kept their configuration.
+
+Hub TypeScript passed. The iOS task branch had 303 passing native and
+smoke checks. The focused release against current main had 299 passes
+and the same two existing fixture failures as its unchanged base
+(`native-court-access` and `native-mlb-matrices`). The isolated
+Postgres verification passed. On build 3 the iPad accepted iPadOS
+notification permission and its Account screen showed Notifications
+enabled. The primary database had one production device for this
+topic. Saved scoring plays, big plays, and period/final alerts from
+the live Chicago at Detroit Game Center and confirmed the consent
+row and successful scheduled runs.
+
+A separate Feed header correction clears the iPad window controls
+at compact width. Visually verified the wordmark and its icon on
+the iPad mini simulator in full screen and a resized window. This
+correction comes after build 3.
