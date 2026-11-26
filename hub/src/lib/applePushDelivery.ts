@@ -2,6 +2,7 @@ import 'server-only'
 import { sign } from 'node:crypto'
 import { connect, type ClientHttp2Session } from 'node:http2'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { appleNotificationPayload } from './appleNotificationPayload'
 import { applePushConfig, appleToken, type ApplePushConfig } from './applePushConfig'
 
 type Device = { id: string; token: string; topic: string; environment: string }
@@ -40,7 +41,7 @@ function requestDelivery(session: ClientHttp2Session, token: string, topic: stri
   })
 }
 
-async function deliver(devices: Device[], config: ApplePushConfig, userId: string, id: string) {
+async function deliver(devices: Device[], config: ApplePushConfig, userId: string, id: string, type: string) {
   const admin = createAdminClient()
   const authority = config.environment === 'development' ? 'https://api.sandbox.push.apple.com' : 'https://api.push.apple.com'
   const connection = connect(authority, { minVersion: 'TLSv1.2' })
@@ -51,7 +52,7 @@ async function deliver(devices: Device[], config: ApplePushConfig, userId: strin
   try {
     const auth = providerToken(config, issuedAt)
     // APNs and the lock screen receive no message text, participant or account details.
-    const payload = JSON.stringify({ aps: { alert: { title: 'SlipSurge', body: 'You have new activity.' }, sound: 'default' }, notificationId: id })
+    const payload = JSON.stringify(appleNotificationPayload(id, type))
     for (const device of devices) {
       if (connection.destroyed || connection.closed) break
       const active = await admin.from('native_apple_push_devices').select('id').eq('id', device.id).eq('user_id', userId).maybeSingle()
@@ -77,7 +78,7 @@ async function deliver(devices: Device[], config: ApplePushConfig, userId: strin
   }
 }
 
-export async function sendApplePush(userId: string, notificationId: string) {
+export async function sendApplePush(userId: string, notificationId: string, type: string) {
   const configs = [applePushConfig('production'), applePushConfig('development')].filter((config): config is ApplePushConfig => config != null)
   if (!configs.length) return
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString()
@@ -86,6 +87,6 @@ export async function sendApplePush(userId: string, notificationId: string) {
   if (error || !data?.length) return
   await Promise.allSettled(configs.map(config => {
     const devices = data.filter(device => device.environment === config.environment && device.topic === config.topic && appleToken(device.token))
-    return devices.length ? deliver(devices, config, userId, notificationId) : Promise.resolve()
+    return devices.length ? deliver(devices, config, userId, notificationId, type) : Promise.resolve()
   }))
 }

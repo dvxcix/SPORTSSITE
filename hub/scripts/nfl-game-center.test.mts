@@ -73,3 +73,20 @@ test('NFL links open game center and refresh does not reload the document', () =
   assert.match(source('src/lib/nflGameCenterServer.ts'), /revalidate: 30/)
   assert.doesNotMatch(source('src/lib/nflGameCenterServer.ts'), /\.(upsert|insert|update|delete)\(/)
 })
+
+test('exact same-team directory portraits reach both play participants and box scores', () => {
+  const directory = [
+    { display_name: 'Fixture Receiver', latest_team: 'CHI', headshot: 'https://images.test/wrong.png', espn_id: null },
+    { display_name: 'Fixture Receiver', latest_team: 'PHI', headshot: null, espn_id: '100' },
+  ]
+  const result = buildNflGameCenter(game, feed, directory)
+  const expected = 'https://a.espncdn.com/i/headshots/nfl/players/full/100.png'
+  assert.equal(result.summary.plays?.find(play => play.id === '2')?.athletes?.[0].athlete.headshot?.href, expected)
+  assert.equal(result.summary.boxscore?.players?.[0].statistics[0].athletes[0].athlete.headshot?.href, expected)
+  const ambiguous = [...directory, { ...directory[1], espn_id: '200' }]
+  assert.equal(buildNflGameCenter(game, feed, ambiguous).summary.plays?.[1].athletes?.[0].athlete.headshot, undefined)
+  assert.equal(buildNflGameCenter(game, feed, directory.slice(0, 1)).summary.plays?.[1].athletes?.[0].athlete.headshot, undefined)
+  const providerPortrait = 'https://images.test/provider.png'
+  const providerFeed = { ...feed, stats: [{ ...stat, player: { ...stat.player, headshot_url: providerPortrait } }] }
+  assert.equal(buildNflGameCenter(game, providerFeed, directory).summary.plays?.[1].athletes?.[0].athlete.headshot?.href, providerPortrait)
+})

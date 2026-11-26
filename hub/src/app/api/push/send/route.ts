@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, skipped: 'quiet hours' })
   }
 
-  after(() => sendApplePush(notification.user_id, notification.id))
+  after(() => sendApplePush(notification.user_id, notification.id, notification.type))
 
   const { data: subscriptions } = await admin
     .from('push_subscriptions')
