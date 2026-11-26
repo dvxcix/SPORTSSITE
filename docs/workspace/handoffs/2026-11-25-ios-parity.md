@@ -2803,3 +2803,14 @@ physical-device push are still open.
   On www.slipsurge.com the old forum, event, page, article and blog routes
   returned 307 to Communities, and Communities returned 200. The two
   already-failing web fixtures are recorded in the web handoff.
+
+## Native design tools · 26 November 2026
+
+- Installed UIZZE `ui-design`, `appllama-app-design-skill` and
+  `appllama-usage` user-wide for Codex on the Mac. Added the AppLlama
+  streamable HTTP server and completed OAuth. The authenticated
+  `get_credits` call succeeded. Install and authorize each additional
+  host separately using the commands in `docs/workspace/SKILLS.md`.
+- For the upcoming iOS interface work, compare the relevant flow against
+  references and walk it in the simulator with SlipSurge’s SwiftUI controls.
+  Use light and dark appearances and exercise intermediate and failure states.
