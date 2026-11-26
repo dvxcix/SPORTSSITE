@@ -114,11 +114,13 @@ struct GameTimeline {
             let people = play.athletes.isEmpty ? roster.people(in: text) : play.athletes.map(roster.person)
             let primary = people.first
             let secondary = people.dropFirst().first
+            let halftime = ["end half", "end of half", "half-time", "halftime"].contains(lower)
             let context: Context?
             switch lower {
             case _ where lower.contains("timeout") || text.lowercased().hasSuffix("timeout"): context = .timeout
             case _ where lower.contains("substitution"): context = .substitution
-            case "end period", "start period", "end of period", "start of period", "halftime", "end of game",
+            case _ where halftime: context = .period
+            case "end period", "start period", "end of period", "start of period", "end quarter", "end of quarter", "end of game",
                  "two-minute warning", "two minute warning": context = .period
             case "penalty": context = .penalty
             default: context = nil
@@ -141,8 +143,9 @@ struct GameTimeline {
                 detail = nil
             } else if context == .substitution {
                 detail = secondary.map { "\($0.name) checks out" } ?? detail
-            } else if context == .period, !text.isEmpty {
-                headline = text
+            } else if context == .period {
+                if halftime { headline = "Halftime" }
+                else if !text.isEmpty { headline = text }
                 detail = nil
             } else if let primary, text.caseInsensitiveCompare("\(primary.name) \(headline)") == .orderedSame {
                 detail = nil

@@ -54,19 +54,24 @@ struct GameAlertSettings: View {
                         Text("These alerts apply to this game. They follow your account’s quiet hours and live game priority.")
                     }
                     .disabled(isSaving)
+                    .listRowBackground(palette.surface)
                     if push.state != .connected {
                         Section("This device") { DeviceAlertControl() }
+                            .listRowBackground(palette.surface)
                     }
                     if let status { Text(status).foregroundStyle(.secondary) }
                 } else if isAvailable == false {
                     ContentUnavailableView("Game alerts unavailable", systemImage: "bell.slash")
+                        .listRowBackground(palette.surface)
                 } else if let status {
                     Section {
                         Text(status)
                         Button("Try again") { retry += 1 }
                     }
+                    .listRowBackground(palette.surface)
                 } else {
                     ProgressView("Loading game alerts")
+                        .listRowBackground(palette.surface)
                 }
             }
             .scrollContentBackground(.hidden)

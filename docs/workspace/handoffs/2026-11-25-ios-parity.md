@@ -3428,3 +3428,17 @@ A separate Feed header correction clears the iPad window controls
 at compact width. Visually verified the wordmark and its icon on
 the iPad mini simulator in full screen and a resized window. This
 correction comes after build 3.
+
+The physical iPad showed the provider's “End of Half” title as a
+full play card. Its normalizer now places that variant into the
+existing compact Halftime treatment. The game-alert sheet uses
+SlipSurge’s surface color. These UI changes are in the build 4 source.
+
+Apple accepted one explicitly labeled private canary at 20:40 CET.
+The notification appeared in Notification Center on Devin’s physical
+iPad. Tapping it opened the exact Sam LaPorta touchdown in Game Center.
+This confirms production APNs delivery and the TestFlight tap path.
+The live fixture exposed that the two-minute NFL import can run after
+the one-minute notification scan. PR 94 at `a71b7162` gave eligible NFL
+events a five-minute window, retaining the subscription start and
+duplicate checks. The next production play will test the scheduled path.

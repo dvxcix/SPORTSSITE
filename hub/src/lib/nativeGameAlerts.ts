@@ -91,7 +91,9 @@ export function gameAlertEvents(scope: GameAlertScope, summary: ESPNSummary, now
   const formatScore = (a: number, h: number) => `${awayTeam} ${a} · ${homeTeam} ${h}`
   const events = new Map<string, GameAlertEvent>()
   const append = (key: string, kind: GameAlertKind, title: string, subtitle: string, body: string, occurredAt: number, playId?: string) => {
-    const expiresAt = occurredAt + (key === 'final' ? 300_000 : 150_000)
+    // NFL play-by-play is imported every two minutes. Allow another
+    // scheduled delivery pass if the first one saw the previous snapshot.
+    const expiresAt = occurredAt + (key === 'final' || scope.sport === 'nfl' ? 300_000 : 150_000)
     if (!Number.isFinite(occurredAt) || occurredAt > now || expiresAt <= now) return
     if (!events.has(key)) events.set(key, { key, kind, title, subtitle, body, occurredAt, expiresAt,
       path: playId ? `${path}?play=${encodeURIComponent(playId)}` : path })
