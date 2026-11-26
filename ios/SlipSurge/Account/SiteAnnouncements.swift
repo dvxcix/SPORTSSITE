@@ -98,8 +98,6 @@ struct ReleaseAnnouncementView: View {
     var queueCount = 1
     var actionTitle = "Don’t Show Again"
     var action: () -> Void
-    var problem: String?
-    var loading = false
     @Environment(\.slipPalette) private var slipPalette
     @State private var selected: Screenshot?
 
@@ -144,11 +142,9 @@ struct ReleaseAnnouncementView: View {
                     }
                     .scrollIndicators(.hidden)
                 }
-                if let problem { Text(problem).font(.subheadline).foregroundStyle(.red) }
                 Button(actionTitle, action: action)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    .disabled(loading)
             }
             .frame(maxWidth: 650, alignment: .leading)
             .padding(19)

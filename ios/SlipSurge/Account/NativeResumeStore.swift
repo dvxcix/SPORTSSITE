@@ -144,8 +144,9 @@ final class NativeResumeStore {
         if interaction { dismiss() }
         guard observedWrite, offer == nil, interaction || lastSaved != nil else { return }
         pendingSave?.cancel()
+        let research = location.path.hasPrefix("/the-paint?") || location.path.hasPrefix("/the-sideline?")
         pendingSave = Task { [weak self] in
-            do { try await Task.sleep(for: .seconds(30)) } catch { return }
+            do { try await Task.sleep(for: .seconds(research ? 2 : 30)) } catch { return }
             await self?.flush(account: account)
         }
     }

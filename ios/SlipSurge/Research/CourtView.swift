@@ -24,7 +24,7 @@ struct CourtView: View {
 
     enum Entry: String {
         case research, oddsBoard = "odds-board", gameMarkets = "game-markets", odds, ladders, movement
-        case firstBasket = "first-basket", cheatsheets, slate, score, dvp, matchup
+        case firstBasket = "first-basket", cheatsheets, slate, score, dvp, matchup, lineups
         case availability, usage, tracking, publicActivity = "public", divergence
 
         fileprivate var tool: CourtMatchupTool? {
@@ -35,6 +35,7 @@ struct CourtView: View {
             case .score: .score
             case .dvp: .defense
             case .matchup: .matchup
+            case .lineups: .lineups
             case .availability: .availability
             case .usage: .scouting
             case .tracking: .tracking
@@ -114,7 +115,6 @@ struct CourtView: View {
     private let preferredBook: String?
     private let comparisonBook: String?
     private let link: CourtLinkContext
-    private let oddsMarket: String?
     private let api = CourtAPI()
     @Environment(\.slipPalette) private var slipPalette
     private var scheme: ColorScheme { slipPalette.colorScheme }
@@ -130,6 +130,10 @@ struct CourtView: View {
     @State private var tool: CourtMatchupTool?
     @State private var market = CourtPlayerMarket.points
     @State private var sportsbook: String?
+    @State private var oddsMarket = "points"
+    @State private var oddsBook = "fanduel"
+    @State private var quoteFilters = ResearchResumeFilters.Quotes()
+    @State private var oddsFilters = ResearchOddsFilters()
     @State private var side = CourtPlayerMarket.Side.over
     @State private var contract: CourtLinkContext.Contract?
     @State private var target: Double?
@@ -157,13 +161,14 @@ struct CourtView: View {
 
     init(scope: Scope, date: Date = .now, linkedGame: Int? = nil, entry: Entry = .research,
         startingMode: CourtResearchMode = .pregame, book: String? = nil, comparisonBook: String? = nil,
-        link: CourtLinkContext = .init(), oddsMarket: String? = nil) {
+        link: CourtLinkContext = .init(), oddsMarket: String? = nil,
+        restoredOdds: ResearchResumeFilters.Odds? = nil, restoredPlayers: ResearchResumeFilters.Players? = nil,
+        restoredQuotes: ResearchResumeFilters.Quotes? = nil) {
         self.scope = scope
         self.linkedGame = linkedGame
         preferredBook = book
         self.comparisonBook = comparisonBook
         self.link = link
-        self.oddsMarket = oddsMarket
         linkedDate = SlateDate.key(date)
         _date = State(initialValue: date)
         _selectedGameID = State(initialValue: linkedGame)
@@ -177,6 +182,20 @@ struct CourtView: View {
         _target = State(initialValue: link.target)
         _sort = State(initialValue: link.sort ?? .average)
         _ascending = State(initialValue: link.ascending)
+        _oddsMarket = State(initialValue: oddsMarket ?? "points")
+        _oddsBook = State(initialValue: book == "all" ? "fanduel" : book ?? "fanduel")
+        _oddsFilters = State(initialValue: ResearchOddsFilters(restoring: restoredOdds, slateGame: linkedGame.map(String.init)))
+        if let restoredQuotes {
+            _quoteFilters = State(initialValue: restoredQuotes)
+            _playerSearch = State(initialValue: restoredQuotes.search)
+        }
+        if let restoredPlayers {
+            _teamFilter = State(initialValue: restoredPlayers.team)
+            _position = State(initialValue: restoredPlayers.position)
+            _venue = State(initialValue: CourtPlayerMarket.Venue(rawValue: restoredPlayers.venue) ?? .all)
+            _savedOnly = State(initialValue: restoredPlayers.savedOnly)
+            _playerSearch = State(initialValue: restoredPlayers.search)
+        }
     }
 
     private var isPreview: Bool {
@@ -278,6 +297,8 @@ struct CourtView: View {
             comparing = []
             teamFilter = ""
         }
+        .onChange(of: slateRequest.date) { _, _ in oddsFilters = ResearchOddsFilters() }
+        .onChange(of: oddsMarket) { _, _ in oddsFilters.clearLineSelection() }
         .onChange(of: resumeLocation, initial: true) { old, location in
             if let location, case .member(let account, _) = scope {
                 resume?.record(location, account: account, interaction: old != nil && old != location)
@@ -325,7 +346,8 @@ struct CourtView: View {
             case .slateEdge: "slate"
             case .score: "score"
             case .defense: "dvp"
-            case .matchup, .lineups: "matchup"
+            case .matchup: "matchup"
+            case .lineups: "lineups"
             case .availability: "availability"
             case .scouting: "usage"
             case .tracking: "tracking"
@@ -352,8 +374,21 @@ struct CourtView: View {
             .init(name: "book", value: sportsbook ?? "all"), .init(name: "side", value: side.rawValue.lowercased()),
             .init(name: "sort", value: sort.rawValue), .init(name: "order", value: ascending ? "asc" : "desc"),
         ]
-        if let contract { query.append(.init(name: "contract", value: contract.rawValue)) }
-        if let target { query.append(.init(name: "target", value: String(target))) }
+        if view == "odds-board" {
+            query = Array(query.prefix(4)) + [.init(name: "market", value: oddsMarket), .init(name: "book", value: oddsBook)]
+            if let filters = ResearchResumeFilters.item(oddsFilters.resumeFilters(following: String(game.id))) { query.append(filters) }
+        } else {
+            if let contract { query.append(.init(name: "contract", value: contract.rawValue)) }
+            if let target { query.append(.init(name: "target", value: String(target))) }
+            if view == "research", let filters = ResearchResumeFilters.item(ResearchResumeFilters.Players(team: teamFilter,
+                position: position, venue: venue.rawValue, savedOnly: savedOnly, search: ResearchResumeFilters.searchTerm(playerSearch))) {
+                query.append(filters)
+            } else if view == "odds" || view == "ladders" {
+                var current = quoteFilters
+                current.search = ResearchResumeFilters.searchTerm(playerSearch)
+                if let filters = ResearchResumeFilters.item(current) { query.append(filters) }
+            }
+        }
         components.queryItems = query
         return components.url.flatMap { NativeResumeLocation.destination($0, title: tool?.rawValue ?? "The Court") }
     }
@@ -443,7 +478,8 @@ struct CourtView: View {
 
     private func oddsBoard(showsContent: Bool) -> some View {
         CourtOddsBoardView(scope: scope, date: slateRequest.date, gameID: selectedGame?.id, mode: mode,
-            reload: revision, showsContent: showsContent, initialBook: preferredBook, initialMarket: oddsMarket)
+            reload: revision, showsContent: showsContent, explicitBook: preferredBook == "all" ? nil : preferredBook,
+            market: $oddsMarket, book: $oddsBook, filters: oddsFilters)
     }
 
     @ViewBuilder
@@ -563,7 +599,7 @@ struct CourtView: View {
             CourtQuoteBoard(scope: scope, board: board, observedAt: observedAt,
                 layout: section == .comparison ? .comparison : .ladder, market: market, side: side,
                 contract: contract, target: target, search: playerSearch, initialBooks: link.booksChoice,
-                oneBook: sportsbook, ranks: rankResult.flatMap { $0.0 == request ? $0.1 : nil } ?? [:])
+                oneBook: sportsbook, ranks: rankResult.flatMap { $0.0 == request ? $0.1 : nil } ?? [:], filters: $quoteFilters)
         }
         .task(id: request) { await loadRanks(board, request: request) }
     }

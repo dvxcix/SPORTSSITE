@@ -35,26 +35,14 @@ struct CourtOddsBoardView: View {
     let explicitBook: String?
     private let api = CourtOddsAPI()
     @Environment(\.slipPalette) private var slipPalette
-    @State private var market = "points"
-    @State private var book = "fanduel"
+    @Binding var market: String
+    @Binding var book: String
     @State private var books: [String] = []
+    @State private var initializedBooks = false
     @State private var state = State.loading
     @State private var attempt = 0
-    @State private var filters = ResearchOddsFilters()
+    let filters: ResearchOddsFilters
     @State private var detail: ResearchOddsDetail?
-
-    init(scope: CourtView.Scope, date: String, gameID: Int?, mode: CourtResearchMode, reload: Int,
-        showsContent: Bool, initialBook: String? = nil, initialMarket: String? = nil) {
-        self.scope = scope
-        self.date = date
-        self.gameID = gameID
-        self.mode = mode
-        self.reload = reload
-        self.showsContent = showsContent
-        explicitBook = initialBook == "all" ? nil : initialBook
-        if let initialBook, initialBook != "all" { _book = SwiftUI.State(initialValue: initialBook) }
-        if let initialMarket { _market = SwiftUI.State(initialValue: initialMarket) }
-    }
 
     private var request: Request {
         .init(selection: .init(date: date, market: market, book: book, mode: mode), revision: reload, attempt: attempt)
@@ -73,8 +61,6 @@ struct CourtOddsBoardView: View {
             if showsContent { content }
         }
         .task(id: request) { await load(request) }
-        .onChange(of: date) { _, _ in filters = ResearchOddsFilters() }
-        .onChange(of: market) { _, _ in filters.clearLineSelection() }
         .onChange(of: request.selection) { _, _ in detail = nil }
         .sheet(item: $detail) { ResearchBookComparison(detail: $0) }
     }
@@ -155,9 +141,12 @@ struct CourtOddsBoardView: View {
                 try Task.checkCancellation()
                 guard wanted == request else { return }
                 books = loaded.books
-                if !books.isEmpty, !books.contains(book), explicitBook == nil {
-                    book = books[0]
-                    return
+                if !initializedBooks, !books.isEmpty {
+                    initializedBooks = true
+                    if !books.contains(book), explicitBook == nil {
+                        book = books[0]
+                        return
+                    }
                 }
                 state = .loaded(selection, loaded)
                 guard let expiry = loaded.expiry else { return }

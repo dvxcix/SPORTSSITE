@@ -94,7 +94,7 @@ struct SidelineView: View {
     @State private var matrices = false
 
     init(api: SidelineAPI, date: Date? = nil, linkedGame: String? = nil, entry: Entry = .core, book: String? = nil,
-        link: SidelineLinkContext = .init()) {
+        link: SidelineLinkContext = .init(), restoredOdds: ResearchResumeFilters.Odds? = nil) {
         self.api = api
         self.linkedGame = linkedGame
         linkedDate = date.map(SlateDate.key)
@@ -130,7 +130,9 @@ struct SidelineView: View {
         }
         _section = State(initialValue: link.capture == nil ? selected : .capture)
         var initialOdds = OddsSelection()
-        if entry == .touchdowns { initialOdds.market = "anytime_td" }
+        if let market = link.market { initialOdds.market = market }
+        else if entry == .touchdowns { initialOdds.market = "anytime_td" }
+        _oddsFilters = State(initialValue: ResearchOddsFilters(restoring: restoredOdds, slateGame: linkedGame))
         if let book, book != "all" { initialOdds.book = book }
         _selection = State(initialValue: initialOdds)
     }
@@ -249,6 +251,10 @@ struct SidelineView: View {
         let mode = tool == .matchupLab || tool == .publicActivity || tool == .sportsbooks || tool == .cheatsheets
         var query: [URLQueryItem] = [.init(name: "date", value: dayRequest.date), .init(name: "game", value: selectedGameID),
             .init(name: mode ? "mode" : "view", value: view), .init(name: "book", value: selection.book)]
+        if tool == .matchup, section.quotes { query.append(.init(name: "market", value: selection.market)) }
+        if view == "odds-board", let filters = ResearchResumeFilters.item(oddsFilters.resumeFilters(following: selectedGameID)) {
+            query.append(filters)
+        }
         if link.sample != .automatic { query.append(.init(name: "sample", value: link.sample.rawValue)) }
         components.queryItems = query
         return components.url.flatMap { NativeResumeLocation.destination($0, title: tool.rawValue) }

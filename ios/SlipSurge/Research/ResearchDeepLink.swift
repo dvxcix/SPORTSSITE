@@ -33,6 +33,9 @@ struct ResearchDeepLink: Hashable {
     let courtMode: CourtResearchMode?
     let courtContext: CourtLinkContext
     let courtMarket: String?
+    let oddsFilters: ResearchResumeFilters.Odds?
+    let playerFilters: ResearchResumeFilters.Players?
+    let quoteFilters: ResearchResumeFilters.Quotes?
     let sidelineEntry: SidelineView.Entry?
     let sidelineContext: SidelineLinkContext
     let book: String?
@@ -61,7 +64,7 @@ struct ResearchDeepLink: Hashable {
             tool = matched
         }
         let items = components.queryItems ?? []
-        let itemLimit = tool == .court ? 18 : tool == .sideline ? 10 : 6
+        let itemLimit = tool == .court ? 18 : tool == .sideline ? 12 : 6
         guard items.count <= itemLimit else { return nil }
         var values: [String: String] = [:]
         for item in items {
@@ -78,8 +81,8 @@ struct ResearchDeepLink: Hashable {
         case .workspace: allowed = ["date", "game", "view", "detail"]
         case .court:
             allowed = ["date", "game", "view", "mode", "book", "market", "side", "sort", "order",
-                       "player", "panel", "line", "type", "metric", "books", "contract", "target"]
-        case .sideline: allowed = ["date", "game", "view", "mode", "book", "sample", "at", "preview", "player", "line"]
+                       "player", "panel", "line", "type", "metric", "books", "contract", "target", ResearchResumeFilters.queryKey]
+        case .sideline: allowed = ["date", "game", "view", "mode", "book", "sample", "at", "preview", "player", "line", "market", ResearchResumeFilters.queryKey]
         case .synergy: allowed = ["game", "sort"]
         case .publicPicks, .costs, .recap: allowed = ["date"]
         }
@@ -147,6 +150,28 @@ struct ResearchDeepLink: Hashable {
                   tool == .court || Sportsbook.isKnown(book) else { return nil }
         }
 
+        var oddsFilters: ResearchResumeFilters.Odds?
+        var playerFilters: ResearchResumeFilters.Players?
+        var quoteFilters: ResearchResumeFilters.Quotes?
+        if let saved = values[ResearchResumeFilters.queryKey] {
+            if courtEntry == .oddsBoard || sidelineEntry == .oddsBoard {
+                guard let filters = ResearchResumeFilters.decode(ResearchResumeFilters.Odds.self, from: saved),
+                      filters.isValid(nfl: tool == .sideline) else { return nil }
+                oddsFilters = filters
+            } else if courtEntry == .research {
+                guard let filters = ResearchResumeFilters.decode(ResearchResumeFilters.Players.self, from: saved),
+                      filters.isValid else { return nil }
+                playerFilters = filters
+            } else if courtEntry == .odds || courtEntry == .ladders {
+                guard let filters = ResearchResumeFilters.decode(ResearchResumeFilters.Quotes.self, from: saved),
+                      filters.isValid else { return nil }
+                quoteFilters = filters
+            } else { return nil }
+        }
+        self.oddsFilters = oddsFilters
+        self.playerFilters = playerFilters
+        self.quoteFilters = quoteFilters
+
         self.tool = tool
         self.date = date
         self.gameID = gameID
@@ -195,7 +220,7 @@ struct LinkedResearchView: View {
         case .sideline:
             if let userID = account.memberID {
                 SidelineView(api: SidelineAPI(scope: .member(account, userID)), date: link.date, linkedGame: link.nflGameID,
-                    entry: link.sidelineEntry ?? .core, book: link.book ?? preferredBook, link: link.sidelineContext)
+                    entry: link.sidelineEntry ?? .core, book: link.book ?? preferredBook, link: link.sidelineContext, restoredOdds: link.oddsFilters)
             } else if link.date != nil || link.nflGameID != nil || link.sidelineEntry != nil {
                 ContentUnavailableView("Sign in to open this matchup", systemImage: "lock")
             } else { SidelineView(api: SidelineAPI()) }
@@ -204,7 +229,7 @@ struct LinkedResearchView: View {
                 CourtView(scope: .member(account, userID), date: date, linkedGame: link.gameID,
                     entry: link.courtEntry ?? .research, startingMode: link.courtMode ?? .pregame,
                     book: link.book ?? preferredBook, comparisonBook: link.book, link: link.courtContext,
-                    oddsMarket: link.courtMarket)
+                    oddsMarket: link.courtMarket, restoredOdds: link.oddsFilters, restoredPlayers: link.playerFilters, restoredQuotes: link.quoteFilters)
             } else if link.date != nil || link.gameID != nil || link.courtEntry != nil || link.courtMode == .live
                 || link.courtContext.player != nil || link.courtMarket != nil {
                 ContentUnavailableView("Sign in to open this matchup", systemImage: "lock")

@@ -21,14 +21,14 @@ struct ResearchLibraryView: View {
     @State private var section = Section.saved
     @State private var data: ResearchLibraryData?
     @State private var selectedWorkspace = ""
-    @State private var selected: [UUID] = []
-    @State private var baseline: [UUID] = []
-    @State private var nfl = Set<UUID>()
-    @State private var mlb = Set<UUID>()
+    @State private var drafts: [String: Selection] = [:]
+    @State private var loadID: UUID?
+    @State private var selectionWithoutWorkspace = Selection()
     @State private var searching = ""
     @State private var error: (any Error)?
     @State private var revision = 0
     @State private var busy = false
+    @State private var savingWorkspace: String?
     @State private var newWorkspace = false
     @State private var name = ""
     @State private var creatingID = UUID()
@@ -37,6 +37,28 @@ struct ResearchLibraryView: View {
     @State private var removingMarket: ResearchLibraryData.SavedMarket?
     @State private var deleteWorkspace = false
     @State private var notice: String?
+
+    private struct Selection: Equatable {
+        var items: [UUID] = []
+        var nfl: Set<UUID> = []
+        var mlb: Set<UUID> = []
+
+        init() {}
+
+        init(_ workspace: ResearchLibraryData.Workspace, in library: ResearchLibraryData) {
+            items = Array(workspace.watchlistItemIds.prefix(4))
+            nfl = Set(workspace.nflMatrixIds)
+            mlb = Set(workspace.mlbMatrixIds)
+            retainAvailable(in: library)
+        }
+
+        mutating func retainAvailable(in library: ResearchLibraryData) {
+            let available = Set(library.items.map(\.id))
+            items.removeAll { !available.contains($0) }
+            nfl.formIntersection(library.nflMatrices.map(\.id))
+            mlb.formIntersection(library.mlbMatrices.map(\.id))
+        }
+    }
 
     private struct DraftNote: Identifiable {
         let id: UUID
@@ -48,12 +70,30 @@ struct ResearchLibraryView: View {
         data?.workspaces.first { $0.id.uuidString.lowercased() == selectedWorkspace }
     }
 
+    private var selection: Selection {
+        get {
+            guard let data, let workspace else { return selectionWithoutWorkspace }
+            return drafts[key(workspace.id)] ?? Selection(workspace, in: data)
+        }
+        nonmutating set {
+            guard let data, let workspace else { selectionWithoutWorkspace = newValue; return }
+            let id = key(workspace.id)
+            drafts[id] = savingWorkspace != id && newValue == Selection(workspace, in: data) ? nil : newValue
+        }
+    }
+
+    private var selected: [UUID] { selection.items }
+
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
                 if let data {
                     ResearchToolRail(title: "Saved research", choices: Section.allCases, selection: $section, label: \.rawValue, glyph: \.glyph, compact: true)
                     if section != .notes { workspaceControls(data.workspaces) }
+                    if error != nil {
+                        Button("Retry Workspace refresh", systemImage: "arrow.clockwise") { revision += 1 }
+                            .buttonStyle(.bordered)
+                    }
                     if let notice { Text(notice).font(.footnote).foregroundStyle(.secondary) }
                     switch section {
                     case .saved: watchlist(data.items)
@@ -72,7 +112,6 @@ struct ResearchLibraryView: View {
         .background(slipPalette.background)
         .foregroundStyle(slipPalette.text)
         .onAppear { if data == nil { section = initialSection } }
-        .onChange(of: selectedWorkspace) { _, _ in select(workspace) }
         .task(id: revision) { await load() }
         .refreshable { await load() }
         .alert("New workspace", isPresented: $newWorkspace) {
@@ -144,24 +183,27 @@ struct ResearchLibraryView: View {
         ForEach(selected.compactMap { id in library.items.first { $0.id == id } }) { market in marketCard(market) }
         if !library.nflMatrices.isEmpty || !library.mlbMatrices.isEmpty {
             ResearchToolCard(color: slipPalette.accent) { Text("Attached Matrices").font(.headline) } content: {
-                ForEach(library.nflMatrices) { matrix in matrixToggle(matrix, league: "NFL", current: $nfl) }
-                ForEach(library.mlbMatrices) { matrix in matrixToggle(matrix, league: "MLB", current: $mlb) }
+                ForEach(library.nflMatrices) { matrix in matrixToggle(matrix, league: "NFL", field: \.nfl) }
+                ForEach(library.mlbMatrices) { matrix in matrixToggle(matrix, league: "MLB", field: \.mlb) }
             }
         }
         if let workspace, workspace.canEdit {
             Button("Save comparison", systemImage: "checkmark") {
                 Task {
-                    let change = ResearchLibraryAPI.Change(kind: "workspace-save", id: key(workspace.id),
-                        items: selected.map(key), baseline: baseline.map(key), nfl: nfl.map(key).sorted(), mlb: mlb.map(key).sorted(), updatedAt: workspace.updatedAt)
+                    let submitted = selection
+                    let id = key(workspace.id)
+                    let change = ResearchLibraryAPI.Change(kind: "workspace-save", id: id,
+                        items: submitted.items.map(key), baseline: Selection(workspace, in: library).items.map(key),
+                        nfl: submitted.nfl.map(key).sorted(), mlb: submitted.mlb.map(key).sorted(), updatedAt: workspace.updatedAt)
                     await save(change)
                 }
             }.buttonStyle(.borderedProminent).disabled(busy)
         }
     }
 
-    private func matrixToggle(_ matrix: ResearchLibraryData.Matrix, league: String, current: Binding<Set<UUID>>) -> some View {
-        Toggle(isOn: Binding(get: { current.wrappedValue.contains(matrix.id) }, set: {
-            if $0 { current.wrappedValue.insert(matrix.id) } else { current.wrappedValue.remove(matrix.id) }
+    private func matrixToggle(_ matrix: ResearchLibraryData.Matrix, league: String, field: WritableKeyPath<Selection, Set<UUID>>) -> some View {
+        Toggle(isOn: Binding(get: { selection[keyPath: field].contains(matrix.id) }, set: {
+            if $0 { selection[keyPath: field].insert(matrix.id) } else { selection[keyPath: field].remove(matrix.id) }
         })) {
             HStack {
                 ResearchArtwork(urls: LeagueArtwork.logo(league).map { [$0] } ?? [], fallback: "square.grid.3x3").frame(width: 24, height: 24)
@@ -185,8 +227,8 @@ struct ResearchLibraryView: View {
                     portraits: [market.headshotUrl].compactMap { $0 }.filter(FeedPostCard.allowedMedia), teamLogo: market.teamLogo, primary: primary, secondary: secondary)
                 Spacer(minLength: 4)
                 Button(included ? "Remove from comparison" : "Add to comparison", systemImage: included ? "minus.circle" : "plus.circle") {
-                    if included { selected.removeAll { $0 == market.id } }
-                    else if selected.count < 4 { selected.append(market.id) }
+                    if included { selection.items.removeAll { $0 == market.id } }
+                    else if selected.count < 4 { selection.items.append(market.id) }
                 }.labelStyle(.iconOnly).buttonStyle(.bordered).disabled(workspace?.canEdit == false || !included && selected.count >= 4)
                 if canRemove {
                     Menu("Saved market actions", systemImage: "ellipsis") {
@@ -256,24 +298,27 @@ struct ResearchLibraryView: View {
 
     private func key(_ id: UUID) -> String { id.uuidString.lowercased() }
 
-    private func select(_ option: ResearchLibraryData.Workspace?) {
-        let available = Set(data?.items.map(\.id) ?? [])
-        selected = Array((option?.watchlistItemIds ?? []).filter { available.contains($0) }.prefix(4))
-        baseline = selected
-        nfl = Set(option?.nflMatrixIds ?? []).intersection(data?.nflMatrices.map(\.id) ?? [])
-        mlb = Set(option?.mlbMatrixIds ?? []).intersection(data?.mlbMatrices.map(\.id) ?? [])
-    }
-
     private func load() async {
+        let request = UUID()
+        loadID = request
         do {
             let result = try await api.load()
             try Task.checkCancellation()
+            guard loadID == request else { return }
+            for (id, var draft) in drafts {
+                guard let row = result.workspaces.first(where: { key($0.id) == id }), row.canEdit else {
+                    drafts[id] = nil
+                    continue
+                }
+                draft.retainAvailable(in: result)
+                drafts[id] = draft == Selection(row, in: result) ? nil : draft
+            }
+            selectionWithoutWorkspace.retainAvailable(in: result)
             data = result
             if workspace == nil { selectedWorkspace = result.workspaces.first.map { key($0.id) } ?? "" }
-            select(workspace)
             error = nil
         } catch {
-            if !Task.isCancelled { self.error = error }
+            if !Task.isCancelled, loadID == request { self.error = error }
         }
     }
 
@@ -291,10 +336,17 @@ struct ResearchLibraryView: View {
     private func save(_ change: ResearchLibraryAPI.Change) async -> Bool {
         guard !busy else { return false }
         busy = true
-        defer { busy = false }
+        savingWorkspace = change.kind == "workspace-save" ? change.id : nil
+        defer {
+            busy = false
+            savingWorkspace = nil
+        }
         notice = nil
-        do { try await api.mutate(change); await load(); return true }
-        catch let response as SlipSurgeHTTP.Status where response.code == 409 {
+        do {
+            try await api.mutate(change)
+            await load()
+            return true
+        } catch let response as SlipSurgeHTTP.Status where response.code == 409 {
             struct Details: Decodable { let error: String? }
             notice = (try? JSONDecoder().decode(Details.self, from: response.data))?.error ?? "Refresh the workspace and try again."
             return false

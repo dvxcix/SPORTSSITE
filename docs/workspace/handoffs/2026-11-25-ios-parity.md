@@ -3200,3 +3200,40 @@ physical-device push are still open.
   resume and unsaved Workspace state, offline release-sheet dismissal,
   and interruptible live reading. Push delivery, provider completion,
   production purchases and role-specific writes remain separate checks.
+
+### 2026-11-26 · Live scores, research Continue, Workspace and offline releases
+
+- Branch `codex/ios-parity-20261125`, based on `0331cc2d`. NBA, NHL and
+  soccer fast score packets now expire. NFL also reads the public fast
+  scoreboard, matching home, away and kickoff to the canonical SlipSurge game
+  ID. Game Center keeps its canonical play IDs and reactions. Feed, Scores and
+  Game Center show “Score delayed” when the best retained live reading is
+  stale. Confirmed finals persist, and an older fallback cannot rewind play.
+- Continue uses each Odds Board’s own market, sportsbook, inner matchup, team,
+  line, search and ordering alongside the date, slate matchup and research mode.
+  It also restores NBA Player Board filters, Compare Books and Prop Ladders
+  filters and the separate Lineups tool. The existing account resume API
+  retains the path and its optimistic-version check. The older paths still
+  open, and pregame freeze behavior remains in effect.
+- Workspace keeps unsaved markets and attached matrices per workspace during
+  reloads, note saves and workspace switching in the open Workspace. A failed
+  refresh leaves the latest shown data and a retry action. What’s New closes
+  immediately via its button, close icon or system sheet gesture, persists
+  queued dismissals per account and retries sync after connectivity returns.
+- Xcode 27.2 Debug builds passed for the iPhone 18 Pro Simulator and Devin’s
+  physical iPad mini. Verified that Continue restored the November 25 NBA
+  Miami–Philadelphia Odds Board in Pregame mode with Points and BetMGM after
+  simulator process relaunch. Opened the Bears–Lions scoreboard from Feed in
+  the resized iPad window. All 289 native/source tests and 21 focused Swift
+  cases passed, including score expiry, fallback, restoration and offline
+  dismissal persistence. The earlier read of App Store Connect reached Apple
+  sign-in, and the production association endpoint returned 404.
+- In Xcode, SlipSurge LLC is team `G69D2DL58M` with Admin access. The old
+  `com.slipsurge.ios.development` app and widget IDs belong to the personal team.
+  Apple provisioned the LLC-only QA app `com.slipsurge.ios.llc.development`
+  against Devin’s iPad with development APNs and Associated Domains, and a
+  matching LLC widget development profile. The first organization build
+  stopped at macOS signing-key authorization. A retry is in progress.
+  Active-game scoring on physical hardware, signed-in iPad feature checks,
+  the distribution bundle and App Store Connect record, APNs delivery and
+  TestFlight remain to be verified. No site release or production config change.

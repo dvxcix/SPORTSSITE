@@ -85,3 +85,18 @@ test('native Resume retains a Feed post anchor and the web-compatible scroll off
   assert.equal(record.saved.path, path)
   assert.equal(record.saved.scroll_y, 1326)
 })
+
+test('native Resume round-trips NBA and NFL Odds Board filters including a different inner matchup', async () => {
+  const selections = [
+    { route: 'the-paint', game: '21718181', innerGame: '21718182', mode: '&mode=live', market: 'points_first3min', book: 'draftkings' },
+    { route: 'the-sideline', game: '2026_12_CHI_DET', innerGame: '2026_12_PHI_DAL', mode: '', market: 'receiving_receptions', book: 'fanduel' },
+  ]
+  for (const { route, game, innerGame, mode, market, book } of selections) {
+    const filters = Buffer.from(JSON.stringify({ game: innerGame, search: 'Amon-Ra', target: 4.5, sortedPriceLine: 4.5,
+      ascendingPrice: true, ascendingName: false, comparison: 'earlier' })).toString('base64url')
+    const path = `/${route}?date=2026-11-26&game=${game}&view=odds-board${mode}&market=${market}&book=${book}&iosFilters=${filters}`
+    const response = await write({ path, pageTitle: 'Odds Board', scrollY: 0 }, route)
+    assert.equal(response.status, 200)
+    assert.equal((await (await read(route)).json()).saved.path, path)
+  }
+})

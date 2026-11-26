@@ -25,8 +25,9 @@ struct SlipSurgeTabs: View {
     @State private var dismissedBannerVersion: String?
     @State private var release: SiteAnnouncements.Release?
     @State private var dismissedReleases: Set<UUID> = []
-    @State private var savingRelease = false
-    @State private var releaseProblem: String?
+    @State private var syncingReleases = Set<UUID>()
+    @State private var closingRelease = false
+    @State private var releaseOwner: UUID?
     @State private var sitePresentation: SitePresentation?
     @State private var profilePresentation: SitePresentation?
     @State private var pendingProfilePresentation: SitePresentation?
@@ -174,21 +175,23 @@ struct SlipSurgeTabs: View {
                 }
             }
         }
-        .sheet(item: $release, onDismiss: presentNextRelease) { current in
+        .sheet(item: releaseSheet, onDismiss: {
+            closingRelease = false
+            presentQueuedProfileOrRelease()
+        }) { current in
             NavigationStack {
-                ReleaseAnnouncementView(release: current, queueCount: remainingReleases.count, action: {
-                    Task { await dismissRelease(current) }
-                }, problem: releaseProblem, loading: savingRelease)
+                ReleaseAnnouncementView(release: current, queueCount: remainingReleases.count) {
+                    dismissRelease(current)
+                }
                 .navigationTitle("What’s New")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Dismiss release", systemImage: "xmark") { Task { await dismissRelease(current) } }
-                            .labelStyle(.iconOnly).disabled(savingRelease)
+                        Button("Dismiss release", systemImage: "xmark") { dismissRelease(current) }
+                            .labelStyle(.iconOnly)
                     }
                 }
             }
-            .interactiveDismissDisabled()
             .environment(\.openURL, OpenURLAction(handler: openLink))
             .sheet(item: $sitePresentation) { site in siteSheet(site) }
         }
@@ -227,9 +230,7 @@ struct SlipSurgeTabs: View {
         }
         .task(id: account.memberID) {
             let userID = account.memberID
-            dismissedReleases = []
-            release = nil
-            announcements = nil
+            alignReleaseOwner(userID)
             await refreshAnnouncements(for: userID)
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(60)) } catch { return }
@@ -292,16 +293,38 @@ struct SlipSurgeTabs: View {
         (announcements?.entries ?? []).filter { !dismissedReleases.contains($0.id) }
     }
 
+    private var releaseSheet: Binding<SiteAnnouncements.Release?> {
+        Binding(get: { release }, set: { next in
+            if next == nil, let release { dismissRelease(release) }
+        })
+    }
+
+    private func alignReleaseOwner(_ userID: UUID?) {
+        guard releaseOwner != userID else { return }
+        releaseOwner = userID
+        dismissedReleases = userID.map { ReleaseDismissals.pending(for: $0) } ?? []
+        if release != nil {
+            closingRelease = true
+            release = nil
+        }
+        announcements = nil
+    }
+
     private func refreshAnnouncements(for userID: UUID?) async {
-        guard let result = try? await SiteAnnouncementsAPI(account: account, userID: userID).read(),
-              !Task.isCancelled, account.memberID == userID else { return }
-        announcements = result
-        presentNextRelease()
+        guard account.memberID == userID else { return }
+        alignReleaseOwner(userID)
+        async let syncing: Void = syncReleaseDismissals(for: userID)
+        if let result = try? await SiteAnnouncementsAPI(account: account, userID: userID).read(),
+           !Task.isCancelled, account.memberID == userID, releaseOwner == userID {
+            announcements = result
+            presentNextRelease()
+        }
+        await syncing
     }
 
     private func presentNextRelease() {
-        guard release == nil, account.memberID != nil, sitePresentation == nil, profilePresentation == nil else { return }
-        releaseProblem = nil
+        guard release == nil, !closingRelease, account.memberID != nil, account.memberID == releaseOwner,
+              sitePresentation == nil, profilePresentation == nil else { return }
         release = remainingReleases.first
     }
 
@@ -314,21 +337,30 @@ struct SlipSurgeTabs: View {
         }
     }
 
-    private func dismissRelease(_ current: SiteAnnouncements.Release) async {
-        guard !savingRelease, let userID = account.memberID else { return }
-        savingRelease = true
-        releaseProblem = nil
-        defer { savingRelease = false }
-        do {
-            try await SiteAnnouncementsAPI(account: account, userID: userID).dismiss(current.id)
-            guard account.memberID == userID else { return }
-            dismissedReleases.insert(current.id)
-            release = nil
-        } catch let status as SlipSurgeHTTP.Status where status.code == 404 {
-            dismissedReleases.insert(current.id)
-            release = nil
-        } catch {
-            releaseProblem = "This dismissal couldn’t sync. Try again."
+    private func dismissRelease(_ current: SiteAnnouncements.Release) {
+        guard release?.id == current.id, let userID = account.memberID, userID == releaseOwner else { return }
+        dismissedReleases.insert(current.id)
+        ReleaseDismissals.enqueue(current.id, for: userID)
+        closingRelease = true
+        release = nil
+        Task { await syncReleaseDismissals(for: userID) }
+    }
+
+    private func syncReleaseDismissals(for userID: UUID?) async {
+        guard let userID, userID == account.memberID, !syncingReleases.contains(userID) else { return }
+        syncingReleases.insert(userID)
+        defer { syncingReleases.remove(userID) }
+        let api = SiteAnnouncementsAPI(account: account, userID: userID)
+        for id in ReleaseDismissals.pending(for: userID) {
+            guard !Task.isCancelled, userID == account.memberID else { return }
+            do {
+                try await api.dismiss(id)
+                ReleaseDismissals.confirm(id, for: userID)
+            } catch let response as SlipSurgeHTTP.Status where response.code == 404 {
+                ReleaseDismissals.confirm(id, for: userID)
+            } catch {
+                return
+            }
         }
     }
 

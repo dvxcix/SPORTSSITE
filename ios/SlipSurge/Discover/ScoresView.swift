@@ -27,6 +27,12 @@ struct Scoreboard: Decodable {
         let venue: String?
         let away: Team
         let home: Team
+        var scoreObservedAt: ContinuousClock.Instant?
+        var delayed = false
+
+        private enum CodingKeys: String, CodingKey {
+            case id, sport, start, state, status, venue, away, home
+        }
 
         var label: String {
             if let status { return status }
@@ -312,7 +318,7 @@ private struct MatchScoreTile: View {
                     ResearchArtwork(urls: LeagueArtwork.logo(match.sport).map { [$0] } ?? [], fallback: "sportscourt", pointSize: 15)
                         .frame(width: 15, height: 15)
                 }
-                MatchStatusLabel(label: match.label, live: match.live)
+                MatchStatusLabel(label: match.delayed ? "Score delayed" : match.label, live: match.live && !match.delayed)
                 Spacer(minLength: 2)
                 Image(systemName: "chevron.right").font(.caption2.bold()).foregroundStyle(.secondary).accessibilityHidden(true)
             }

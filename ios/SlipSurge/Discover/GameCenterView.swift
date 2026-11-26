@@ -67,7 +67,10 @@ struct GameCenterView: View {
     @State private var contextReaction: GameCenterData.Play?
     @State private var timeline = GameTimeline()
     @State private var providerPlays: LivePlayUpdate?
-    @State private var liveScore: LiveScorePacket?
+    @State private var liveScore: LiveScorePacket.Observation?
+    @State private var confirmedScore: LiveScorePacket.Observation?
+    @State private var displayedScore: LiveScorePacket?
+    @State private var scoreDelayed = false
     @State private var scoringTimeline = GameTimeline()
     @State private var followingLive: Bool
     @State private var selectedPeriod = ""
@@ -83,6 +86,9 @@ struct GameCenterView: View {
         _section = State(initialValue: game.state == "pre" && play == nil ? .overview : .plays)
         _requestedPlay = State(initialValue: play)
         _followingLive = State(initialValue: play == nil)
+        _confirmedScore = State(initialValue: game.observation)
+        _displayedScore = State(initialValue: game.scorePacket)
+        _scoreDelayed = State(initialValue: game.delayed)
     }
 
     private var reload: String { "\(section.query):\(revision):\(phase):\(visible)" }
@@ -99,12 +105,9 @@ struct GameCenterView: View {
     private var baseQuery: [URLQueryItem] { [.init(name: "sport", value: game.sport), .init(name: "game", value: game.id), .init(name: "date", value: date)] }
     private var feed: FeedAPI { FeedAPI(account: api.account, userID: api.userID) }
     private var color: Color { treatment(game.home.color) }
-    private var shownScore: LiveScorePacket? {
-        guard section == .plays, lastResult?.state != "post" else { return nil }
-        return liveScore
-    }
-    private var state: String { shownScore?.status.state ?? lastResult?.state ?? game.state }
-    private var displayStatus: String? { shownScore?.status.shortDetail ?? lastResult?.status ?? game.status }
+    private var shownScore: LiveScorePacket? { displayedScore }
+    private var state: String { shownScore?.status.state ?? game.state }
+    private var displayStatus: String? { shownScore?.status.shortDetail ?? game.status }
     private var live: Bool { state == "in" }
     private var scheduledToStart: Bool {
         state == "pre" && game.startDate.map { $0 <= .now } == true
@@ -200,6 +203,18 @@ struct GameCenterView: View {
                 }
             }
             .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
+        }
+        .task(id: visible && phase == .active) {
+            guard visible, phase == .active else { return }
+            repeat {
+                updateDisplayedScore()
+                do { try await Task.sleep(for: .seconds(2)) } catch { return }
+            } while !Task.isCancelled
+        }
+        .task(id: visible && phase == .active && game.sport == "nfl" && (live || scheduledToStart)) {
+            if visible, phase == .active, game.sport == "nfl", live || scheduledToStart {
+                await followNFLScore()
+            }
         }
         .task(id: followsPublicTimeline) {
             if followsPublicTimeline { await followPublicPlays() }
@@ -390,7 +405,8 @@ struct GameCenterView: View {
         VStack(spacing: 4) {
             ResearchArtwork(urls: LeagueArtwork.logo(game.sport).map { [$0] } ?? [], fallback: "sportscourt", pointSize: 19)
                 .frame(width: 19, height: 19)
-            MatchStatusLabel(label: state == "post" ? "Final" : state == "pre" ? game.label : displayStatus ?? game.label, live: live)
+            MatchStatusLabel(label: state == "post" ? "Final" : scoreDelayed && live ? "Score delayed" :
+                state == "pre" ? game.label : displayStatus ?? game.label, live: live && !scoreDelayed)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -730,6 +746,12 @@ struct GameCenterView: View {
                 scoringTimeline = GameTimeline(plays: snapshots[.overview]?.plays ?? [],
                     groups: snapshots[.box]?.groups ?? [], basketball: game.sport == "nba")
             }
+            let packet = LiveScorePacket(status: .init(state: result.state, shortDetail: result.status),
+                away: result.awayScore, home: result.homeScore)
+            if confirmedScore.map({ packet.trails($0.packet) }) != true {
+                confirmedScore = .init(packet: packet, receivedAt: .now)
+                updateDisplayedScore()
+            }
             if requested == section {
                 lastResult = result
                 error = nil
@@ -750,11 +772,36 @@ struct GameCenterView: View {
         withAnimation(arriving && !reduceMotion ? .snappy(duration: 0.24) : nil) { timeline = next }
     }
 
+    private func updateDisplayedScore() {
+        let observation = LiveScorePacket.Observation.preferred(fast: liveScore, fallback: confirmedScore, asOf: .now)
+        displayedScore = observation.score?.packet ?? game.scorePacket
+        scoreDelayed = observation.delayed
+    }
+
+    private func acceptFastScore(_ score: LiveScorePacket) {
+        guard liveScore.map({ score.trails($0.packet) }) != true else { return }
+        liveScore = .init(packet: score, receivedAt: .now)
+        updateDisplayedScore()
+    }
+
+    private func followNFLScore() async {
+        repeat {
+            if let scores = try? await LiveScorePacket.load(sport: game.sport, day: date, games: [game]),
+               !Task.isCancelled, let score = scores[game.id] {
+                acceptFastScore(score)
+                if score.status.state == "post" { return }
+            }
+            do { try await Task.sleep(for: .seconds(2)) } catch { return }
+        } while !Task.isCancelled
+    }
+
     private func followPublicPlays() async {
         repeat {
             if let update = try? await LivePlayUpdate.load(sport: game.sport, id: game.id),
                !Task.isCancelled, let score = update.score, score.status.state != "pre" {
-                if score != liveScore { liveScore = score }
+                if update.hasSamePlays(as: providerPlays) || update.canAdvance(providerPlays) || score.status.state == "post" {
+                    acceptFastScore(score)
+                }
                 if !update.hasSamePlays(as: providerPlays), update.canAdvance(providerPlays) {
                     providerPlays = update
                     rebuildTimeline()

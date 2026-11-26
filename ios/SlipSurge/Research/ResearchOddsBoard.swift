@@ -66,7 +66,7 @@ struct ResearchOddsSlate {
     var expiry: Date?
 }
 
-enum OddsComparison: String, CaseIterable {
+enum OddsComparison: String, CaseIterable, Codable {
     case opening, earlier
 
     var symbol: String { self == .opening ? "flag" : "clock.arrow.circlepath" }
@@ -79,7 +79,7 @@ enum OddsComparison: String, CaseIterable {
     }
 }
 
-enum OddsSort: String, CaseIterable {
+enum OddsSort: String, CaseIterable, Codable {
     case alphabetical = "Player A–Z"
     case shortened = "Most shortened"
     case lengthened = "Most lengthened"
@@ -104,6 +104,31 @@ enum OddsSort: String, CaseIterable {
     var ascendingPrice = false
     var ascendingName = true
     var comparison = OddsComparison.opening
+
+    init(restoring saved: ResearchResumeFilters.Odds? = nil, slateGame: String? = nil) {
+        guard let saved else { return }
+        self.slateGame = slateGame
+        game = saved.game
+        team = saved.team
+        target = saved.target
+        search = saved.search
+        sort = saved.sort
+        sortedPriceLine = saved.sortedPriceLine
+        ascendingPrice = saved.ascendingPrice
+        ascendingName = saved.ascendingName
+        comparison = saved.comparison
+    }
+
+    func resumeFilters(following selectedGame: String?) -> ResearchResumeFilters.Odds {
+        // A first render or a newly selected header game will be applied by the board.
+        guard slateGame == selectedGame else {
+            return .init(game: selectedGame, search: ResearchResumeFilters.searchTerm(search), sort: sort,
+                ascendingPrice: ascendingPrice, ascendingName: ascendingName, comparison: comparison)
+        }
+        return .init(game: game, team: team, target: target, search: ResearchResumeFilters.searchTerm(search),
+            sort: sort, sortedPriceLine: sortedPriceLine, ascendingPrice: ascendingPrice,
+            ascendingName: ascendingName, comparison: comparison)
+    }
 
     func followSlateGame(_ id: String?) {
         guard slateGame != id else { return }

@@ -31,9 +31,10 @@ struct CourtQuoteBoard: View {
     private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.memberResearchPreferences) private var preferences
     @Environment(\.courtResults) private var results
-    @State private var selectedBooks: Set<String>?
-    @State private var sort = ""
-    @State private var ascending = true
+    @Binding var filters: ResearchResumeFilters.Quotes
+
+    private var sort: String { filters.sort }
+    private var ascending: Bool { filters.ascending }
     @State private var filterBooks = false
 
     private var availableBooks: [String] {
@@ -42,7 +43,7 @@ struct CourtQuoteBoard: View {
 
     private var visibleBooks: [String] {
         if let oneBook { return availableBooks.filter { Sportsbook.normalized($0) == Sportsbook.normalized(oneBook) } }
-        if let selectedBooks { return availableBooks.filter { selectedBooks.contains($0) } }
+        if let selectedBooks = filters.books { return availableBooks.filter { selectedBooks.contains($0) } }
         let wanted: [String]
         if let initialBooks {
             wanted = initialBooks
@@ -100,12 +101,12 @@ struct CourtQuoteBoard: View {
     private var bookOptions: some View {
         NavigationStack {
             List {
-                Button("All available books", systemImage: "checkmark.circle") { selectedBooks = Set(availableBooks) }
+                Button("All available books", systemImage: "checkmark.circle") { filters.books = availableBooks }
                 ForEach(availableBooks, id: \.self) { book in
                     Button {
-                        var selected = selectedBooks ?? Set(visibleBooks)
+                        var selected = Set(filters.books ?? visibleBooks)
                         if selected.contains(book) { selected.remove(book) } else { selected.insert(book) }
-                        selectedBooks = selected
+                        filters.books = selected.sorted()
                     } label: {
                         HStack {
                             ResearchToolBook(book: book, price: nil, showPrice: false)
@@ -126,8 +127,8 @@ struct CourtQuoteBoard: View {
     }
 
     private func selectSort(_ choice: String) {
-        ascending = sort == choice ? !ascending : choice.isEmpty
-        sort = choice
+        filters.ascending = sort == choice ? !ascending : choice.isEmpty
+        filters.sort = choice
     }
 
     private func ordered(_ a: CourtBoard.Player, _ b: CourtBoard.Player) -> Bool {

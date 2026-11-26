@@ -6,10 +6,15 @@ struct SidelineLinkContext: Hashable {
     var player: Int?
     var line: Double?
     var preview = false
+    var market: String?
 
     init() {}
 
     init?(_ values: [String: String]) {
+        if let value = values["market"] {
+            guard value.range(of: #"^[a-z][a-z0-9_]{0,39}$"#, options: .regularExpression) != nil else { return nil }
+            market = value
+        }
         if let value = values["sample"] {
             guard let chosen = SidelineResearchSample(rawValue: value) else { return nil }
             sample = chosen
