@@ -3547,3 +3547,27 @@ visually showed complete tab names and separate lines for the profile
 statistics at that size. The device’s text setting was restored after QA.
 Build 5 was archived and exported, then stopped before Xcode began
 uploading. Build 6 is the distribution candidate with the tab fix.
+
+Xcode archived 1.0 (6) from source checkpoint `fb8f48d0` under
+SlipSurge LLC. The exported package verified the main bundle, build
+number, production push entitlement and runtime setting, and the
+embedded Scoreboard widget. Apple accepted it and build 6 is Testing
+in the existing one-tester SlipSurge Internal QA group. The upload
+again reported missing vendor crash symbols for GiphyUISDK. It did
+not prevent the release.
+
+Devin’s iPad installed the TestFlight build and retained the signed-in
+session. In the resized window, checked the Feed wordmark, tabs and
+avatar, opened live Chicago–Detroit, focused the Game Room composer
+and saw Photo, GIF and Emoji together with the in-field dismiss
+control. The native GIF picker loaded GIPHY previews. At full width,
+the Feed and five tabs retained their artwork, and both Inbox sections
+opened with separate badges. Left the iPad on the signed-in Feed.
+No chat message was sent and no read marker was changed.
+
+The final native and production source smoke run passed 295 checks.
+The iPhone 18 Pro showed Bam Adebayo’s colored hit and miss bars and
+expanded NBA game log. An Instruments Animation Hitches capture was
+unavailable on the simulator, so this checkpoint provides no frame
+timing measurement. Apple and device verification here was private
+TestFlight. No desktop deployment, data migration or collectors changed.
