@@ -2,34 +2,44 @@ import Foundation
 
 struct GameTimeline {
     struct Person: Equatable {
+        var id: String? = nil
         let name: String
         let headshot: URL?
         let team: String?
 
         var portrait: URL? { headshot.flatMap { FeedPostCard.allowedMedia($0) ? $0 : nil } }
+        var shortName: String {
+            let pieces = name.split(maxSplits: 1, whereSeparator: \.isWhitespace)
+            guard pieces.count == 2, let initial = pieces[0].first else { return name }
+            return "\(initial). \(pieces[1])"
+        }
     }
 
     enum Context {
-        case timeout, substitution, period
+        case timeout, substitution, period, foul, rebound
 
         var glyph: String {
             switch self {
             case .timeout: "pause.fill"
             case .substitution: "arrow.left.arrow.right"
             case .period: "flag.checkered"
+            case .foul: "whistle"
+            case .rebound: "arrow.uturn.up"
             }
         }
     }
 
     struct Entry: Identifiable {
         let play: GameCenterData.Play
-        let headline: String
-        let detail: String?
-        let person: Person?
-        let secondary: Person?
-        let madeShot: Bool?
-        let context: Context?
+        var headline: String
+        var detail: String?
+        var person: Person?
+        var secondary: Person?
+        var madeShot: Bool?
+        var context: Context?
         let freeThrow: FreeThrow?
+        var stats: [BasketballPlayTimeline.Stat] = []
+        var notes: [BasketballPlayTimeline.Note] = []
 
         var id: String { play.id }
 
@@ -90,10 +100,13 @@ struct GameTimeline {
     }
 
     let entries: [Entry]
+    let latestPlayID: String?
+    private let attachedTo: [String: String]
 
-    init(plays: [GameCenterData.Play] = [], groups: [GameCenterData.StatGroup] = [], basketball: Bool = false) {
+    init(plays: [GameCenterData.Play] = [], groups: [GameCenterData.StatGroup] = [],
+         basketball: Bool = false, completeHistory: Bool = false) {
         let roster = Roster(groups)
-        entries = plays.map { play in
+        let raw = plays.map { play in
             let title = Self.cleaned(play.title ?? "")
             let text = Self.cleaned(play.text)
             let lower = title.lowercased()
@@ -107,7 +120,10 @@ struct GameTimeline {
             case "end period", "start period", "end of period", "start of period", "halftime", "end of game": context = .period
             default: context = nil
             }
-            let attempt = basketball ? Self.freeThrow(in: title) : nil
+            let attempt: FreeThrow? = if basketball {
+                Self.freeThrow(in: title) ?? Self.freeThrow(in: text) ??
+                    (play.shot?.attempted == 1 ? FreeThrow(attempt: 1, total: 1) : nil)
+            } else { nil }
             let outcome = basketball ? Self.shotOutcome(in: text, shooter: primary) : nil
             var headline = title.isEmpty ? (text.isEmpty ? "Play" : text) : title
             var detail = text.isEmpty || text == headline ? nil : text
@@ -131,10 +147,24 @@ struct GameTimeline {
             return Entry(play: play, headline: headline, detail: detail, person: primary, secondary: secondary,
                          madeShot: outcome?.made, context: context, freeThrow: attempt)
         }
+        latestPlayID = raw.first?.id
+        if basketball {
+            let grouped = BasketballPlayTimeline(raw, completeHistory: completeHistory)
+            entries = grouped.entries
+            attachedTo = grouped.attachedTo
+        } else {
+            entries = raw
+            attachedTo = [:]
+        }
+    }
+
+    func displayID(for playID: String) -> String? {
+        attachedTo[playID] ?? entries.first(where: { $0.id == playID })?.id
     }
 
     func currentCue(status: String?) -> Cue? {
-        guard let latest = entries.first else { return nil }
+        guard let latest = entries.first,
+              latestPlayID == latest.id || latest.context == nil else { return nil }
         let play = latest.play
         let clock = [play.period, play.clock].compactMap { $0 }.joined(separator: " · ")
         if let status, latest.context != .period || !Self.isPeriodBreak(status) {
@@ -195,7 +225,7 @@ struct GameTimeline {
     }
 
     private static func freeThrow(in title: String) -> FreeThrow? {
-        guard let match = title.firstMatch(of: /(?i)free throw\s*-\s*(\d+)\s+of\s+(\d+)/),
+        guard let match = title.firstMatch(of: /(?i)free throw\s*(?:-\s*)?(\d+)\s+of\s+(\d+)/),
               let index = Int(match.1), let total = Int(match.2), index > 0, index <= total, total <= 3 else { return nil }
         return FreeThrow(attempt: index, total: total)
     }
@@ -253,7 +283,7 @@ struct GameTimeline {
         func person(_ athlete: GameCenterData.Play.Athlete) -> Person {
             let candidates = names[athlete.name.lowercased()]
             let roster = candidates?.count == 1 ? candidates?.first : nil
-            return Person(name: athlete.name, headshot: athlete.headshot ?? roster?.headshot, team: roster?.team)
+            return Person(id: athlete.id, name: athlete.name, headshot: athlete.headshot ?? roster?.headshot, team: roster?.team)
         }
     }
 }

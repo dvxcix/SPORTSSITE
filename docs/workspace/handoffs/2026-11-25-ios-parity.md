@@ -2726,3 +2726,35 @@ physical-device push are still open.
 - Simulator Debug and physical Xcode Run both opened the exact play. The
   native and production suites passed 288/288, and the web TypeScript check
   passed. Local device captures stay off Git.
+
+## NBA play context, running stats and live scrolling · 26 November 2026
+
+- Continued `codex/ios-parity-20261125` from `b183508b`. The NBA timeline
+  nests a foul under its latest free throw and a rebound under its preceding
+  miss. Unmatched events stay visible as compact markers. Attached foul and
+  rebound IDs still open their exact context and keep their share, discussion
+  and reaction actions. Player labels use a first initial and last name with
+  the full name available to VoiceOver. Made and missed plays use separate
+  high-contrast colors in both appearances.
+- The native NBA read uses the complete provider play history when available.
+  Running stats include the current event and are calculated in chronological
+  order. Three-point attempts show makes, attempts and percentage with game
+  points. Blocks, rebounds, assists, steals, fouls and turnovers show the
+  credited player's running totals where relevant. A partial history keeps
+  event context and omits unverified totals. No production database or
+  desktop deployment was required.
+- Plays follows new events by default, even after scrolling to older action.
+  Pause, a historical quarter filter and an exact play link let the user
+  review without the live scroll. Go live returns to the newest action.
+  On the iPhone 18 Pro simulator, the viewport was on older fourth-quarter
+  plays when a new Heat–76ers lineup change arrived at 5:36. The viewport
+  returned to the top without a tap or refresh.
+- On Miranda’s iPhone 16 Plus the original shooting-foul link opened
+  G. Antetokounmpo’s second free throw and highlighted the nested T. Maxey
+  foul. The nearby Dean Wade miss showed Giannis’s defensive rebound.
+  Verified that V. Edgecombe’s made three displayed 2/4, 50% and 12 points
+  as of that shot, and that the Wade block appeared with 1 BLK under the
+  blocked layup. Checked 375 events and 19 player point totals against the
+  same provider packet, including partial history and a free-throw sequence
+  arriving one attempt at a time. Both Xcode Debug builds and all 288 native
+  and production checks passed.

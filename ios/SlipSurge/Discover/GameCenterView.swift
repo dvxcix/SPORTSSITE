@@ -59,8 +59,7 @@ struct GameCenterView: View {
     @State private var providerPlays: LivePlayUpdate?
     @State private var liveScore: LiveScorePacket?
     @State private var scoringTimeline = GameTimeline()
-    @State private var nearPlayStart = true
-    @State private var latestSeenPlay: String?
+    @State private var followingLive: Bool
     @State private var selectedPeriod = ""
     @State private var scoringOnly = false
     @State private var team = ""
@@ -72,6 +71,7 @@ struct GameCenterView: View {
         self.date = date
         _section = State(initialValue: game.state == "pre" && play == nil ? .overview : .plays)
         _requestedPlay = State(initialValue: play)
+        _followingLive = State(initialValue: play == nil)
     }
 
     private var reload: String { "\(section.query):\(revision):\(phase):\(visible)" }
@@ -101,7 +101,7 @@ struct GameCenterView: View {
     private var matchTitle: String { "\(game.away.abbreviation) at \(game.home.abbreviation)" }
     private var gameLink: GameLink { .init(sport: game.sport, id: game.id) }
     private var roomLatest: UUID? { snapshots[.room]?.room?.last?.id }
-    private var newestPlay: String? { timeline.entries.first(where: includesPlay)?.id }
+    private var newestPlay: String? { timeline.latestPlayID }
     private var cue: GameTimeline.Cue? {
         guard live, section == .plays else { return nil }
         return timeline.currentCue(status: displayStatus)
@@ -113,9 +113,12 @@ struct GameCenterView: View {
         visible && phase == .active && state != "pre" && (section == .plays || section == .overview)
     }
     private var targetPlay: String? {
-        guard section == .plays, let requestedPlay,
-              snapshots[.plays]?.plays?.contains(where: { $0.id == requestedPlay }) == true else { return nil }
-        return requestedPlay
+        guard section == .plays, let requestedPlay else { return nil }
+        return timeline.displayID(for: requestedPlay)
+    }
+    private var wantsNBAHistory: Bool {
+        visible && phase == .active && game.sport == "nba" && state == "post" &&
+            (section == .plays || section == .overview) && providerPlays == nil
     }
 
     var body: some View {
@@ -182,6 +185,12 @@ struct GameCenterView: View {
         .task(id: followsPublicTimeline) {
             if followsPublicTimeline { await followPublicPlays() }
         }
+        .task(id: wantsNBAHistory) {
+            if wantsNBAHistory, let update = try? await LivePlayUpdate.load(sport: game.sport, id: game.id), !Task.isCancelled {
+                providerPlays = update
+                rebuildTimeline()
+            }
+        }
         .task(id: wantsRoster) {
             if wantsRoster, snapshots[.box] == nil { await load(.box) }
         }
@@ -216,9 +225,11 @@ struct GameCenterView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: section == .room ? 3 : 9) {
-                    if section == .plays { playStart }
+                    if section == .plays { Color.clear.frame(height: 2).id("plays-start").accessibilityHidden(true) }
                     if let data = snapshots[section] {
                         details(data)
+                    } else if section == .plays, !timeline.entries.isEmpty {
+                        playList
                     } else if error != nil {
                         ContentUnavailableView {
                             Label("Game details couldn’t load", systemImage: "exclamationmark.circle")
@@ -250,14 +261,18 @@ struct GameCenterView: View {
                 }
             }
             .overlay(alignment: .bottomTrailing) {
-                if section == .plays, live, let newestPlay, latestSeenPlay != newestPlay, !nearPlayStart {
-                    Button("New plays", systemImage: "arrow.up") {
-                        withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) {
-                            proxy.scrollTo("plays-start", anchor: .top)
+                if section == .plays, live, newestPlay != nil {
+                    Button(followingLive ? "Following live" : "Go live",
+                           systemImage: followingLive ? "pause.fill" : "arrow.up") {
+                        followingLive.toggle()
+                        if followingLive {
+                            selectedPeriod = ""
+                            scrollToLive(proxy)
                         }
-                        latestSeenPlay = newestPlay
                     }
                     .font(.caption.bold()).buttonStyle(.borderedProminent).buttonBorderShape(.capsule)
+                    .controlSize(.regular).frame(minHeight: 44)
+                    .accessibilityLabel(followingLive ? "Pause live scrolling" : "Go to the latest play and follow live")
                     .padding(12)
                 }
                 if section == .room, let roomLatest, roomLastSeen != roomLatest, !nearRoomEnd {
@@ -276,31 +291,29 @@ struct GameCenterView: View {
             }
             .onChange(of: section) {
                 if section == .room, roomLatest != nil { scrollRoom(proxy, animated: false) }
-                if section == .plays { latestSeenPlay = newestPlay; nearPlayStart = true }
                 scrollAnchor = nil
             }
-            .onChange(of: newestPlay, initial: true) {
-                if nearPlayStart { latestSeenPlay = newestPlay }
+            .onChange(of: selectedPeriod) {
+                if !selectedPeriod.isEmpty { followingLive = false }
+            }
+            .onChange(of: newestPlay) { previous, current in
+                if section == .plays, previous != nil, current != nil, state != "pre", followingLive {
+                    scrollToLive(proxy)
+                }
             }
             .onChange(of: targetPlay, initial: true) {
-                if let targetPlay, revealedPlay != targetPlay {
-                    scrollAnchor = targetPlay
-                    proxy.scrollTo(targetPlay, anchor: .top)
-                    revealedPlay = targetPlay
+                if let requestedPlay, let targetPlay, !followingLive {
+                    proxy.scrollTo(targetPlay, anchor: UnitPoint(x: 0.5, y: 0.15))
+                    revealedPlay = requestedPlay
                 }
             }
         }
     }
 
-    @ViewBuilder private var playStart: some View {
-        let anchor = Color.clear.frame(height: 2).id("plays-start").accessibilityHidden(true)
-        if #available(iOS 18, *) {
-            anchor.onScrollVisibilityChange { visible in
-                nearPlayStart = visible
-                if visible { latestSeenPlay = newestPlay }
-            }
-        } else {
-            anchor
+    private func scrollToLive(_ proxy: ScrollViewProxy) {
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) {
+            scrollAnchor = "plays-start"
+            proxy.scrollTo("plays-start", anchor: .top)
         }
     }
 
@@ -407,9 +420,12 @@ struct GameCenterView: View {
                     }
                 } content: { EmptyView() }
             }
-            if !scoringTimeline.entries.isEmpty {
+            let scoringPlays = game.sport == "nba" && !timeline.entries.isEmpty
+                ? Array(timeline.entries.lazy.filter { $0.play.scoring }.prefix(8))
+                : scoringTimeline.entries
+            if !scoringPlays.isEmpty {
                 Text("Scoring plays").font(.headline).accessibilityAddTraits(.isHeader)
-                ForEach(scoringTimeline.entries) { playCard($0) }
+                ForEach(scoringPlays) { playCard($0) }
             }
         case .plays:
             playList
@@ -460,7 +476,7 @@ struct GameCenterView: View {
                     .toggleStyle(.button).font(.caption.weight(.semibold))
             }
         }
-        if let requestedPlay, !entries.contains(where: { $0.id == requestedPlay }) {
+        if let requestedPlay, timeline.displayID(for: requestedPlay) == nil {
             Label("This play is outside the available timeline.", systemImage: "clock")
                 .font(.subheadline).foregroundStyle(.secondary)
         }
@@ -468,12 +484,16 @@ struct GameCenterView: View {
         if filtered.isEmpty {
             ContentUnavailableView(entries.isEmpty ? "No play-by-play available" : "No plays match these filters", systemImage: "list.bullet")
         }
-        ForEach(GameTimeline.rows(filtered, keeping: requestedPlay)) { row in
-            if row.first.context != nil {
-                if cue?.id != row.id || requestedPlay == row.id { contextMarker(row).id(row.id) }
-            } else {
-                playCard(row.first).id(row.id)
+        ForEach(GameTimeline.rows(filtered, keeping: targetPlay)) { row in
+            Group {
+                if row.first.context != nil {
+                    if cue?.id != row.id || targetPlay == row.id { contextMarker(row) }
+                } else {
+                    playCard(row.first)
+                }
             }
+            .id(row.id)
+            .transition(reduceMotion ? .identity : .offset(y: -12).combined(with: .opacity))
         }
     }
 
@@ -495,7 +515,8 @@ struct GameCenterView: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.caption.weight(.semibold))
-                if entry.context == .substitution, let detail = row.substitutions ?? entry.detail {
+                if entry.context == .substitution || entry.context == .foul || entry.context == .rebound,
+                   let detail = row.substitutions ?? entry.detail {
                     Text(detail).font(.caption2)
                 }
             }
@@ -525,9 +546,10 @@ struct GameCenterView: View {
     }
 
     private func playCard(_ entry: GameTimeline.Entry) -> some View {
-        GamePlayCard(entry: entry, game: game, highlighted: entry.id == revealedPlay, canReact: api.userID != nil,
+        GamePlayCard(entry: entry, game: game, highlightedPlay: revealedPlay, canReact: api.userID != nil,
             reactionStore: reactionStore, react: { emoji, enabled in await react(emoji, to: entry.play, enabled: enabled) },
-            discuss: { discuss(entry.play) }, showPitches: { pitchPlay = entry.play })
+            discuss: { discuss(entry.play) }, showPitches: { pitchPlay = entry.play },
+            discussNote: discuss, reactToNote: { contextReaction = $0 })
     }
 
     @ViewBuilder
@@ -671,8 +693,13 @@ struct GameCenterView: View {
 
     private func rebuildTimeline() {
         let confirmed = snapshots[.plays]?.plays ?? []
-        let displayed = providerPlays?.merge(with: confirmed) ?? confirmed
-        timeline = GameTimeline(plays: displayed, groups: snapshots[.box]?.groups ?? [], basketball: game.sport == "nba")
+        let basketball = game.sport == "nba"
+        let displayed = providerPlays?.merge(with: confirmed, basketball: basketball)
+        let next = GameTimeline(plays: displayed?.plays ?? confirmed, groups: snapshots[.box]?.groups ?? [],
+            basketball: basketball, completeHistory: displayed?.completeHistory == true)
+        let arriving = section == .plays && live && followingLive && timeline.latestPlayID != nil &&
+            timeline.latestPlayID != next.latestPlayID
+        withAnimation(arriving && !reduceMotion ? .snappy(duration: 0.24) : nil) { timeline = next }
     }
 
     private func followPublicPlays() async {
@@ -680,7 +707,7 @@ struct GameCenterView: View {
             if let update = try? await LivePlayUpdate.load(sport: game.sport, id: game.id),
                !Task.isCancelled, let score = update.score, score.status.state != "pre" {
                 if score != liveScore { liveScore = score }
-                if providerPlays?.latestPlayID != update.latestPlayID {
+                if !update.hasSamePlays(as: providerPlays), update.canAdvance(providerPlays) {
                     providerPlays = update
                     rebuildTimeline()
                 }

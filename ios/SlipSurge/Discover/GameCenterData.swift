@@ -20,6 +20,7 @@ struct GameCenterData: Decodable {
 
     struct Play: Decodable, Identifiable {
         struct Athlete: Decodable, Identifiable { let id: String; let name: String; let headshot: URL? }
+        struct Shot: Decodable { let attempted: Int; let scored: Int }
         struct Reaction: Decodable, Equatable { let count: Int; let mine: Bool }
         struct Pitch: Decodable, Identifiable {
             let id: Int
@@ -49,6 +50,7 @@ struct GameCenterData: Decodable {
         let athletes: [Athlete]
         let reactions: [String: Reaction]
         let pitches: [Pitch]?
+        var shot: Shot? = nil
     }
 
     struct TeamStats: Decodable, Identifiable {
