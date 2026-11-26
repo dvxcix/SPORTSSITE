@@ -6,8 +6,8 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import {
   Home, TrendingUp, MessageCircle, Users, Search, Compass,
-  Bookmark, Calendar, BookOpen, ShoppingBag,
-  LayoutGrid, Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, Coins, Megaphone, Link2, X, Flame,
+  Bookmark, ShoppingBag,
+  Bell, Star, Trophy, Activity, FlaskConical, Sparkles, CloudSun, Crosshair, Table2, Coins, Megaphone, Link2, X, Flame,
   ChevronLeft, ChevronRight, ChartSpline, Layers3, Award, History, LockKeyhole, Settings,
   type LucideIcon,
 } from 'lucide-react'
@@ -93,9 +93,6 @@ const nav: NavItem[] = [
   { section: 'Connect' },
   { href: '/sports',      icon: Activity,      label: 'Live Scores', badge: 'LIVE' },
   { href: '/groups',   icon: Users,         label: 'Communities' },
-  { href: '/pages',       icon: LayoutGrid,    label: 'Pages', flagKey: 'feature_pages' },
-  { href: '/events',      icon: Calendar,      label: 'Events', flagKey: 'feature_events' },
-  { href: '/blog',        icon: BookOpen,      label: 'Blog', flagKey: 'feature_blog' },
   { href: '/marketplace', icon: ShoppingBag,   label: 'Matrix Marketplace', ultimateOnly: true },
   null,
   { section: 'Discover' },
@@ -135,8 +132,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   // flags load, so testers don't see items flash on then disappear — matches
   // the site_settings rows we ship disabled by default.
   const [flags, setFlags] = useState<Record<string, boolean>>({
-    feature_blog: false, feature_forum: false, feature_marketplace: false,
-    feature_pages: false, feature_events: false,
+    feature_marketplace: false,
   })
 
   useEffect(() => {

@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server'
 import { getBlockedEitherWayIds, isAccountId } from '@/lib/blocks'
-import { FEATURE_FLAGS } from '@/lib/featureFlags'
-import { isFeatureEnabledServer } from '@/lib/featureFlags.server'
 import { POST_WITH_AUTHOR } from '@/lib/feedQuery'
 import { canViewMlb } from '@/lib/mlbViewerAccess'
 import { mobilePost } from '@/lib/nativeSocial'
@@ -29,23 +27,15 @@ async function searchAccount(request: Request) {
 type SearchActor = Exclude<Awaited<ReturnType<typeof searchAccount>>, { error: Response }>
 
 async function communityMatches(actor: SearchActor, contains: string, showMlb: boolean) {
-  const { supabase, userId } = actor
-  const [pages, events] = await Promise.all([
-    isFeatureEnabledServer(FEATURE_FLAGS.pages, false, actor),
-    isFeatureEnabledServer(FEATURE_FLAGS.events, false, actor),
-  ])
+  const { supabase } = actor
   const fields = 'id,slug,name,description,avatar_url,emoji'
-  const [groups, publications, channels, meetings] = await Promise.all([
+  const [groups, channels] = await Promise.all([
     supabase.from('groups').select(`${fields},sport,member_count`).eq('is_public', true)
       .or(`name.ilike.${contains},description.ilike.${contains}`).order('member_count', { ascending: false }).limit(8),
-    pages ? supabase.from('pages').select(`${fields},sport,category,follower_count`).eq('is_published', true)
-      .or(`name.ilike.${contains},description.ilike.${contains}`).order('follower_count', { ascending: false }).limit(8) : empty,
     supabase.from('channels').select('id,slug,name,description,icon,member_count,group_id,group:groups!channels_group_id_fkey(slug,sport)')
       .or(`name.ilike.${contains},description.ilike.${contains}`).order('member_count', { ascending: false }).limit(8),
-    events ? supabase.from('events').select('id,title,description,cover_image,start_date,going_count,sport')
-      .or(`title.ilike.${contains},description.ilike.${contains}`).order('start_date').limit(8) : empty,
   ])
-  if ([groups, publications, channels, meetings].some(result => result.error)) throw Error('Community search unavailable')
+  if ([groups, channels].some(result => result.error)) throw Error('Community search unavailable')
   const visible = (sport: string | null | undefined) => showMlb || sport?.trim().toUpperCase() !== 'MLB'
   const rooms = await Promise.all((channels.data ?? []).map(async row => {
     const group = Array.isArray(row.group) ? row.group[0] : row.group
@@ -61,14 +51,9 @@ async function communityMatches(actor: SearchActor, contains: string, showMlb: b
     groups: (groups.data ?? []).filter(row => visible(row.sport)).map(row => ({
       ...row, path: `/groups/${encodeURIComponent(row.slug)}`, count: row.member_count,
     })),
-    pages: (publications.data ?? []).filter(row => visible(row.sport) && visible(row.category)).map(row => ({
-      ...row, path: `/pages/${encodeURIComponent(row.slug)}`, count: row.follower_count,
-    })),
+    pages: [],
     rooms: rooms.flatMap(row => row ?? []),
-    events: (meetings.data ?? []).filter(row => visible(row.sport)).map(row => ({
-      id: row.id, path: `/events/${row.id}`, name: row.title, description: row.description,
-      avatar_url: row.cover_image, time: row.start_date, count: row.going_count,
-    })),
+    events: [],
   }
 }
 

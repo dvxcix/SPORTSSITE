@@ -77,7 +77,7 @@ const FAMILY_SEEDS: FamilySeed[] = [
   },
   {
     family: 'Community', priority: 'P0', defaults: legacy,
-    routes: ['/community', '/groups', '/groups/create', '/groups/[slug]', '/groups/[slug]/settings', '/channels', '/channels/[slug]', '/forum', '/forum/new', '/forum/[category]', '/forum/thread/[id]', '/pages', '/pages/create', '/pages/[slug]', '/pages/[slug]/settings', '/events', '/events/create', '/events/[id]'],
+    routes: ['/community', '/groups', '/groups/create', '/groups/[slug]', '/groups/[slug]/settings', '/channels', '/channels/[slug]'],
   },
   {
     family: 'Messaging', priority: 'P1', defaults: legacy,
@@ -86,10 +86,6 @@ const FAMILY_SEEDS: FamilySeed[] = [
   {
     family: 'Creator & commerce', priority: 'P2', defaults: partial,
     routes: ['/creators', '/creators/apply', '/creators/studio', '/creators/payouts', '/creators/[username]', '/creators/offers/[productId]', '/marketplace', '/marketplace/sell', '/marketplace/[id]'],
-  },
-  {
-    family: 'Publishing', priority: 'P2', defaults: legacy,
-    routes: ['/blog', '/blog/[slug]', '/blog/my', '/blog/create', '/blog/create/ai', '/blog/edit/[id]'],
   },
   {
     family: 'Settings', priority: 'P1', defaults: partial,
@@ -101,7 +97,7 @@ const FAMILY_SEEDS: FamilySeed[] = [
   },
   {
     family: 'Admin community', priority: 'P2', defaults: shared,
-    routes: ['/admin/users', '/admin/users/online', '/admin/users/verify', '/admin/users/banned', '/admin/users/deletions', '/admin/reports', '/admin/content/reports', '/admin/content/posts', '/admin/content/blogs', '/admin/content/stories', '/admin/groups', '/admin/forum', '/admin/pages', '/admin/events', '/admin/creators', '/admin/marketplace', '/admin/badges', '/admin/emojis'],
+    routes: ['/admin/users', '/admin/users/online', '/admin/users/verify', '/admin/users/banned', '/admin/users/deletions', '/admin/reports', '/admin/content/reports', '/admin/content/posts', '/admin/content/stories', '/admin/groups', '/admin/creators', '/admin/marketplace', '/admin/badges', '/admin/emojis'],
   },
   {
     family: 'Admin research', priority: 'P1', defaults: shared,

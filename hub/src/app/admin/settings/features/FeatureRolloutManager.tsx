@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Check, LoaderCircle, Save, ShieldCheck, UsersRound } from 'lucide-react'
-import { FEATURE_FLAGS, type FeatureFlagKey, type FeatureRollout, type FeatureRolloutAudience } from '@/lib/featureFlags'
+import { FEATURE_FLAGS, isRetiredCommunityFeature, type FeatureFlagKey, type FeatureRollout, type FeatureRolloutAudience } from '@/lib/featureFlags'
 import styles from './FeatureRolloutManager.module.css'
 
 const LABELS: Record<FeatureFlagKey, string> = {
@@ -17,7 +17,7 @@ const AUDIENCES: { value: FeatureRolloutAudience; label: string }[] = [
 type Editable = Pick<FeatureRollout, 'feature_key' | 'audience' | 'rollout_percent'>
 
 export function FeatureRolloutManager() {
-  const defaults = useMemo(() => Object.values(FEATURE_FLAGS).map(feature_key => ({ feature_key, audience: 'everyone' as const, rollout_percent: 100 })), [])
+  const defaults = useMemo(() => Object.values(FEATURE_FLAGS).filter(key => !isRetiredCommunityFeature(key)).map(feature_key => ({ feature_key, audience: 'everyone' as const, rollout_percent: 100 })), [])
   const [rows, setRows] = useState<Editable[]>(defaults)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<FeatureFlagKey | null>(null)

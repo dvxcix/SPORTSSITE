@@ -294,16 +294,13 @@ export async function updateSession(request: NextRequest) {
   // content and posts. Studios, messages and account actions stay gated.
   const pathname = request.nextUrl.pathname
   const creatorSlug = pathname.match(/^\/creators\/([^/]+)$/)?.[1]
-  const blogSlug = pathname.match(/^\/blog\/([^/]+)$/)?.[1]
   const isPublicCreatorRoute = pathname === '/creators'
     || pathname === '/creators/apply'
     || pathname.startsWith('/creators/offers/')
     || (!!creatorSlug && !['studio', 'payouts'].includes(creatorSlug))
-  const isPublicBlogRoute = pathname === '/blog'
-    || (!!blogSlug && !['create', 'edit', 'my'].includes(blogSlug))
   const isPublicRoute = ['/', '/about', '/faq', '/terms', '/privacy', '/responsible-gambling', '/support', '/pricing'].some(p =>
     pathname === p
-  ) || isPublicCreatorRoute || isPublicBlogRoute || isPublicBrowseRequest(pathname, request.method)
+  ) || isPublicCreatorRoute || isPublicBrowseRequest(pathname, request.method)
 
   if (!userId && !isAuthRoute && !isPublicRoute) {
     if (pathname.startsWith('/api/') || /^\/the-sideline\/(market|results|touchdown-replay)$/.test(pathname)) {

@@ -1,7 +1,7 @@
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { FeatureFlagKey, FeatureRollout } from './featureFlags'
+import { isRetiredCommunityFeature, type FeatureFlagKey, type FeatureRollout } from './featureFlags'
 
 function cohortBucket(value: string) {
   let hash = 2166136261
@@ -28,7 +28,11 @@ export function resolveFeatureRollout(rollout: Pick<FeatureRollout, 'audience' |
 // client fetcher from there without pulling this into the browser bundle.
 type VerifiedFeatureViewer = { supabase: SupabaseClient; userId: string | null }
 
-export async function getFeatureFlagsServer(keys: FeatureFlagKey[], fallback = true, viewer?: VerifiedFeatureViewer): Promise<Record<FeatureFlagKey, boolean>> {
+export async function getFeatureFlagsServer(requested: FeatureFlagKey[], fallback = true, viewer?: VerifiedFeatureViewer): Promise<Record<FeatureFlagKey, boolean>> {
+  const retired = Object.fromEntries(requested.filter(isRetiredCommunityFeature).map(key => [key, false])) as Record<FeatureFlagKey, boolean>
+  const keys = requested.filter(key => !isRetiredCommunityFeature(key))
+  if (keys.length === 0) return retired
+
   const supabase = viewer?.supabase ?? await createServerSupabase()
   const userId = viewer ? viewer.userId : (await supabase.auth.getUser()).data.user?.id ?? null
   let isAdmin = false
@@ -49,19 +53,19 @@ export async function getFeatureFlagsServer(keys: FeatureFlagKey[], fallback = t
       const missing = keys.filter(key => !rolloutByKey.has(key))
       const { data: legacy } = missing.length ? await supabase.from('site_settings').select('key, value').in('key', missing) : { data: [] }
       const legacyByKey = new Map((legacy ?? []).map(row => [row.key, row.value === 'true']))
-      return Object.fromEntries(keys.map(key => {
+      return { ...retired, ...Object.fromEntries(keys.map(key => {
         const override = overrideByKey.get(key)
         if (typeof override === 'boolean') return [key, isAdmin || override]
         const rollout = rolloutByKey.get(key)
         if (rollout) return [key, resolveFeatureRollout(rollout as Pick<FeatureRollout, 'audience' | 'rollout_percent' | 'rollout_salt'>, { userId, isAdmin })]
         return [key, legacyByKey.get(key) ?? fallback]
-      })) as Record<FeatureFlagKey, boolean>
+      })) } as Record<FeatureFlagKey, boolean>
     }
   } catch {}
 
   const { data } = await supabase.from('site_settings').select('key, value').in('key', keys)
   const legacyByKey = new Map((data ?? []).map(row => [row.key, row.value === 'true']))
-  return Object.fromEntries(keys.map(key => [key, legacyByKey.get(key) ?? fallback])) as Record<FeatureFlagKey, boolean>
+  return { ...retired, ...Object.fromEntries(keys.map(key => [key, legacyByKey.get(key) ?? fallback])) }
 }
 
 export async function isFeatureEnabledServer(key: FeatureFlagKey, fallback = true, viewer?: VerifiedFeatureViewer): Promise<boolean> {

@@ -56,26 +56,26 @@ function RootLayoutShellContent({ children }: { children: React.ReactNode }) {
   }
 
   if (path === '/creators/studio' || path === '/creators/payouts') {
-    return <><MfaGate/><NetworkStatus/><ProductTelemetry/><CreatorWorkspaceShell>{children}</CreatorWorkspaceShell><div hidden inert><MyPicksButton/><WatchlistButton/></div><UtilityDock teaserOnly/></>
+    return <><MfaGate/><NetworkStatus/><ProductTelemetry/><CreatorWorkspaceShell>{children}</CreatorWorkspaceShell><div hidden inert><MyPicksButton/><WatchlistButton/></div></>
   }
   if (path === '/creators' || path.startsWith('/creators/offers/') || path.startsWith('/creators/access/') || /^\/creators\/[^/]+$/.test(path)) {
-    return <><MfaGate/><NetworkStatus/><ProductTelemetry/><CreatorMarketShell>{children}</CreatorMarketShell><div hidden inert><MyPicksButton/><WatchlistButton/></div><UtilityDock teaserOnly/></>
+    return <><MfaGate/><NetworkStatus/><ProductTelemetry/><CreatorMarketShell>{children}</CreatorMarketShell><div hidden inert><MyPicksButton/><WatchlistButton/></div></>
   }
 
   if (isLandingPage || isPublicPreviewPath(path)) {
-    return <><NetworkStatus/><ProductTelemetry/>{children}<UtilityDock teaserOnly/></>
+    return <><NetworkStatus/><ProductTelemetry/>{children}</>
   }
 
   if (isAuthPage || process.env.NEXT_PUBLIC_DESIGN_REVIEW === '1' && path === '/design-review/full-audit') {
-    return <><NetworkStatus /><ProductTelemetry /><main id="main-content">{children}</main>{(isLandingPage || isPublicPreviewPath(path)) && <UtilityDock teaserOnly />}</>
+    return <><NetworkStatus /><ProductTelemetry /><main id="main-content">{children}</main></>
   }
 
   if (usesVisitorBrowseFrame(path) && !loading && !authUnavailable && !user) {
-    return <><NetworkStatus/><ProductTelemetry/><VisitorBrowseShell pathname={path}>{children}</VisitorBrowseShell><UtilityDock teaserOnly/></>
+    return <><NetworkStatus/><ProductTelemetry/><VisitorBrowseShell pathname={path}>{children}</VisitorBrowseShell></>
   }
 
   // Single drawer hosts stay mounted here; headers and the account menu open
-  // them. VOLT is the only floating launcher on every route.
+  // them through their header and account actions.
   // WatchlistProvider (and its two FABs) used to live inside dugout/page.tsx
   // only, so the watchlist/picks were invisible everywhere else — moved up
   // here so a signed-in user can see and manage them from any page, not just

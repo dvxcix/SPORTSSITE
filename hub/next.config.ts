@@ -28,14 +28,9 @@ const privateRoutes = [
   '/marketplace/:path*',
   '/creators/studio',
   '/creators/payouts',
-  '/blog/create/:path*',
-  '/blog/edit/:path*',
   '/groups/create',
   '/groups/:slug/settings',
-  '/pages/create',
-  '/pages/:slug/settings',
   '/stories/create',
-  '/events/create',
 ];
 
 const nextConfig: NextConfig = {
@@ -49,6 +44,20 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'whop.com' },
       { protocol: 'https', hostname: '*.whop.com' },
     ],
+  },
+  async redirects() {
+    return [
+      ...['/forum', '/pages', '/events', '/blog', '/articles'].map(path => ({
+        source: `${path}/:path*`,
+        destination: '/groups',
+        permanent: false,
+      })),
+      ...['/admin/forum', '/admin/pages', '/admin/events', '/admin/content/blogs'].map(path => ({
+        source: `${path}/:path*`,
+        destination: '/admin/groups',
+        permanent: false,
+      })),
+    ];
   },
   async headers() {
     return [

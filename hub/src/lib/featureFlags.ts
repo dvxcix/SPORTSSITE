@@ -14,6 +14,12 @@ export const FEATURE_FLAGS = {
 } as const
 
 export type FeatureFlagKey = typeof FEATURE_FLAGS[keyof typeof FEATURE_FLAGS]
+const retiredCommunityFeatures = new Set<string>([FEATURE_FLAGS.blog, FEATURE_FLAGS.forum, FEATURE_FLAGS.pages, FEATURE_FLAGS.events])
+
+export function isRetiredCommunityFeature(key: string) {
+  return retiredCommunityFeatures.has(key)
+}
+
 export type FeatureRolloutAudience = 'off' | 'admins' | 'members' | 'percentage' | 'everyone'
 
 export type FeatureRollout = {
@@ -31,13 +37,12 @@ export type FeatureRollout = {
 export async function fetchFeatureFlagsClient(): Promise<Record<string, boolean>> {
   const keys = Object.values(FEATURE_FLAGS)
   const flags: Record<string, boolean> = {}
-  const optionalDiscovery = new Set<string>([FEATURE_FLAGS.blog, FEATURE_FLAGS.forum, FEATURE_FLAGS.pages, FEATURE_FLAGS.events])
-  for (const key of keys) flags[key] = !optionalDiscovery.has(key)
+  for (const key of keys) flags[key] = !isRetiredCommunityFeature(key)
   try {
     const response = await fetch('/api/features', { cache: 'no-store', credentials: 'same-origin' })
     if (!response.ok) return flags
     const body = await response.json() as { flags?: Record<string, boolean> }
-    for (const key of keys) if (typeof body.flags?.[key] === 'boolean') flags[key] = body.flags[key]
+    for (const key of keys) if (!isRetiredCommunityFeature(key) && typeof body.flags?.[key] === 'boolean') flags[key] = body.flags[key]
   } catch {}
   return flags
 }

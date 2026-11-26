@@ -67,7 +67,7 @@ export function PlayerAvatar({
   const badgeSize = Math.round(size * 0.46)
   const showHeadshot = !!resolvedHeadshot
   const showBadge = showTeam && resolvedLogo && failedLogo !== resolvedLogo
-  const isNba = league === 'nba'
+  const hasTopAlignedPortrait = league === 'nba' || league === 'nfl'
 
   return (
     <div
@@ -79,15 +79,13 @@ export function PlayerAvatar({
         ...style,
       }}
     >
-      {/* NBA artwork has a wide transparent canvas. Fill the frame and crop
-          the lower jersey so the face stays readable at small sizes. */}
       <div
         style={{
           width: size,
           height: size,
           borderRadius: Math.max(8,Math.round(size*.24)),
           overflow: 'hidden',
-          background: isNba || league === 'nfl' || showHeadshot ? sportTeamBackground(league, teamAbbr) : 'var(--accent-dim)',
+          background: hasTopAlignedPortrait || showHeadshot ? sportTeamBackground(league, teamAbbr) : 'var(--accent-dim)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -104,12 +102,10 @@ export function PlayerAvatar({
             alt={name}
             onError={() => setFailedHeadshots(previous => [...new Set([...previous, resolvedHeadshot!])])}
             style={{
-              width: isNba ? '100%' : '112%',
-              height: isNba ? '100%' : '112%',
-              objectFit: isNba ? 'cover' : 'contain',
-              objectPosition: isNba ? 'center' : 'center 40%',
-              transform: isNba ? 'scale(1.2)' : undefined,
-              transformOrigin: isNba ? 'center 12%' : undefined,
+              width: hasTopAlignedPortrait ? '100%' : '112%',
+              height: hasTopAlignedPortrait ? '100%' : '112%',
+              objectFit: hasTopAlignedPortrait ? 'cover' : 'contain',
+              objectPosition: hasTopAlignedPortrait ? 'center top' : 'center 40%',
               filter: 'saturate(1.06) contrast(1.02)',
             }}
           />

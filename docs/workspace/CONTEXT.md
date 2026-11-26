@@ -19,8 +19,9 @@ available data, not an invented board or an immediate sign-in wall. Creators
 and communities are different destinations. Creator Studio is a dedicated
 business workspace. Free groups are supported; paid creators use self-service
 Whop setup with the existing subaccount arrangement. Do not introduce a new 10%
-fee. VOLT remains a small floating mascot on phones with its Coming soon teaser;
-the AI backend is not authorized merely by this document.
+fee. The owner removed the VOLT Coming Soon launcher from the web and native
+app on 26 November 2026. Community is centered on groups, rooms and messages.
+Events, Articles, Discussions and Pages are retired from Community navigation.
 
 ## Repository map
 

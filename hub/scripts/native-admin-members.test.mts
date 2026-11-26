@@ -132,12 +132,14 @@ test('native feature controls require the version that was reviewed before chang
     },
   } } })
   const { NextRequest } = require('next/server')
-  const patch = (expected?: string) => PATCH(new NextRequest('https://slipsurge.invalid/api/admin/feature-rollouts', {
+  const patch = (expected?: string, featureKey = 'feature_polls') => PATCH(new NextRequest('https://slipsurge.invalid/api/admin/feature-rollouts', {
     method: 'PATCH', headers: { authorization: 'Bearer ready' },
-    body: JSON.stringify({ featureKey: 'feature_blog', audience: 'percentage', rolloutPercent: 23, expectedUpdatedAt: expected }),
+    body: JSON.stringify({ featureKey, audience: 'percentage', rolloutPercent: 23, expectedUpdatedAt: expected }),
   }))
   assert.equal((await patch()).status, 400)
   assert.equal((await patch('2026-11-24T04:00:00Z')).status, 409)
+  assert.equal(saved, 0)
+  assert.equal((await patch(version, 'feature_blog')).status, 400)
   assert.equal(saved, 0)
   const confirmation = await (await patch(version)).json()
   assert.equal(confirmation.rollout.rollout_percent, 23)
