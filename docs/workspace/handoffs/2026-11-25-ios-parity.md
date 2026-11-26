@@ -2921,6 +2921,12 @@ physical-device push are still open.
 - The final signed build installed on Devin’s iPad. The first relaunch
   encountered the lock screen. Xcode subsequently reopened the updated
   build and the physical capture confirmed Feed and Games today.
-  Signed-in iPad chat, account-specific research, widgets, and a freely
-  resized iPad window still need a live pass. Apple enrollment is with
-  Apple Support and does not block these local development builds.
+  The signed-in device also opened The Sideline and The Court Odds Boards
+  and the Messages list, including Search and Message requests. Both research
+  routes showed loading at the initial four-second capture. In the next
+  sampled pass, the first non-loading captures were at about seven seconds
+  including route launch and capture overhead. This identifies a wait worth
+  profiling and does not isolate API latency. The device was left on The Court.
+  Chat composer interactions, widgets, and deliberately resized iPad windows
+  still need device QA. Apple enrollment is with Apple Support and does not
+  block these local development builds.
