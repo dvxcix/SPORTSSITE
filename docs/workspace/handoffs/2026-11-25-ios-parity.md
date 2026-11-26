@@ -3244,15 +3244,20 @@ physical-device push are still open.
   QA archive is in Xcode Organizer. At kickoff the iPad’s Game Center changed
   from a 19:00 scheduled start to a 0–0 live score with 14:15 left in the first
   quarter, matching ESPN’s public NFL score. The iPhone 18 Pro Max Simulator
-  Feed independently showed the game live at 14:11.
+  Feed independently showed the game live at 14:11. At 19:10 CET both the iPad
+  Game Center and the simulator Feed showed Detroit’s first field goal at
+  11:28 in the first quarter, with Detroit ahead 3–0.
 - App Store Connect was available under SlipSurge LLC on the second check.
   Created the iOS draft record for SlipSurge 1.0 with bundle identifier
   `com.slipsurge.ios`, SKU `SLIPSURGE-IOS`, and English (U.S.) as the primary
   language. The production archive and App Store Connect export passed.
   Verified Apple Distribution signatures for the app and
   `com.slipsurge.ios.widgets`. Xcode uploaded version 1.0 build 1 to the private
-  App Store Connect record. TestFlight showed the upload as Processing. Apple
-  accepted the binary and noted a missing vendor dSYM for GiphyUISDK 2.4.0.
-  Production APNs delivery, universal links and signed-in member flows on
-  the iPad still need verification. No site release or production configuration
-  change was made.
+  App Store Connect record. Processing completed and TestFlight shows Missing
+  Compliance for build 1. Apple's App Encryption Documentation form is open
+  for the account holder’s confirmation. The app uses Apple HTTPS and
+  CryptoKit SHA-256 for sign-in. The GIPHY framework is supplied as a binary.
+  Upload succeeded with a missing vendor dSYM warning for GiphyUISDK 2.4.0.
+  TestFlight installation, production APNs delivery, universal links and
+  signed-in member flows on the iPad still need verification. No App Store
+  submission, site release or production configuration change was made.
