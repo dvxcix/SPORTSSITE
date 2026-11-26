@@ -14,6 +14,10 @@ for (const file of await readdir(web)) {
   if (file.startsWith('logo-header-') || file === 'head-snippet.html' || file === 'site.webmanifest') continue
   await copyFile(path.join(web, file), path.join(publicRoot, file))
 }
+// Next.js file-based metadata takes precedence over public-root icon files.
+for (const [route, source] of Object.entries({ 'favicon.ico': 'favicon.ico', 'icon.png': 'icon-512.png', 'apple-icon.png': 'apple-touch-icon.png' })) {
+  await copyFile(path.join(web, source), path.join(root, 'src/app', route))
+}
 for (const surface of ['dark', 'light']) {
   const header = `logo-header-on-${surface}.svg`
   await copyFile(path.join(web, header), path.join(publicBrand, header))
