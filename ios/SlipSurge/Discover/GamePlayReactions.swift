@@ -1,11 +1,6 @@
 import SwiftUI
 
 struct GamePlayReactions: View {
-    private struct Burst: Equatable {
-        let symbol: String
-        let id = UUID()
-    }
-
     let reactions: [String: GameCenterData.Play.Reaction]
     let enabled: Bool
     let react: (String, Bool) async -> Void
@@ -15,7 +10,7 @@ struct GamePlayReactions: View {
     private struct Selection { let emoji: String; let enabled: Bool }
     @State private var pending: Selection?
     @State private var picking = false
-    @State private var burst: Burst?
+    @State private var burst: ReactionBurst?
     @State private var feedback = 0
 
     private var displayed: [String: GameCenterData.Play.Reaction] {
@@ -90,30 +85,17 @@ struct GamePlayReactions: View {
         }
         .foregroundStyle(.secondary)
         .sensoryFeedback(.selection, trigger: feedback)
-        .overlay(alignment: .leading) {
-            if !reduceMotion {
-                NativeReactionArtwork(symbol: burst?.symbol ?? "", size: 23)
-                    .font(.title3)
-                    .keyframeAnimator(initialValue: 0.0, trigger: burst?.id) { content, time in
-                        content.scaleEffect(0.72 + 0.5 * sin(time * .pi))
-                            .offset(x: 12 + 19 * time, y: -52 * time)
-                            .opacity(max(0, min(time * 9, (1 - time) * 3)))
-                    } keyframes: { _ in
-                        LinearKeyframe(1.0, duration: 0.63)
-                        MoveKeyframe(0.0)
-                    }
-                    .allowsHitTesting(false).accessibilityHidden(true)
-            }
-        }
+        .reactionBurst(burst)
         .sheet(isPresented: $picking) {
             NavigationStack { NativeEmojiPicker(title: "React to play", select: select) }
                 .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
         }
         .onChange(of: reactions) { previous, current in
             if let increased = current.keys.sorted().first(where: {
-                pending?.emoji != $0 && (current[$0]?.count ?? 0) > (previous[$0]?.count ?? 0)
+                let ownIncrease = current[$0]?.mine == true && previous[$0]?.mine != true ? 1 : 0
+                return (current[$0]?.count ?? 0) - (previous[$0]?.count ?? 0) > ownIncrease
             }), !reduceMotion {
-                burst = Burst(symbol: increased)
+                burst = ReactionBurst(symbol: increased)
             }
         }
     }
@@ -134,7 +116,7 @@ struct GamePlayReactions: View {
         let next = reactions[emoji]?.mine != true
         pending = .init(emoji: emoji, enabled: next)
         feedback += 1
-        if next && !reduceMotion { burst = Burst(symbol: emoji) }
+        if next && !reduceMotion { burst = ReactionBurst(symbol: emoji) }
         Task {
             await react(emoji, next)
             pending = nil

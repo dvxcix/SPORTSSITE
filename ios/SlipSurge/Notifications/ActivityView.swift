@@ -14,6 +14,7 @@ struct ActivityView: View {
     @State private var busy = false
     @State private var showClear = false
     @State private var mutationFailed = false
+    @State private var refreshFailed = false
     @State private var revision = 0
     @State private var opened = false
 
@@ -25,6 +26,16 @@ struct ActivityView: View {
         case all = "All"
         case unread = "Unread"
         case mentions = "Mentions"
+    }
+
+    private enum Period: String, CaseIterable {
+        case today = "Today"
+        case earlier = "Earlier"
+    }
+
+    private func period(of row: ActivityNotification) -> Period {
+        guard let date = SidelineBoard.timestamp(row.createdAt), Calendar.current.isDateInToday(date) else { return .earlier }
+        return .today
     }
 
     private var filtered: [ActivityNotification] {
@@ -42,6 +53,10 @@ struct ActivityView: View {
                 ProgressView("Loading notifications")
                     .listRowBackground(Brand.surface(for: scheme))
             case .ready:
+                if refreshFailed {
+                    Button("Couldn’t refresh activity. Retry", systemImage: "arrow.clockwise") { revision += 1 }
+                        .listRowBackground(Brand.surface(for: scheme))
+                }
                 activityRows
             case .denied:
                 ContentUnavailableView("Notification access required", systemImage: "lock")
@@ -64,7 +79,7 @@ struct ActivityView: View {
             case .community(let id): DiscoverView(api: DiscoverAPI(account: api.account, userID: api.userID), opensCommunity: id)
             case .profile(let id): MemberProfileView(api: DiscoverAPI(account: api.account, userID: api.userID), target: id.uuidString.lowercased())
             case .research(let link): LinkedResearchView(account: api.account, link: link)
-            case .discussion(let id): ForumThreadView(api: .init(viewer: .init(account: api.account, userID: api.userID)), id: id)
+            case .game(let link): LinkedScoreView(viewer: .init(account: api.account, userID: api.userID), link: link)
             }
         }
         .scrollContentBackground(.hidden)
@@ -77,14 +92,17 @@ struct ActivityView: View {
                 state = .ready
             }
             await load()
-            if !opened, let id = opensNotification {
-                opened = true
+            if !opened, state == .ready, let id = opensNotification {
                 if let matching = rows.first(where: { $0.id == id }) {
                     open(matching)
                 } else if let matching = try? await api.load(id: id).first, matching.id == id {
                     open(matching)
                 }
+                opened = true
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .slipSurgeActivityChanged)) { _ in
+            if !busy { revision += 1 }
         }
         .refreshable { if !busy { await load() } }
         .toolbar {
@@ -128,17 +146,33 @@ struct ActivityView: View {
             ContentUnavailableView("No notifications", systemImage: "bell")
                 .listRowBackground(Brand.surface(for: scheme))
         }
-        ForEach(filtered) { row in
-            Button {
-                open(row)
-            } label: {
-                notification(row)
-            }
-            .disabled(busy)
-            .listRowBackground(Brand.surface(for: scheme))
-            .swipeActions(allowsFullSwipe: false) {
-                Button("Remove", role: .destructive) { Task { await mutate { try await api.remove(row.id) } } }
-                    .disabled(busy)
+        let grouped = Dictionary(grouping: filtered, by: period)
+        ForEach(Period.allCases, id: \.self) { period in
+            if let items = grouped[period] {
+                Section(period.rawValue) {
+                    ForEach(items) { row in
+                        Button {
+                            open(row)
+                        } label: {
+                            notification(row)
+                        }
+                        .disabled(busy)
+                        .listRowBackground(Brand.surface(for: scheme))
+                        .swipeActions(edge: .leading) {
+                            if !row.read {
+                                Button("Mark as read", systemImage: "checkmark") {
+                                    Task { await mutate { try await api.markRead([row.id]) } }
+                                }
+                                .tint(Brand.accent(for: scheme))
+                                .disabled(busy)
+                            }
+                        }
+                        .swipeActions(allowsFullSwipe: false) {
+                            Button("Remove", role: .destructive) { Task { await mutate { try await api.remove(row.id) } } }
+                                .disabled(busy)
+                        }
+                    }
+                }
             }
         }
     }
@@ -149,36 +183,64 @@ struct ActivityView: View {
     }
 
     private func notification(_ row: ActivityNotification) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            if let actor = row.actor {
-                NativeMemberAvatar(url: actor.avatarUrl, name: actor.displayName ?? actor.username, size: 32,
-                    style: actor.avatarRingStyle, color: actor.avatarRingColor)
-            } else {
-                Image(systemName: row.icon).frame(width: 32, height: 32).accessibilityHidden(true)
+        let artwork = row.artworkUrl.flatMap { FeedPostCard.allowedMedia($0) ? $0 : nil }
+        let hasImage = row.actor != nil || artwork != nil
+        return HStack(alignment: .top, spacing: 12) {
+            ZStack(alignment: .bottomTrailing) {
+                if let actor = row.actor {
+                    NativeMemberAvatar(url: actor.avatarUrl, name: actor.displayName ?? actor.username, size: 40,
+                        style: actor.avatarRingStyle, color: actor.avatarRingColor)
+                } else if let artwork {
+                    ResearchArtwork(urls: [artwork], fallback: row.icon, pointSize: 40, playerPortrait: row.type == "pick_result")
+                        .frame(width: 40, height: 40)
+                        .background(Brand.accent(for: scheme).opacity(0.12), in: .rect(cornerRadius: 12))
+                        .clipShape(.rect(cornerRadius: 12))
+                } else {
+                    Circle().fill(Brand.accent(for: scheme).opacity(0.12))
+                        .frame(width: 40, height: 40)
+                }
+                Image(systemName: row.icon)
+                    .font((hasImage ? Font.caption2 : .body).weight(.semibold))
+                    .foregroundStyle(Brand.accent(for: scheme))
+                    .frame(width: hasImage ? 21 : 40, height: hasImage ? 21 : 40)
+                    .background(hasImage ? Brand.surface(for: scheme) : .clear, in: .circle)
+                    .offset(x: hasImage ? 5 : 0, y: hasImage ? 4 : 0)
+                    .accessibilityHidden(true)
             }
-            VStack(alignment: .leading, spacing: 3) {
-                if let message = row.message { Text(verbatim: message).font(.headline) }
-                if let body = row.body { Text(verbatim: body).font(.subheadline) }
-                if row.message == nil, row.body == nil {
-                    Text(row.type.replacingOccurrences(of: "_", with: " ").capitalized)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Text(row.title).font(.caption.weight(.semibold))
+                    Spacer(minLength: 2)
+                    if let date = SidelineBoard.timestamp(row.createdAt) {
+                        Text(date, style: .relative).font(.caption2).monospacedDigit().lineLimit(1)
+                    }
                 }
-                if let date = SidelineBoard.timestamp(row.createdAt) {
-                    Text(date.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption).foregroundStyle(.secondary)
+                .foregroundStyle(.secondary)
+                if let actor = row.actor {
+                    let name = actor.displayName?.isEmpty == false ? actor.displayName ?? actor.username : actor.username
+                    (Text(verbatim: name).fontWeight(.bold) +
+                        Text(verbatim: row.message.map { " " + $0 } ?? ""))
+                        .font(.subheadline)
+                } else if let message = row.message {
+                    Text(verbatim: message).font(.subheadline.weight(row.read ? .regular : .semibold))
                 }
+                if let body = row.body { Text(verbatim: body).font(.subheadline).foregroundStyle(.secondary) }
             }
             .foregroundStyle(Brand.text(for: scheme))
-            Spacer()
             if !row.read {
                 Circle().fill(Brand.accent(for: scheme))
-                    .frame(width: 8, height: 8)
+                    .frame(width: 7, height: 7)
+                    .padding(.top, 4)
                     .accessibilityLabel("Unread")
             }
         }
+        .padding(.vertical, 4)
+        .contentShape(.rect)
         .accessibilityElement(children: .combine)
     }
 
     private func load() async {
+        refreshFailed = false
         do {
             let loaded = try await api.load()
             try Task.checkCancellation()
@@ -192,7 +254,10 @@ struct ActivityView: View {
                 onUnreadChange(0)
             }
         } catch {
-            if !Task.isCancelled, state != .ready { state = .unavailable }
+            if !Task.isCancelled {
+                if rows.isEmpty { state = .unavailable }
+                else { refreshFailed = true }
+            }
         }
     }
 

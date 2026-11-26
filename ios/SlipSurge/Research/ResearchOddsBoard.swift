@@ -106,11 +106,15 @@ struct ResearchOddsBoard: View {
     @State private var target: Double?
     @State private var search = ""
     @State private var sort: OddsSort?
+    @State private var sortedPriceLine: Double?
+    @State private var ascendingPrice = false
+    @State private var ascendingName = true
     @State private var comparison = OddsComparison.opening
     @State private var filtersOpen = false
     @State private var selectedPrice: SelectedPrice?
 
     private var selectedSort: OddsSort { sort ?? defaultSort }
+    private var sortedLine: Double? { sortedPriceLine.flatMap { milestones.contains($0) && (target == nil || target == $0) ? $0 : nil } }
 
     private var teams: [ResearchOddsSlate.Team] {
         Array(Set(slate.players.filter { game == nil || $0.gameID == game }.map(\.team)))
@@ -128,15 +132,23 @@ struct ResearchOddsBoard: View {
     private var milestones: [Double] { Array(Set(players.flatMap(\.prices).map(\.line))).sorted() }
 
     private var rows: [ResearchOddsSlate.Player] {
-        players.filter { player in target == nil || player.prices.contains { $0.line == target } }
+        let line = sortedLine
+        let nameAscending = line != nil || selectedSort != .alphabetical || ascendingName
+        return players.filter { player in target == nil || player.prices.contains { $0.line == target } }
             .sorted { left, right in
-                if selectedSort != .alphabetical {
+                if let line {
+                    let first = left.prices.first { $0.line == line }?.current
+                    let second = right.prices.first { $0.line == line }?.current
+                    if let first, let second, first != second { return ascendingPrice ? first < second : first > second }
+                    if (first == nil) != (second == nil) { return first != nil }
+                } else if selectedSort != .alphabetical {
                     let first = movement(left), second = movement(right)
                     if let first, let second, first != second { return selectedSort == .shortened ? first > second : first < second }
                     if (first == nil) != (second == nil) { return first != nil }
                 }
                 let nameOrder = left.name.localizedStandardCompare(right.name)
-                return nameOrder == .orderedSame ? left.id < right.id : nameOrder == .orderedAscending
+                if nameOrder == .orderedSame { return left.id < right.id }
+                return nameAscending ? nameOrder == .orderedAscending : nameOrder == .orderedDescending
             }
     }
 
@@ -241,7 +253,7 @@ struct ResearchOddsBoard: View {
                 Picker("Compare with", selection: $comparison) {
                     ForEach(OddsComparison.allCases, id: \.self) { Text($0.label(live: live)).tag($0) }
                 }
-                Picker("Sort", selection: Binding(get: { selectedSort }, set: { sort = $0 })) {
+                Picker("Sort", selection: Binding(get: { selectedSort }, set: { sort = $0; sortedPriceLine = nil; ascendingName = true })) {
                     ForEach(OddsSort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
                 if scorerLabel == nil {
@@ -267,16 +279,20 @@ struct ResearchOddsBoard: View {
         ScrollView(.horizontal) {
             LazyVStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 2) {
-                    Text("Player").frame(width: identityWidth, alignment: .leading).padding(.leading, 10)
+                    ResearchSortHeader(title: "Player", selected: sortedLine == nil && selectedSort == .alphabetical, ascending: ascendingName) {
+                        if sortedLine == nil && selectedSort == .alphabetical { ascendingName.toggle() }
+                        else { sort = .alphabetical; sortedPriceLine = nil; ascendingName = true }
+                    }
+                    .frame(width: identityWidth, alignment: .leading).padding(.leading, 10)
                     ForEach(columns, id: \.self) { line in
-                        Text(scorerLabel ?? "\(line.formatted())+").frame(width: priceWidth)
+                        ResearchSortHeader(title: scorerLabel ?? "\(line.formatted())+", selected: sortedLine == line, ascending: ascendingPrice) {
+                            if sortedLine == line { ascendingPrice.toggle() }
+                            else { sortedPriceLine = line; ascendingPrice = false }
+                        }
+                        .frame(width: priceWidth)
                     }
                 }
-                .padding(.vertical, 11)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Brand.accent(for: scheme))
                 .background(Brand.surface(for: scheme))
-                .accessibilityAddTraits(.isHeader)
                 ForEach(players) { player in
                     let byLine = Dictionary(uniqueKeysWithValues: player.prices.map { ($0.line, $0) })
                     HStack(spacing: 2) {

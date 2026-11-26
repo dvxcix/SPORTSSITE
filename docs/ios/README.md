@@ -268,3 +268,26 @@ Apple domain diagnostics before recording universal links as verified.
 The native target includes the required-reason entries for app-owned settings
 and the elapsed-time check used for research freshness. App Store Connect
 privacy disclosures and third-party SDK declarations require a release review.
+
+### Scoreboard widgets and notification actions
+
+The `SlipSurgeWidgets` extension is embedded in the app. On iPhone, add
+**Scoreboard** from the SlipSurge widget gallery. The small and medium Home
+Screen widgets and the rectangular Lock Screen widget support a league selected
+in **Edit Widget**. They read the same public, Eastern-date scoreboard as the app
+and open the selected matchup in native Game Center. WidgetKit schedules
+refreshes. The widget identifies an older in-progress snapshot by its update
+time. It uses no member token, App Group, account or Ultimate data.
+
+The extension’s bundle identifier is the app identifier plus `.widgets`. A
+distribution build needs both identifiers provisioned under the same paid
+Apple Developer team. The widget has no push entitlement of its own.
+
+Onboarding and Alert Preferences show the iPhone’s alert control, separate from
+account delivery preferences and quiet hours. Apple alerts group messages,
+lineup updates and other activity. Their notification text is generic.
+**Mark as Read** and the default tap resolve the ID through the signed-in
+member API. For a development test, set the APNs environment and signing
+entitlements as described above. Simulator injection can verify the OS
+presentation and action; confirm the production APNs provider on a real,
+push-entitled device before releasing.

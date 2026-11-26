@@ -21,7 +21,20 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
     }
     private var pending: UUID?
 
-    enum State { case unknown, available, off, connecting, connected, unavailable }
+    enum State { case unknown, available, authorized, off, connecting, connected, unavailable, failed }
+
+    private enum Category: String, CaseIterable {
+        case activity = "SLIPSURGE_ACTIVITY"
+        case message = "SLIPSURGE_MESSAGE"
+        case game = "SLIPSURGE_GAME"
+
+        static let markRead = "SLIPSURGE_MARK_READ"
+
+        var systemCategory: UNNotificationCategory {
+            let read = UNNotificationAction(identifier: Self.markRead, title: "Mark as Read", options: [.authenticationRequired])
+            return UNNotificationCategory(identifier: rawValue, actions: [read], intentIdentifiers: [], options: [])
+        }
+    }
 
     private struct Registration: Equatable {
         let userID: UUID
@@ -36,7 +49,9 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
     }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        UNUserNotificationCenter.current().delegate = self
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
+        center.setNotificationCategories(Set(Category.allCases.map(\.systemCategory)))
         return true
     }
 
@@ -47,7 +62,7 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: any Error) {
         self.deviceToken = nil
-        state = .unavailable
+        state = .failed
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
@@ -56,10 +71,27 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        guard response.actionIdentifier == UNNotificationDefaultActionIdentifier,
-              let raw = response.notification.request.content.userInfo["notificationId"] as? String,
+        guard let raw = response.notification.request.content.userInfo["notificationId"] as? String,
               let id = UUID(uuidString: raw) else { return }
-        await open(id)
+        switch response.actionIdentifier {
+        case UNNotificationDefaultActionIdentifier: await open(id)
+        case Category.markRead: await markRead(id)
+        default: break
+        }
+    }
+
+    private func markRead(_ id: UUID) async {
+        // The user may choose this action while iOS is restoring a cold app session.
+        for _ in 0..<10 {
+            if let account, let userID = account.memberID, !signingOut {
+                do {
+                    try await ActivityAPI(account: account, userID: userID).markRead([id])
+                    NotificationCenter.default.post(name: .slipSurgeActivityChanged, object: nil)
+                } catch { /* Leave the item unread when the server cannot confirm it. */ }
+                return
+            }
+            do { try await Task.sleep(for: .milliseconds(200)) } catch { return }
+        }
     }
 
     private func open(_ id: UUID) {
@@ -85,21 +117,24 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
             _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
             await sync()
         } catch {
-            state = .unavailable
+            state = .failed
         }
     }
 
     func sync() async {
-        guard !signingOut, let account, let userID = account.memberID else { return }
-        let authorization = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
-        guard !signingOut, account.memberID == userID else { return }
+        guard !signingOut else { return }
         guard Self.environment != nil else { state = .unavailable; return }
+        let account = self.account
+        let userID = account?.memberID
+        let authorization = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        guard !signingOut, self.account?.memberID == userID else { return }
         switch authorization {
         case .notDetermined: state = .available
         case .denied:
-            await disconnect(account: account, userID: userID)
-            if account.memberID == userID { state = .off }
+            if let account, let userID { await disconnect(account: account, userID: userID) }
+            if self.account?.memberID == userID { state = .off }
         case .authorized, .provisional, .ephemeral:
+            guard let account, let userID else { state = .authorized; return }
             if let deviceToken {
                 await connect(account: account, current: Registration(userID: userID, deviceToken: deviceToken))
             } else {
@@ -129,7 +164,7 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
                     state = .connected
                 }
             } catch {
-                if generation == attempt { state = .unavailable }
+                if generation == attempt { state = .failed }
             }
         }
     }
@@ -170,4 +205,8 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
         request.httpBody = try JSONEncoder().encode(["token": registration.deviceToken, "topic": Self.topic, "environment": environment])
         _ = try await SlipSurgeHTTP.send(request)
     }
+}
+
+extension Notification.Name {
+    static let slipSurgeActivityChanged = Notification.Name("SlipSurge.ActivityChanged")
 }

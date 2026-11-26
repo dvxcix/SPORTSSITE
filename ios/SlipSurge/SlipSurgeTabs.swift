@@ -351,6 +351,9 @@ struct SlipSurgeTabs: View {
             }
             sitePresentation = nil
             selected = .feed
+        case .discover(.scores):
+            profilePresentation = nil
+            sitePresentation = .init(target: link)
         case .discover(let destination):
             sitePresentation = nil
             profilePresentation = nil

@@ -20,9 +20,10 @@ struct ActivityNotification: Decodable, Identifiable {
     let actorId: UUID?
     let targetId: UUID?
     let targetType: String?
+    let artworkUrl: URL?
 
     enum Destination: Hashable {
-        case post(UUID), conversation(MessageDestination), discovery, community(UUID), profile(UUID), research(ResearchDeepLink), discussion(UUID)
+        case post(UUID), conversation(MessageDestination), discovery, community(UUID), profile(UUID), research(ResearchDeepLink), game(GameLink)
     }
 
     var destination: Destination? {
@@ -31,8 +32,9 @@ struct ActivityNotification: Decodable, Identifiable {
                   !value.percentEncodedPath.contains("\\") else { return nil }
             return value.percentEncodedPath.split(separator: "/")
         } ?? []
-        if path.count == 3, path[0] == "forum", path[1] == "thread", let id = UUID(uuidString: String(path[2])) { return .discussion(id) }
-        if targetType == "forum_thread", let targetId { return .discussion(targetId) }
+        if path.first == "forum" || targetType == "forum_thread" { return .discovery }
+        if path.first == "sports", let link, let url = URL(string: "https://\(SlipSurgeHTTP.site)" + link),
+           case .scoreGame(let game) = NativeSiteLink(url) { return .game(game) }
         if targetType == "post", let targetId { return .post(targetId) }
         if path.count == 2, path[0] == "posts", let id = UUID(uuidString: String(path[1])) { return .post(id) }
         if type == "message" {
@@ -51,6 +53,23 @@ struct ActivityNotification: Decodable, Identifiable {
         return nil
     }
 
+    var title: String {
+        switch type {
+        case "follow": "Follow"
+        case "reaction": "Reaction"
+        case "comment": "Comment"
+        case "message": "Message"
+        case "mention": "Mention"
+        case "pick_result": "Pick result"
+        case "subscription": "Subscription"
+        case "repost": "Repost"
+        case "group_invite": "Community invite"
+        case "new_pick": "New pick"
+        case "lineup_confirmed": "Lineup confirmed"
+        default: "Activity"
+        }
+    }
+
     var icon: String {
         switch type {
         case "follow": "person.badge.plus"
@@ -58,6 +77,7 @@ struct ActivityNotification: Decodable, Identifiable {
         case "comment", "message": "bubble.left"
         case "mention": "at"
         case "pick_result": "trophy"
+        case "subscription": "person.crop.circle.badge.checkmark"
         case "repost": "arrow.2.squarepath"
         case "group_invite": "person.2"
         case "new_pick": "chart.line.uptrend.xyaxis"

@@ -16,7 +16,7 @@ struct GameTimeline {
     }
 
     enum Context {
-        case timeout, substitution, period, foul, rebound
+        case timeout, substitution, period, foul, rebound, penalty
 
         var glyph: String {
             switch self {
@@ -24,6 +24,7 @@ struct GameTimeline {
             case .substitution: "arrow.left.arrow.right"
             case .period: "flag.checkered"
             case .foul: "whistle"
+            case .penalty: "flag"
             case .rebound: "arrow.uturn.up"
             }
         }
@@ -117,7 +118,9 @@ struct GameTimeline {
             switch lower {
             case _ where lower.contains("timeout") || text.lowercased().hasSuffix("timeout"): context = .timeout
             case _ where lower.contains("substitution"): context = .substitution
-            case "end period", "start period", "end of period", "start of period", "halftime", "end of game": context = .period
+            case "end period", "start period", "end of period", "start of period", "halftime", "end of game",
+                 "two-minute warning", "two minute warning": context = .period
+            case "penalty": context = .penalty
             default: context = nil
             }
             let attempt: FreeThrow? = if basketball {

@@ -586,6 +586,18 @@ struct CourtView: View {
                     error: savedError == board.game.id ? URLError(.resourceUnavailable) : nil) { savedRevision += 1 }
             } else {
                 let teams = [board.game.visitorTeam, board.game.homeTeam].filter { teamFilter.isEmpty || String($0.id) == teamFilter }
+                ScrollView(.horizontal) {
+                    HStack(spacing: 2) {
+                        ForEach([CourtLinkContext.Sort.name, .average, .mm, .line, .odds, .l5, .l10, .l20, .minutes], id: \.self) { column in
+                            ResearchSortHeader(title: column.label, selected: sort == column, ascending: ascending) {
+                                if sort == column { ascending.toggle() }
+                                else { sort = column; ascending = column == .name }
+                            }
+                        }
+                    }
+                }
+                .scrollIndicators(.hidden)
+                .accessibilityLabel("Sort players by column")
                 ForEach(teams, id: \.id) { team in
                     CourtPlayerBoard(team: team, board: board, observedAt: observedAt, market: market,
                         sportsbook: sportsbook, side: side, search: playerSearch, ranks: ranks, matrixMatches: matches, matrixFilter: filter,

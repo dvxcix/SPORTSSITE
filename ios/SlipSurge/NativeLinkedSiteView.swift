@@ -35,7 +35,8 @@ struct NativeLinkedSiteView: View {
         case .pricing: NativeMembershipOverview(account: account)
         case .preview(.nba): CourtView(scope: .preview)
         case .preview(.nfl): SidelineView(api: SidelineAPI())
-        case .scoreGame(let game): linkedScore(game)
+        case .discover(.scores(let date, let league)): ScoresView(api: viewer, date: date ?? .now, league: league)
+        case .scoreGame(let game): LinkedScoreView(viewer: viewer, link: game)
         case .registration: EmailAccountForm(account: account, flow: .registration)
         case .passwordRecovery: EmailAccountForm(account: account, flow: .recovery)
         default: EmptyView()
@@ -158,7 +159,13 @@ struct NativeLinkedSiteView: View {
         LinkedCommunityView(viewer: viewer, slug: slug, section: section)
     }
 
-    private func linkedScore(_ link: GameLink) -> some View {
+}
+
+struct LinkedScoreView: View {
+    let viewer: DiscoverAPI
+    let link: GameLink
+
+    var body: some View {
         struct Selection: Decodable { let date: String; let game: Scoreboard.Match }
         return NativeLinkLookup(title: "Game Center", load: {
             let result = try await viewer.readPublic(Selection.self, path: "/api/mobile/scores/resolve",

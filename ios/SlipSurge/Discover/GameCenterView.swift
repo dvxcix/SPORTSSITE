@@ -64,6 +64,7 @@ struct GameCenterView: View {
     @State private var scoringOnly = false
     @State private var team = ""
     @State private var pitchPlay: GameCenterData.Play?
+    @State private var expandedPenalty: String?
 
     init(api: DiscoverAPI, game: Scoreboard.Match, date: String, play: String? = nil) {
         self.api = api
@@ -254,7 +255,7 @@ struct GameCenterView: View {
                         GameRoomComposer(draft: draft, link: gameLink, account: api.account, userID: userID, sending: busy) {
                             Task { await send() }
                         }
-                    } else if api.userID == nil, let account = URL(string: "https://\(SlipSurgeHTTP.site)/account") {
+                    } else if api.userID == nil, let account = URL(string: "slipsurge-app://site/account") {
                         Link("Sign in to join the room", destination: account)
                             .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 48).background(.bar)
                     }
@@ -371,9 +372,11 @@ struct GameCenterView: View {
         VStack(spacing: 4) {
             ResearchArtwork(urls: LeagueArtwork.logo(game.sport).map { [$0] } ?? [], fallback: "sportscourt", pointSize: 19)
                 .frame(width: 19, height: 19)
-            MatchStatusLabel(label: state == "pre" ? game.label : displayStatus ?? game.label, live: live)
+            MatchStatusLabel(label: state == "post" ? "Final" : state == "pre" ? game.label : displayStatus ?? game.label, live: live)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func teamSide(_ team: Scoreboard.Match.Team, score: String?, home: Bool = false) -> some View {
@@ -400,6 +403,9 @@ struct GameCenterView: View {
     private func details(_ data: GameCenterData) -> some View {
         switch section {
         case .overview:
+            if state == "post", let result = data.status, result.localizedCaseInsensitiveCompare("Final") != .orderedSame {
+                Text(verbatim: result).font(.subheadline.weight(.medium)).fixedSize(horizontal: false, vertical: true)
+            }
             if let venue = data.venue ?? game.venue {
                 Label(venue, systemImage: "mappin").font(.footnote).foregroundStyle(.secondary)
             }
@@ -426,6 +432,7 @@ struct GameCenterView: View {
                 ? Array(timeline.entries.lazy.filter { $0.play.scoring }.prefix(8))
                 : scoringTimeline.entries
             if !scoringPlays.isEmpty {
+                GameScoreTrend(game: game, plays: scoringPlays.map(\.play))
                 Text("Scoring plays").font(.headline).accessibilityAddTraits(.isHeader)
                 ForEach(scoringPlays) { playCard($0) }
             }
@@ -509,7 +516,8 @@ struct GameCenterView: View {
         let title = if entry.context == .timeout, let team { "\(team.name) timeout" }
             else if row.entries.count > 1 { "Lineup change" }
             else { entry.contextTitle }
-        return HStack(spacing: 7) {
+        let expanded = expandedPenalty == entry.id
+        let label = HStack(spacing: 7) {
             if let team, let logo = game.logo(for: team) {
                 ResearchArtwork(urls: [logo], fallback: "shield", pointSize: 17).frame(width: 17, height: 17)
             } else if let context = entry.context {
@@ -517,20 +525,38 @@ struct GameCenterView: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.caption.weight(.semibold))
-                if entry.context == .substitution || entry.context == .foul || entry.context == .rebound,
+                if entry.context == .substitution || entry.context == .foul || entry.context == .rebound || entry.context == .penalty,
                    let detail = row.substitutions ?? entry.detail {
-                    Text(detail).font(.caption2)
+                    Text(detail).font(.caption2).lineLimit(entry.context == .penalty && !expanded ? 2 : nil)
                 }
             }
             Spacer(minLength: 6)
             if let clock = entry.play.clock { Text(clock).font(.caption2.monospacedDigit()) }
+            if entry.context == .penalty {
+                Image(systemName: expanded ? "chevron.up" : "chevron.down").font(.caption2)
+                    .accessibilityHidden(true)
+            }
         }
         .foregroundStyle(.secondary)
         .padding(.horizontal, 10).padding(.vertical, 5)
         .background {
             if entry.id == revealedPlay { Color.secondary.opacity(0.12).clipShape(.rect(cornerRadius: 8)) }
         }
+        .contentShape(.rect)
         .accessibilityElement(children: .combine)
+        return Group {
+            if entry.context == .penalty, entry.detail != nil {
+                Button {
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.18)) {
+                        expandedPenalty = expanded ? nil : entry.id
+                    }
+                } label: { label }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(expanded ? "Collapse penalty details" : "Read full penalty details")
+            } else {
+                label
+            }
+        }
         .contextMenu {
             if let url = GameLink(sport: game.sport, id: game.id, play: entry.id).url {
                 ShareLink(item: url, subject: Text(title))

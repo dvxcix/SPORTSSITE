@@ -95,8 +95,8 @@ struct AccountView: View {
                     .disabled(account.isBusy || push.signingOut)
                 }
                 .listRowBackground(Brand.surface(for: scheme))
-                if account.memberID != nil, PushNotifications.environment != nil {
-                    Section("Device alerts") { deviceAlerts }
+                if account.memberID != nil {
+                    Section("Device alerts") { DeviceAlertControl() }
                         .listRowBackground(Brand.surface(for: scheme))
                 }
             }
@@ -128,22 +128,6 @@ struct AccountView: View {
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .keyboardDone()
-    }
-
-    @ViewBuilder
-    private var deviceAlerts: some View {
-        switch push.state {
-        case .unknown, .connecting: ProgressView("Checking device alerts")
-        case .available:
-            Button("Enable notifications", systemImage: "bell.badge") { Task { await push.requestPermission() } }
-        case .connected: Label("Notifications enabled", systemImage: "bell.badge.fill")
-        case .off:
-            Button("Open iOS notification settings", systemImage: "gear") {
-                if let url = URL(string: UIApplication.openNotificationSettingsURLString) { UIApplication.shared.open(url) }
-            }
-        case .unavailable:
-            Button("Retry device alerts", systemImage: "arrow.clockwise") { Task { await push.sync() } }
-        }
     }
 
     private var verificationFields: some View {

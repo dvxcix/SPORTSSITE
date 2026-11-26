@@ -1,0 +1,8 @@
+#include "Auth.xcconfig"
+
+INFOPLIST_FILE = SlipSurgeWidgetsInfo.plist
+CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*] =
+CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*] =
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @executable_path/../../Frameworks
+PRODUCT_BUNDLE_IDENTIFIER = com.slipsurge.ios.development.widgets
+PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*] = $(SLIPSURGE_IOS_BUNDLE_IDENTIFIER).widgets

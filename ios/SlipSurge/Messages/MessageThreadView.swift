@@ -62,6 +62,14 @@ struct MessageThreadView: View {
     @State private var typingPresence = MessageTypingPresence()
     @State private var forwarding: MessageThread.Note?
     @State private var selectingReaction: ReactionTarget?
+    @State private var reactionBurst: MessageReactionBurst?
+    @State private var reacting = Set<String>()
+    @State private var reactionFeedback = 0
+
+    private struct MessageReactionBurst {
+        let message: UUID
+        let animation: ReactionBurst
+    }
     @State private var forwardAttempts: [UUID: UUID] = [:]
     @State private var forwardedThread: MessageDestination?
 
@@ -90,6 +98,7 @@ struct MessageThreadView: View {
         }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
+        .sensoryFeedback(.selection, trigger: reactionFeedback)
         .navigationTitle(thread?.title ?? "Messages")
         .navigationBarTitleDisplayMode(.inline)
         .socialDetail()
@@ -383,22 +392,28 @@ struct MessageThreadView: View {
                     }
                 }
                 if !counts.isEmpty {
-                    HStack(spacing: 6) {
-                        ForEach(counts.keys.sorted().prefix(8), id: \.self) { symbol in
-                            let items = counts[symbol] ?? []
-                            let selected = items.contains(where: \.mine)
-                            Button { react(symbol, on: messageID, enabled: !selected) } label: {
-                                HStack(spacing: 3) {
-                                    NativeReactionArtwork(symbol: symbol, size: 15)
-                                    Text(items.count.formatted()).monospacedDigit()
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 6) {
+                            ForEach(counts.keys.sorted().prefix(8), id: \.self) { symbol in
+                                let items = counts[symbol] ?? []
+                                let selected = items.contains(where: \.mine)
+                                Button { react(symbol, on: messageID, enabled: !selected) } label: {
+                                    HStack(spacing: 3) {
+                                        NativeReactionArtwork(symbol: symbol, size: 15)
+                                        Text(items.count.formatted()).monospacedDigit()
+                                            .contentTransition(reduceMotion ? .identity : .numericText())
+                                    }
+                                    .frame(minWidth: 26, minHeight: 32)
                                 }
-                            }
                                 .font(.caption2.weight(.semibold)).buttonStyle(.bordered).buttonBorderShape(.capsule)
                                 .tint(selected ? Brand.accent(for: scheme) : .secondary)
-                                .accessibilityLabel("\(symbol) reaction, \(items.count)")
+                                .accessibilityLabel("\(NativeEmojiLibrary.shortcode(in: symbol) ?? symbol) reaction, \(items.count)")
                                 .accessibilityAddTraits(selected ? .isSelected : [])
+                            }
                         }
                     }
+                    .scrollIndicators(.hidden)
+                    .fixedSize(horizontal: counts.count < 4, vertical: false)
                 }
                 HStack(spacing: 4) {
                     if pinned { Image(systemName: "pin.fill").accessibilityLabel("Pinned") }
@@ -410,6 +425,16 @@ struct MessageThreadView: View {
             if !mine { Spacer(minLength: 38) }
         }
         .frame(maxWidth: .infinity)
+        .reactionBurst(reactionBurst?.message == message.id ? reactionBurst?.animation : nil,
+                       alignment: mine ? .trailing : .leading)
+        .onChange(of: reactions) { previous, updated in
+            guard !reduceMotion else { return }
+            let before = Dictionary(grouping: previous.filter { !$0.mine }, by: \.emoji)
+            let after = Dictionary(grouping: updated.filter { !$0.mine }, by: \.emoji)
+            if let symbol = after.keys.sorted().first(where: { (after[$0]?.count ?? 0) > (before[$0]?.count ?? 0) }) {
+                reactionBurst = .init(message: message.id, animation: .init(symbol: symbol))
+            }
+        }
     }
 
     private func author(of message: MessageThread.Note, in thread: MessageThread) -> MessagePerson? {
@@ -646,7 +671,14 @@ struct MessageThreadView: View {
     }
 
     private func react(_ symbol: String, on id: String, enabled: Bool) {
-        Task { await mutate(.init(action: "react", message: id, emoji: symbol, enabled: enabled)) }
+        let key = "\(id):\(symbol)"
+        guard let messageID = UUID(uuidString: id), reacting.insert(key).inserted else { return }
+        reactionFeedback += 1
+        if enabled, !reduceMotion { reactionBurst = .init(message: messageID, animation: .init(symbol: symbol)) }
+        Task {
+            defer { reacting.remove(key) }
+            await mutate(.init(action: "react", message: id, emoji: symbol, enabled: enabled))
+        }
     }
 
     private func send() async {

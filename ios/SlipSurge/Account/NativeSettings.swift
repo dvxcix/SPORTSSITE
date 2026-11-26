@@ -341,6 +341,14 @@ struct NativeSettings: View {
 
     @ViewBuilder
     private var alertFields: some View {
+        SwiftUI.Section {
+            DeviceAlertControl()
+        } header: {
+            Text("This iPhone")
+        } footer: {
+            Text("Device permission applies here. Your alert preferences apply to your account.")
+        }
+        .listRowBackground(Brand.surface(for: scheme))
         SwiftUI.Section("Delivery timing") {
             Toggle("Quiet hours", isOn: Binding(get: { delivery.quiet_hours_enabled ?? false }, set: { delivery.quiet_hours_enabled = $0 }))
             if delivery.quiet_hours_enabled == true {

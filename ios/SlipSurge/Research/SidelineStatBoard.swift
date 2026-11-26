@@ -290,6 +290,14 @@ struct SidelineStatBoard: View {
             if rows.isEmpty {
                 ContentUnavailableView("No player data in this sample", systemImage: "person.crop.circle.badge.questionmark")
             } else {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 2) {
+                        sortColumn("Name", field: "name")
+                        ForEach(playerFields) { column in sortColumn(column.label, field: column.id) }
+                    }
+                }
+                .scrollIndicators(.hidden)
+                .accessibilityLabel("Sort players by column")
                 LazyVStack(spacing: 8) {
                     ForEach(rows) { row in playerCard(row, fields: playerFields) }
                 }
@@ -301,9 +309,22 @@ struct SidelineStatBoard: View {
 
     private var playerFields: [SidelineStatColumn] { columns.filter { $0.category != .team } }
 
+    private var sortingField: String? { sort ?? (mode == .matchup ? category.fields.first : playerFields.first?.id) }
+
+    private func sortColumn(_ label: String, field: String) -> some View {
+        ResearchSortHeader(title: label, selected: sortingField == field, ascending: ascending) {
+            if sortingField == field {
+                ascending.toggle()
+            } else {
+                sort = field
+                ascending = field == "name"
+            }
+        }
+    }
+
     private func filtered(_ rows: [Projection.Row]) -> [Projection.Row] {
         let term = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        let field = sort ?? (mode == .matchup ? category.fields.first : playerFields.first?.id)
+        let field = sortingField
         return rows.filter { row in
             (team.isEmpty || normalized(row.player.team) == normalized(team)) && role.accepts(row.player.position)
                 && (term.isEmpty || "\(row.player.name) \(row.player.team) \(row.player.position ?? "")".localizedStandardContains(term))
@@ -312,7 +333,7 @@ struct SidelineStatBoard: View {
                 let left = a.value(field), right = b.value(field)
                 if let left, let right, left != right { return ascending ? left < right : left > right }
                 if (left == nil) != (right == nil) { return left != nil }
-            } else if mode == .matchup, category == .market, a.signal?.anytime?.price != b.signal?.anytime?.price {
+            } else if field == nil, mode == .matchup, category == .market, a.signal?.anytime?.price != b.signal?.anytime?.price {
                 return (a.signal?.anytime?.price ?? .max) < (b.signal?.anytime?.price ?? .max)
             }
             let order = a.player.name.localizedStandardCompare(b.player.name)

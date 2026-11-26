@@ -2814,3 +2814,61 @@ physical-device push are still open.
 - For the upcoming iOS interface work, compare the relevant flow against
   references and walk it in the simulator with SlipSurge’s SwiftUI controls.
   Use light and dark appearances and exercise intermediate and failure states.
+
+### 2026-11-26 · Native Scoreboard widgets, alerts and game presentation
+
+- AppLlama references inspected: X Activity `oth_y1dmc`, Discord permission
+  introduction `onb_d529w` and preferences `oth_xgeun`, Real sport/player
+  alerts `oth_5e1bz` and permission `onb_hoa85`, NBA system controls
+  `oth_wyg2p`. SlipSurge adopts triage, contextual permission and native
+  system surfaces using its own visual language. UIZZE's local native review
+  and an independent render review exposed a missing cached-refresh failure
+  state, which now has Retry. UIZZE's separate library connection was unavailable.
+- Added the embedded WidgetKit Scoreboard target. It supports Home Screen small
+  and medium plus rectangular Lock Screen, renders genuine team logos and opens
+  a selected game or the native scoreboard. League selection stays on the
+  device. iOS owns timeline refresh. Simulator showed WPG–BOS in progress with
+  club logos and opened that exact game from the widget.
+- Native Activity now has day groups, actor names, kind icons, swipe-to-read and
+  retry. iPhone permission is available in setup and preferences. Grouped Apple
+  notifications preserve privacy by carrying generic text and a row ID. A
+  Simulator-injected message showed the iOS **Mark as Read** action.
+- Game Center keeps short status in the scoreboard and wraps long final recaps
+  in Summary. Miranda’s iPhone 16 Plus showed the completed NO–CHI game with
+  both team marks and scores, all tabs fully visible, and Caleb Williams and
+  Charlie Smyth portraits. Added an interactive scoring-margin chart from
+  recorded scoring plays, clearer research chart result counts, tappable sort
+  controls on Court/Sideline player stats and NBA/NFL Odds Board, and reusable
+  animated emoji bursts for Game Center and messaging that honor Reduce Motion.
+  NFL penalties expand on tap when needed. The two-minute warning and timeouts
+  use compact markers and a live cue above the timeline during the stop.
+  Physical and Simulator captures showed the live GB–LAR score advance from
+  10–13 to 13–13; this confirms a real update, with no latency measurement.
+- Server PR #89 merged as `7c9b57d4` with generic native alert categories and
+  existing-directory NFL portraits. PR #90 adds verified name variants and
+  suffix handling, preserving same-team and uniqueness checks. Changes are
+  read-only for sports data and leave browser push behavior and account
+  preferences intact. PR #90 production commit `b8bedcde` returned 163/163
+  distinct portraits across three completed Week 11 games. Live GB–LAR
+  returned 44/44 distinct portraits and both devices opened the match.
+  PR #91 merged as `940132fd` for authenticated sports artwork in Activity.
+  Production `dpl_24Se6fWHhXQ1bU7uKEHJhw8jmMkw` is READY; a signed-out
+  request returned 401 with private/no-store. APNs still sends generic category
+  text only. See
+  [server handoff](2026-11-26-ios-alerts-web.md).
+- Checks so far: 288 native and production source checks, 15 targeted server
+  checks, web TypeScript, Xcode Debug for iPhone 18 Pro simulator and Miranda’s
+  iPhone 16 Plus, physical install and Game Center launch. Simulator Court
+  Average changed the sort direction and Game Center Summary rendered the
+  scoring chart. The final Release archive built locally. The signed-in Personal Team cannot provision Push Notifications
+  or App Store distribution for app and widget. Apple lacks a local iOS
+  Distribution signing identity. Simulator injection does not validate APNs.
+- Remaining release verification: enroll or connect the app’s paid Developer
+  team, provision app and widget IDs, sign and exercise real Apple push on a
+  registered test device, then export and verify through App Store Connect.
+  Physical Lock Screen widget placement, fresh-account setup to completion,
+  and two-account reaction latency remain unverified. Per-game Dynamic Island
+  Live Activities and app-wide interaction and parity review remain open.
+  Later live QA recorded the custom burst after a fire reaction on Chris Brooks’s
+  reception. The public play count changed from 0 to 1 and returned to 0 after
+  removing the test. Cross-account delivery and animation timing remain unmeasured.

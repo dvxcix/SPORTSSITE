@@ -70,7 +70,19 @@ struct NativeOnboarding: View {
     }
 
     private enum Step: String, CaseIterable {
-        case profile = "Profile", teams = "Your sports", privacy = "Privacy", alerts = "Notifications"
+        case profile = "Make it yours"
+        case teams = "Follow your sports"
+        case privacy = "Choose your privacy"
+        case alerts = "Stay in the loop"
+
+        var icon: String {
+            switch self {
+            case .profile: "person.crop.circle"
+            case .teams: "sportscourt"
+            case .privacy: "lock.shield"
+            case .alerts: "bell.badge"
+            }
+        }
     }
 
     let account: AccountStore
@@ -87,45 +99,87 @@ struct NativeOnboarding: View {
     @State private var failed = false
     @State private var retry = 0
 
+    private var stepIndex: Int { Step.allCases.firstIndex(of: step) ?? 0 }
+    private var busy: Bool { account.isBusy || uploadingAvatar || uploadingBanner }
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                if let initial, let draft = Binding($draft) {
-                    ResearchToolRail(title: "Account setup", choices: Step.allCases, selection: $step, label: \.rawValue) {
-                        switch $0 {
-                        case .profile: "person.crop.circle"
-                        case .teams: "sportscourt"
-                        case .privacy: "lock"
-                        case .alerts: "bell"
+        ScrollViewReader { scroll in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    if let initial, let draft = Binding($draft) {
+                        introduction.id("top")
+                        stage(initial, draft: draft)
+                            .id(step)
+                            .transition(.opacity)
+                        if failed {
+                            Text("Setup couldn’t save. Your selections are still here.")
+                                .font(.footnote).foregroundStyle(Brand.signal(-1, for: scheme))
                         }
+                    } else {
+                        ResearchToolMessage(title: "Setup couldn’t load", error: error) { retry += 1 }
                     }
-                    stage(initial, draft: draft)
-                        .id(step)
-                        .transition(.opacity)
-                    if failed {
-                        Text("Setup couldn’t save. Your selections are still here.")
-                            .font(.footnote).foregroundStyle(Brand.signal(-1, for: scheme))
+                }
+                .frame(maxWidth: 560)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .frame(maxWidth: .infinity)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .onChange(of: step) { _, _ in scroll.scrollTo("top", anchor: .top) }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if let draft {
+                    Button {
+                        if step == .alerts { Task { await apply(draft) } }
+                        else { navigate(to: stepIndex + 1) }
+                    } label: {
+                        Text(step == .alerts ? "Finish setup" : "Continue")
+                            .frame(maxWidth: .infinity)
                     }
-                    Button(step == .alerts ? "Finish setup" : "Continue") {
-                        if let index = Step.allCases.firstIndex(of: step), index + 1 < Step.allCases.count {
-                            withAnimation(reduceMotion ? nil : .smooth(duration: 0.22)) { step = Step.allCases[index + 1] }
-                        } else {
-                            Task { await apply(draft.wrappedValue) }
-                        }
-                    }
-                    .font(.headline).frame(maxWidth: .infinity, minHeight: 44)
-                    .buttonStyle(.borderedProminent).disabled(account.isBusy || uploadingAvatar || uploadingBanner)
-                } else {
-                    ResearchToolMessage(title: "Setup couldn’t load", error: error) { retry += 1 }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: 560)
+                    .frame(maxWidth: .infinity)
+                    .padding(12)
+                    .background(.bar)
+                    .disabled(busy)
                 }
             }
-            .padding(16)
         }
         .task(id: retry) { await load() }
-        .navigationTitle("Set up your account")
+        .navigationTitle("Account setup")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if stepIndex > 0 {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Previous step", systemImage: "chevron.backward") { navigate(to: stepIndex - 1) }
+                        .labelStyle(.iconOnly)
+                        .disabled(busy)
+                }
+            }
+        }
         .background(Brand.background(for: scheme))
         .foregroundStyle(Brand.text(for: scheme))
+        .tint(Brand.accent(for: scheme))
+    }
+
+    private var introduction: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ProgressView(value: Double(stepIndex + 1), total: Double(Step.allCases.count))
+                .accessibilityLabel("Setup progress")
+                .accessibilityValue("Step \(stepIndex + 1) of \(Step.allCases.count)")
+            Image(systemName: step.icon)
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(Brand.accent(for: scheme))
+                .frame(width: 50, height: 50)
+                .background(Brand.accent(for: scheme).opacity(0.12), in: .circle)
+                .accessibilityHidden(true)
+            Text(step.rawValue).font(.largeTitle.weight(.bold)).accessibilityAddTraits(.isHeader)
+        }
+    }
+
+    private func navigate(to index: Int) {
+        withAnimation(reduceMotion ? nil : .smooth(duration: 0.22)) { step = Step.allCases[index] }
     }
 
     @ViewBuilder
@@ -160,6 +214,12 @@ struct NativeOnboarding: View {
             Toggle("Private account", isOn: draft.isPrivate)
             Toggle("Hide win rate", isOn: draft.hideWinRate)
         case .alerts:
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Turn on iPhone alerts for the updates you care about. You can change these anytime in Settings.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                DeviceAlertControl().buttonStyle(.bordered).controlSize(.large)
+            }
+            Text("Alert preferences").font(.headline).accessibilityAddTraits(.isHeader)
             ForEach([("lineup_confirmed", "Confirmed lineups"), ("new_pick", "New picks"), ("pick_result", "Pick results"),
                 ("dm", "Messages")], id: \.0) { key, label in
                 Toggle(label, isOn: Binding(get: { draft.alerts.wrappedValue[key] == true },

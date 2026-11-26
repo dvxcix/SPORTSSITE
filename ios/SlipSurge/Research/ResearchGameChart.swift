@@ -20,6 +20,15 @@ struct ResearchGameChart: View {
             }
         }
 
+        var plural: String {
+            switch self {
+            case .hit: "hits"
+            case .miss: "misses"
+            case .push: "pushes"
+            case .recorded: "recorded"
+            }
+        }
+
         var icon: String {
             switch self {
             case .hit: "checkmark.circle.fill"
@@ -50,6 +59,7 @@ struct ResearchGameChart: View {
             if games.isEmpty {
                 Text("No recorded games for this sample.").font(.caption).foregroundStyle(.secondary)
             } else {
+                if line != nil { sampleResults }
                 chart
                 if let selected, games.indices.contains(selected) {
                     gameRow(games[selected])
@@ -75,6 +85,26 @@ struct ResearchGameChart: View {
         .sensoryFeedback(.selection, trigger: selected) { _, next in next != nil }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: selected)
         .onChange(of: games) { _, _ in selected = nil }
+    }
+
+    private var sampleResults: some View {
+        let counts = Dictionary(grouping: games, by: \.result).mapValues(\.count)
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 9) { resultCounts(counts) }
+            VStack(alignment: .leading, spacing: 4) { resultCounts(counts) }
+        }
+        .font(.caption.weight(.semibold))
+        .accessibilityElement(children: .combine)
+    }
+
+    private func resultCounts(_ counts: [Result: Int]) -> some View {
+        ForEach([Result.hit, .miss, .push], id: \.self) { result in
+            if let count = counts[result] {
+                Label("\(count) \(count == 1 ? result.rawValue.lowercased() : result.plural)", systemImage: result.icon)
+                    .foregroundStyle(result.color(for: scheme))
+                    .monospacedDigit()
+            }
+        }
     }
 
     private var chart: some View {
