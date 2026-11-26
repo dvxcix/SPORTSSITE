@@ -3,10 +3,23 @@ import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 import test from 'node:test'
 import sharp from 'sharp'
+import nextTesting from 'next/experimental/testing/server.js'
 
 const root = path.resolve(import.meta.dirname, '..')
 const kit = path.resolve(root, '../brand')
 const bytes = file => readFile(path.resolve(root, file))
+
+test('both install manifests bypass the page proxy while private lookalikes remain protected', async () => {
+  const source = await readFile(path.join(root, 'src/proxy.ts'), 'utf8')
+  const configSource = source.slice(source.lastIndexOf('export const config =')).replace('export const config =', 'return ')
+  const config = new Function(configSource)()
+  for (const url of ['/site.webmanifest', '/site.webmanifest?v=2027', '/manifest.webmanifest']) {
+    assert.equal(nextTesting.unstable_doesMiddlewareMatch({ config, url }), false, url)
+  }
+  for (const url of ['/siteXwebmanifest', '/site.webmanifest/private', '/api/site.webmanifest', '/api/admin/settings', '/settings', '/players/site.webmanifest', '/marketplace/site.webmanifest']) {
+    assert.equal(nextTesting.unstable_doesMiddlewareMatch({ config, url }), true, url)
+  }
+})
 
 test('website exports preserve the finished artwork byte for byte', async () => {
   for (const file of ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'favicon-16.png', 'favicon-32.png', 'favicon-48.png', 'icon-192.png', 'icon-512.png', 'maskable-512.png', 'og-image-1200x630.png']) {
