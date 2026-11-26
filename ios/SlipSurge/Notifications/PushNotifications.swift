@@ -74,23 +74,36 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
         state = .failed
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        [.banner, .list, .sound]
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping @Sendable (UNNotificationPresentationOptions) -> Void
+    ) {
+        Task { @MainActor in
+            completionHandler([.banner, .list, .sound])
+        }
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        if response.actionIdentifier == UNNotificationDefaultActionIdentifier,
-           let path = response.notification.request.content.userInfo["gamePath"] as? String {
-            await openGame(path)
-            return
-        }
-        guard let raw = response.notification.request.content.userInfo["notificationId"] as? String,
-              let id = UUID(uuidString: raw) else { return }
-        switch response.actionIdentifier {
-        case UNNotificationDefaultActionIdentifier: await open(id)
-        case Category.markRead: await markRead(id)
-        default: break
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping @Sendable () -> Void
+    ) {
+        let action = response.actionIdentifier
+        let info = response.notification.request.content.userInfo
+        let gamePath = info["gamePath"] as? String
+        let notificationID = (info["notificationId"] as? String).flatMap(UUID.init(uuidString:))
+
+        // UIKit updates scene restoration from this completion on iPad.
+        Task { @MainActor in
+            defer { completionHandler() }
+            if action == UNNotificationDefaultActionIdentifier, let gamePath {
+                openGame(gamePath)
+            } else if let notificationID {
+                switch action {
+                case UNNotificationDefaultActionIdentifier: open(notificationID)
+                case Category.markRead: await markRead(notificationID)
+                default: break
+                }
+            }
         }
     }
 

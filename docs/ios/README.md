@@ -224,6 +224,12 @@ available. The repository still builds the public research app without account
 configuration. Keep account credentials and tokens out of build settings and
 the repository.
 
+Before distributing a TestFlight archive, confirm the exported app's Info.plist
+has nonempty values for the existing `SlipSurgeSupabasePublishableKey` and
+`SlipSurgeGiphyIOSSDKKey` entries. Check presence without printing the values.
+An isolated worktree needs its own ignored configuration or a local symlink to
+the Mac's approved configuration.
+
 The Court's native member schedule and board use `/api/mobile/court/*`. The
 production routes require a verified bearer account, MFA where configured and
 completed onboarding before delegating to the existing tier-gated readers.
