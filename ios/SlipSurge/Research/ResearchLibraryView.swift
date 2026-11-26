@@ -130,6 +130,7 @@ struct ResearchLibraryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .background(slipPalette.background)
         .foregroundStyle(slipPalette.text)
+        .tint(slipPalette.accent)
         .onAppear { if data == nil { section = initialSection } }
         .task(id: revision) { await load() }
         .refreshable { await load() }
@@ -207,7 +208,8 @@ struct ResearchLibraryView: View {
             }
         }
         if let workspace, workspace.canEdit {
-            if drafts[key(workspace.id)] != nil {
+            let hasChanges = drafts[key(workspace.id)] != nil
+            if hasChanges {
                 Text("Unsaved changes").font(.caption.weight(.medium)).foregroundStyle(.secondary)
             }
             Button("Save comparison", systemImage: "checkmark") {
@@ -219,7 +221,9 @@ struct ResearchLibraryView: View {
                         nfl: submitted.nfl.map(key).sorted(), mlb: submitted.mlb.map(key).sorted(), updatedAt: workspace.updatedAt)
                     await save(change)
                 }
-            }.buttonStyle(.borderedProminent).disabled(busy)
+            }
+            .buttonStyle(.bordered)
+            .disabled(busy || !hasChanges)
         }
     }
 

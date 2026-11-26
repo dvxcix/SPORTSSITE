@@ -20,6 +20,15 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
         }
     }
     private var pending: UUID?
+    var onOpenGame: ((URL) -> Void)? {
+        didSet {
+            if let pendingGame, let onOpenGame {
+                self.pendingGame = nil
+                onOpenGame(pendingGame)
+            }
+        }
+    }
+    private var pendingGame: URL?
 
     enum State { case unknown, available, authorized, off, connecting, connected, unavailable, failed }
 
@@ -71,6 +80,11 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        if response.actionIdentifier == UNNotificationDefaultActionIdentifier,
+           let path = response.notification.request.content.userInfo["gamePath"] as? String {
+            await openGame(path)
+            return
+        }
         guard let raw = response.notification.request.content.userInfo["notificationId"] as? String,
               let id = UUID(uuidString: raw) else { return }
         switch response.actionIdentifier {
@@ -96,6 +110,13 @@ final class PushNotifications: NSObject, UIApplicationDelegate, UNUserNotificati
 
     private func open(_ id: UUID) {
         if let onOpen { onOpen(id) } else { pending = id }
+    }
+
+    private func openGame(_ path: String) {
+        guard path.hasPrefix("/sports/"), path.count < 180,
+              let url = URL(string: "https://" + SlipSurgeHTTP.site + path),
+              case .scoreGame = NativeSiteLink(url) else { return }
+        if let onOpenGame { onOpenGame(url) } else { pendingGame = url }
     }
 
     @Published private(set) var state = State.unknown

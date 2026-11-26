@@ -25,6 +25,7 @@ struct SlipSurgeApp: App {
                 }
                 .task(id: account.memberID) {
                     push.onOpen = { notificationOpen = InboxNotificationOpen(notificationID: $0) }
+                    push.onOpenGame = { incomingURL = $0 }
                     await push.updateAccount(account)
                 }
                 .onChange(of: phase) { _, state in

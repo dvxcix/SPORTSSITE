@@ -3322,3 +3322,84 @@ Search, live scores, and the member avatar. Search opened from the new header.
 Relaunch returned to the member’s app without requiring the introduction again.
 The build is available to the existing private tester. The upload retained the
 existing GIPHY debug-symbol warning. Source and testing are limited to native iOS.
+
+#### November 26 signed-in TestFlight QA and live game alerts
+
+On Devin’s physical iPad mini, iPadOS 27.2.1, verified TestFlight
+`com.slipsurge.ios` 1.0 (2). Exercised full-screen and phone-width windows.
+
+- NFL and NBA Odds Boards loaded signed-in matchup and market data, player
+  portraits and quotes. Opened comparisons at both widths. The NBA fixture
+  was Bam Adebayo 15+ points for Miami at Philadelphia. The full-width NFL
+  comparison used Dak Prescott 10+ rushing yards for Philadelphia at Dallas.
+  Upcoming NFL matchups showed a slate-wide settlement message from an
+  unrelated game. The native board now scopes that message to explicit
+  settlement uncertainty for the selected matchup. An initial sportsbook
+  reset was observed once. A fresh run retained DraftKings during the
+  matchup switch and after Continue, so this change retains the existing
+  sportsbook logic.
+- Continue restored the November 25 Miami–Philadelphia NBA Pregame Points
+  Odds Board with BetMGM after a full-screen relaunch, and the November 26
+  Philadelphia–Dallas NFL Rushing Yards board with DraftKings in the
+  resized window after relaunch.
+- Workspace Compare retained an unsaved matrix when switching sections and
+  reopening at compact width. Restored the test toggle without saving.
+  The linked compact Workspace sheet used default blue despite Color mode.
+  Applied the palette tint at the Workspace root and made Save Comparison
+  available when the draft has changes.
+- Community opened the joined group, Rooms, and its native composer.
+  Verified the Photo, GIF and Emoji options, and compact text focus and
+  dismissal. The room had no messages. No production chat or DM was sent.
+  Inbox Activity and Messages loaded at both widths, with one Activity
+  unread and no Messages unread. Read markers were left alone.
+- Build 2 showed Enable notifications. The shipped archive’s configuration
+  reported the development APNs environment, but TestFlight requires
+  production. The production registration table was empty, Vercel
+  listed no APNs credentials, and the existing Postgres token constraint
+  used a repetition bound that prevents valid registrations. The proposed
+  migration replaces that constraint and creates service-owned game
+  subscriptions and delivery claims. Its SQL passed in isolated Postgres,
+  including 64- and 512-character tokens, invalid tokens, unauthorized roles,
+  wrong owner, expired events, pre-subscription events, opt-out and dedupe.
+- Game Center’s new bell offers scoring plays, big plays and period/final
+  updates for an individual game. Delivery groups notifications by game,
+  includes the play and score or final summary, routes taps into Game
+  Center, honors account quiet-hours/game priority, and expires stale or
+  pre-subscription events. NFL/NBA adapt the Game Center play feeds. MLB
+  reuses official scoring data and the primary database’s existing
+  near-home-run outbox. This checkpoint contains text and score enrichment.
+  The migration, schedule and feature are inactive in production.
+  For the pilot use one opted-in device and a live game. An APNs
+  acceptance does not prove an iPad displayed the notification.
+
+Emil skill pass for this slice:
+
+| Skill | Application |
+| --- | --- |
+| ask-emil | Routed interaction polish and motion review before implementation. |
+| emil-design-eng | Kept the same controls at both widths. Fixed the compact Workspace tint and unchanged-draft save state. |
+| write-swift | Extended the existing authenticated API and kept push navigation on the main actor. |
+| apple-design | Used native settings, a grouped form and iPad window controls. |
+| gestures | Checked the room composer’s focused dismiss control and the system window-size controls. |
+| review-animations | Checked opening and closing comparison, Workspace and room transitions. Frame pacing was not measured. |
+| improve-animations | Compared cold loading and settled states. A separate launch and research latency measurement remains useful. |
+| remove-animations | Avoided adding motion to scores, price updates or preference toggles. |
+| find-animation-opportunities | Kept system motion for the alert sheet. Alert content changes do not require a second animation. |
+| animate | Used existing SwiftUI presentation behavior for the new sheet. |
+| choreograph | Left matchup context visible while opening sportsbook comparisons. No bespoke entrance sequence was added. |
+| break-ui | Exercised narrow windows and empty Watchlist, Compare and chat states. |
+| mobile-native | Applied its hardware and narrow-window checks to SwiftUI. The CSS-specific guidance does not apply to these changes. |
+| animation-vocabulary | Used sheet presentation and dismissal as the motion terms in the review. |
+| animation-performance | Applied the restraint around frequent updates. Its compositing tooling targets the web. |
+| animate-expo | Its animation and gesture technology targets Expo. This app uses SwiftUI. |
+| ask-sonner | React toast guidance is outside this native change. |
+| pick-ui-library | Reviewed the fit of the native form and existing controls. No new library was needed. |
+| prototype | The reported issues were reproducible in the running app and fixed directly. |
+| learn-taste | Recorded the correction about matching the selected matchup and maintaining the palette in linked sheets. |
+
+Xcode built the signed iPhone 18 Pro simulator target and archived 1.0 (3)
+under SlipSurge LLC. Local App Store export verification confirmed
+`com.slipsurge.ios`, build 3, the widget extension and matching runtime
+and signed production APNs environments. Live APNs delivery is still
+pending the production provider credential, registration repair rollout,
+iPad permission and the single-device canary.

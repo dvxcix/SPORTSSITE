@@ -63,7 +63,6 @@ extension SidelineBoard {
         var notices: [String] = []
         if games.contains(where: { $0.status != "ready" }) { notices.append("Some games have incomplete or unavailable prices.") }
         if !availabilityUnavailable.isEmpty { notices.append("Prices are withheld while player availability is verified.") }
-        if resultsPending == true { notices.append("Final results are being verified.") }
         return .init(games: matchups, players: rows, books: books, notices: notices)
     }
 

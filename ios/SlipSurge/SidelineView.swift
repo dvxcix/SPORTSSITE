@@ -434,6 +434,12 @@ struct SidelineView: View {
                         Text("Odds unavailable for this matchup.").font(.subheadline).foregroundStyle(.secondary)
                     }
                 } else {
+                    let settling = selectedGameID.map { board.resultsUnavailable?.contains($0) == true } ?? false
+                    if settling {
+                        Label("Final results are being verified.", systemImage: "info.circle")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                     ResearchOddsBoard(slate: oddsSlate, selectedGame: selectedGameID,
                         marketLabel: marketName(board.market), scorerLabel: board.scorerLabel, sportsbook: board.book,
                         readBook: comparisonReader(date: board.date, market: board.market), openQuote: { oddsDetail = $0 },

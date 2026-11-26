@@ -59,6 +59,7 @@ export function buildNflGameCenter(game: ESPNGame, feed: NflCenterFeed | null) {
     scoringPlay: play.scoring_play === true, scoreValue: play.score_value,
     period: { number: play.period ?? 0, displayValue: (play.period ?? 0) > 4 ? 'OT' : `Q${play.period ?? ''}` },
     clock: { displayValue: play.clock_display ?? '' },
+    wallclock: play.wallclock,
     ...(play.team && teamFor(play.team.abbreviation) ? { team: { id: teamFor(play.team.abbreviation)!.team.id } } : {}),
     athletes: (play.participants ?? []).flatMap(participant => {
       const row = stats.find(stat => stat.player.id === participant.player_id)

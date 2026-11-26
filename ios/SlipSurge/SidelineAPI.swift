@@ -147,6 +147,7 @@ struct SidelineBoard: Decodable {
     let finals: [Final]?
     let picks: [Picks]?
     let resultsPending: Bool?
+    let resultsUnavailable: [String]?
 
     func refreshDeadline() throws -> Date? {
         guard phaseToken.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,

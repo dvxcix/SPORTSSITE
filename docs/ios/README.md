@@ -141,6 +141,16 @@ verification records in the handoff.
 - Test real APNs delivery and notification lifecycle on a consenting physical
   device in a dedicated development/test setup. Local simulated notifications
   and a successful Simulator build do not certify remote delivery.
+- For TestFlight, archive with `SLIPSURGE_APNS_ENVIRONMENT=production` and
+  match `SLIPSURGE_APNS_SIGNING_ENVIRONMENT` to the archive's provisioning
+  profile. Xcode re-signs the App Store export for production. Verify the
+  exported Info.plist and signed aps-environment both say production.
+- Live game alerts are separate from social Activity and browser push. Apply
+  the reviewed game-alert migration and configure the LLC provider before
+  enabling `SLIPSURGE_NATIVE_GAME_ALERTS=1`. Pilot with one registered,
+  consenting TestFlight iPad, a game that is about to start, and the app
+  backgrounded. Verify an Apple-accepted delivery and a device-visible banner,
+  then tap it and confirm the exact play in Game Center.
 - Use the SwiftUI UI Patterns skill for navigation/state and its deep-link
   reference; use the iOS Debugger Agent skill for Mac build/run/UI evidence.
   Apply performance and Liquid Glass skills when those concerns enter an

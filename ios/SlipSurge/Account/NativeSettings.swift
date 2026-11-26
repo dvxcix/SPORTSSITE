@@ -344,7 +344,7 @@ struct NativeSettings: View {
         SwiftUI.Section {
             DeviceAlertControl()
         } header: {
-            Text("This iPhone")
+            Text("This device")
         } footer: {
             Text("Device permission applies here. Your alert preferences apply to your account.")
         }

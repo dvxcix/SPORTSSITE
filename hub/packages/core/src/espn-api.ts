@@ -45,6 +45,7 @@ export interface ESPNPlay {
   scoreValue?: number
   period: { number: number; displayValue: string }
   clock: { displayValue: string }
+  wallclock?: string
   team?: { id: string }
   start?: { yardLine?: number; distance?: number; down?: number; downDistanceText?: string; isRedZone?: boolean }
   athletes?: {

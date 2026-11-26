@@ -58,6 +58,7 @@ struct GameCenterView: View {
     @State private var roomLastSeen: UUID?
     @State private var nearRoomEnd = true
     @State private var sharing = false
+    @State private var showingGameAlerts = false
     @State private var queued: (id: UUID, text: String)?
     @State private var lastSent: UUID?
     @State private var busy = false
@@ -166,6 +167,11 @@ struct GameCenterView: View {
         .tint(slipPalette.accent)
         .socialDetail()
         .toolbar {
+            if api.userID != nil, state != "post", ["nfl", "nba", "mlb"].contains(game.sport) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Game alerts", systemImage: "bell") { showingGameAlerts = true }
+                }
+            }
             if let url = gameLink.url {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu("Share game", systemImage: "square.and.arrow.up") {
@@ -176,6 +182,10 @@ struct GameCenterView: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showingGameAlerts) {
+            GameAlertSettings(api: api, query: baseQuery, matchup: matchTitle)
+                .presentationDragIndicator(.visible)
         }
         .navigationDestination(item: $selectedPost) { id in FeedThreadView(api: feed, id: id) }
         .navigationDestination(item: $selectedMember) { name in MemberProfileView(api: api, target: name) }

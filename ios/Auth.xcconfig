@@ -2,6 +2,9 @@
 SLIPSURGE_SUPABASE_PUBLISHABLE_KEY =
 SLIPSURGE_GIPHY_IOS_SDK_KEY =
 SLIPSURGE_APNS_ENVIRONMENT =
+// Xcode may sign an archive with a development profile before App Store export
+// re-signs it. The app's runtime APNs environment still needs to be production.
+SLIPSURGE_APNS_SIGNING_ENVIRONMENT = $(SLIPSURGE_APNS_ENVIRONMENT)
 SLIPSURGE_DEVICE_ENTITLEMENTS =
 SLIPSURGE_IOS_BUNDLE_IDENTIFIER = com.slipsurge.ios.development
 SLIPSURGE_IOS_DEVELOPMENT_TEAM =

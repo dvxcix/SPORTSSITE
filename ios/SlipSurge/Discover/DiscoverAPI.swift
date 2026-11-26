@@ -163,11 +163,12 @@ extension DiscoverAPI {
     }
 
     func write<Body: Encodable, Response: Decodable>(_ type: Response.Type, path: String, query: [URLQueryItem] = [], body: Body,
-        keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy = .useDefaultKeys, timeout: TimeInterval = 30) async throws -> Response {
+        keyDecodingStrategy: JSONDecoder.KeyDecodingStrategy = .useDefaultKeys, timeout: TimeInterval = 30,
+        method: String = "POST") async throws -> Response {
         guard let userID else { throw URLError(.userAuthenticationRequired) }
         var request = try SlipSurgeHTTP.request(host: SlipSurgeHTTP.site, path: path, query: query, timeout: timeout)
         let access = try await account.accessToken(for: userID)
-        request.httpMethod = "POST"
+        request.httpMethod = method
         request.httpBody = try JSONEncoder().encode(body)
         request.setValue("Bearer \(access)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

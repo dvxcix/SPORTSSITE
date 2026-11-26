@@ -24,13 +24,13 @@ function localMinute(now: Date, timezone: string) {
   }
 }
 
-export function shouldSuppressNotificationDelivery(settings: NotificationDeliverySettings | null | undefined, type: NotificationType, data: Record<string, unknown> | null | undefined, now = new Date()) {
+export function shouldSuppressNotificationDelivery(settings: NotificationDeliverySettings | null | undefined, type: NotificationType | 'game_alert', data: Record<string, unknown> | null | undefined, now = new Date()) {
   if (!settings?.quiet_hours_enabled) return false
   const start = minuteOfDay(settings.quiet_start ?? '22:00')
   const end = minuteOfDay(settings.quiet_end ?? '07:00')
   if (start == null || end == null || start === end) return false
 
-  const isGameAlert = type === 'lineup_confirmed' || Boolean(data?.game_pk || data?.game_id || data?.gameId)
+  const isGameAlert = type === 'lineup_confirmed' || type === 'game_alert' || Boolean(data?.game_pk || data?.game_id || data?.gameId)
   if (settings.live_game_priority !== false && isGameAlert) return false
 
   const minute = localMinute(now, settings.timezone ?? 'America/New_York')
