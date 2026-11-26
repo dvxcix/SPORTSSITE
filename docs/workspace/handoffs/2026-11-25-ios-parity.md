@@ -3261,3 +3261,18 @@ physical-device push are still open.
   TestFlight installation, production APNs delivery, universal links and
   signed-in member flows on the iPad still need verification. No App Store
   submission, site release or production configuration change was made.
+
+### 2026-11-26 · Private TestFlight enrollment on Devin’s iPad
+
+- The account holder submitted Apple’s encryption declaration for iOS 1.0 (1).
+  App Store Connect cleared Missing Compliance and offered the build for internal
+  testing. Created **SlipSurge Internal QA** with manual build assignment, added
+  1.0 (1), and confirmed **Ready to Test**.
+- Added Devin Vick’s existing SlipSurge LLC account as the group’s sole internal
+  tester. Apple shows **Invited**. Installed Apple TestFlight 4.4.1 (697.1) on
+  Devin’s physical iPad mini and launched it. The SlipSurge beta is awaiting
+  acceptance of the Apple invitation. The Mac verified the production bundle
+  `com.slipsurge.ios` is absent from the iPad at this checkpoint.
+- After the invitation is accepted, install 1.0 (1) through TestFlight, verify
+  its production bundle on the iPad, then sign in to SlipSurge for member-flow
+  testing. The registered-device QA bundle remains a separate installation.
