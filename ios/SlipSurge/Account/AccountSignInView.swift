@@ -84,13 +84,10 @@ struct AccountSignInView: View {
     }
 
     private var logo: some View {
-        HStack(spacing: 9) {
-            Image("brand")
-                .resizable().scaledToFit().frame(width: 34, height: 34)
-                .clipShape(.rect(cornerRadius: 9))
-                .accessibilityHidden(true)
-            Text("SlipSurge").font(.headline.weight(.heavy))
-        }
+        Image(.brand)
+            .resizable().scaledToFit()
+            .frame(width: 156, height: 46)
+            .accessibilityLabel("SlipSurge")
     }
 
     private var credentials: some View {

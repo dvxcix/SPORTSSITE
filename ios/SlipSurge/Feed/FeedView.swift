@@ -115,11 +115,11 @@ struct FeedView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) { VoltTeaser() }
             ToolbarItem(placement: .principal) {
-                HStack(spacing: 6) {
-                    Image("brand").resizable().scaledToFit().frame(width: 25, height: 25)
-                        .clipShape(.rect(cornerRadius: 6)).accessibilityHidden(true)
-                    Text("SlipSurge").font(.headline.weight(.heavy)).accessibilityAddTraits(.isHeader)
-                }
+                Image(.brand)
+                    .resizable().scaledToFit()
+                    .frame(maxWidth: 122, maxHeight: 36)
+                    .accessibilityLabel("SlipSurge")
+                    .accessibilityAddTraits(.isHeader)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink {

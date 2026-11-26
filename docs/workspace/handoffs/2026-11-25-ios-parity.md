@@ -2758,3 +2758,19 @@ physical-device push are still open.
   same provider packet, including partial history and a free-throw sequence
   arriving one attempt at a time. Both Xcode Debug builds and all 288 native
   and production checks passed.
+
+## Windows brand refresh in native iOS · 26 November 2026
+
+- Continued `codex/ios-parity-20261125` from `60f46adf`. The logo kit came
+  from Windows commit `4bce5172`, merged into main as `af4344b7` in PR #85.
+  The native Xcode target uses the supplied default, dark, and tinted icon
+  files. Feed and sign-in use the original horizontal SVGs with the ink
+  artwork in light mode and lime and white artwork in dark mode. The
+  source files match the brand kit byte for byte.
+- Xcode Debug passed for simulator and iPhone. The compiled asset catalog
+  contains all three 1024-pixel icon renditions and both wordmarks as vector
+  assets. The Feed header rendered in both appearances on iPhone 18 Pro
+  Simulator, and the sign-in header in both on iPhone 17e Simulator. The
+  new build was installed on Miranda’s iPhone 16 Plus and opened on Feed.
+  All 288 native and production checks passed. This checkpoint carries only
+  native branding. Store artwork uploads remain with the owner.
