@@ -50,11 +50,7 @@ extension SidelineBoard {
             let prices = offers.map { item -> ResearchOddsSlate.Price in
                 let counts = pickCounts[PickKey(result: key, line: item.id.line)] ?? []
                 let saved = counts.count == 1 ? counts.first : nil
-                return .init(line: item.id.line, current: item.price,
-                    opening: verifiedPrice(item.openingConflict ? nil : item.openingPrice),
-                    earlier: verifiedPrice(item.previousPrice), observedAt: item.observedAt,
-                    earlierAt: item.previousObservedAt,
-                    result: final.map { $0 >= item.id.line }, picks: saved?.count, estimated: saved?.estimated == true)
+                return item.oddsPrice(result: final.map { $0 >= item.id.line }, picks: saved?.count, estimated: saved?.estimated == true)
             }
             let status = final.map { value in
                 market == "first_td" ? (value == 1 ? "First touchdown" : "Not first touchdown") : "Final \(value.formatted())"
@@ -69,6 +65,15 @@ extension SidelineBoard {
         if !availabilityUnavailable.isEmpty { notices.append("Prices are withheld while player availability is verified.") }
         if resultsPending == true { notices.append("Final results are being verified.") }
         return .init(games: matchups, players: rows, books: books, notices: notices)
+    }
+
+}
+
+extension SidelineBoard.Quote {
+    func oddsPrice(result: Bool? = nil, picks: Int? = nil, estimated: Bool = false) -> ResearchOddsSlate.Price {
+        .init(line: id.line, current: price, opening: verifiedPrice(openingConflict ? nil : openingPrice),
+            earlier: verifiedPrice(previousPrice), observedAt: observedAt, earlierAt: previousObservedAt,
+            result: result, picks: picks, estimated: estimated)
     }
 
     private func verifiedPrice(_ value: Int?) -> Int? {

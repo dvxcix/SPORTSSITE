@@ -19,7 +19,24 @@ struct ResearchBookQuote: Sendable {
 
 typealias ResearchBookRead = @Sendable (String, ResearchBookTarget) async throws -> ResearchBookQuote?
 
-struct ResearchBookComparison<History: View>: View {
+struct ResearchOddsDetail: Identifiable {
+    let player: ResearchOddsSlate.Player
+    let matchup: ResearchOddsSlate.Game?
+    let subtitle: String
+    let live: Bool
+    let sportsbook: String
+    let books: [String]
+    let original: ResearchBookQuote
+    let read: ResearchBookRead
+
+    var id: String { "\(player.id):\(original.price.line)" }
+
+    var target: ResearchBookTarget {
+        .init(gameID: player.gameID, playerID: player.playerID, team: player.team.code, line: original.price.line)
+    }
+}
+
+struct ResearchBookComparison: View {
     private enum Section: String, CaseIterable {
         case sportsbooks = "Sportsbooks"
         case history = "History"
@@ -32,30 +49,20 @@ struct ResearchBookComparison<History: View>: View {
         case denied
     }
 
-    let player: ResearchOddsSlate.Player
-    let matchup: ResearchOddsSlate.Game?
-    let subtitle: String
-    let marketMode: String
-    let sportsbook: String
-    let books: [String]
-    let original: ResearchBookQuote
-    let read: ResearchBookRead
-    let history: History
+    let detail: ResearchOddsDetail
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var textSize
     @State private var section = Section.sportsbooks
     @State private var outcomes: [String: Outcome] = [:]
     @State private var retry = 0
     @State private var denied = false
-
-    private var target: ResearchBookTarget {
-        .init(gameID: player.gameID, playerID: player.playerID, team: player.team.code, line: original.price.line)
-    }
+    @State private var expiryCheck = Date.distantPast
 
     private var vendors: [String] {
-        Array(Set(books + [sportsbook])).sorted {
-            if ($0 == sportsbook) != ($1 == sportsbook) { return $0 == sportsbook }
+        Array(Set(detail.books + [detail.sportsbook])).sorted {
+            if ($0 == detail.sportsbook) != ($1 == detail.sportsbook) { return $0 == detail.sportsbook }
             let left = bookName($0)
             let right = bookName($1)
             return left == right ? $0 < $1 : left < right
@@ -79,19 +86,8 @@ struct ResearchBookComparison<History: View>: View {
                     ContentUnavailableView("Odds Board access required", systemImage: "lock")
                 } else {
                     switch section {
-                    case .sportsbooks:
-                        TimelineView(.explicit([Date.now] + expirationDates)) { context in
-                            bookList(at: context.date)
-                        }
-                    case .history:
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(bookName(sportsbook))
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 18)
-                                .padding(.top, 6)
-                            history
-                        }
+                    case .sportsbooks: bookList(at: max(expiryCheck, .now))
+                    case .history: history(at: max(expiryCheck, .now))
                     }
                 }
             }
@@ -107,25 +103,33 @@ struct ResearchBookComparison<History: View>: View {
             }
         }
         .tint(Brand.accent(for: scheme))
-        .presentationDetents([.fraction(0.68), .large])
+        .presentationDetents(textSize.isAccessibilitySize ? [.large] : [.fraction(0.68), .large])
         .presentationDragIndicator(.visible)
         .task(id: retry) { await loadBooks() }
+        .task(id: nextExpiry) {
+            guard let nextExpiry else { return }
+            do {
+                try await Task.sleep(for: .seconds(max(0, nextExpiry.timeIntervalSinceNow)))
+                expiryCheck = max(nextExpiry, .now)
+            } catch { return }
+        }
     }
 
     private var context: some View {
-        HStack(spacing: 12) {
+        let player = detail.player
+        return HStack(spacing: 12) {
             PlayerArtwork(portraits: player.portraits, logo: player.logo, primary: player.primary, secondary: player.secondary)
             VStack(alignment: .leading, spacing: 4) {
                 Text(player.name).font(.headline).accessibilityAddTraits(.isHeader)
-                Text(subtitle).font(.subheadline.weight(.semibold))
+                Text(detail.subtitle).font(.subheadline.weight(.semibold))
                 HStack(spacing: 5) {
-                    if let matchup {
+                    if let matchup = detail.matchup {
                         ForEach([matchup.away?.logo, matchup.home?.logo].compactMap { $0 }, id: \.self) { logo in
                             ResearchArtwork(urls: [logo], fallback: "shield", pointSize: 15)
                                 .frame(width: 15, height: 15)
                         }
                     }
-                    Text([matchup?.title, marketMode].compactMap { $0 }.joined(separator: " · "))
+                    Text([detail.matchup?.title, detail.live ? "Live" : "Pregame"].compactMap { $0 }.joined(separator: " · "))
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -143,15 +147,14 @@ struct ResearchBookComparison<History: View>: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var expirationDates: [Date] {
+    private var nextExpiry: Date? {
         outcomes.values.compactMap { outcome in
             if case .quoted(let quote) = outcome { quote.expiry }
             else { nil }
-        }.filter { $0 > .now }.sorted()
+        }.filter { $0 > expiryCheck }.min()
     }
 
-    private func bookList(at time: Date) -> some View {
-        let now = max(time, .now)
+    private func bookList(at now: Date) -> some View {
         let quoted = vendors.compactMap { book -> (String, Int)? in
             guard case .quoted(let quote) = outcomes[book], quote.expiry.map({ $0 > now }) != false else { return nil }
             return (book, quote.price.current)
@@ -224,12 +227,35 @@ struct ResearchBookComparison<History: View>: View {
         Sportsbook.name(Sportsbook.normalized(vendor))
     }
 
+    @ViewBuilder
+    private func history(at now: Date) -> some View {
+        let book = detail.sportsbook
+        switch outcomes[book] {
+        case .quoted(let quote) where quote.expiry.map({ $0 > now }) != false:
+            VStack(alignment: .leading, spacing: 0) {
+                Text(bookName(book))
+                    .font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                    .padding(.horizontal, 18).padding(.top, 6)
+                ResearchPriceHistory(price: quote.price, live: detail.live)
+            }
+        case nil:
+            ProgressView("Loading history").frame(maxWidth: .infinity, maxHeight: .infinity)
+        default:
+            ContentUnavailableView {
+                Label("Price history unavailable", systemImage: "clock.arrow.circlepath")
+            } actions: {
+                Button("Refresh prices") { retry += 1 }
+            }
+        }
+    }
+
     private func loadBooks() async {
-        let target = target
-        let read = read
-        let canUseOriginal = retry == 0 && original.expiry.map { $0 > .now } != false
+        let target = detail.target
+        let read = detail.read
+        let sportsbook = detail.sportsbook
+        let canUseOriginal = retry == 0 && detail.original.expiry.map { $0 > .now } != false
         denied = false
-        outcomes = canUseOriginal ? [sportsbook: .quoted(original)] : [:]
+        outcomes = canUseOriginal ? [sportsbook: .quoted(detail.original)] : [:]
         var remaining = vendors.filter { !canUseOriginal || $0 != sportsbook }.makeIterator()
         await withTaskGroup(of: (String, Outcome).self) { group in
             func submit(_ vendor: String) {

@@ -35,6 +35,9 @@ struct SlipSurgeTabs: View {
     @State private var inboxSection = InboxSection.activity
     @State private var inboxNavigationRevision = 0
     @State private var opensAccountSettings = false
+    @State private var opensAccountSetup = false
+    @AppStorage("hasSeenNativeWelcome") private var hasSeenNativeWelcome = false
+    @State private var showsNativeWelcome = false
     @State private var inboxUnread = InboxUnread()
     @State private var feedSelection: NativeFeedSelection?
     @State private var feedTopRequest = 0
@@ -120,18 +123,23 @@ struct SlipSurgeTabs: View {
             .tag(Destination.inbox)
 
             NavigationStack {
-                if let userID = account.memberID, !account.needsNewPassword, !account.needsVerification {
-                    MemberProfileView(api: .init(account: account, userID: userID), target: userID.uuidString, isYouTab: true)
-                        .navigationDestination(isPresented: $opensAccountSettings) {
-                            AccountView(account: account, appearance: $appearance)
-                        }
-                        .toolbar {
-                            ToolbarItem(placement: .topBarLeading) {
-                                Button("Account and settings", systemImage: "gearshape") { opensAccountSettings = true }
+                Group {
+                    if let userID = account.memberID, !account.needsNewPassword, !account.needsVerification {
+                        MemberProfileView(api: .init(account: account, userID: userID), target: userID.uuidString, isYouTab: true)
+                            .navigationDestination(isPresented: $opensAccountSettings) {
+                                AccountView(account: account, appearance: $appearance)
                             }
-                        }
-                } else {
-                    AccountView(account: account, appearance: $appearance, isYou: true)
+                            .toolbar {
+                                ToolbarItem(placement: .topBarLeading) {
+                                    Button("Account and settings", systemImage: "gearshape") { opensAccountSettings = true }
+                                }
+                            }
+                    } else {
+                        AccountView(account: account, appearance: $appearance, isYou: true)
+                    }
+                }
+                .navigationDestination(isPresented: $opensAccountSetup) {
+                    NativeOnboarding(account: account)
                 }
             }
             .environment(\.socialTab, .you)
@@ -196,7 +204,20 @@ struct SlipSurgeTabs: View {
             .environment(\.openURL, OpenURLAction(handler: openLink))
             .environment(\.nativeEmojiLibrary, emojiLibrary)
         }
-        .task { await account.restore() }
+        .sheet(isPresented: $showsNativeWelcome) {
+            NativeWelcome { destination in
+                showsNativeWelcome = false
+                selectTab(destination)
+            }
+        }
+        .task {
+            await account.restore()
+            if account.didRestoreAccount, account.user == nil, !account.needsNewPassword, !account.needsVerification,
+               !hasSeenNativeWelcome, !choseDestination, incomingURL == nil, notificationOpen == nil {
+                hasSeenNativeWelcome = true
+                showsNativeWelcome = true
+            }
+        }
         .task(id: account.memberID) { await account.refreshProfileIdentity() }
         .task(id: account.memberID) { await resume.refresh(account: account, userID: account.memberID) }
         .task(id: account.memberID) { await applyLaunchPreference() }
@@ -217,16 +238,27 @@ struct SlipSurgeTabs: View {
         .onChange(of: account.memberID) { _, memberID in
             if memberID != nil, notificationOpen != nil { presentInbox(section: .activity) }
         }
-        .onChange(of: account.needsNewPassword) { _, ready in if ready { selected = .you } }
+        .onChange(of: account.needsNewPassword) { _, ready in
+            if ready {
+                showsNativeWelcome = false
+                selected = .you
+            }
+        }
         .onChange(of: account.user?.id) { _, signedIn in
-            if signedIn != nil, !account.onboardingComplete { selected = .you }
+            if signedIn != nil { showsNativeWelcome = false }
+            if signedIn != nil, !account.onboardingComplete, !account.needsNewPassword, !account.needsVerification {
+                selected = .you
+                opensAccountSetup = true
+            }
         }
         .onChange(of: notificationOpen, initial: true) { _, request in
             guard request != nil else { return }
+            showsNativeWelcome = false
             presentInbox(section: .activity)
         }
         .onChange(of: incomingURL, initial: true) {
             guard let url = incomingURL else { return }
+            showsNativeWelcome = false
             incomingURL = nil
             _ = openLink(url)
         }

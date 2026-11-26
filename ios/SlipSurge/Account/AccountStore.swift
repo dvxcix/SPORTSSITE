@@ -31,6 +31,7 @@ final class AccountStore {
     private var restored = false
 
     var isConfigured: Bool { api.isConfigured }
+    var didRestoreAccount: Bool { restored || !isConfigured }
     var user: AccountSession.User? { session?.user }
     var memberID: UUID? { onboardingComplete && !isSigningOut ? user?.id : nil }
     var needsVerification: Bool { pendingVerification != nil }

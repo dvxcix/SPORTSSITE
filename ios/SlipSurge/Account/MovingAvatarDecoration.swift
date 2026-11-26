@@ -56,7 +56,7 @@ private struct AvatarFramePlayer: UIViewRepresentable {
     final class PlayerView: UIView {
         private var sprite: AvatarMotion.Sprite?
         private var playing = false
-        private var lastFrame: Int?
+        private let animationKey = "avatar-decoration"
 
         func present(_ sprite: AvatarMotion.Sprite, playing: Bool) {
             guard self.sprite !== sprite || self.playing != playing else { return }
@@ -77,55 +77,19 @@ private struct AvatarFramePlayer: UIViewRepresentable {
         }
 
         private func updatePlayback() {
-            lastFrame = nil
+            layer.removeAnimation(forKey: animationKey)
             layer.contents = sprite?.frames.first
-            if window != nil, playing, sprite != nil {
-                AvatarFrameClock.shared.add(self)
-                drawFrame(at: CACurrentMediaTime())
-            } else {
-                AvatarFrameClock.shared.remove(self)
-            }
+            guard window != nil, playing, let sprite, let first = sprite.frames.first else { return }
+            let animation = CAKeyframeAnimation(keyPath: "contents")
+            animation.values = sprite.frames + [first]
+            animation.calculationMode = .discrete
+            animation.duration = sprite.duration
+            animation.repeatCount = .infinity
+            let now = CACurrentMediaTime()
+            let phase = now.truncatingRemainder(dividingBy: sprite.duration)
+            animation.beginTime = layer.convertTime(now, from: nil) - phase
+            layer.add(animation, forKey: animationKey)
         }
-
-        func drawFrame(at time: CFTimeInterval) {
-            guard let sprite else { return }
-            let progress = time.truncatingRemainder(dividingBy: sprite.duration) / sprite.duration
-            let frame = min(sprite.frames.count - 1, Int(progress * Double(sprite.frames.count)))
-            guard lastFrame != frame else { return }
-            lastFrame = frame
-            layer.contents = sprite.frames[frame]
-        }
-    }
-}
-
-@MainActor private final class AvatarFrameClock: NSObject {
-    static let shared = AvatarFrameClock()
-    private let players = NSHashTable<AvatarFramePlayer.PlayerView>.weakObjects()
-    private var link: CADisplayLink?
-
-    func add(_ player: AvatarFramePlayer.PlayerView) {
-        players.add(player)
-        guard link == nil else { return }
-        let displayLink = CADisplayLink(target: self, selector: #selector(tick(_:)))
-        displayLink.preferredFrameRateRange = .init(minimum: 24, maximum: 30, preferred: 30)
-        displayLink.add(to: .main, forMode: .common)
-        link = displayLink
-    }
-
-    func remove(_ player: AvatarFramePlayer.PlayerView) {
-        players.remove(player)
-        if players.allObjects.isEmpty { stop() }
-    }
-
-    @objc private func tick(_ link: CADisplayLink) {
-        let visible = players.allObjects
-        if visible.isEmpty { stop(); return }
-        for player in visible { player.drawFrame(at: link.targetTimestamp) }
-    }
-
-    private func stop() {
-        link?.invalidate()
-        link = nil
     }
 }
 

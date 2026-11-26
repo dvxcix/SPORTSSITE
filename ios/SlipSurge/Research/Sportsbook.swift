@@ -38,6 +38,7 @@ enum Sportsbook {
         case "betrivers": "BetRivers"
         case "betparx": "betPARX"
         case "ballybet": "Bally Bet"
+        case "betway": "Betway"
         case "espnbet": "ESPN BET"
         default: key.replacingOccurrences(of: "_", with: " ").capitalized
         }
@@ -45,7 +46,7 @@ enum Sportsbook {
 
     static func artwork(_ key: String) -> String? {
         switch key {
-        case "ballybet", "betmgm", "betparx", "betrivers", "caesars",
+        case "ballybet", "betmgm", "betparx", "betrivers", "betway", "caesars",
              "draftkings", "fanduel", "fanatics", "kalshi", "pinnacle", "polymarket": "book-\(key)"
         default: nil
         }

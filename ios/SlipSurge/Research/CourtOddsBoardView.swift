@@ -41,6 +41,7 @@ struct CourtOddsBoardView: View {
     @State private var state = State.loading
     @State private var attempt = 0
     @State private var filters = ResearchOddsFilters()
+    @State private var detail: ResearchOddsDetail?
 
     init(scope: CourtView.Scope, date: String, gameID: Int?, mode: CourtResearchMode, reload: Int,
         showsContent: Bool, initialBook: String? = nil, initialMarket: String? = nil) {
@@ -74,6 +75,8 @@ struct CourtOddsBoardView: View {
         .task(id: request) { await load(request) }
         .onChange(of: date) { _, _ in filters = ResearchOddsFilters() }
         .onChange(of: market) { _, _ in filters.clearLineSelection() }
+        .onChange(of: request.selection) { _, _ in detail = nil }
+        .sheet(item: $detail) { ResearchBookComparison(detail: $0) }
     }
 
     private var content: some View {
@@ -91,7 +94,7 @@ struct CourtOddsBoardView: View {
                 if selection == request.selection {
                     ResearchOddsBoard(slate: slate, selectedGame: gameID.map(String.init),
                         marketLabel: markets.first { $0.id == market }?.name ?? market, scorerLabel: nil,
-                        sportsbook: selection.book, readBook: comparisonReader(for: selection), filter: filters,
+                        sportsbook: selection.book, readBook: comparisonReader(for: selection), openQuote: { detail = $0 }, filter: filters,
                         live: mode == .live)
                 } else {
                     loading
@@ -159,7 +162,10 @@ struct CourtOddsBoardView: View {
                 state = .loading
             }
         } catch let error as SlipSurgeHTTP.Status where [401, 403].contains(error.code) {
-            if !Task.isCancelled, wanted == request { state = .denied }
+            if !Task.isCancelled, wanted == request {
+                detail = nil
+                state = .denied
+            }
         } catch {
             if !Task.isCancelled, wanted == request { state = .failed }
         }

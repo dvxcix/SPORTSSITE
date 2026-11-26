@@ -237,7 +237,7 @@ struct LiveGamesStrip: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     if !slate.isEmpty {
-                        Label(live.isEmpty ? "Games today" : "Live now", systemImage: live.isEmpty ? "scoreboard" : "dot.radiowaves.left.and.right")
+                        Label(live.isEmpty ? "Games today" : "Live now", systemImage: live.isEmpty ? "list.number" : "dot.radiowaves.left.and.right")
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(Brand.text(for: scheme))
                             .accessibilityAddTraits(.isHeader)
@@ -248,7 +248,7 @@ struct LiveGamesStrip: View {
                     } label: {
                         HStack(spacing: 5) {
                             if slate.isEmpty {
-                                Image(systemName: "scoreboard").accessibilityHidden(true)
+                                Image(systemName: "list.number").accessibilityHidden(true)
                                 Text("Scores").font(.subheadline.weight(.semibold))
                                 Spacer()
                             } else {

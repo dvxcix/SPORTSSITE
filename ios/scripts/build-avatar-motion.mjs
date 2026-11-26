@@ -4,8 +4,6 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 
 const requireHub = createRequire(new URL('../../hub/package.json', import.meta.url))
-const { chromium } = requireHub('playwright-core')
-const sharp = requireHub('sharp')
 const source = new URL('../../hub/public/avatar-decorations/animated/', import.meta.url)
 const catalog = JSON.parse(await readFile(new URL('../../hub/src/lib/avatarDecorations.json', import.meta.url), 'utf8'))
 const destination = new URL('../SlipSurge/', import.meta.url)
@@ -37,6 +35,8 @@ if (process.argv.includes('--check')) {
     assert.equal(item.frames, Math.min(frameLimit, Math.ceil(item.duration * 1000 * framesPerSecond / 1000)))
   }
 } else {
+  const { chromium } = requireHub('playwright-core')
+  const sharp = requireHub('sharp')
   const browser = await chromium.launch()
   const rendered = new Array(inputs.length)
   try {
@@ -48,7 +48,7 @@ if (process.argv.includes('--check')) {
       try {
         while (next < inputs.length) {
           const index = next++
-          rendered[index] = await render(page, inputs[index])
+          rendered[index] = await render(page, inputs[index], sharp)
         }
       } finally { await page.close() }
     }))
@@ -67,7 +67,7 @@ if (process.argv.includes('--check')) {
   ])
 }
 
-async function render(page, { id, svg, sha256 }) {
+async function render(page, { id, svg, sha256 }, sharp) {
   await page.setContent(`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>html,body,svg{margin:0;display:block;width:100%;height:100%;background:transparent}</style>${svg}`)
   const duration = await page.evaluate(() => {
     const svg = document.querySelector('svg')

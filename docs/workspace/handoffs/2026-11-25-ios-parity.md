@@ -3058,3 +3058,42 @@ physical-device push are still open.
 - Design references included HOF’s live comparison and Apple Sports
   matchup context. Independent review flagged a missing Betway asset,
   which uses the generic sportsbook icon pending an approved mark.
+
+### 2026-11-26 · Launch, first run, and native polish
+
+- Price details are presented by the owning research screen. A timed table
+  reload keeps the player, matchup and selected line visible in the
+  comparison sheet. The sheet expires each book using its own observation
+  proof and offers a refresh in place. Price history reads from the same
+  currently verified book response. Betway uses the official sportsbook
+  icon in the comparison and picker.
+  [Betway artwork source](https://betway.de/de/static/media/betway-icon-96x96.97d774dd.png?dpl=dpl-mww91kcx)
+- Feed uses a leading SlipSurge wordmark with a quiet Search control.
+  Verified the signed-in Search push on Devin’s iPad in a narrow window.
+  The system launch screen uses the current wordmark and appearance
+  colors. A clean iPhone 17e Simulator showed the branded launch and the
+  first-run welcome. Its Explore Research action reached the signed-out
+  research landing and The Court’s featured slate without an account.
+  A dated member deep link dismissed the welcome and reached the access
+  gate. Newly authenticated
+  members with setup remaining are routed to the existing native flow.
+  Account creation and onboarding completion were not exercised with a
+  new account in this session.
+- Core Animation now plays the existing avatar sprite sequences without
+  a shared main-thread display tick. Visibility and Reduce Motion still
+  control playback. The device showed a changing profile decoration.
+  Instruments recorded zero hitches in one eight-second attached sample
+  on Devin’s iPad. The existing artwork is sampled at 24 frames per
+  second, and this sample did not measure a before-and-after frame rate.
+- Xcode lists SlipSurge LLC with the Admin role. Its Devices pane showed
+  zero provisioned devices and its certificate list was empty on this
+  Mac. The installed iPad Debug build used the existing development
+  provisioning. LLC signing, APNs delivery and TestFlight remain to be
+  configured and verified separately.
+- Final Xcode builds passed for Devin’s iPad and iPhone 18 Pro Simulator,
+  all 288 native/source checks passed, and the avatar asset verification
+  passed. Devin’s iPad was left on Andrew Wiggins’s 10+ points sportsbook
+  comparison in The Court after verifying ranked books, Betway artwork
+  and a selectable History observation. The local Mac
+  [visual receipt](/Users/vick/.codex/visualizations/2026/11/25/01a21037-b02d-7d53-85e3-36b17a54b24d/ios-comparison-welcome/visual-evidence.json)
+  covers the final phone comparison and branded first run.

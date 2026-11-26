@@ -116,24 +116,23 @@ struct FeedView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .navigationTitle("Feed")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $member) { name in
             MemberProfileView(api: DiscoverAPI(account: api.account, userID: api.userID), target: name)
         }
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Image(.brand)
-                    .resizable().scaledToFit()
-                    .frame(maxWidth: 122, maxHeight: 36)
-                    .accessibilityLabel("SlipSurge")
-                    .accessibilityAddTraits(.isHeader)
+            if #available(iOS 26, *) {
+                ToolbarItem(placement: .topBarLeading) { wordmark }
+                    .sharedBackgroundVisibility(.hidden)
+            } else {
+                ToolbarItem(placement: .topBarLeading) { wordmark }
             }
             if api.userID != nil {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        NativeSearchView(api: .init(viewer: .init(account: api.account, userID: api.userID)))
-                    } label: { Label("Search", systemImage: "magnifyingglass").labelStyle(.iconOnly) }
+                if #available(iOS 26, *) {
+                    ToolbarItem(placement: .topBarTrailing) { searchLink }
+                        .sharedBackgroundVisibility(.hidden)
+                } else {
+                    ToolbarItem(placement: .topBarTrailing) { searchLink }
                 }
             }
         }
@@ -180,6 +179,28 @@ struct FeedView: View {
         }
         .onAppear { visible = true }
         .onDisappear { visible = false }
+    }
+
+    private var wordmark: some View {
+        Image(.brand)
+            .resizable().scaledToFit()
+            .frame(width: 108, height: 32)
+            .accessibilityLabel("SlipSurge")
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private var searchLink: some View {
+        NavigationLink {
+            NativeSearchView(api: .init(viewer: .init(account: api.account, userID: api.userID)))
+        } label: {
+            Image(systemName: "magnifyingglass")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Brand.text(for: scheme))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Search")
     }
 
     private var timeline: some View {

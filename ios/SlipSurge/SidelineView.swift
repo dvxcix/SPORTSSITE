@@ -71,6 +71,7 @@ struct SidelineView: View {
     @State private var revision = 0
     @State private var state = LoadState.loading
     @State private var oddsFilters = ResearchOddsFilters()
+    @State private var oddsDetail: ResearchOddsDetail?
     @State private var lastBoard: SidelineBoard?
     @State private var schedule = ScheduleState.loading
     @State private var useDefaultDate = true
@@ -178,14 +179,19 @@ struct SidelineView: View {
         }
         .task(id: dayRequest) { await loadSchedule() }
         .task(id: requestKey) { await load() }
-        .onChange(of: dayRequest.date) { _, _ in oddsFilters = ResearchOddsFilters() }
+        .onChange(of: dayRequest.date) { _, _ in
+            oddsFilters = ResearchOddsFilters()
+            oddsDetail = nil
+        }
         .onChange(of: selection.market) { _, _ in oddsFilters.clearLineSelection() }
+        .onChange(of: selection) { _, _ in oddsDetail = nil }
         .refreshable { revision += 1 }
         .sheet(isPresented: $matrices) {
             if case .member(let account, let userID) = api.scope {
                 NavigationStack { MatricesView(api: .init(league: .nfl, account: account, userID: userID)) { revision += 1 } }
             }
         }
+        .sheet(item: $oddsDetail) { ResearchBookComparison(detail: $0) }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { revision += 1 }
         }
@@ -408,7 +414,8 @@ struct SidelineView: View {
                 } else {
                     ResearchOddsBoard(slate: oddsSlate, selectedGame: selectedGameID,
                         marketLabel: marketName(board.market), scorerLabel: board.scorerLabel, sportsbook: board.book,
-                        readBook: comparisonReader(date: board.date, market: board.market), filter: oddsFilters, defaultSort: .shortened)
+                        readBook: comparisonReader(date: board.date, market: board.market), openQuote: { oddsDetail = $0 },
+                        filter: oddsFilters, defaultSort: .shortened)
                 }
             } else {
                 loading("Loading board")
@@ -430,8 +437,7 @@ struct SidelineView: View {
                 $0.id.player.team == target.team && $0.id.line == target.line
             }
             guard matches.count == 1, let quote = matches.first, quote.observedAt <= .now else { return nil }
-            return .init(price: .init(line: quote.id.line, current: quote.price, opening: nil, earlier: nil,
-                observedAt: quote.observedAt), expiry: expiry)
+            return .init(price: quote.oddsPrice(), expiry: expiry)
         }
     }
 
@@ -561,8 +567,11 @@ struct SidelineView: View {
                 try await Task.sleep(for: .seconds(30))
                 revision += 1
             }
-        } catch let error as SlipSurgeHTTP.Status where error.code == 403 && !api.isFeatured {
-            if !Task.isCancelled, requested == requestKey { state = .denied }
+        } catch let error as SlipSurgeHTTP.Status where [401, 403].contains(error.code) && !api.isFeatured {
+            if !Task.isCancelled, requested == requestKey {
+                oddsDetail = nil
+                state = .denied
+            }
         } catch {
             if !Task.isCancelled, requested == requestKey { state = .failed }
         }
