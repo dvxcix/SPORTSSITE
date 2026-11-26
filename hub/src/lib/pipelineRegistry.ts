@@ -28,6 +28,9 @@ export const TRACKED_PIPELINES: PipelineDefinition[] = [
   { name: 'lineup-confirmed', label: 'Confirmed lineups', schedule: 'Every 5 minutes', staleAfterMinutes: everyFiveMinutes, area: 'MLB data' },
   { name: 'hr-alerts', label: 'Home run alerts', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Alerts' },
   { name: 'near-hr-alerts', label: 'Near home run alerts', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Alerts' },
+  ...(process.env.SLIPSURGE_NATIVE_GAME_ALERTS === '1'
+    ? [{ name: 'native-game-alerts', label: 'iOS live game alerts', schedule: 'Every minute', staleAfterMinutes: everyMinute, area: 'Alerts' as const }]
+    : []),
   { name: 'slate-drop', label: 'Daily slate alert', schedule: 'Daily', staleAfterMinutes: daily, area: 'Alerts' },
   { name: 'mlb-sync-bio', label: 'MLB player biographies', schedule: 'Every 15 minutes', staleAfterMinutes: everyFifteenMinutes, area: 'MLB data' },
   { name: 'mlb-sync-season-stats', label: 'MLB season statistics', schedule: 'Every 15 minutes', staleAfterMinutes: everyFifteenMinutes, area: 'MLB data' },

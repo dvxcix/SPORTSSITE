@@ -4,6 +4,7 @@ import { connect, type ClientHttp2Session } from 'node:http2'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { appleNotificationPayload } from './appleNotificationPayload'
 import { applePushConfig, appleToken, type ApplePushConfig } from './applePushConfig'
+import { gameAlertPayload, type GameAlertEvent, type GameAlertScope } from './nativeGameAlerts'
 
 type Device = { id: string; token: string; topic: string; environment: string }
 
@@ -15,11 +16,11 @@ function providerToken(config: ApplePushConfig, issuedAt: number) {
   return `${input}.${signature.toString('base64url')}`
 }
 
-function requestDelivery(session: ClientHttp2Session, token: string, topic: string, auth: string, id: string, issuedAt: number, payload: string) {
+function requestDelivery(session: ClientHttp2Session, token: string, topic: string, auth: string, id: string, expiresAt: number, payload: string) {
   return new Promise<{ status: number; invalidAt?: string }>((resolve, reject) => {
     const request = session.request({ ':method': 'POST', ':path': `/3/device/${token}`,
       authorization: `bearer ${auth}`, 'apns-topic': topic, 'apns-id': id, 'apns-collapse-id': id,
-      'apns-push-type': 'alert', 'apns-priority': '10', 'apns-expiration': String(issuedAt + 3600),
+      'apns-push-type': 'alert', 'apns-priority': '10', 'apns-expiration': String(expiresAt),
       'content-type': 'application/json' })
     let status = 0, response = ''
     request.setEncoding('utf8')
@@ -62,7 +63,7 @@ async function deliver(devices: Device[], config: ApplePushConfig, userId: strin
       let providerStatus: number | null = null
       let success = false
       try {
-        const result = await requestDelivery(connection, device.token, device.topic, auth, id, issuedAt, payload)
+        const result = await requestDelivery(connection, device.token, device.topic, auth, id, issuedAt + 3600, payload)
         providerStatus = result.status || null
         success = result.status === 200
         if (result.invalidAt) {
@@ -89,4 +90,60 @@ export async function sendApplePush(userId: string, notificationId: string, type
     const devices = data.filter(device => device.environment === config.environment && device.topic === config.topic && appleToken(device.token))
     return devices.length ? deliver(devices, config, userId, notificationId, type) : Promise.resolve()
   }))
+}
+
+type GameDelivery = { device: Device; userId: string; event: GameAlertEvent }
+
+export async function sendAppleGameAlerts(scope: GameAlertScope, deliveries: GameDelivery[], config: ApplePushConfig) {
+  const batch = deliveries.filter(({ device }) =>
+    device.environment === config.environment && device.topic === config.topic && appleToken(device.token))
+  if (!batch.length) return { accepted: 0, failed: 0 }
+  const admin = createAdminClient()
+  const authority = config.environment === 'development' ? 'https://api.sandbox.push.apple.com' : 'https://api.push.apple.com'
+  const connection = connect(authority, { minVersion: 'TLSv1.2' })
+  connection.on('error', () => { /* Each request records its own result. */ })
+  connection.setTimeout(10_000, () => connection.destroy())
+  const deadline = setTimeout(() => connection.destroy(), 40_000)
+  const table = 'native_game_alert_deliveries'
+  let accepted = 0, failed = 0
+  try {
+    const auth = providerToken(config, Math.floor(Date.now() / 1000))
+    // At most eight APNs streams share the connection. A device's plays are
+    // submitted in order even when its game and other games are being followed.
+    const devices = [...Map.groupBy(batch, entry => entry.device.id).values()]
+    let nextDevice = 0
+    async function worker() {
+      while (nextDevice < devices.length && !connection.destroyed && !connection.closed) {
+        const entries = devices[nextDevice++]
+        for (const { event, userId, device } of entries) {
+          if (event.expiresAt <= Date.now() || connection.destroyed || connection.closed) continue
+          const key = { device_id: device.id, sport: scope.sport, game_id: scope.gameId, event_key: event.key }
+          const claim = await admin.rpc('claim_native_game_alert', {
+            p_device_id: device.id, p_user_id: userId, p_sport: scope.sport, p_game_id: scope.gameId,
+            p_event_key: event.key, p_kind: event.kind, p_occurred_at: new Date(event.occurredAt).toISOString(),
+            p_expires_at: new Date(event.expiresAt).toISOString(),
+          })
+          if (claim.error) { failed++; continue }
+          if (!claim.data) continue
+          let status: number | null = null
+          try {
+            const result = await requestDelivery(connection, device.token, device.topic, auth, claim.data,
+              Math.floor(event.expiresAt / 1000), JSON.stringify(gameAlertPayload(scope, event)))
+            status = result.status || null
+            if (result.invalidAt) await admin.from('native_apple_push_devices').delete().eq('id', device.id)
+              .eq('user_id', userId).lte('updated_at', result.invalidAt)
+          } catch { /* Keep the claim if transport timed out after submission. */ }
+          if (status === 200) accepted++
+          else failed++
+          const saved = await admin.from(table).update({ status: status === 200 ? 'sent' : 'failed', provider_status: status }).match(key)
+          if (saved.error && status === 200) failed++
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(8, devices.length) }, worker))
+  } finally {
+    clearTimeout(deadline)
+    connection.destroy()
+  }
+  return { accepted, failed }
 }

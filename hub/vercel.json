@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/native-game-alerts",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/nba-model-validate",
       "schedule": "*/5 * * * *"
     },
