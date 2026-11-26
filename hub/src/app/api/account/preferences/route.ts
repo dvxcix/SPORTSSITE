@@ -7,7 +7,7 @@ import { validResearchPreferences } from '@/lib/researchPreferences'
 
 export const dynamic = 'force-dynamic'
 const headers = { 'Cache-Control': 'private, no-store, max-age=0' }
-const notificationKeys = new Set(['new_follower', 'post_reaction', 'post_comment', 'repost', 'mention', 'new_pick', 'pick_result', 'group_invite', 'dm', 'subscription', 'lineup_confirmed'].flatMap(key => [key, `${key}_email`]))
+const notificationKeys = new Set(['player_news', ...['new_follower', 'post_reaction', 'post_comment', 'repost', 'mention', 'new_pick', 'pick_result', 'group_invite', 'dm', 'subscription', 'lineup_confirmed'].flatMap(key => [key, `${key}_email`])])
 const objectValue = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value)
 const stringList = (value: unknown) => Array.isArray(value) && value.length <= 300 && value.every(item => typeof item === 'string' && item.length <= 120)
 

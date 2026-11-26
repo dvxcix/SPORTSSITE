@@ -90,14 +90,14 @@ async function responseMetadata(response: Response, jobName: string): Promise<Re
   const settlementJob = ['grade-live-picks', 'settle-picks'].includes(jobName)
   const mlbPublicCaptureJob = jobName === 'poll-pikkit-picks'
   const whopReconcileJob = ['whop-reconcile', 'whop-addon-reconcile'].includes(jobName)
-  const detailedJob = jobName.startsWith('nfl-sync-') || ['nba-research-sync', 'nba-model-validate', 'nba-research-snapshot', 'nba-market-capture', 'nba-book-first-capture', 'poll-pikkit-nba-picks', 'poll-fanduel-nfl', 'poll-pikkit-nfl-picks', 'market-dna-maintenance', 'slate-drop', 'research-mechanics-precompute'].includes(jobName)
+  const detailedJob = jobName.startsWith('nfl-sync-') || ['native-player-news', 'nba-research-sync', 'nba-model-validate', 'nba-research-snapshot', 'nba-market-capture', 'nba-book-first-capture', 'poll-pikkit-nba-picks', 'poll-fanduel-nfl', 'poll-pikkit-nfl-picks', 'market-dna-maintenance', 'slate-drop', 'research-mechanics-precompute'].includes(jobName)
   if (response.ok && !detailedJob && !settlementJob && !mlbPublicCaptureJob && !whopReconcileJob) return { error: null, details: {} }
   try {
     const body = await response.clone().json() as Record<string, unknown>
     if (mlbPublicCaptureJob) return mlbPublicCaptureMetadata(body, response)
     if (response.ok && settlementJob) return settlementMetadata(body)
     if (response.ok && whopReconcileJob) return whopReconciliationMetadata(body)
-    if (response.ok) return { error: null, details: Object.fromEntries(['checked', 'captured', 'unchanged', 'failed', 'unavailable', 'due', 'cleanupIssues', 'reason', 'graded', 'games', 'deferred', 'pages', 'rows', 'remaining', 'synced', 'season', 'coverage', 'results', 'gamesComputed', 'windowsComputed', 'stage', 'modelVersion', 'trainingRows', 'trainedThrough', 'queued', 'alreadyQueued', 'skipped', ...(jobName === 'nba-market-capture' ? ['firstBasket', 'availability'] : []), ...(jobName === 'nba-book-first-capture' ? ['books', 'saved', 'checked'] : [])].filter(key => body[key] !== undefined).map(key => [key, body[key]])) }
+    if (response.ok) return { error: null, details: Object.fromEntries(['checked', 'captured', 'unchanged', 'failed', 'unavailable', 'due', 'cleanupIssues', 'reason', 'graded', 'games', 'deferred', 'pages', 'rows', 'remaining', 'synced', 'season', 'coverage', 'results', 'gamesComputed', 'windowsComputed', 'stage', 'modelVersion', 'trainingRows', 'trainedThrough', 'queued', 'published', 'alreadyQueued', 'skipped', ...(jobName === 'nba-market-capture' ? ['firstBasket', 'availability'] : []), ...(jobName === 'nba-book-first-capture' ? ['books', 'saved', 'checked'] : [])].filter(key => body[key] !== undefined).map(key => [key, body[key]])) }
     const reason = typeof body.reason === 'string' ? body.reason : Array.isArray(body.cleanupIssues)&&typeof body.cleanupIssues[0]==='string'?body.cleanupIssues[0]:`HTTP ${response.status}`
     const details = Object.fromEntries(['cleanupIssues', 'unavailable', 'deferred', 'stage', 'budgetCode', 'requiredThroughDate', 'retryAt', 'failed', 'due', 'results', 'coverage', 'gamesWaiting', 'gamesComputed', 'windowsComputed', ...(jobName === 'nba-market-capture' ? ['firstBasket', 'availability'] : []), ...(jobName === 'nba-book-first-capture' ? ['books', 'saved', 'checked'] : [])]
       .filter(key => body[key] !== undefined)
