@@ -71,6 +71,7 @@ struct ScoresView: View {
     let api: DiscoverAPI
     @Environment(\.colorScheme) private var scheme
     @Environment(\.scenePhase) private var phase
+    @Environment(\.dynamicTypeSize) private var textSize
     @State private var date: Date
     @State private var league: String
     @State private var liveBoard = LiveScoreboard()
@@ -85,6 +86,9 @@ struct ScoresView: View {
     private var day: String { SlateDate.key(date) }
     private var scoreboard: Scoreboard? { liveBoard.board(for: day) }
     private var leagues: [String] { scoreboard?.leagues.map(\.id) ?? [] }
+    private var gameColumns: [GridItem] {
+        [GridItem(textSize.isAccessibilitySize ? .flexible() : .adaptive(minimum: 275), spacing: 10, alignment: .top)]
+    }
     private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = SlateDate.zone
@@ -123,6 +127,8 @@ struct ScoresView: View {
             }
             .refreshable { await liveBoard.refresh(day: day) }
         }
+        .frame(maxWidth: 920)
+        .frame(maxWidth: .infinity)
         .navigationTitle("Scores")
         .navigationBarTitleDisplayMode(.inline)
         .background(Brand.background(for: scheme))
@@ -198,13 +204,15 @@ struct ScoresView: View {
         if !league.available {
             Text("Scores for this league couldn’t refresh.").font(.footnote).foregroundStyle(.secondary)
         }
-        ForEach(league.games.sorted { $0.live && !$1.live }) { match in
-            NavigationLink {
-                GameCenterView(api: api, game: match, date: day)
-            } label: {
-                MatchScoreTile(match: match)
+        LazyVGrid(columns: gameColumns, spacing: 10) {
+            ForEach(league.games.sorted { $0.live && !$1.live }) { match in
+                NavigationLink {
+                    GameCenterView(api: api, game: match, date: day)
+                } label: {
+                    MatchScoreTile(match: match)
+                }
+                .buttonStyle(SlipSurgePressStyle())
             }
-            .buttonStyle(SlipSurgePressStyle())
         }
     }
 
@@ -263,7 +271,9 @@ struct LiveGamesStrip: View {
                                     GameCenterView(api: api, game: match, date: board.date)
                                 } label: {
                                     MatchScoreTile(match: match, compact: true)
-                                        .containerRelativeFrame(.horizontal, count: 9, span: 4, spacing: 8)
+                                        .containerRelativeFrame(.horizontal) { available, _ in
+                                            min(224, (available - 10) * 4 / 9)
+                                        }
                                 }
                                 .buttonStyle(SlipSurgePressStyle())
                             }

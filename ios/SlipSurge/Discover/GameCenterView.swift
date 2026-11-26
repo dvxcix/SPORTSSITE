@@ -138,6 +138,8 @@ struct GameCenterView: View {
             }
             gameContent
         }
+        .frame(maxWidth: 920)
+        .frame(maxWidth: .infinity)
         .navigationTitle(matchTitle)
         .navigationBarTitleDisplayMode(.inline)
         .background(Brand.background(for: scheme))
@@ -412,7 +414,7 @@ struct GameCenterView: View {
             if let networks = data.broadcasts, !networks.isEmpty {
                 Label(Array(Set(networks)).sorted().joined(separator: " · "), systemImage: "tv").font(.subheadline)
             }
-            if let quarters = data.quarters, !quarters.isEmpty { periodScores(quarters) }
+            if data.state != "pre", let quarters = data.quarters, !quarters.isEmpty { periodScores(quarters) }
             ForEach(Array((data.leaders ?? []).enumerated()), id: \.offset) { _, leader in
                 ResearchToolCard(color: color) {
                     HStack {

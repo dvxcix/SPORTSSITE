@@ -458,75 +458,30 @@ struct NativeResumeOffer: View {
 private struct ResearchHome: View {
     let account: AccountStore
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.dynamicTypeSize) private var textSize
     @Environment(\.memberResearchPreferences) private var preferences
     @State private var dugoutAvailable = false
     private var book: String? { preferences?.read(for: account.memberID)?.preferences.primaryBook }
+    private var columns: [GridItem] {
+        [GridItem(textSize.isAccessibilitySize ? .flexible() : .adaptive(minimum: 290), spacing: 12, alignment: .top)]
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                NavigationLink {
-                    if let userID = account.memberID {
-                        SidelineView(api: SidelineAPI(scope: .member(account, userID)), book: book)
-                    } else {
-                        SidelineView(api: SidelineAPI())
-                    }
-                } label: {
-                    destination("The Sideline", league: "NFL", logo: "nfl")
-                }
-                NavigationLink {
-                    if let userID = account.memberID {
-                        CourtView(scope: .member(account, userID), book: book)
-                    } else {
-                        CourtView(scope: .preview)
-                    }
-                } label: {
-                    destination("The Court", league: "NBA", logo: "nba")
-                }
-                if let userID = account.memberID, dugoutAvailable {
-                    NavigationLink {
-                        DugoutView(api: .init(account: account, userID: userID))
-                    } label: {
-                        destination("The Dugout", league: "MLB", logo: "mlb")
-                    }
+                LazyVGrid(columns: columns, spacing: 12) {
+                    researchCards
                 }
                 if account.memberID == nil {
                     NavigationLink {
                         NativeMembershipOverview(account: account)
                     } label: { Label("Compare memberships", systemImage: "bolt.circle") }
                         .buttonStyle(.bordered)
-                } else if let id = account.memberID {
-                    NavigationLink {
-                        NativeMarketplaceView(api: .init(account: account, userID: id), userID: id, target: .init())
-                    } label: {
-                        ResearchToolCard(color: Brand.accent(for: scheme)) {
-                            Label("Matrix Marketplace", systemImage: "storefront").font(.title3.weight(.semibold))
-                        } content: { EmptyView() }
-                    }
-                    .buttonStyle(SlipSurgePressStyle())
-                    NavigationLink {
-                        ResearchLibraryView(api: ResearchLibraryAPI(account: account, userID: id))
-                    } label: {
-                        ResearchToolCard(color: Brand.accent(for: scheme)) {
-                            Label("Workspace", systemImage: "square.grid.2x2").font(.title3.weight(.semibold))
-                        } content: {
-                            Text("Watchlist, comparisons, notes and shared research").font(.subheadline).foregroundStyle(.secondary)
-                        }
-                    }
-                    .buttonStyle(SlipSurgePressStyle())
-                    NavigationLink {
-                        MyPicksView(api: DiscoverAPI(account: account, userID: id))
-                    } label: {
-                        ResearchToolCard(color: Brand.accent(for: scheme)) {
-                            Label("My Picks", systemImage: "list.clipboard").font(.title3.weight(.semibold))
-                        } content: {
-                            Text("Active picks, parlays and results").font(.subheadline).foregroundStyle(.secondary)
-                        }
-                    }
-                    .buttonStyle(SlipSurgePressStyle())
                 }
             }
             .padding()
+            .frame(maxWidth: 920)
+            .frame(maxWidth: .infinity)
         }
         .navigationTitle("Research")
         .background(Brand.background(for: scheme))
@@ -535,6 +490,64 @@ private struct ResearchHome: View {
             guard let userID = account.memberID else { dugoutAvailable = false; return }
             let allowed = (try? await DugoutAPI(account: account, userID: userID).available()) == true
             if !Task.isCancelled, userID == account.memberID { dugoutAvailable = allowed }
+        }
+    }
+
+    @ViewBuilder private var researchCards: some View {
+        NavigationLink {
+            if let userID = account.memberID {
+                SidelineView(api: SidelineAPI(scope: .member(account, userID)), book: book)
+            } else {
+                SidelineView(api: SidelineAPI())
+            }
+        } label: {
+            destination("The Sideline", league: "NFL", logo: "nfl")
+        }
+        NavigationLink {
+            if let userID = account.memberID {
+                CourtView(scope: .member(account, userID), book: book)
+            } else {
+                CourtView(scope: .preview)
+            }
+        } label: {
+            destination("The Court", league: "NBA", logo: "nba")
+        }
+        if let userID = account.memberID, dugoutAvailable {
+            NavigationLink {
+                DugoutView(api: .init(account: account, userID: userID))
+            } label: {
+                destination("The Dugout", league: "MLB", logo: "mlb")
+            }
+        }
+        if let id = account.memberID {
+            NavigationLink {
+                NativeMarketplaceView(api: .init(account: account, userID: id), userID: id, target: .init())
+            } label: {
+                ResearchToolCard(color: Brand.accent(for: scheme)) {
+                    Label("Matrix Marketplace", systemImage: "storefront").font(.title3.weight(.semibold))
+                } content: { EmptyView() }
+            }
+            .buttonStyle(SlipSurgePressStyle())
+            NavigationLink {
+                ResearchLibraryView(api: ResearchLibraryAPI(account: account, userID: id))
+            } label: {
+                ResearchToolCard(color: Brand.accent(for: scheme)) {
+                    Label("Workspace", systemImage: "square.grid.2x2").font(.title3.weight(.semibold))
+                } content: {
+                    Text("Watchlist, comparisons, notes and shared research").font(.subheadline).foregroundStyle(.secondary)
+                }
+            }
+            .buttonStyle(SlipSurgePressStyle())
+            NavigationLink {
+                MyPicksView(api: DiscoverAPI(account: account, userID: id))
+            } label: {
+                ResearchToolCard(color: Brand.accent(for: scheme)) {
+                    Label("My Picks", systemImage: "list.clipboard").font(.title3.weight(.semibold))
+                } content: {
+                    Text("Active picks, parlays and results").font(.subheadline).foregroundStyle(.secondary)
+                }
+            }
+            .buttonStyle(SlipSurgePressStyle())
         }
     }
 

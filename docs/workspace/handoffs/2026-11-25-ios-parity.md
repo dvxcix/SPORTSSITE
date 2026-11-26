@@ -2897,3 +2897,29 @@ physical-device push are still open.
   reported the Personal Team cannot create App Store profiles and there is
   no iOS Distribution certificate. Real APNs and App Store release still
   require the app’s paid Apple Developer team.
+
+### 2026-11-26 · Devin’s iPad mini and adaptive layouts
+
+- Continued `codex/ios-parity-20261125` from `357baafb`. Devin’s iPad mini
+  (A20 Pro, iPadOS 27.2.1) is the primary live-use test device. Xcode 27.2
+  registered it after Developer Mode was enabled. The original signed iPad
+  build installed, opened, and showed the sign-in form and production Feed.
+- Centered Feed and aligned its filters and composer to the reading column.
+  The Games today cards no longer grow with the entire tablet window. Scores
+  and Research use width-adaptive cards, with a single column for accessibility
+  text. Score and game controls stay together at a comfortable tablet width.
+- The scheduled Bears–Lions summary incorrectly showed 0 totals with no
+  recorded quarters. It now shows the venue without a period table before
+  kickoff. The completed Saints–Bears matchup still showed its real period
+  scores, player portraits, and scoring trend.
+- Verified iPad mini Simulator in portrait and landscape, Scores links and
+  three game tiles across in landscape, Research selection across rotation,
+  Community and Inbox while signed out, and single-column Research at
+  accessibility-medium text. iPhone 18 Pro Simulator retained single-column
+  Scores and its regular bottom tabs. All 288 native source checks passed;
+  the final Simulator and physical iPad Debug builds succeeded.
+- The final signed build installed on Devin’s iPad. It locked before the
+  Xcode relaunch, so open it after unlocking to continue device verification.
+  Signed-in iPad chat, account-specific research, widgets, and a freely
+  resized iPad window still need a live pass. Apple enrollment is with
+  Apple Support and does not block these local development builds.

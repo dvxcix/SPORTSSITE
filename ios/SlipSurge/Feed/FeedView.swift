@@ -16,6 +16,8 @@ struct FeedView: View {
     let scrollToTopRequest: Int
     let resumeOffer: NativeResumeOffer?
 
+    private let readingWidth: CGFloat = 680
+
     @Environment(\.colorScheme) private var scheme
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -88,7 +90,12 @@ struct FeedView: View {
                 }
                 .onChange(of: scope) { proxy.scrollTo("feed-start", anchor: .top) }
         }
-        .safeAreaInset(edge: .top, spacing: 0) { scopes }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            scopes
+                .frame(maxWidth: readingWidth)
+                .frame(maxWidth: .infinity)
+                .background(Brand.background(for: scheme))
+        }
         .safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) {
             if canCompose {
                 Button {
@@ -105,6 +112,8 @@ struct FeedView: View {
                 .accessibilityLabel("Compose")
                 .padding(.trailing, 16)
                 .padding(.bottom, 12 + (sizeClass == .compact ? SlipSurgeTabBar.minimumHeight : 0))
+                .frame(maxWidth: readingWidth, alignment: .trailing)
+                .frame(maxWidth: .infinity)
             }
         }
         .navigationTitle("Feed")
@@ -202,8 +211,11 @@ struct FeedView: View {
                 }
             }
             .scrollTargetLayout()
+            .frame(maxWidth: readingWidth)
+            .background(Brand.surface(for: scheme))
+            .frame(maxWidth: .infinity)
         }
-        .background(Brand.surface(for: scheme))
+        .background(Brand.background(for: scheme))
     }
 
     private var scopes: some View {

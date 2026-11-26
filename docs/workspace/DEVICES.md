@@ -55,6 +55,8 @@ jobs and messaging retain their separate authorization boundaries in AGENTS.md.
 - Audit checkpoint: `9dcf9d43cd0b9c6183952dc47fd027fb632d7e7c`
 - Handoff: `docs/workspace/handoffs/2026-11-25-ios-parity.md`
 - Product baseline and source inventory: `docs/ios/README.md`
+- Primary live-use device: Devin’s iPad mini. Check iPhone layouts on an iPhone
+  device or Simulator and keep the app universal.
 - First native build checkpoint: `5dbfa649fa8fc9432a541efc82ddd0bd637af4e0`
 - Status: `ios/SlipSurge.xcodeproj` builds and runs from Xcode on this Mac.
   Device Hub displays the signed-out Sideline preview and the sportsbook
