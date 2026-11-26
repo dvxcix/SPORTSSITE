@@ -3624,14 +3624,54 @@ were replayed.
 
 ### 26 November 2026 — Injury and roster alerts
 
-Build 8 adds an opt-in setting for saved teams and players under You →
-Alert preferences, in-app injury and roster labels, and a native
-notification attachment that pairs the portrait with team marks.
-The signed App Store export verified build 8 for the app, embedded
-notification extension and widget under SlipSurge LLC.
+Build 9 adds an opt-in setting for saved teams and players under You →
+Profile & membership → Alert preferences, in-app injury and roster
+labels, and an Apple notification attachment that puts the real player
+portrait beside the team mark. Trade alerts can include both team marks.
+The app keeps the text and tap destination when a source image is absent.
 
-Production discovery found a real new follow on Devin’s account at
-22:13 CET. The legacy insert trigger required a browser subscription,
-so the existing TestFlight-only device was never handed the event.
-The follow and player-news release addresses the native registration
-guard, while the original artwork delivery remains separately verified.
+Hub PR 99 (`db0ce4ad`) wired the five NBA, NFL, and MLB injury and
+transaction feeds into the existing push pipeline. Each source captures
+its first observation silently. The service checks every five minutes,
+deduplicates work in a private outbox, then matches opted-in users'
+favorites and applies existing delivery preferences. PR 99 also fixed
+the follow trigger for Apple-only registrations. PR 100 (`a36c38ec`)
+allowed the new setting through the existing preference save function.
+Vercel production is READY at `a36c38ec`. The two individually applied
+production migrations are `20261126212341_native_player_news` and
+`20261126214651_allow_native_player_news_preference`. Scheduled checks
+processed all five feeds. The iPad saved the new setting successfully.
+
+The real follow at 22:13 CET exposed a trigger that required a browser
+subscription. After the trigger fix, a fresh follow arrived at 22:26 CET,
+and tapping it exposed an iOS delegate completion crash. Build 9 completes
+the delegate on the main actor. A fresh follow from the signed-in test
+account at 22:49 CET returned APNs 200, displayed in Notification Center
+on Devin’s physical iPad, opened the follower's native profile when
+tapped, and was marked read. The account had no uploaded avatar.
+
+Xcode 27.2 archived and exported SlipSurge LLC TestFlight 1.0 (9) from
+`691c4114`. The signed IPA verified production APNs, the embedded
+notification service and widget, and populated sign-in and GIPHY
+configuration. The isolated build must have the ignored local auth
+configuration before archiving. Builds 7 and 8 omitted it. Build 8 was
+accepted but never assigned. Build 9 is Testing in SlipSurge Internal QA,
+installed and signed in on Devin’s iPad, with automatic updates on.
+Apple accepted the upload with the same missing vendor GIPHY dSYM warning.
+
+All 19 focused checks passed, including source parsing, artwork, push
+routing and database behavior. The wider run passed 299 of 301 and
+reproduced the existing Court dependency and MLB matrix harness failures.
+Real archived NBA and MLB source responses produced game artwork with
+two team marks and a player portrait in local checks. No historical
+events were replayed or sent to the device.
+
+Live NBA and MLB delivery and a newly published injury or roster alert
+still need physical-device verification. Devin’s iPad account is
+subscribed to scoring, major plays and milestones for Miami at New York
+(public game `401909326`, November 27 at 7 p.m. ET or November 28 at
+01:00 CET). There was no NBA game on November 26 and MLB is in its
+offseason. At a live game, verify the expanded artwork and tap destination
+from Notification Center. Verify player news separately when an opted-in
+favorite has a fresh report. The Mac’s pre-existing Xcode project and
+scheme changes remain in its original checkout.
