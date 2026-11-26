@@ -32,12 +32,12 @@ struct NativeEmojiPicker: View {
     @Environment(\.nativeEmojiLibrary) private var library
     @State private var query = ""
     private let fallback = ["❤️", "🔥", "⚡", "👀", "👏", "😂", "💯", "🏆", "👍", "👎", "🙌", "🤝"]
-    private var term: String { query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+    private var term: String { query.trimmingCharacters(in: .whitespacesAndNewlines.union(.init(charactersIn: ":"))).lowercased() }
 
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 13) {
-                if let library, !library.standard.isEmpty {
+                if let library, !library.standard.isEmpty || !library.custom.isEmpty {
                     let groups = Dictionary(grouping: library.custom, by: { $0.category?.name ?? "Other" })
                     ForEach(groups.keys.sorted { left, right in
                         if left == "Other" || right == "Other" { return right == "Other" }
@@ -49,7 +49,7 @@ struct NativeEmojiPicker: View {
                             LazyVGrid(columns: columns) {
                                 ForEach(entries) { entry in
                                     tile(":\(entry.code):", label: entry.code) {
-                                        ResearchArtwork(urls: [entry.imageUrl], fallback: "face.smiling", pointSize: 26).frame(width: 26, height: 26)
+                                        NativeReactionArtwork(symbol: ":\(entry.code):", size: 26)
                                     }
                                 }
                             }
@@ -106,11 +106,38 @@ struct NativeReactionArtwork: View {
     let symbol: String
     var size: CGFloat = 18
     @Environment(\.nativeEmojiLibrary) private var library
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var phase
+    @State private var visible = false
 
     var body: some View {
-        let code = symbol.trimmingCharacters(in: CharacterSet(charactersIn: ":"))
-        if symbol.hasPrefix(":"), symbol.hasSuffix(":"), let asset = library?.entry(for: code) {
-            ResearchArtwork(urls: [asset.imageUrl], fallback: "face.smiling", pointSize: size).frame(width: size, height: size)
-        } else { Text(symbol) }
+        if let code = NativeEmojiLibrary.shortcode(in: symbol) {
+            Group {
+                if visible, !reduceMotion, phase == .active, library?.hasMotion(code) == true {
+                    TimelineView(.animation(minimumInterval: 1.0 / 15.0)) { time in
+                        icon(for: code, at: time.date)
+                    }
+                } else {
+                    icon(for: code, at: nil)
+                }
+            }
+            .frame(width: size, height: size)
+            .accessibilityLabel(code.replacingOccurrences(of: "_", with: " "))
+            .task(id: "\(code):\(library?.revision ?? 0)") { await library?.loadIcons([code]) }
+            .onAppear { visible = true }
+            .onDisappear { visible = false }
+        } else {
+            Text(symbol)
+        }
+    }
+
+    @ViewBuilder private func icon(for code: String, at date: Date?) -> some View {
+        if let image = library?.image(for: code, at: date) {
+            Image(decorative: image, scale: 1).resizable().scaledToFit()
+        } else if let glyph = library?.unicode(for: code) {
+            Text(glyph)
+        } else {
+            Image(systemName: "face.smiling").resizable().scaledToFit().opacity(0.55)
+        }
     }
 }

@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { build } from 'esbuild'
 import type { MLBGameFeed } from '@slipsurge/core/mlb-api'
 import { getGameSummary, getScoreboard } from '../packages/core/src/espn-api'
+import { EMOJI_CATEGORIES } from '../src/lib/emojiCatalog'
 
 const team = (id: number, name: string, abbreviation: string) => ({ id, name, abbreviation })
 const away = team(147, 'New York Yankees', 'NYY'), home = team(111, 'Boston Red Sox', 'BOS')
@@ -132,4 +134,15 @@ test('mobile live reads shorten upstream revalidation while default readers keep
   assert.notEqual(requests[2]?.agent, requests[3]?.agent)
   assert.equal(requests[0]?.url, requests[1]?.url)
   assert.equal(requests[2]?.url, requests[3]?.url)
+})
+
+
+test('all shared standard emoji fit the play reaction constraint', () => {
+  const sql = readFileSync(new URL('../supabase/migrations/20261125234813_native_play_reaction_catalog.sql', import.meta.url), 'utf8')
+  const [constraint] = sql.split('create function')
+  const accepted = new Set([...constraint.matchAll(/'([^']+)'/g)].map(match => match[1]))
+  for (const { char } of EMOJI_CATEGORIES.flatMap(category => category.emoji)) {
+    assert.ok(accepted.has(char), 'Missing play reaction: ' + char)
+  }
+  assert.ok(accepted.has('😤'), 'Keep the older web reaction')
 })

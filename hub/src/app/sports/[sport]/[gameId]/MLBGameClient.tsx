@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { PlayerAvatar } from '@/components/sports/PlayerAvatar'
 import { PostCardClient } from '@/components/social/PostCardClient'
+import { EmojiText } from '@/components/social/EmojiText'
 import { BaseDiamond } from '@/components/sports/BaseDiamond'
 import { StrikeZonePlot } from '@/components/sports/StrikeZonePlot'
 import { Tooltip } from '@/components/ui/tooltip-card'
@@ -535,7 +536,7 @@ function PlayRow({
 
       {/* Reactions */}
       <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
-        {EMOJI_OPTIONS.map(emoji => {
+        {Array.from(new Set([...EMOJI_OPTIONS, ...Object.keys(reactions ?? {})])).map(emoji => {
           const r = reactions?.[emoji]
           const active = r?.mine ?? false
           return (
@@ -548,7 +549,7 @@ function PlayRow({
               cursor: isLoggedIn ? 'pointer' : 'default',
               transition: 'all 120ms',
             }}>
-              <span>{emoji}</span>
+              <span><EmojiText text={emoji} /></span>
               {(r?.count ?? 0) > 0 && <span style={{ fontSize: 12, fontWeight: 700 }}>{r!.count}</span>}
             </button>
           )

@@ -216,18 +216,14 @@ private struct AvatarFramePlayer: UIViewRepresentable {
         let size = min(key.pixels, index.size)
         let height = (entry.frames + index.columns - 1) / index.columns * size
         let width = index.columns * size
-        let atlas: CGImage
-        if size == index.size {
-            atlas = original
-        } else {
-            guard let drawing = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
-                bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
-            drawing.interpolationQuality = .medium
-            drawing.draw(original, in: CGRect(x: 0, y: 0, width: width, height: height))
-            guard let reduced = drawing.makeImage() else { return nil }
-            atlas = reduced
-        }
+        // A crop from a compressed WebP can retain its lazy decoder. Flatten the
+        // atlas on the decode queue before Core Animation sees any of its frames.
+        guard let drawing = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
+            bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        drawing.interpolationQuality = size == index.size ? .none : .medium
+        drawing.draw(original, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard let atlas = drawing.makeImage() else { return nil }
         guard atlas.width == width, atlas.height == height else { return nil }
         let frames = (0..<entry.frames).compactMap { frame in
             atlas.cropping(to: CGRect(x: frame % index.columns * size, y: frame / index.columns * size,

@@ -21,15 +21,26 @@ enum NativeGIFSource {
 }
 
 struct NativeGIFPlayback: View {
-    private struct Frame: Sendable {
+    struct Frame: Sendable {
         let image: CGImage
         let duration: Double
     }
 
-    private struct Animation: Sendable {
+    struct Animation: Sendable {
         let url: URL
         let frames: [Frame]
         let aspect: CGFloat
+        let cycle: TimeInterval
+
+        func image(at date: Date?) -> CGImage? {
+            guard let date, cycle > 0 else { return frames.first?.image }
+            var offset = date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: cycle)
+            for frame in frames {
+                if offset < frame.duration { return frame.image }
+                offset -= frame.duration
+            }
+            return frames.last?.image
+        }
     }
 
     let url: URL
@@ -86,6 +97,10 @@ struct NativeGIFPlayback: View {
         try await decode(imageData(url, limit: byteLimit), url: url)
     }
 
+    nonisolated static func emojiAnimation(_ url: URL) async throws -> Animation {
+        try await decode(imageData(url, limit: byteLimit), url: url, frameSize: 72)
+    }
+
     nonisolated static func thumbnail(_ url: URL, checkingAttachment: Bool = false) async throws -> CGImage {
         let data = try await imageData(url, limit: checkingAttachment ? byteLimit : 1_000_000)
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
@@ -112,13 +127,13 @@ struct NativeGIFPlayback: View {
         return data
     }
 
-    nonisolated private static func decode(_ data: Data, url: URL) throws -> Animation {
+    nonisolated private static func decode(_ data: Data, url: URL, frameSize: Int = 320) throws -> Animation {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               CGImageSourceGetType(source) as String? == "com.compuserve.gif" else { throw URLError(.cannotDecodeContentData) }
         let count = CGImageSourceGetCount(source)
         guard count > 0 else { throw URLError(.cannotDecodeContentData) }
         let stride = max(1, Int(ceil(Double(count) / 100)))
-        let maxFrameWidth = min(320, Int(sqrt(3_000_000 / Double(min(100, count)))))
+        let maxFrameWidth = min(frameSize, Int(sqrt(3_000_000 / Double(min(100, count)))))
         let options = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: maxFrameWidth,
             kCGImageSourceShouldCacheImmediately: true] as CFDictionary
         var frames: [Frame] = []
@@ -129,7 +144,8 @@ struct NativeGIFPlayback: View {
             frames.append(Frame(image: image, duration: seconds))
         }
         guard let first = frames.first else { throw URLError(.cannotDecodeContentData) }
-        return Animation(url: url, frames: frames, aspect: CGFloat(first.image.width) / CGFloat(first.image.height))
+        return Animation(url: url, frames: frames, aspect: CGFloat(first.image.width) / CGFloat(first.image.height),
+                         cycle: frames.reduce(0) { $0 + $1.duration })
     }
 
     nonisolated private static func delay(_ source: CGImageSource, index: Int) -> Double {

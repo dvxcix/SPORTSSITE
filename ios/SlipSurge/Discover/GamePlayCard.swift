@@ -5,6 +5,7 @@ struct GamePlayCard: View {
     let game: Scoreboard.Match
     let highlighted: Bool
     let canReact: Bool
+    let reactionStore: GameReactionStore
     let react: (String, Bool) async -> Void
     let discuss: () -> Void
     let showPitches: () -> Void
@@ -37,7 +38,8 @@ struct GamePlayCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             HStack(spacing: 2) {
-                GamePlayReactions(reactions: play.reactions, enabled: canReact, react: react)
+                GamePlayReactions(reactions: reactionStore.reactions(for: play.id, fallback: play.reactions),
+                                  enabled: canReact, react: react)
                 Spacer(minLength: 3)
                 if play.pitches?.isEmpty == false {
                     Button("Pitch details", systemImage: "scope", action: showPitches)

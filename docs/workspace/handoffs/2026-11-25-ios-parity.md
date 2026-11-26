@@ -2691,3 +2691,38 @@ physical-device push are still open.
   checkpoint 6dc6117d showed MIA/PHI change from 56–70 to 58–70 to 58–72
   without leaving Feed or manually refreshing. The clock advanced in the
   same tile. The physical iPhone remained on the same game’s play feed.
+
+## Native live game reactions and shared emoji · 26 November 2026
+
+- This checkpoint is on `codex/ios-parity-20261125`, following
+  `33976231`. The same SlipSurge catalog powers the play reaction picker and
+  inline social emoji. The production catalog returned 71 uploads, including
+  six animated GIFs. Play chips and incoming bursts render emoji artwork.
+  Known shortcodes expand when posts and chat messages are displayed.
+  Animated artwork uses bounded decoding and respects Reduce Motion.
+- Game Center subscribes to production reaction changes for the visible game,
+  refreshes the affected reaction state, and falls back to polling when the
+  socket is unavailable. A linked play stays in view as newer plays arrive.
+  Xcode caught the previous phone build at a memory limit while ImageIO was
+  decoding a lazy WebP avatar crop. The current build rasterizes the source
+  before taking avatar crops. Both devices stayed open through the tests.
+- Production Supabase migration
+  `20261125234813_native_play_reaction_catalog` is already applied. It
+  preserves legacy reaction values, validates custom codes against the
+  catalog, and keeps one reaction per account and play. The existing RLS
+  policies and Realtime publication remain in place. The web reaction
+  renderers also accept these images on this task branch. Production Vercel
+  received no deployment from this checkpoint.
+- On Miranda’s iPhone 16 Plus and the iPhone 18 Pro simulator, both signed
+  in as `@parlayparty`, open Heat–76ers game `401909317` and Giannis’s
+  second free throw at Q3 7:11, play `401909317419`. A simulator fire tap
+  produced a floating flame and one selected reaction on the phone without
+  reopening or refreshing. The phone captured that frame by 1.8 seconds
+  after the tap. Changing the reaction to the uploaded `fireaf` GIF
+  produced one selected custom chip on the phone, with different animation
+  frames observed. The test reaction was removed and the play’s original
+  zero rows were confirmed in Supabase. Distinct-account aggregation and
+  ownership still need a second signed-in account for a device check.
+- Simulator Debug and physical Xcode Run both opened the exact play. The
+  native and production suites passed 288/288, and the web TypeScript check
+  passed. Local device captures stay off Git.

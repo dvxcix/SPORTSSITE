@@ -29,7 +29,14 @@ enum AvatarArtwork {
     static let items = catalog?.items ?? []
     private static let byId = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
 
-    private static let stillAtlas = UIImage(named: "AvatarDecorations")?.cgImage
+    private static let stillAtlas: CGImage? = {
+        guard let source = UIImage(named: "AvatarDecorations")?.cgImage,
+              let bitmap = CGContext(data: nil, width: source.width, height: source.height, bitsPerComponent: 8,
+                                    bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        bitmap.draw(source, in: CGRect(x: 0, y: 0, width: source.width, height: source.height))
+        return bitmap.makeImage()
+    }()
     private static let tileOffsets = Dictionary(uniqueKeysWithValues: items.enumerated().map { ($0.element.id, $0.offset) })
     private static var tiles: [String: CGImage] = [:]
 

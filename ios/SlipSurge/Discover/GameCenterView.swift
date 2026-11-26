@@ -30,6 +30,7 @@ struct GameCenterView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var phase
+    @Environment(\.nativeEmojiLibrary) private var emojiLibrary
     @State private var section: Section
     @State private var snapshots: [Section: GameCenterData] = [:]
     @State private var lastResult: GameCenterData?
@@ -43,6 +44,7 @@ struct GameCenterView: View {
     @State private var draft = GameRoomDraft()
     @State private var requestedPlay: String?
     @State private var revealedPlay: String?
+    @State private var scrollAnchor: String?
     @State private var roomLastSeen: UUID?
     @State private var nearRoomEnd = true
     @State private var sharing = false
@@ -51,10 +53,11 @@ struct GameCenterView: View {
     @State private var busy = false
     @State private var failed = false
     @State private var reacting = Set<String>()
+    @State private var reactionStore = GameReactionStore()
+    @State private var contextReaction: GameCenterData.Play?
     @State private var timeline = GameTimeline()
     @State private var providerPlays: LivePlayUpdate?
     @State private var liveScore: LiveScorePacket?
-    @State private var confirmedPlays = Set<String>()
     @State private var scoringTimeline = GameTimeline()
     @State private var nearPlayStart = true
     @State private var latestSeenPlay: String?
@@ -161,6 +164,21 @@ struct GameCenterView: View {
                 if requested == .room || live || scheduledToStart { await load(requested) }
             }
         }
+        .task(id: emojiLibrary?.revision) { await emojiLibrary?.prepareAnimatedReactions() }
+        .task(id: (visible && phase == .active && (section == .plays || section == .overview)) ? api.userID : nil) {
+            if let userID = api.userID, visible, phase == .active, section == .plays || section == .overview {
+                await reactionStore.run(game: game.id, account: api.account, userID: userID)
+            }
+        }
+        .sheet(item: $contextReaction) { play in
+            NavigationStack {
+                NativeEmojiPicker(title: "React to play") { emoji in
+                    let existing = reactionStore.reactions(for: play.id, fallback: play.reactions)
+                    Task { await react(emoji, to: play, enabled: existing[emoji]?.mine != true) }
+                }
+            }
+            .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
+        }
         .task(id: followsPublicTimeline) {
             if followsPublicTimeline { await followPublicPlays() }
         }
@@ -212,8 +230,10 @@ struct GameCenterView: View {
                     }
                     if section == .room { roomEnd }
                 }
+                .scrollTargetLayout()
                 .padding(.horizontal, 14).padding(.vertical, 12)
             }
+            .scrollPosition(id: $scrollAnchor, anchor: .top)
             .id(section)
             .scrollDismissesKeyboard(.interactively)
             .refreshable { await load(section) }
@@ -257,12 +277,14 @@ struct GameCenterView: View {
             .onChange(of: section) {
                 if section == .room, roomLatest != nil { scrollRoom(proxy, animated: false) }
                 if section == .plays { latestSeenPlay = newestPlay; nearPlayStart = true }
+                scrollAnchor = nil
             }
             .onChange(of: newestPlay, initial: true) {
                 if nearPlayStart { latestSeenPlay = newestPlay }
             }
             .onChange(of: targetPlay, initial: true) {
                 if let targetPlay, revealedPlay != targetPlay {
+                    scrollAnchor = targetPlay
                     proxy.scrollTo(targetPlay, anchor: .top)
                     revealedPlay = targetPlay
                 }
@@ -491,12 +513,8 @@ struct GameCenterView: View {
                 ShareLink(item: url, subject: Text(title))
             }
             Button("Discuss in Game Room", systemImage: "bubble.left") { discuss(entry.play) }
-            if api.userID != nil, confirmedPlays.contains(entry.id) {
-                Menu("React", systemImage: "face.smiling") {
-                    ForEach(["🔥", "❤️", "⚡", "👏", "😂", "👀", "🏆", "👍"], id: \.self) { emoji in
-                        Button(emoji) { Task { await react(emoji, to: entry.play, enabled: entry.play.reactions[emoji]?.mine != true) } }
-                    }
-                }
+            if api.userID != nil {
+                Button("React", systemImage: "face.smiling") { contextReaction = entry.play }
             }
         }
     }
@@ -508,7 +526,7 @@ struct GameCenterView: View {
 
     private func playCard(_ entry: GameTimeline.Entry) -> some View {
         GamePlayCard(entry: entry, game: game, highlighted: entry.id == revealedPlay, canReact: api.userID != nil,
-            react: { emoji, enabled in await react(emoji, to: entry.play, enabled: enabled) },
+            reactionStore: reactionStore, react: { emoji, enabled in await react(emoji, to: entry.play, enabled: enabled) },
             discuss: { discuss(entry.play) }, showPitches: { pitchPlay = entry.play })
     }
 
@@ -653,7 +671,6 @@ struct GameCenterView: View {
 
     private func rebuildTimeline() {
         let confirmed = snapshots[.plays]?.plays ?? []
-        confirmedPlays = Set(confirmed.map(\.id))
         let displayed = providerPlays?.merge(with: confirmed) ?? confirmed
         timeline = GameTimeline(plays: displayed, groups: snapshots[.box]?.groups ?? [], basketball: game.sport == "nba")
     }
@@ -700,27 +717,12 @@ struct GameCenterView: View {
     }
 
     private func react(_ emoji: String, to play: GameCenterData.Play, enabled: Bool) async {
-        struct Action: Encodable { let kind = "react"; let play: String; let emoji: String; let enabled: Bool }
-        struct Response: Decodable { let ok: Bool }
-        let key = "\(play.id):\(emoji)"
-        guard api.userID != nil, reacting.insert(key).inserted else { return }
-        defer { reacting.remove(key) }
-        let requested = section
-        let arriving = requested == .plays && !confirmedPlays.contains(play.id)
-        let action = Action(play: play.id, emoji: emoji, enabled: enabled)
-        let query = baseQuery + [.init(name: "freshness", value: "live")]
+        guard let userID = api.userID, reacting.insert(play.id).inserted else { return }
+        defer { reacting.remove(play.id) }
         do {
-            for attempt in 0...5 {
-                do {
-                    let result = try await api.write(Response.self, path: path, query: query, body: action)
-                    guard result.ok else { throw URLError(.cannotParseResponse) }
-                    await load(requested)
-                    return
-                } catch let error as SlipSurgeHTTP.Status where error.code == 404 && arriving && attempt < 5 {
-                    // The provider can show a play before the account API has indexed it.
-                    try await Task.sleep(for: .seconds(4))
-                }
-            }
+            try await GameReactionStore.set(emoji, enabled: enabled, for: play.id, in: game.id,
+                                            account: api.account, userID: userID)
+            await reactionStore.refresh(game: game.id, account: api.account, userID: userID)
         } catch {
             if !Task.isCancelled { failed = true }
         }

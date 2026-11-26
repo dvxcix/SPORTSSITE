@@ -7,6 +7,7 @@ import type { ESPNGame, ESPNSummary, ESPNPlay, SportKey } from '@slipsurge/core/
 import { getGameStatus } from '@slipsurge/core/espn-api'
 import { PlayerAvatar, TeamLogo } from '@/components/sports/PlayerAvatar'
 import { PostCardClient } from '@/components/social/PostCardClient'
+import { EmojiText } from '@/components/social/EmojiText'
 import styles from '@/components/product/GameDetail.module.css'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { GameRoom, type GameRoomMessage } from '@/components/community/GameRoom'
@@ -460,7 +461,7 @@ function PlayRow({ play, teamMap, athleteMap, reactions, isLoggedIn, onReact, sp
                 fontSize: 13, color: 'var(--text-2)',
               }}
             >
-              {emoji} <span style={{ fontSize: 12, fontWeight: 700 }}>{data.count}</span>
+              <EmojiText text={emoji} /> <span style={{ fontSize: 12, fontWeight: 700 }}>{data.count}</span>
             </button>
           ))}
         </div>
