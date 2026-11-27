@@ -105,7 +105,7 @@ struct NflPlayDiagram: View {
     @ViewBuilder
     private func downAndDistance(_ field: GameCenterData.Play.Field) -> some View {
         if let down = field.down, (1...4).contains(down), let distance = field.distance {
-            Text("\(down)\(suffix(down)) & \(distance)")
+            Text("\(down)\(suffix(down)) & \(distance == field.startToGoal ? "Goal" : distance.formatted())")
         }
     }
 

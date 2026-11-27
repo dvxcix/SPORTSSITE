@@ -32,7 +32,8 @@ preserved. TestFlight 1.0 (9) remains installed beside SlipSurge Launch QA.
   Vercel production was ready. DAL–PHI returned 116 measured diagrams across
   193 plays. KC–BUF returned 23 measured plays across 32 as play-by-play was
   updating. The iPhone 18 Pro Max displayed the live KC–BUF field, player art,
-  the quarter cue and the Replay control. The iPad mini simulator displayed
+  the quarter cue and the Replay control. Opened James Cook’s five-yard
+  touchdown diagram from the live play list and exercised Replay. The iPad mini simulator displayed
   the DAL–PHI diagram in a narrow iPadOS window.
 - The independent UI critique found that the mirrored yard markers did not
   identify the ball spot. The revised iPhone and iPad captures name the exact
@@ -52,6 +53,12 @@ preserved. TestFlight 1.0 (9) remains installed beside SlipSurge Launch QA.
   The second account could read it after joining. The signed-out post and
   community URLs did not expose the fixture. The unlisted community and post
   remain available to the two test accounts for follow-up.
+- The native community reloaded with two members after the count release.
+  The native paid setup accepted the existing provider-backed test offer as
+  the membership requirement. The second account reached the membership
+  gate on the existing paid test community. The current test offer is live
+  billing. The native membership check displayed Ultimate administrator
+  access and kept the purchased plan identified as Free.
 - Main merged the mobile count API and the Discord fixture repair in
   `fdfeb1f8` ([PR #103](https://github.com/dvxcix/SPORTSSITE/pull/103)).
   The previous Discord test still mocked the route’s obsolete auth imports.
@@ -82,7 +89,7 @@ its tools were not callable from the current session.
 [TheReal release notes](https://docs.realapp.link/updates/changelog)
 
 The physical iPad narrow-window interaction, additional NFL/NBA chart gestures,
-paid creator membership test, Free → Ultimate purchase and provider restore,
+paid creator purchase and unlock, Free → Ultimate purchase and provider restore,
 and live Discord role grant and removal still need end-to-end verification.
 There is no verified SlipSurge Whop sandbox in this session. The second
 account has no verified Discord connection or designated test server here.
