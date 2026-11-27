@@ -54,6 +54,7 @@ struct ResearchBookComparison: View {
     @Environment(\.slipPalette) private var slipPalette
     private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.incomingNavigation) private var incomingNavigation
     @Environment(\.dynamicTypeSize) private var textSize
     @State private var section = Section.sportsbooks
     @State private var outcomes: [String: Outcome] = [:]
@@ -106,6 +107,7 @@ struct ResearchBookComparison: View {
         .tint(slipPalette.accent)
         .presentationDetents(textSize.isAccessibilitySize ? [.large] : [.fraction(0.68), .large])
         .presentationDragIndicator(.visible)
+        .onChange(of: incomingNavigation?.revision) { dismiss() }
         .task(id: retry) { await loadBooks() }
         .task(id: nextExpiry) {
             guard let nextExpiry else { return }

@@ -54,6 +54,20 @@ The next signed-in walkthrough found the same navigation issue in the shared GIP
 
 Devin completed App Store Connect sign-in. Build 1.0 (12) was added to the existing SlipSurge Internal QA group and App Store Connect showed Testing. TestFlight automatically installed it on the iPad. CoreDevice verified the signed release bundle `com.slipsurge.ios` at 1.0 (12). The existing SlipSurge session remained signed in.
 
-- The installed TestFlight build passed both Matchup Labs, both Odds Boards, and Inbox at 756 × 1,158 pt against production. The NBA compare-to-market inputs and archived opponent log loaded. Denver–Pittsburgh showed the archived scoring baseline and 4/10 ATS and total coverage.
+- The installed TestFlight build passed both Matchup Labs, both Odds Boards, and Inbox at 756 × 1,158 pt against production. The NBA projected score, market comparison, and archived opponent log loaded. Denver–Pittsburgh showed the archived scoring baseline and 4/10 ATS and total coverage.
 - At full screen, an incoming Inbox link dismissed the open Odds Board filter sheet. Named injury entries showed in Activity. Messages switched independently and the recipient picker opened and closed. Returning to Research retained the NBA sort.
-- The same signed-in app passed the archive and Inbox checks in the floating window at 525 × 931 pt and at 375 × 515 pt. The very short NFL Odds Board pass still needs a retry with its controls scrolled into view. The normal phone-height pass and broader signed-in smoke are in progress.
+- The same signed-in app passed the archive and Inbox checks in the floating window at 525 × 931 pt and at 375 × 515 pt. At 375 × 724 pt, the NFL filter sheet dismissed on the Inbox link, named Activity alerts loaded, the Messages recipient picker opened and closed, and the NFL sort survived returning to Research. Retested the even shorter NFL Odds Board window by scrolling the filter button into view. Its filter sheet opened and dismissed.
+
+### Extended TestFlight 12 coverage
+
+- Verified same-player and same-line Sportsbooks and History on both Odds Boards. NBA showed Andrew Wiggins at 5+ points for MIA at NYK, and the comparison retained the matchup while switching to History.
+- Opened First Basket Odds and History, NBA and NFL Cheatsheets, NFL MM and Slate Edge, and the MLB offseason slate’s empty state.
+- Walked all four Workspace sections, signed-in search, an NFL scoreboard entry into Game Center, the You profile and Appearance, the joined QA room and live GIPHY catalog, and the Feed link from the open GIF picker.
+- Verified Creator Studio, Admin queues, membership details showing Ultimate access, and the New Community form with the access selector available and creation disabled while empty. Alert Settings reported notifications enabled on the iPad and showed delivery and player-news controls.
+- End-to-end purchase and restore, receipt behavior with another account, live APNs delivery, multi-account messaging, and actual community publication still require separate release verification.
+
+### Compare odds follow-up
+
+TestFlight 12 reproduced a separate case of a sheet remaining over the destination. The NBA and NFL same-line comparisons and their History panels worked, but the displayed Compare odds sheet stayed over Inbox when an incoming link switched tabs.
+
+The shared Compare odds sheet now dismisses on the existing incoming-navigation signal, the same signal used by the GIF picker. Xcode built and signed the separate Launch QA bundle. With it pointed at production, the exact sequence passed for NBA at 756 × 1,158 pt and NFL at 375 × 724 pt. In each case the comparison opened with the same player and line, History opened, and the incoming link dismissed the sheet with Inbox accessible. The source fix is in this checkpoint for the next TestFlight build. The original TestFlight release on the iPad is 1.0 (12).
