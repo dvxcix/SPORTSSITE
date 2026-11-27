@@ -9,6 +9,7 @@ struct GamePlayCard: View {
     let react: (String, Bool) async -> Void
     let discuss: () -> Void
     let showPitches: () -> Void
+    var showDiagram: (() -> Void)? = nil
     let discussNote: (GameCenterData.Play) -> Void
     let reactToNote: (GameCenterData.Play) -> Void
 
@@ -52,6 +53,10 @@ struct GamePlayCard: View {
                 Spacer(minLength: 3)
                 if play.pitches?.isEmpty == false {
                     Button("Pitch details", systemImage: "scope", action: showPitches)
+                        .labelStyle(.iconOnly).frame(width: 44, height: 44)
+                }
+                if let showDiagram {
+                    Button("View play diagram", systemImage: "football", action: showDiagram)
                         .labelStyle(.iconOnly).frame(width: 44, height: 44)
                 }
                 Button("Discuss this play in Game Room", systemImage: "bubble.left", action: discuss)

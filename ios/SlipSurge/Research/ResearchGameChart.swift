@@ -49,9 +49,36 @@ struct ResearchGameChart: View {
     let games: [Game]
     let line: Double?
     let metric: String
-    var showLog = true
-    @State private var selected: Int?
+    let showLog: Bool
+    let isExpanded: Bool
+    @State private var inspectedID: Game.ID?
+    @State private var showAverage = false
+    @State private var showInspector = false
+    @State private var showGameLog: Bool
     @Environment(\.slipPalette) private var slipPalette
+
+    init(games: [Game], line: Double?, metric: String, showLog: Bool = true, isExpanded: Bool = false,
+         inspectedID: Game.ID? = nil, showAverage: Bool = false) {
+        self.games = games
+        self.line = line
+        self.metric = metric
+        self.showLog = showLog
+        self.isExpanded = isExpanded
+        _inspectedID = State(initialValue: inspectedID)
+        _showAverage = State(initialValue: showAverage)
+        _showGameLog = State(initialValue: isExpanded)
+    }
+
+    private var selected: Int? {
+        games.firstIndex { $0.id == inspectedID }
+    }
+
+    private var selection: Binding<Int?> {
+        Binding(get: { selected }, set: { index in
+            // Charts sends nil when a drag finishes. Preserve the inspected game.
+            if let index, games.indices.contains(index) { inspectedID = games[index].id }
+        })
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -59,10 +86,11 @@ struct ResearchGameChart: View {
                 Text("No recorded games for this sample.").font(.caption).foregroundStyle(.secondary)
             } else {
                 if line != nil { sampleResults }
+                if !isExpanded || games.count >= 3 { chartControls }
                 chart
                 if let sample = games.first { selectionReadout(sizingFrom: sample) }
                 if showLog {
-                    DisclosureGroup("Game log") {
+                    DisclosureGroup("Game log", isExpanded: $showGameLog) {
                         VStack(spacing: 8) {
                             ForEach(games.reversed()) { game in
                                 gameRow(game)
@@ -75,20 +103,62 @@ struct ResearchGameChart: View {
                 }
             }
         }
-        .sensoryFeedback(.selection, trigger: selected) { _, next in next != nil }
-        .onChange(of: games) { _, _ in selected = nil }
+        .sensoryFeedback(.selection, trigger: inspectedID) { _, next in next != nil }
+        .onChange(of: games) {
+            if selected == nil { inspectedID = nil }
+        }
+        .sheet(isPresented: $showInspector) {
+            NavigationStack {
+                ScrollView {
+                    ResearchGameChart(games: games, line: line, metric: metric, isExpanded: true,
+                                      inspectedID: inspectedID, showAverage: showAverage)
+                        .padding(16).frame(maxWidth: 680).frame(maxWidth: .infinity)
+                }
+                .background(slipPalette.background)
+                .navigationTitle(metric)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close chart", systemImage: "xmark") { showInspector = false }.labelStyle(.iconOnly)
+                    }
+                }
+            }
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var chartControls: some View {
+        HStack(spacing: 9) {
+            if games.count >= 3 {
+                Toggle("3-game average", systemImage: "chart.line.uptrend.xyaxis", isOn: $showAverage)
+                    .toggleStyle(.button).controlSize(.small).frame(minHeight: 44)
+            }
+            Spacer(minLength: 0)
+            if !isExpanded {
+                Button("Expand chart", systemImage: "arrow.up.left.and.arrow.down.right") { showInspector = true }
+                    .labelStyle(.iconOnly).buttonStyle(.bordered).buttonBorderShape(.circle)
+                    .frame(minWidth: 44, minHeight: 44)
+            }
+        }
+        .font(.caption.weight(.semibold))
     }
 
     private func selectionReadout(sizingFrom sample: Game) -> some View {
         ZStack(alignment: .leading) {
             gameRow(sample).hidden().accessibilityHidden(true)
             if let selected, games.indices.contains(selected) {
-                gameRow(games[selected])
+                HStack(spacing: 5) {
+                    gameRow(games[selected])
+                    Button("Clear selected game", systemImage: "xmark.circle.fill") { inspectedID = nil }
+                        .labelStyle(.iconOnly).buttonStyle(.plain).frame(width: 44, height: 44)
+                        .foregroundStyle(.secondary)
+                }
             } else if let line {
                 Label("\(metric) line \(line.formatted())", systemImage: "minus")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
+        .frame(minHeight: 44)
         .lineLimit(1)
     }
 
@@ -134,13 +204,24 @@ struct ResearchGameChart: View {
                         .accessibilityHidden(true)
                 }
             }
+            if showAverage {
+                ForEach(games.indices.dropFirst(2), id: \.self) { index in
+                    let average = games[(index - 2)...index].map(\.value).reduce(0, +) / 3
+                    LineMark(x: .value("Game", index), y: .value("3-game average", average))
+                        .foregroundStyle(slipPalette.text)
+                        .lineStyle(StrokeStyle(lineWidth: 2, dash: [3, 3]))
+                        .symbolSize(18)
+                        .accessibilityLabel("\(games[index].label), 3-game average")
+                        .accessibilityValue(average.formatted(.number.precision(.fractionLength(0...2))))
+                }
+            }
         }
         .chartXAxis(.hidden)
         .chartYAxis {
             AxisMarks(position: .trailing, values: .automatic(desiredCount: 4))
         }
-        .chartXSelection(value: $selected)
-        .frame(height: 140)
+        .chartXSelection(value: selection)
+        .frame(height: isExpanded ? 260 : 140)
         .accessibilityLabel("\(metric) by game, oldest to newest")
     }
 

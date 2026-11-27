@@ -78,6 +78,7 @@ struct GameCenterView: View {
     @State private var scoringOnly = false
     @State private var team = ""
     @State private var pitchPlay: GameCenterData.Play?
+    @State private var diagramPlay: GameTimeline.Entry?
     @State private var expandedPenalty: String?
 
     init(api: DiscoverAPI, game: Scoreboard.Match, date: String, play: String? = nil) {
@@ -186,6 +187,26 @@ struct GameCenterView: View {
         .sheet(isPresented: $showingGameAlerts) {
             GameAlertSettings(api: api, query: baseQuery, matchup: matchTitle)
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $diagramPlay) { entry in
+            NavigationStack {
+                ScrollView {
+                    NflPlayDiagram(entry: entry, game: game)
+                        .padding(16)
+                        .frame(maxWidth: 620)
+                        .frame(maxWidth: .infinity)
+                }
+                .background(slipPalette.background)
+                .navigationTitle("Play diagram")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close", systemImage: "xmark") { diagramPlay = nil }.labelStyle(.iconOnly)
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .navigationDestination(item: $selectedPost) { id in FeedThreadView(api: feed, id: id) }
         .navigationDestination(item: $selectedMember) { name in MemberProfileView(api: api, target: name) }
@@ -517,6 +538,12 @@ struct GameCenterView: View {
     @ViewBuilder private var playList: some View {
         let entries = timeline.entries
         let periods = orderedUnique(entries.reversed().compactMap { $0.play.period })
+        let filtered = entries.filter(includesPlay)
+        if game.sport == "nfl", let latest = filtered.first(where: { $0.context == nil }),
+           let mapped = filtered.first(where: { $0.context == nil && $0.play.field?.valid == true }) {
+            NflPlayDiagram(entry: mapped, game: game, showsEarlierPlay: mapped.id != latest.id,
+                           autoPlay: live && followingLive && mapped.id == latest.id)
+        }
         if !periods.isEmpty {
             HStack(spacing: 8) {
                 ResearchToolFilter(title: periodName, symbol: "clock", selection: selectedPeriod.isEmpty ? allPeriods : selectedPeriod) {
@@ -533,7 +560,6 @@ struct GameCenterView: View {
             Label("This play is outside the available timeline.", systemImage: "clock")
                 .font(.subheadline).foregroundStyle(.secondary)
         }
-        let filtered = entries.filter(includesPlay)
         if filtered.isEmpty {
             ContentUnavailableView(entries.isEmpty ? "No play-by-play available" : "No plays match these filters", systemImage: "list.bullet")
         }
@@ -621,6 +647,7 @@ struct GameCenterView: View {
         GamePlayCard(entry: entry, game: game, highlightedPlay: revealedPlay, canReact: api.userID != nil,
             reactionStore: reactionStore, react: { emoji, enabled in await react(emoji, to: entry.play, enabled: enabled) },
             discuss: { discuss(entry.play) }, showPitches: { pitchPlay = entry.play },
+            showDiagram: game.sport == "nfl" && entry.play.field?.valid == true ? { diagramPlay = entry } : nil,
             discussNote: discuss, reactToNote: { contextReaction = $0 })
     }
 

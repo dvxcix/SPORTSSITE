@@ -21,6 +21,22 @@ struct GameCenterData: Decodable {
     struct Play: Decodable, Identifiable {
         struct Athlete: Decodable, Identifiable { let id: String; let name: String; let headshot: URL? }
         struct Shot: Decodable { let attempted: Int; let scored: Int }
+        struct Field: Decodable, Equatable {
+            let startToGoal: Int
+            let endToGoal: Int
+            let down: Int?
+            let distance: Int?
+
+            var valid: Bool {
+                (1...99).contains(startToGoal) && (0...100).contains(endToGoal)
+            }
+
+            var yards: Int { startToGoal - endToGoal }
+            var firstDownToGoal: Int? {
+                guard let distance, (1...startToGoal).contains(distance) else { return nil }
+                return startToGoal - distance
+            }
+        }
         struct Reaction: Decodable, Equatable { let count: Int; let mine: Bool }
         struct Pitch: Decodable, Identifiable {
             let id: Int
@@ -51,6 +67,7 @@ struct GameCenterData: Decodable {
         let reactions: [String: Reaction]
         let pitches: [Pitch]?
         var shot: Shot? = nil
+        var field: Field? = nil
     }
 
     struct TeamStats: Decodable, Identifiable {

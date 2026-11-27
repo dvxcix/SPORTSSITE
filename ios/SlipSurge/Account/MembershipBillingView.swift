@@ -67,6 +67,11 @@ struct MembershipBillingView: View {
                             }
                         }.buttonStyle(.bordered)
                     }
+                    Button("Check membership access", systemImage: "arrow.clockwise") {
+                        Task { await checkAccess() }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(operation || checkingCheckout)
                     if storefront == "USA", let options = snapshot.membership.billingOptions, !options.isEmpty {
                         choosePlan(options)
                     } else if snapshot.accessTier != "ultimate", snapshot.membership.billingOptions?.isEmpty == false {
@@ -82,6 +87,7 @@ struct MembershipBillingView: View {
                 }
                 if let notice {
                     Text(notice).font(.subheadline).foregroundStyle(.secondary)
+                        .accessibilityAddTraits(.updatesFrequently)
                 }
                 if checkingCheckout { ProgressView("Checking your membership") }
             }
@@ -204,7 +210,7 @@ struct MembershipBillingView: View {
         for attempt in 0..<5 {
             await load()
             guard account.memberID == userID, !Task.isCancelled else { return }
-            if snapshot?.accessTier == "ultimate" {
+            if snapshot?.membership.purchasedTier == "ultimate", snapshot?.accessTier == "ultimate" {
                 await refreshAccount()
                 notice = "Ultimate is active."
                 return
@@ -214,7 +220,27 @@ struct MembershipBillingView: View {
                 catch { return }
             }
         }
-        notice = "Your access hasn’t updated yet. Pull to refresh after checkout is confirmed."
+        notice = "Your access hasn’t updated yet. Use Check membership access after Whop confirms the purchase."
+    }
+
+    private func checkAccess() async {
+        guard !checkingCheckout, !operation else { return }
+        checkingCheckout = true
+        notice = nil
+        defer { checkingCheckout = false }
+        await load()
+        guard account.memberID == userID, !Task.isCancelled else { return }
+        await refreshAccount()
+        guard let snapshot else { return }
+        if snapshot.membership.purchasedTier != "free" {
+            notice = "\(snapshot.membership.planLabel ?? snapshot.membership.purchasedTier.capitalized) is on this account."
+        } else if snapshot.role == "admin" {
+            notice = "Ultimate research is available through your administrator account."
+        } else if snapshot.membership.connectedWhop == false {
+            notice = "If you already subscribed through Whop, connect the Whop account you used for checkout."
+        } else {
+            notice = "Whop access hasn’t appeared on this account. Check your membership on Whop."
+        }
     }
 
     private func checkout() async {

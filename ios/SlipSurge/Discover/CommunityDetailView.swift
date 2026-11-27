@@ -9,6 +9,7 @@ struct CommunityDetailView: View {
         let allowMlb: Bool?
         let publicAudience: Bool?
         let role: String?
+        let memberCount: Int?
         let posts: [FeedPost]
         let nextCursor: String?
         let hasMore: Bool
@@ -65,6 +66,9 @@ struct CommunityDetailView: View {
     private var path: String { "/api/mobile/communities/\(group.id.uuidString.lowercased())" }
     private var feedAPI: FeedAPI { FeedAPI(account: api.account, userID: api.userID) }
     private var postFeed: Feed { feed == .rooms ? .posts : feed }
+    private var memberCountLabel: String? {
+        (page?.memberCount ?? group.memberCount).map { $0 == 1 ? "1 member" : "\($0.formatted()) members" }
+    }
 
     var body: some View {
         ScrollView {
@@ -74,7 +78,7 @@ struct CommunityDetailView: View {
                 } else {
                     DiscoverIdentityCard(title: group.name, subtitle: group.sport.map(LeagueArtwork.label) ?? "Community",
                         detail: group.description, avatar: group.avatarUrl, banner: group.bannerUrl, symbol: "person.2",
-                        count: group.memberCount.map { $0 == 1 ? "1 member" : "\($0.formatted()) members" })
+                        count: memberCountLabel)
                 }
                 if let feedback { Text(feedback).font(.footnote).foregroundStyle(.secondary) }
                 if api.userID == nil {
@@ -190,8 +194,8 @@ struct CommunityDetailView: View {
                 .clipShape(.rect(cornerRadius: 12))
             if let description = group.description, !description.isEmpty {
                 Text(description).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
-            } else if let count = group.memberCount {
-                Text(count == 1 ? "1 member" : "\(count.formatted()) members").font(.subheadline).foregroundStyle(.secondary)
+            } else if let memberCountLabel {
+                Text(memberCountLabel).font(.subheadline).foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
         }

@@ -193,11 +193,12 @@ struct PlayerArtwork: View {
     let logo: URL?
     let primary: Color
     let secondary: Color
+    var size: CGFloat = 48
 
     var body: some View {
         ResearchArtwork(urls: portraits, fallback: "person.fill", pointSize: 68, playerPortrait: true)
             .foregroundStyle(.white)
-            .frame(width: 48, height: 48)
+            .frame(width: size, height: size)
             .background {
                 LinearGradient(colors: [primary, secondary], startPoint: .topLeading, endPoint: .bottomTrailing)
             }

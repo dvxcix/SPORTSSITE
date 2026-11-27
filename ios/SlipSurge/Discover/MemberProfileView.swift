@@ -193,7 +193,9 @@ struct MemberProfileView: View {
         .navigationTitle(isYouTab ? "You" : page?.profile.username ?? "Profile")
         .navigationBarTitleDisplayMode(.inline)
         .socialDetail(!isYouTab)
-        .background { SlipBackdrop() }
+        .background {
+            SlipBackdrop(profileColors: page?.profile.teams.first?.colors?.compactMap { Color(hex: $0) } ?? [])
+        }
         .foregroundStyle(slipPalette.text)
         .navigationDestination(item: $selectedPost) { id in FeedThreadView(api: feed, id: id) }
         .toolbar {

@@ -1,5 +1,8 @@
 # SlipSurge iOS launch pipeline
 
+The [November 27 checkpoint](2026-11-27-ios-field-research-community.md) records
+NFL field diagrams, research chart changes and the two-account private community test.
+
 November 26–27, 2026. Native work continues on `codex/ios-parity-20261125`
 from build 9 source `691c4114` and handoff `a18dbe91`. The production Hub
 baseline for this pass is `a36c38ec`.

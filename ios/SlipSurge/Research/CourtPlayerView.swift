@@ -322,6 +322,9 @@ struct CourtPlayerView: View {
                     counts: samples.map { sample in
                         sample.map { "\($0.wins)/\($0.decisions)" + ($0.pushes > 0 ? " · \($0.pushes)P" : "") }
                     })
+                if let opponent = matchupOpponent {
+                    opponentTrend(opponent, metric: metric, history: history, reference: reference)
+                }
                 Picker("Games shown", selection: $window) {
                     ForEach([3, 5, 10, 20], id: \.self) { Text("L\($0)").tag($0) }
                 }
@@ -338,6 +341,43 @@ struct CourtPlayerView: View {
             }
         } else {
             Text("Choose a market to view recent form.").foregroundStyle(.secondary)
+        }
+    }
+
+    private var matchupOpponent: CourtBoard.Team? {
+        if game.homeTeam.id == player.team.id { return game.visitorTeam }
+        if game.visitorTeam.id == player.team.id { return game.homeTeam }
+        return nil
+    }
+
+    @ViewBuilder
+    private func opponentTrend(_ opponent: CourtBoard.Team, metric: CourtPlayerMarket,
+                               history: [CourtBoard.PlayerLog], reference: CourtPlayerMarket.Reference?) -> some View {
+        let meetings = history.filter { log in
+            guard let playerTeam = log.team?.id,
+                  let home = log.game.homeTeamId, let away = log.game.visitorTeamId else { return false }
+            return playerTeam == home && away == opponent.id || playerTeam == away && home == opponent.id
+        }
+        let values = meetings.compactMap(metric.statistic)
+        if !values.isEmpty {
+            let average = (values.reduce(0, +) / Double(values.count)).formatted(.number.precision(.fractionLength(0...1)))
+            let rate = reference.map { metric.rate(meetings[...], against: $0, side: side) }
+            HStack(alignment: .top, spacing: 8) {
+                ResearchArtwork(urls: opponent.logo.map { [$0] } ?? [], fallback: "shield")
+                    .frame(width: 23, height: 23).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Against \(opponent.abbreviation)").font(.caption.weight(.semibold))
+                    Text("\(values.count) \(values.count == 1 ? "game" : "games") · \(average) average")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 6)
+                if let rate, rate.decisions > 0 {
+                    Text("\(rate.wins)/\(rate.decisions) hit").font(.caption.weight(.semibold)).monospacedDigit()
+                }
+            }
+            .padding(9)
+            .background(.quaternary, in: .rect(cornerRadius: 10))
+            .accessibilityElement(children: .combine)
         }
     }
 

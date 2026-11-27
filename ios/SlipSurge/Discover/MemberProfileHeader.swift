@@ -63,24 +63,25 @@ struct MemberProfileHeader: View {
     }
 
     private var banner: some View {
-        let colors = profile.teams.first?.colors?.compactMap { Color(hex: $0) } ?? []
-        let primary = colors.first ?? accent
-        let secondary = colors.dropFirst().first ?? slipPalette.background
-        return GeometryReader { geometry in
+        GeometryReader { geometry in
             ZStack(alignment: .bottomLeading) {
-                LinearGradient(colors: [primary.opacity(0.55), secondary, slipPalette.surface],
-                    startPoint: .topLeading, endPoint: .bottomTrailing)
                 if let url = profile.bannerUrl, FeedPostCard.allowedMedia(url) {
                     ResearchArtwork(urls: [url], fallback: nil, contentMode: .fill, pointSize: 450)
-                        .frame(width: geometry.size.width, height: geometry.size.height).clipped()
-                } else if let team = profile.teams.first, let logo = team.logo {
-                    ResearchArtwork(urls: [logo], fallback: "shield", pointSize: 105).frame(width: 105, height: 105)
-                        .rotationEffect(.degrees(-10)).opacity(0.48)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing).padding(.trailing, 12)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .clipShape(.rect(cornerRadius: 14))
+                        .mask {
+                            LinearGradient(stops: [.init(color: .black, location: 0.68), .init(color: .clear, location: 1)],
+                                           startPoint: .top, endPoint: .bottom)
+                        }
+                        .accessibilityHidden(true)
+                } else if let logo = profile.teams.first?.logo {
+                    ResearchArtwork(urls: [logo], fallback: nil, pointSize: 91).frame(width: 91, height: 91)
+                        .opacity(0.68).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                        .padding(.trailing, 12)
                         .accessibilityHidden(true)
                 }
             }
-            .clipShape(.rect(cornerRadius: 16))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay(alignment: .bottomLeading) {
                 NativeMemberAvatar(url: profile.avatarUrl, name: profile.name, size: 67,
                     style: profile.avatarRingStyle, color: profile.avatarRingColor)
@@ -88,7 +89,7 @@ struct MemberProfileHeader: View {
                     .padding(.leading, 12).offset(y: 32)
             }
         }
-        .frame(height: 116)
+        .frame(height: profile.bannerUrl.map(FeedPostCard.allowedMedia) == true ? 128 : 88)
     }
 
     private var profileSummary: some View {
