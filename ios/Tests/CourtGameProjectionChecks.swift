@@ -44,8 +44,8 @@ struct CourtGameProjectionChecks {
         }
     }
 
-    private static func compare(_ offers: [GameMarketBook]) -> CourtGameMarketComparison {
-        CourtGameMarketComparison(offers: offers) { odds in
+    private static func compare(_ offers: [GameMarketBook]) -> GameMarketComparison {
+        GameMarketComparison(offers: offers) { odds in
             let price = Double(odds)
             return price < 0 ? -price / (100 - price) : 100 / (100 + price)
         }

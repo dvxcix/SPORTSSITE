@@ -95,7 +95,7 @@ struct CourtMatchupLab: View {
             case .overview:
                 overview
             case .projection:
-                CourtGameProjectionView(sportsbook: $projectionBook, board: board, observedGame: observedGame, openPregame: openPregame)
+                CourtGameProjectionView(sportsbook: $projectionBook, board: board, observedGame: observedGame, scope: scope, revision: revision, openPregame: openPregame)
             case .rotations:
                 ForEach(teams, id: \.id) { team in rotation(team) }
             case .defense:

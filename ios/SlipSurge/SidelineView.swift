@@ -24,8 +24,15 @@ struct SidelineView: View {
         var quotes: Bool { self == .touchdowns || self == .props || self == .oddsBoard }
     }
 
+    private enum MatchupPanel: String, CaseIterable {
+        case overview = "Overview", projection = "Projection"
+
+        var glyph: String { self == .overview ? "rectangle.split.2x1" : "chart.line.uptrend.xyaxis" }
+    }
+
     enum Entry: String {
         case core, props, oddsBoard = "odds-board", touchdowns, publicActivity = "public", markets, cheatsheets
+        case gameProjection = "game-projection"
         case mismatch = "mm", slateEdge = "slate-edge", ladders, usage, tracking, team, all, custom, research, movement, trends
     }
 
@@ -83,6 +90,8 @@ struct SidelineView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var date = Date.now
     @State private var section = Section.gameDay
+    @State private var matchupPanel: MatchupPanel
+    @State private var matchupBenchmark: String
     @State private var tool = Workspace.matchup
     @State private var selection = OddsSelection()
     @State private var selectedGameID: String?
@@ -95,7 +104,7 @@ struct SidelineView: View {
     @State private var useDefaultDate = true
     @State private var matrices = false
 
-    init(api: SidelineAPI, date: Date? = nil, linkedGame: String? = nil, entry: Entry = .core, book: String? = nil,
+    init(api: SidelineAPI, date: Date? = nil, linkedGame: String? = nil, entry: Entry = .core, book: String? = nil, comparisonBook: String? = nil,
         link: SidelineLinkContext = .init(), restoredOdds: ResearchResumeFilters.Odds? = nil) {
         self.api = api
         self.linkedGame = linkedGame
@@ -113,7 +122,7 @@ struct SidelineView: View {
         case .publicActivity: workspace = .publicActivity
         case .markets: workspace = .sportsbooks
         case .ladders: workspace = .ladders
-        case .research: workspace = .matchupLab
+        case .research, .gameProjection: workspace = .matchupLab
         case .trends: workspace = .trends
         default: workspace = .matchup
         }
@@ -132,6 +141,8 @@ struct SidelineView: View {
         default: .gameDay
         }
         _section = State(initialValue: link.capture == nil ? selected : .capture)
+        _matchupPanel = State(initialValue: entry == .gameProjection ? .projection : .overview)
+        _matchupBenchmark = State(initialValue: entry == .gameProjection ? (comparisonBook ?? "consensus") : "consensus")
         var initialOdds = OddsSelection()
         if let market = link.market { initialOdds.market = market }
         else if entry == .touchdowns { initialOdds.market = "anytime_td" }
@@ -263,7 +274,7 @@ struct SidelineView: View {
             case .all: "all"
             case .custom: "custom"
             }
-        case .matchupLab: "research"
+        case .matchupLab: matchupPanel == .projection ? "game-projection" : "research"
         case .mismatch: "mm"
         case .cheatsheets: "cheatsheets"
         case .trends: "trends"
@@ -276,16 +287,23 @@ struct SidelineView: View {
         components.scheme = "https"
         components.host = SlipSurgeHTTP.site
         components.path = "/the-sideline"
-        let mode = tool == .matchupLab || tool == .publicActivity || tool == .sportsbooks || tool == .cheatsheets || tool == .trends
+        let mode = view != "game-projection" && (tool == .matchupLab || tool == .publicActivity || tool == .sportsbooks || tool == .cheatsheets || tool == .trends)
         var query: [URLQueryItem] = [.init(name: "date", value: dayRequest.date), .init(name: "game", value: selectedGameID),
-            .init(name: mode ? "mode" : "view", value: view), .init(name: "book", value: selection.book)]
+            .init(name: mode ? "mode" : "view", value: view)]
+        if view == "game-projection" {
+            if matchupBenchmark != "consensus", Sportsbook.isKnown(matchupBenchmark) {
+                query.append(.init(name: "book", value: matchupBenchmark))
+            }
+        } else {
+            query.append(.init(name: "book", value: selection.book))
+        }
         if tool == .matchup, section.quotes { query.append(.init(name: "market", value: selection.market)) }
         if view == "odds-board", let filters = ResearchResumeFilters.item(oddsFilters.resumeFilters(following: selectedGameID)) {
             query.append(filters)
         }
         if link.sample != .automatic { query.append(.init(name: "sample", value: link.sample.rawValue)) }
         components.queryItems = query
-        return components.url.flatMap { NativeResumeLocation.destination($0, title: tool.rawValue) }
+        return components.url.flatMap { NativeResumeLocation.destination($0, title: view == "game-projection" ? "Matchup Projection" : tool.rawValue) }
     }
 
     private var boardPicker: some View {
@@ -387,7 +405,23 @@ struct SidelineView: View {
                 initialLine: gameID == linkedGame ? link.line : nil)
                 .id(gameID)
         case .matchupLab:
-            statBoard(date: date, gameID: gameID, teams: selectedTeams, mode: .matchup)
+            if case .member(let account, let user) = api.scope, let away = selectedTeams.first, let home = selectedTeams.last {
+                VStack(alignment: .leading, spacing: 12) {
+                    ResearchToolRail(title: "Matchup breakdown", choices: MatchupPanel.allCases,
+                        selection: $matchupPanel, label: \.rawValue, glyph: \.glyph, compact: true)
+                    switch matchupPanel {
+                    case .overview: statBoard(date: date, gameID: gameID, teams: selectedTeams, mode: .matchup)
+                    case .projection:
+                        SidelineTeamProjection(api: api, archiveAPI: .init(account: account, user: user), game: gameID, date: date,
+                            away: .init(name: away.code, logo: away.logo, color: away.primary, secondary: away.secondary),
+                            home: .init(name: home.code, logo: home.logo, color: home.primary, secondary: home.secondary),
+                            revision: revision, benchmark: $matchupBenchmark)
+                            .id(gameID)
+                    }
+                }
+            } else {
+                statBoard(date: date, gameID: gameID, teams: selectedTeams, mode: .matchup)
+            }
         }
     }
 

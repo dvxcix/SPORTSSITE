@@ -27,7 +27,7 @@ struct CourtGameProjection {
     var total: Double { homeScore + awayScore }
 }
 
-struct CourtGameMarketComparison {
+struct GameMarketComparison {
     struct Sample {
         let value: Double
         let count: Int
@@ -47,14 +47,14 @@ struct CourtGameMarketComparison {
     let total: Sample?
     let homeMoneylineProbability: Sample?
 
-    init(offers: [GameMarketBook], impliedProbability: (Int) -> Double) {
+    init(offers: [GameMarketBook], totalRange: ClosedRange<Double> = 50...500, impliedProbability: (Int) -> Double) {
         homeSpread = Sample(offers.compactMap { book in
             guard let home = book.spreadHome, let away = book.spreadAway,
                   (-100...100).contains(home), (-100...100).contains(away), abs(home + away) < 0.001 else { return nil }
             return home
         })
         total = Sample(offers.compactMap { book in
-            guard let total = book.total, (50...500).contains(total) else { return nil }
+            guard let total = book.total, totalRange.contains(total) else { return nil }
             return total
         })
         homeMoneylineProbability = Sample(offers.compactMap { book in

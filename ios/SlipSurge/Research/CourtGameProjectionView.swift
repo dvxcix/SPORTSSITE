@@ -4,6 +4,8 @@ struct CourtGameProjectionView: View {
     @Binding var sportsbook: String
     let board: CourtBoard
     let observedGame: CourtBoard.Game?
+    let scope: CourtView.Scope
+    let revision: Int
     let openPregame: () -> Void
     @Environment(\.slipPalette) private var palette
     @Environment(\.dynamicTypeSize) private var textSize
@@ -47,8 +49,8 @@ struct CourtGameProjectionView: View {
         return board.game.isFinal ? board.game : nil
     }
 
-    private var benchmark: CourtGameMarketComparison {
-        CourtGameMarketComparison(offers: selectedQuote.map { [$0] } ?? quotes, impliedProbability: ResearchOddsSlate.Price.implied)
+    private var benchmark: GameMarketComparison {
+        GameMarketComparison(offers: selectedQuote.map { [$0] } ?? quotes, impliedProbability: ResearchOddsSlate.Price.implied)
     }
 
     var body: some View {
@@ -73,6 +75,10 @@ struct CourtGameProjectionView: View {
                 if let finishedGame, let awayScore = finishedGame.visitorTeamScore, let homeScore = finishedGame.homeTeamScore,
                    (1...400).contains(awayScore), (1...400).contains(homeScore) {
                     gameResult(awayScore: awayScore, homeScore: homeScore, model: model, market: market)
+                }
+                if case .member(let account, let user) = scope {
+                    CourtMatchupHistory(api: .init(account: account, user: user), game: board.game,
+                        away: marketTeam(away), home: marketTeam(home), benchmark: selectedQuote?.vendor ?? Self.consensus, revision: revision)
                 }
             }
         }
@@ -145,7 +151,7 @@ struct CourtGameProjectionView: View {
             selection: Binding(get: { selectedQuote?.vendor ?? Self.consensus }, set: { sportsbook = $0 }))
     }
 
-    private func spreadAndTotal(_ model: CourtGameProjection?, market: CourtGameMarketComparison) -> some View {
+    private func spreadAndTotal(_ model: CourtGameProjection?, market: GameMarketComparison) -> some View {
         VStack(spacing: 8) {
             comparisonRow("Spread", projection: model.map { -$0.homeMargin },
                 difference: difference(model?.homeMargin, market.homeSpread.map { -$0.value },
@@ -158,7 +164,7 @@ struct CourtGameProjectionView: View {
     }
 
     private func comparisonRow(_ title: String, projection: Double?, difference: String?,
-                               sample: CourtGameMarketComparison.Sample?, format: (Double) -> String) -> some View {
+                               sample: GameMarketComparison.Sample?, format: (Double) -> String) -> some View {
         ResearchToolCard(color: palette.accent) {
             Text(title).font(.headline)
         } content: {
@@ -179,7 +185,7 @@ struct CourtGameProjectionView: View {
         }
     }
 
-    private func comparisonScale(projection: Double, market: CourtGameMarketComparison.Sample) -> some View {
+    private func comparisonScale(projection: Double, market: GameMarketComparison.Sample) -> some View {
         let lower = min(projection, market.range.lowerBound)
         let upper = max(projection, market.range.upperBound)
         let padding = max(1, (upper - lower) * 0.12)
@@ -204,7 +210,7 @@ struct CourtGameProjectionView: View {
         .accessibilityHidden(true)
     }
 
-    @ViewBuilder private func moneyline(_ sample: CourtGameMarketComparison.Sample?) -> some View {
+    @ViewBuilder private func moneyline(_ sample: GameMarketComparison.Sample?) -> some View {
         if let sample {
             ResearchToolCard(color: palette.accent) {
                 Text("Moneyline implied chances").font(.headline)
@@ -261,7 +267,7 @@ struct CourtGameProjectionView: View {
     }
 
     private func gameResult(awayScore: Int, homeScore: Int, model: CourtGameProjection?,
-                            market: CourtGameMarketComparison) -> some View {
+                            market: GameMarketComparison) -> some View {
         DisclosureGroup("Final result", isExpanded: $showingResult) {
             let total = awayScore + homeScore
             let margin = homeScore - awayScore

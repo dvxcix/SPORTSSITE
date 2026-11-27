@@ -242,7 +242,7 @@ struct LinkedResearchView: View {
         case .sideline:
             if let userID = account.memberID {
                 SidelineView(api: SidelineAPI(scope: .member(account, userID)), date: link.date, linkedGame: link.nflGameID,
-                    entry: link.sidelineEntry ?? .core, book: link.book ?? preferredBook, link: link.sidelineContext, restoredOdds: link.oddsFilters)
+                    entry: link.sidelineEntry ?? .core, book: link.book ?? preferredBook, comparisonBook: link.book, link: link.sidelineContext, restoredOdds: link.oddsFilters)
             } else if link.date != nil || link.nflGameID != nil || link.sidelineEntry != nil {
                 accessGate("Sign in to open this matchup")
             } else { SidelineView(api: SidelineAPI()) }
