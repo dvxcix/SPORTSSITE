@@ -38,6 +38,8 @@ struct NativeGIFPickerSheet: View {
     let userID: UUID
     let uploadKind: NativeMediaUpload.Kind
     let choose: (URL) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.incomingNavigation) private var incomingNavigation
     @State private var detent = PresentationDetent.large
 
     var body: some View {
@@ -46,6 +48,7 @@ struct NativeGIFPickerSheet: View {
         }
         .presentationDetents([.medium, .large], selection: $detent)
         .presentationDragIndicator(.visible)
+        .onChange(of: incomingNavigation?.revision) { dismiss() }
     }
 }
 

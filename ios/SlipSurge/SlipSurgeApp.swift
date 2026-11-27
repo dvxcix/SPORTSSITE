@@ -35,6 +35,16 @@ struct SlipSurgeApp: App {
     }
 }
 
+@Observable final class IncomingNavigation {
+    private(set) var revision = 0
+
+    func receivedLink() { revision += 1 }
+}
+
+extension EnvironmentValues {
+    @Entry var incomingNavigation: IncomingNavigation?
+}
+
 enum Appearance: String, CaseIterable {
     case color = "Color"
     case system = "System"

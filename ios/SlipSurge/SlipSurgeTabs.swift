@@ -54,6 +54,7 @@ struct SlipSurgeTabs: View {
     @State private var choseDestination = false
     @State private var keyboardVisible = false
     @State private var socialDetails = SocialDetailVisibility()
+    @State private var incomingNavigation = IncomingNavigation()
 
     private struct SitePresentation: Identifiable {
         let id = UUID()
@@ -183,6 +184,7 @@ struct SlipSurgeTabs: View {
         .environment(\.nativeEmojiLibrary, emojiLibrary)
         .environment(\.memberResearchPreferences, researchPreferences)
         .environment(\.nativeResume, resume)
+        .environment(\.incomingNavigation, incomingNavigation)
         .environment(\.presentOddsFilters, { oddsFilterSheet = $0 })
         .environment(\.presentNativeSpotlight, presentSpotlight)
         .environment(\.openURL, OpenURLAction(handler: openLink))
@@ -301,12 +303,14 @@ struct SlipSurgeTabs: View {
         }
         .onChange(of: notificationOpen, initial: true) { _, request in
             guard request != nil else { return }
+            incomingNavigation.receivedLink()
             spotlight = nil
             bypassIntroduction()
             presentInbox(section: .activity)
         }
         .onChange(of: incomingURL, initial: true) {
             guard let url = incomingURL else { return }
+            incomingNavigation.receivedLink()
             spotlight = nil
             bypassIntroduction()
             incomingURL = nil

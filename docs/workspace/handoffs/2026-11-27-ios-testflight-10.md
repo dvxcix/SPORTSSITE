@@ -32,3 +32,12 @@ The production walkthrough reproduced a stale Odds Board filter sheet over Inbox
 - On the patched build at 375 × 724 pt, selected a different NFL sort and left the filter sheet open. The incoming Inbox link dismissed the sheet, Activity showed named production injuries, and Messages opened and dismissed the recipient picker. Returning to Research preserved the changed sort.
 - Full-screen Community opened the joined private QA room. The composer showed Photo, GIF and Emoji and the keyboard dismissed on request. The You tab displayed the signed-in avatar and opened the Appearance setting. The run sent no posts or chat messages.
 - Xcode archived and exported 1.0 (11) from the source in this checkpoint. Verified its SlipSurge LLC distribution signature, production APNs entitlement, embedded extension versions, and absence of preview overrides. Its internal TestFlight upload and installation are tracked in the next status update.
+
+## Build 12 GIF picker follow-up
+
+Apple accepted the internal build 11 upload at 23:05 CET. The iPad still reported TestFlight build 9 during the checks below.
+
+The next signed-in walkthrough found the same navigation issue in the shared GIPHY picker. With a private room’s picker open, an incoming Feed link changed the tab behind it. The picker now dismisses itself when the app receives a supported URL or a notification open. The transition leaves composer draft state in the originating view.
+
+- Opened the joined QA room and the real GIPHY catalog at 375 × 724 pt. Invoked the incoming Feed link with the picker open. XCTest confirmed the picker disappeared and the Feed’s Latest and Picks controls were available. No messages or posts were submitted.
+- On-device functional checks are from the separate signed Launch QA bundle pointed at production. Verify the production TestFlight bundle version before recording release QA.
