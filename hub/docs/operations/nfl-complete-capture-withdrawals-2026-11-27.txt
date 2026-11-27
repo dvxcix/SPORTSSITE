@@ -1,0 +1,27 @@
+NFL complete-capture withdrawal repair — 2026-11-27
+
+Incident: 2026_12_KC_BUF showed partial source coverage despite a ready
+candidate built from complete source captures. The merged partial-view cache
+carried two absent FanDuel quotes from 2026-11-26T03:09:57.267Z:
+Travis Kelce three_plus_td (3), Ray Davis two_plus_td (2).
+Fresh complete FanDuel receipt: 2026-11-27T00:13:06.266Z, 18 tabs,
+parser v3, all tabs complete. Public picks receipt: 00:26:04.371Z.
+
+Immediate repair copied the unexpired ready candidate into its matching
+partial-view cache, retaining the candidate's actual fetched/expires times.
+No raw capture, snapshot, kickoff, archive, or source timestamp was rewritten.
+One admin capture attempt returned reservation-unavailable, browserSessions 0;
+no paid browser session launched. Extra spending was not the coverage issue.
+
+Permanent repair treats a complete per-game candidate as authoritative for
+absent quotes. Incomplete source reads still retain original last-seen prices;
+same-time price conflicts and inconsistent openings still mark incomplete.
+The partial-view cache moves v12 -> v13, retaining prior-cache fallback for
+genuine incomplete reads. Candidate and frozen research namespaces unchanged.
+
+Validation: 99/99 targeted odds-board, quote trust, results and kickoff tests;
+135/135 production smoke tests. Two new tests cover current and v12 rollout
+withdrawals. The current-cache regression fails on main's old merge logic.
+Broader market-integration/freeze checks have 18 existing failures (12 pass),
+reproduced with the unchanged main route: missing server-only/telemetry fixture
+dependencies and outdated freeze fixtures. These are not full certification.
