@@ -100,7 +100,8 @@ struct CourtPlayerView: View {
                     .listRowBackground(slipPalette.surface)
             } else {
                 ResearchToolRail(title: "Player research", choices: panelOptions,
-                    selection: Binding(get: { panel }, set: { selectedPanel = $0 }), label: \.label, glyph: \.icon)
+                    selection: Binding(get: { panel }, set: { selectedPanel = $0 }), label: \.label, glyph: \.icon,
+                    scrollAnchor: nil)
                     .listRowInsets(.init(top: 2, leading: 0, bottom: 2, trailing: 0))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)

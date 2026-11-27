@@ -47,6 +47,7 @@ struct CourtVolumeTrends: View {
     @State private var filters = Filters()
     @Environment(\.slipPalette) private var palette
     @Environment(\.dynamicTypeSize) private var textSize
+    @Environment(\.horizontalSizeClass) private var widthClass
 
     private var teams: [CourtBoard.Team] { [board.game.visitorTeam, board.game.homeTeam] }
 
@@ -88,37 +89,42 @@ struct CourtVolumeTrends: View {
         let actions = textSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
             : AnyLayout(HStackLayout(spacing: 8))
+        let filterBar = widthClass == .regular && textSize <= .large
+            ? AnyLayout(HStackLayout(spacing: 8))
+            : AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
         let summary = "Last \(filters.window) · \(filters.venue.rawValue) · \(filters.order.rawValue)"
         return VStack(alignment: .leading, spacing: 8) {
-            actions {
-                if case .member(_, let account) = scope {
-                    ResearchSavedFilters(account: account, board: "court.volume", current: filters) {
-                        filters = $0
-                        if !teams.contains(where: { $0.abbreviation == filters.team }) { filters.team = nil }
+            filterBar {
+                actions {
+                    if case .member(_, let account) = scope {
+                        ResearchSavedFilters(account: account, board: "court.volume", current: filters) {
+                            filters = $0
+                            if !teams.contains(where: { $0.abbreviation == filters.team }) { filters.team = nil }
+                        }
                     }
+                    ResearchArtworkPicker(title: "Team", options: [.init(id: "", title: "Both teams", icon: "person.2")] +
+                        teams.map { .team(id: $0.abbreviation, title: $0.abbreviation, logo: $0.logo) },
+                        selection: Binding(get: { filters.team ?? "" }, set: { filters.team = $0.isEmpty ? nil : $0 }))
                 }
-                ResearchArtworkPicker(title: "Team", options: [.init(id: "", title: "Both teams", icon: "person.2")] +
-                    teams.map { .team(id: $0.abbreviation, title: $0.abbreviation, logo: $0.logo) },
-                    selection: Binding(get: { filters.team ?? "" }, set: { filters.team = $0.isEmpty ? nil : $0 }))
-            }
-            actions {
-                ResearchToolFilter(title: "Usage metric", symbol: "chart.bar", selection: filters.metric.rawValue) {
-                    Picker("Usage metric", selection: $filters.metric) {
-                        ForEach(Metric.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                actions {
+                    ResearchToolFilter(title: "Usage metric", symbol: "chart.bar", selection: filters.metric.rawValue) {
+                        Picker("Usage metric", selection: $filters.metric) {
+                            ForEach(Metric.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        }
                     }
+                    ResearchToolFilter(title: "More volume filters", symbol: "line.3.horizontal.decrease", selection: "Filters") {
+                        Picker("Recent games", selection: $filters.window) {
+                            ForEach([3, 5, 10], id: \.self) { Text("Last \($0)").tag($0) }
+                        }
+                        Picker("Venue", selection: $filters.venue) {
+                            ForEach(CourtPlayerMarket.Venue.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        }
+                        Picker("Sort", selection: $filters.order) {
+                            ForEach(Order.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        }
+                    }
+                    .accessibilityValue(summary)
                 }
-                ResearchToolFilter(title: "More volume filters", symbol: "line.3.horizontal.decrease", selection: "Filters") {
-                    Picker("Recent games", selection: $filters.window) {
-                        ForEach([3, 5, 10], id: \.self) { Text("Last \($0)").tag($0) }
-                    }
-                    Picker("Venue", selection: $filters.venue) {
-                        ForEach(CourtPlayerMarket.Venue.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    Picker("Sort", selection: $filters.order) {
-                        ForEach(Order.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                }
-                .accessibilityValue(summary)
             }
             Text(summary).font(.caption).foregroundStyle(.secondary)
                 .accessibilityHidden(true)
@@ -142,6 +148,7 @@ struct CourtVolumeTrends: View {
                     Spacer()
                     Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.secondary)
                 }
+                .contentShape(Rectangle())
             }.buttonStyle(.plain)
         } content: {
             ResearchToolValues(items: [

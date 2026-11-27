@@ -231,6 +231,7 @@ private struct CourtPropTrendsView: View {
                     Spacer(minLength: 4)
                     Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.secondary)
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         } content: {

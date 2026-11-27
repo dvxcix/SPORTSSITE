@@ -7,6 +7,7 @@ struct ResearchToolRail<Choice: Hashable>: View {
     let label: (Choice) -> String
     let glyph: (Choice) -> String
     var compact = false
+    var scrollAnchor: UnitPoint? = .center
 
     @Environment(\.slipPalette) private var slipPalette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -39,9 +40,9 @@ struct ResearchToolRail<Choice: Hashable>: View {
                 .padding(4)
             }
             .scrollIndicators(.hidden)
-            .onAppear { proxy.scrollTo(selection, anchor: .center) }
+            .onAppear { proxy.scrollTo(selection, anchor: scrollAnchor) }
             .onChange(of: selection) { _, value in
-                withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { proxy.scrollTo(value, anchor: .center) }
+                withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { proxy.scrollTo(value, anchor: scrollAnchor) }
             }
         }
     }

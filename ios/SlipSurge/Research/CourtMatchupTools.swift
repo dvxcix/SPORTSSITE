@@ -209,6 +209,7 @@ struct CourtMatchupLab: View {
                         Text(minutes(player.seasonMinutes))
                             .font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 if player.id != list.prefix(8).last?.id { Divider() }
