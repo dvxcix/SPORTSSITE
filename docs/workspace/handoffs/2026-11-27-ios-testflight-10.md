@@ -49,3 +49,11 @@ The next signed-in walkthrough found the same navigation issue in the shared GIP
 - Additional production smoke covered Feed, the room composer and GIPHY, the You avatar and Appearance settings, Workspace, Memberships, and Live Games. The NFL scoreboard opened Denver at Pittsburgh into Game Center with a live quarter, score, field diagram and play details. Workspace and Memberships checks were read-only.
 - Devin’s iPad verified the installed production TestFlight bundle as 1.0 (9). The TestFlight product and eligible builds list also showed 9 as the newest available. App Store Connect requires a fresh sign-in before checking processing and assigning 12 to SlipSurge Internal QA. Resume with installation through TestFlight, confirm the installed build, and repeat signed-in research and Inbox in both window sizes. Live delivery, purchases and restore, and broader role-based tests still need release evidence.
 - Rechecked homepage, Feed, scores and the signed-out protection for both reviewed mobile APIs. Preserved the existing Mac Xcode edits and the Windows workspace.
+
+### Build 12 assigned and installed
+
+Devin completed App Store Connect sign-in. Build 1.0 (12) was added to the existing SlipSurge Internal QA group and App Store Connect showed Testing. TestFlight automatically installed it on the iPad. CoreDevice verified the signed release bundle `com.slipsurge.ios` at 1.0 (12). The existing SlipSurge session remained signed in.
+
+- The installed TestFlight build passed both Matchup Labs, both Odds Boards, and Inbox at 756 × 1,158 pt against production. The NBA compare-to-market inputs and archived opponent log loaded. Denver–Pittsburgh showed the archived scoring baseline and 4/10 ATS and total coverage.
+- At full screen, an incoming Inbox link dismissed the open Odds Board filter sheet. Named injury entries showed in Activity. Messages switched independently and the recipient picker opened and closed. Returning to Research retained the NBA sort.
+- The same signed-in app passed the archive and Inbox checks in the floating window at 525 × 931 pt and at 375 × 515 pt. The very short NFL Odds Board pass still needs a retry with its controls scrolled into view. The normal phone-height pass and broader signed-in smoke are in progress.
