@@ -21,6 +21,19 @@ struct ActivityNotification: Decodable, Identifiable {
     let targetId: UUID?
     let targetType: String?
     let artworkUrl: URL?
+    let playerName: String?
+
+    private static let shortPlayerStatuses: Set<String> = [
+        "active", "inactive", "available", "unavailable", "out", "questionable", "probable", "doubtful"
+    ]
+
+    var displayMessage: String? {
+        guard type == "injury_update" || type == "roster_move",
+              let message, let playerName, !playerName.isEmpty else { return message }
+        let status = message.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: .punctuationCharacters)
+        guard Self.shortPlayerStatuses.contains(status.lowercased()) else { return message }
+        return "\(playerName) · \(status.lowercased())"
+    }
 
     enum Destination: Hashable {
         case post(UUID), conversation(MessageDestination), discovery, community(UUID), profile(UUID), research(ResearchDeepLink), game(GameLink)

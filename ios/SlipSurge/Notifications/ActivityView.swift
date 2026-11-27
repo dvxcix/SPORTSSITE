@@ -213,7 +213,7 @@ struct ActivityView: View {
                     (Text(verbatim: name).fontWeight(.bold) +
                         Text(verbatim: row.message.map { " " + $0 } ?? ""))
                         .font(.subheadline)
-                } else if let message = row.message {
+                } else if let message = row.displayMessage {
                     Text(verbatim: message).font(.subheadline.weight(row.read ? .regular : .semibold))
                 }
                 if let body = row.body { Text(verbatim: body).font(.subheadline).foregroundStyle(.secondary) }
