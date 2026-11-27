@@ -11,6 +11,7 @@ struct MembershipBillingView: View {
     private struct Snapshot: Decodable {
         struct Existing: Decodable {
             struct Quote: Decodable { let id: String; let price: String; let days: Int; let trialDays: Int }
+            struct AppleOffer: Decodable { let productId: String; let canPurchase: Bool }
             let purchasedTier: String
             let status: String?
             let currentPeriodEnd: String?
@@ -20,6 +21,7 @@ struct MembershipBillingView: View {
             let connectedWhop: Bool?
             let betaAccess: Bool?
             let billingOptions: [String: Quote]?
+            let storeKit: AppleOffer?
         }
 
         let id: UUID
@@ -36,6 +38,8 @@ struct MembershipBillingView: View {
     @Environment(\.scenePhase) private var phase
     @Environment(\.openURL) private var openURL
     @State private var snapshot: Snapshot?
+    @State private var appleProduct: Product?
+    @State private var loadingAppleProduct = false
     @State private var storefront: String?
     @State private var offer = Offer.monthly
     @State private var expectedState: String?
@@ -72,7 +76,9 @@ struct MembershipBillingView: View {
                     }
                     .buttonStyle(.bordered)
                     .disabled(operation || checkingCheckout)
-                    if storefront == "USA", let options = snapshot.membership.billingOptions, !options.isEmpty {
+                    if let apple = snapshot.membership.storeKit, apple.productId == UltimateAppleSubscription.productID {
+                        applePlan(canPurchase: apple.canPurchase)
+                    } else if storefront == "USA", let options = snapshot.membership.billingOptions, !options.isEmpty {
                         choosePlan(options)
                     } else if snapshot.accessTier != "ultimate", snapshot.membership.billingOptions?.isEmpty == false {
                         Label("New subscriptions are currently unavailable in your App Store region.", systemImage: "info.circle")
@@ -98,6 +104,7 @@ struct MembershipBillingView: View {
         .background(slipPalette.background)
         .foregroundStyle(slipPalette.text)
         .task(id: retry) { await load() }
+        .task(id: snapshot?.membership.storeKit?.canPurchase) { await loadAppleProduct() }
         .task {
             for await current in Storefront.updates { storefront = current.countryCode }
         }
@@ -127,6 +134,10 @@ struct MembershipBillingView: View {
         } content: {
             LabeledContent("Purchased plan", value: snapshot.membership.planLabel ?? snapshot.membership.purchasedTier.capitalized)
             if snapshot.membership.provider == "whop" { LabeledContent("Billed through", value: "Whop") }
+            if snapshot.membership.provider == "apple" {
+                LabeledContent("Billed through", value: "Apple")
+                Link("Manage Apple subscription", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
+            }
             if snapshot.role == "admin" {
                 Label("Full access as an administrator", systemImage: "checkmark.shield").font(.caption).foregroundStyle(.secondary)
             } else if snapshot.membership.betaAccess == true {
@@ -182,6 +193,97 @@ struct MembershipBillingView: View {
                 .foregroundStyle(Color(rgb: 0x150E0C)).background(Color(rgb: 0xFA4616), in: .rect(cornerRadius: 12))
             }
             .buttonStyle(SlipSurgePressStyle()).disabled(operation || checkingCheckout || options[offer.rawValue] == nil)
+        }
+    }
+
+    private func applePlan(canPurchase: Bool) -> some View {
+        ResearchToolCard(color: slipPalette.accent) {
+            Text("Ultimate Monthly").font(.title2.weight(.heavy))
+        } content: {
+            if canPurchase {
+                if let appleProduct {
+                    Text("\(appleProduct.displayPrice) per month").font(.headline)
+                    Text("Full NBA and NFL slates, sportsbook comparisons, and player research.")
+                        .font(.subheadline)
+                    Text("Renews monthly until canceled in your Apple Account settings.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Button("Subscribe with Apple", systemImage: "apple.logo") {
+                        Task { await purchaseWithApple(appleProduct) }
+                    }
+                    .buttonStyle(SlipSurgePrimaryButtonStyle())
+                    .disabled(operation || checkingCheckout)
+                } else if loadingAppleProduct {
+                    ProgressView("Loading App Store price")
+                } else {
+                    Text("The monthly plan is currently unavailable in this App Store.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    Button("Reload App Store price") { Task { await loadAppleProduct() } }
+                        .disabled(operation)
+                }
+            }
+            Button("Restore Apple purchases", systemImage: "arrow.clockwise") {
+                Task { await restoreApplePurchase() }
+            }
+            .buttonStyle(.bordered)
+            .disabled(operation || checkingCheckout)
+            if canPurchase {
+                Link("Terms of Use", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
+                InformationLink(page: .privacy, account: account)
+            }
+        }
+    }
+
+    private func loadAppleProduct() async {
+        guard snapshot?.membership.storeKit?.canPurchase == true, !loadingAppleProduct else { return }
+        loadingAppleProduct = true
+        defer { loadingAppleProduct = false }
+        do {
+            let product = try await UltimateAppleSubscription.product()
+            if !Task.isCancelled { appleProduct = product }
+        } catch {
+            if !Task.isCancelled { appleProduct = nil }
+        }
+    }
+
+    private func purchaseWithApple(_ product: Product) async {
+        guard !operation, !checkingCheckout, snapshot?.membership.storeKit?.canPurchase == true else { return }
+        operation = true
+        notice = nil
+        defer { operation = false }
+        do {
+            switch try await UltimateAppleSubscription.purchase(product, account: account, userID: userID) {
+            case .active:
+                await load()
+                notice = "Ultimate is active."
+            case .pending:
+                notice = "Apple is waiting for purchase approval. Ultimate will unlock after verification."
+            case .cancelled:
+                break
+            case .verificationPending:
+                notice = "Apple purchase confirmation is pending. Try Restore Apple purchases to check again."
+            }
+        } catch {
+            notice = "The Apple purchase couldn’t start. Try again from Memberships."
+        }
+    }
+
+    private func restoreApplePurchase() async {
+        guard !operation, !checkingCheckout else { return }
+        operation = true
+        notice = nil
+        defer { operation = false }
+        do {
+            switch try await UltimateAppleSubscription.restore(account: account, userID: userID) {
+            case .active:
+                await load()
+                notice = "Ultimate was restored."
+            case .none:
+                notice = "Apple found no active Ultimate subscription for this account."
+            case .otherAccount:
+                notice = "This Apple subscription belongs to a different SlipSurge account."
+            }
+        } catch {
+            notice = "Apple purchases couldn’t be restored yet. Try again in a moment."
         }
     }
 

@@ -28,6 +28,10 @@ struct SlipSurgeApp: App {
                     push.onOpenGame = { incomingURL = $0 }
                     await push.updateAccount(account)
                 }
+                .task(id: account.memberID) {
+                    guard let userID = account.memberID else { return }
+                    await UltimateAppleSubscription.observe(account: account, userID: userID)
+                }
                 .onChange(of: phase) { _, state in
                     if state == .active { Task { await push.sync() } }
                 }
