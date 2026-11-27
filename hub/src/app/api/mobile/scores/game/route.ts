@@ -3,6 +3,7 @@ import { getGameStatus, getGameSummary, getScoreboard, type SportKey } from '@sl
 import { getBlockedEitherWayIds, isAccountId } from '@/lib/blocks'
 import { POST_WITH_AUTHOR, type FeedPost } from '@/lib/feedQuery'
 import { getNflGameCenter } from '@/lib/nflGameCenterServer'
+import { espnNflPlayField } from '@/lib/nflPlayField'
 import { nbaGameReference } from '@/lib/nbaGameReference'
 import { loadNativeMlbGame } from '@/lib/nativeMlbGameCenter'
 import { isGuestVisible, mobilePost, nativeAnonymousClient } from '@/lib/nativeSocial'
@@ -90,6 +91,7 @@ export async function GET(request: Request) {
         plays: [...lineup].reverse().map(play => ({ id: String(play.id), title: play.type?.text ?? null, text: play.text ?? '',
           period: play.period?.displayValue ?? null, clock: play.clock?.displayValue ?? null, home: play.homeScore ?? null,
           away: play.awayScore ?? null, scoring: play.scoringPlay === true, teamId: play.team?.id ?? null,
+          ...(sport === 'nfl' ? { field: espnNflPlayField(play) } : {}),
           athletes: (play.athletes ?? []).slice(0, 4).map(player => ({ id: player.athlete.id, name: player.athlete.displayName, headshot: player.athlete.headshot?.href ?? null })),
           ...('pitches' in found ? { pitches: found.pitches.get(String(play.id)) ?? [] } : {}),
           reactions: Object.fromEntries([...Map.groupBy(byPlay.get(String(play.id)) ?? [], item => item.emoji)].map(([emoji, rows]) =>

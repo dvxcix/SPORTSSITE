@@ -34,6 +34,23 @@ export interface ESPNGame {
   links?: { href: string; text: string }[]
 }
 
+export interface NflPlayField {
+  startToGoal: number
+  endToGoal: number
+  down?: number
+  distance?: number
+}
+
+interface ESPNPlaySpot {
+  yardLine?: number
+  yardsToEndzone?: number
+  distance?: number
+  down?: number
+  downDistanceText?: string
+  isRedZone?: boolean
+  team?: { id: string }
+}
+
 export interface ESPNPlay {
   id: string
   sequenceNumber: string
@@ -47,7 +64,10 @@ export interface ESPNPlay {
   clock: { displayValue: string }
   wallclock?: string
   team?: { id: string }
-  start?: { yardLine?: number; distance?: number; down?: number; downDistanceText?: string; isRedZone?: boolean }
+  start?: ESPNPlaySpot
+  end?: ESPNPlaySpot
+  statYardage?: number
+  nflField?: NflPlayField
   athletes?: {
     athlete: {
       id: string
