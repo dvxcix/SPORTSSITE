@@ -41,3 +41,11 @@ The next signed-in walkthrough found the same navigation issue in the shared GIP
 
 - Opened the joined QA room and the real GIPHY catalog at 375 × 724 pt. Invoked the incoming Feed link with the picker open. XCTest confirmed the picker disappeared and the Feed’s Latest and Picks controls were available. No messages or posts were submitted.
 - On-device functional checks are from the separate signed Launch QA bundle pointed at production. Verify the production TestFlight bundle version before recording release QA.
+
+### Internal build 12 status at 23:10 CET
+
+- Xcode built 1.0 (12) from `d46b03da6c2646c2e3db9037ae565770ac0ff68b` and Apple accepted the internal TestFlight upload at 23:10 CET. The verified distribution package uses SlipSurge LLC signing, the canonical app ID, production APNs and matching versions in both bundled extensions. Apple reported the pre-existing missing GIPHY SDK dSYM warning.
+- Full-screen physical QA at 756 × 1,158 pt changed the NBA Odds Board sort, opened Inbox while the filter sheet was showing, and verified the sheet closed. Returning to Research retained the selected sort. The full NBA archive test also passed after giving the signed-in data time to load. The corresponding NFL-to-Inbox regression passed at 375 × 724 pt.
+- Additional production smoke covered Feed, the room composer and GIPHY, the You avatar and Appearance settings, Workspace, Memberships, and Live Games. The NFL scoreboard opened Denver at Pittsburgh into Game Center with a live quarter, score, field diagram and play details. Workspace and Memberships checks were read-only.
+- Devin’s iPad verified the installed production TestFlight bundle as 1.0 (9). The TestFlight product and eligible builds list also showed 9 as the newest available. App Store Connect requires a fresh sign-in before checking processing and assigning 12 to SlipSurge Internal QA. Resume with installation through TestFlight, confirm the installed build, and repeat signed-in research and Inbox in both window sizes. Live delivery, purchases and restore, and broader role-based tests still need release evidence.
+- Rechecked homepage, Feed, scores and the signed-out protection for both reviewed mobile APIs. Preserved the existing Mac Xcode edits and the Windows workspace.
