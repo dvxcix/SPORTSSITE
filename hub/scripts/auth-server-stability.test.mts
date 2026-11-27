@@ -261,6 +261,7 @@ test('tier gates distinguish unavailable membership from a verified free account
     const mod = await compiled('lib/requireTier.ts', {
       'next/headers': { headers: async () => new Headers() }, '@supabase/supabase-js': { createClient: () => client },
       '@/lib/supabase/server': { createClient: async () => client },
+      '@/lib/storeKitEntitlements': { ownsStoreKitUltimate: async () => false },
       '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: dbError ? null : { tier: 'free' }, error: dbError }) }) }) }) }) },
       '@slipsurge/core/tiers': { effectiveTier: (tier: string) => tier, hasFullAccessOverride: () => false, hasTierAccess: () => false },
     })
@@ -289,6 +290,7 @@ test('NBA and NFL gates return failed verification before any entitlement or spo
   for (const [file, method] of [['lib/paintAccess.ts', 'requirePaintAccess'], ['lib/nflAccess.ts', 'requireNflAccess']]) {
     const mod = await compiled(file, {
       'server-only': {}, '@/lib/nbaAccessPolicy': {}, '@/lib/nflAccessPolicy': {}, '@slipsurge/core/tiers': {},
+      '@/lib/storeKitEntitlements': { ownsStoreKitUltimate: async () => { throw new Error('Purchase read before verification') } },
       '@/lib/supabase/admin': { createAdminClient: () => { throw new Error('Privileged read before verification') } },
       '@/lib/requireTier': { resolveAuthedClient: async () => ({ userId: null, error: NextResponse.json({ code: 'AUTH_TEMPORARILY_UNAVAILABLE' }, { status: 503 }), supabase: { from: () => { throw new Error('Read before verification') } } }) },
     })

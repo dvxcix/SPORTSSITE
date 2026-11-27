@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hasTierAccess, hasFullAccessOverride, effectiveTier, type Tier } from '@slipsurge/core/tiers'
 import { AUTH_UNAVAILABLE_HEADERS, isRetryableAuthError } from './supabase/authErrors'
+import { ownsStoreKitUltimate } from '@/lib/storeKitEntitlements'
 
 function unavailable() {
   return NextResponse.json({ error: 'Account verification temporarily unavailable', code: 'AUTH_TEMPORARILY_UNAVAILABLE' }, { status: 503, headers: AUTH_UNAVAILABLE_HEADERS })
@@ -67,6 +68,7 @@ export async function requireVerifiedUserTier(userId: string, minTier: Tier): Pr
   if (hasFullAccessOverride(data?.account_type, data?.beta_access_active) || hasTierAccess(userTier, minTier)) {
     return { userId }
   }
+  if (await ownsStoreKitUltimate(userId)) return { userId }
   return { error: NextResponse.json({ error: 'Upgrade required' }, { status: 403 }) }
 }
 
@@ -84,8 +86,9 @@ export async function getEffectiveTier(): Promise<{ error?: NextResponse; userId
 
   const { data, error } = await createAdminClient().from('users').select('tier, account_type, beta_access_active, discord_advanced_claimed, admin_granted_tier').eq('id', userId).single()
   if (error || !data) return { error: unavailable() }
-  const tier: Tier = hasFullAccessOverride(data?.account_type, data?.beta_access_active)
+  const existingTier: Tier = hasFullAccessOverride(data?.account_type, data?.beta_access_active)
     ? 'ultimate'
     : effectiveTier((data?.tier as Tier | undefined) ?? 'free', data?.discord_advanced_claimed, data?.admin_granted_tier as Tier | null)
+  const tier: Tier = existingTier === 'ultimate' || await ownsStoreKitUltimate(userId) ? 'ultimate' : existingTier
   return { userId, tier }
 }

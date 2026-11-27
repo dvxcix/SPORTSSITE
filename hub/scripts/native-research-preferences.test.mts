@@ -14,6 +14,7 @@ const stubs: Record<string, string> = {
   'next/server': 'export const NextResponse = Response',
   '@/lib/nbaAccessPolicy': 'export const NBA_ACCESS_COLUMNS = "account_type,tier"; export const hasNbaAccess = profile => profile.nba;',
   '@/lib/nflAccess': 'export const requireNflAccess = async () => ({userId: globalThis.researchSettingsFixture.nflUser});',
+  '@/lib/storeKitEntitlements': 'export const ownsStoreKitUltimate = async () => false;',
   '@/lib/researchPreferencesServer': `export const readResearchPreferences = async id => {
     globalThis.researchSettingsReads.push(['preferences', id]);
     return { preferences: globalThis.savedResearchSettings, available: globalThis.researchSettingsFixture.available };

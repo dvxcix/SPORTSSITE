@@ -35,6 +35,7 @@ const require=createRequire(import.meta.url)
 const stubs:Record<string,string>={
   'server-only':'',
   '@/lib/requireTier':`export const resolveAuthedClient=async()=>({userId:null,error:undefined})`,
+  '@/lib/storeKitEntitlements':'export const ownsStoreKitUltimate=async()=>false',
   '@/lib/supabase/admin':`export const createAdminClient=()=>{throw Error('Private account lookup must not run in a scoped public read')}`,
   '@/lib/publicWorkspaceData':`export const resolvePublicWorkspace=async sport=>({sport,game:'123',date:'2026-11-23'})`,
   '@/lib/publicWorkspaceRoutes':`import{publicWorkspaceScope,publicWorkspaceGames}from'@/lib/publicWorkspaceScope';import{requirePaintAccess}from'@/lib/paintAccess';export const PUBLIC_WORKSPACE_READERS={'/the-paint/board':async()=>({GET:async()=>{globalThis.previewReaderCalls++;return Response.json({scope:publicWorkspaceScope(),gate:await requirePaintAccess(),games:publicWorkspaceGames([{id:123},{id:124}],'nba')})}})}`,

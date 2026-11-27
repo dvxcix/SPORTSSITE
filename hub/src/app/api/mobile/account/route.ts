@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireNativeAccount } from '@/lib/supabase/nativeAccount'
 import { hasApprovedCreatorAccess } from '@/lib/creator'
 import { publicMembershipBilling } from '@/lib/publicMembershipComparison'
+import { offersStoreKit, storeKitMembership, ULTIMATE_STOREKIT_PRODUCT } from '@/lib/storeKitEntitlements'
 
 const headers = { 'Cache-Control': 'private, no-store' }
 
@@ -20,7 +21,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Account details unavailable' }, { status: 503, headers })
   }
   const tier = effectiveTier((data.tier ?? 'free') as Tier, data.discord_advanced_claimed, data.admin_granted_tier as Tier | null)
-  const canBuy = (data.tier ?? 'free') === 'free' && !hasFullAccessOverride(data.account_type, data.beta_access_active) && tier !== 'ultimate'
+  let storeKitAvailable = offersStoreKit(account.userId)
+  const appleMembership = await storeKitMembership(account.userId).catch(() => {
+    storeKitAvailable = false
+    return null
+  })
+  const canBuy = (data.tier ?? 'free') === 'free' && !hasFullAccessOverride(data.account_type, data.beta_access_active) && tier !== 'ultimate' && !appleMembership
   let canOpenStudio = await hasApprovedCreatorAccess(account.supabase, account.userId, data.account_type).catch(() => false)
   if (!canOpenStudio) {
     const { data: ownedGroup } = await account.supabase.from('groups').select('id').eq('owner_id', account.userId).limit(1).maybeSingle()
@@ -34,18 +40,19 @@ export async function GET(request: Request) {
     verified: data.is_verified,
     role: data.account_type,
     canOpenStudio,
-    accessTier: hasFullAccessOverride(data.account_type, data.beta_access_active) ? 'ultimate' : tier,
+    accessTier: appleMembership || hasFullAccessOverride(data.account_type, data.beta_access_active) ? 'ultimate' : tier,
     membership: {
       discordClaim: data.discord_advanced_claimed === true,
-      purchasedTier: data.tier ?? 'free',
-      status: data.tier_status,
-      currentPeriodEnd: data.tier_current_period_end,
-      cancelAtPeriodEnd: data.tier_cancel_at_period_end === true,
-      provider: data.whop_membership_id ? 'whop' : null,
-      planLabel: data.whop_plan_id ? WHOP_PLANS[data.whop_plan_id]?.label ?? null : null,
+      purchasedTier: appleMembership ? 'ultimate' : data.tier ?? 'free',
+      status: appleMembership ? 'active' : data.tier_status,
+      currentPeriodEnd: appleMembership?.access_until ?? data.tier_current_period_end,
+      cancelAtPeriodEnd: !appleMembership && data.tier_cancel_at_period_end === true,
+      provider: appleMembership ? 'apple' : data.whop_membership_id ? 'whop' : null,
+      planLabel: appleMembership ? 'Ultimate Monthly' : data.whop_plan_id ? WHOP_PLANS[data.whop_plan_id]?.label ?? null : null,
+      storeKit: storeKitAvailable ? { productId: ULTIMATE_STOREKIT_PRODUCT, canPurchase: canBuy } : null,
       connectedWhop: Boolean(data.whop_user_id),
       betaAccess: data.beta_access_active === true,
-      billingOptions: canBuy ? {
+      billingOptions: canBuy && !offersStoreKit(account.userId) ? {
         annual: { id: ULTIMATE_ANNUAL_CHECKOUT_PLAN_ID, ...publicMembershipBilling.annual, trialDays: 0 },
         ...(data.discord_advanced_claimed === true
           ? { discord: { id: DISCORD_ULTIMATE_ADDON_PLAN_ID, price: '$10', days: 30, trialDays: 0 } }
