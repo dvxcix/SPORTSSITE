@@ -25,13 +25,13 @@ struct CourtView: View {
     enum Entry: String {
         case research, oddsBoard = "odds-board", gameMarkets = "game-markets", odds, ladders, movement
         case firstBasket = "first-basket", cheatsheets, trends, slate, score, dvp, matchup, lineups
-        case availability, usage, tracking, publicActivity = "public", divergence
+        case availability, usage, tracking, publicActivity = "public", divergence, propTrends = "prop-trends"
 
         fileprivate var tool: CourtMatchupTool? {
             switch self {
             case .firstBasket: .firstBasket
             case .cheatsheets: .cheatsheets
-            case .trends: .trends
+            case .trends, .propTrends: .trends
             case .slate: .slateEdge
             case .score: .score
             case .dvp: .defense
@@ -129,6 +129,7 @@ struct CourtView: View {
     @State private var mode = CourtResearchMode.pregame
     @State private var section = BoardSection.players
     @State private var tool: CourtMatchupTool?
+    @State private var trendBoard = CourtTrendsBoard.props
     @State private var market = CourtPlayerMarket.points
     @State private var sportsbook: String?
     @State private var oddsMarket = "points"
@@ -170,6 +171,7 @@ struct CourtView: View {
         preferredBook = book
         self.comparisonBook = comparisonBook
         self.link = link
+        _trendBoard = State(initialValue: entry == .trends ? .volume : .props)
         linkedDate = SlateDate.key(date)
         _date = State(initialValue: date)
         _selectedGameID = State(initialValue: linkedGame)
@@ -364,7 +366,7 @@ struct CourtView: View {
             view = switch tool {
             case .firstBasket: "first-basket"
             case .cheatsheets: "cheatsheets"
-            case .trends: "trends"
+            case .trends: trendBoard == .volume ? "trends" : "prop-trends"
             case .slateEdge: "slate"
             case .score: "score"
             case .defense: "dvp"
@@ -567,9 +569,10 @@ struct CourtView: View {
             }
             if let tool {
                 switch tool {
-                case .matchup: CourtMatchupLab(board: board, observedAt: observedAt, scope: scope)
-                case .trends: CourtVolumeTrends(board: board, observedAt: observedAt, scope: scope)
-                    .id("\(board.game.id):\(mode.rawValue)")
+                case .matchup: CourtMatchupLab(board: board, observedAt: observedAt, scope: scope, revision: revision)
+                case .trends:
+                    CourtTrendsView(board: board, observedAt: observedAt, scope: scope, selection: $trendBoard)
+                        .id("\(board.game.id):\(mode.rawValue)")
                 case .availability: CourtAvailability(board: board, observedAt: observedAt, scope: scope)
                 case .firstBasket, .cheatsheets, .slateEdge, .score, .defense, .lineups, .publicActivity, .crossMarket, .scouting, .tracking: EmptyView()
                 }

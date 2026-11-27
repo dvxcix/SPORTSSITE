@@ -5,7 +5,7 @@ enum CourtMatchupTool: String, CaseIterable {
     case availability = "Availability"
     case firstBasket = "First Basket"
     case cheatsheets = "Cheatsheets"
-    case trends = "Volume Trends"
+    case trends = "Trends"
     case slateEdge = "Slate Edge"
     case score = "SlipSurge Score"
     case defense = "Defense vs. Position"
@@ -73,9 +73,12 @@ struct CourtMatchupLab: View {
     let board: CourtBoard
     let observedAt: Date
     let scope: CourtView.Scope
+    let revision: Int
     @State private var metric = Metric.pace
     @State private var section = Section.overview
     @Environment(\.slipPalette) private var slipPalette
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var textSize
     private var scheme: ColorScheme { slipPalette.colorScheme }
 
     private var teams: [CourtBoard.Team] { [board.game.visitorTeam, board.game.homeTeam] }
@@ -90,7 +93,7 @@ struct CourtMatchupLab: View {
             case .rotations:
                 ForEach(teams, id: \.id) { team in rotation(team) }
             case .defense:
-                CourtIntelligenceView(scope: scope, board: board, defense: true, revision: 0)
+                CourtIntelligenceView(scope: scope, board: board, defense: true, revision: revision)
             }
         }
     }
@@ -99,23 +102,21 @@ struct CourtMatchupLab: View {
         VStack(alignment: .leading, spacing: 12) {
             if board.teamStats?.isEmpty == false {
                 ResearchSectionTitle(title: "Offense against defense")
-                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
-                    ForEach(teams, id: \.id) { team in
-                        if let opponent = teams.first(where: { $0.id != team.id }) {
-                            GridRow {
-                                Text("\(team.abbreviation) offense").font(.subheadline.weight(.semibold))
-                                Text(Metric.offense.format(rating(.offense, team: team))).monospacedDigit()
-                                Text("vs \(opponent.abbreviation) defense").font(.subheadline).foregroundStyle(.secondary)
-                                Text(Metric.defense.format(rating(.defense, team: opponent))).monospacedDigit()
-                            }
-                       }
-                    }
+                let comparisonLayout = horizontalSizeClass == .regular && !textSize.isAccessibilitySize
+                    ? AnyLayout(HStackLayout(alignment: .top, spacing: 8))
+                    : AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                comparisonLayout {
+                    ratings(offense: board.game.visitorTeam, defense: board.game.homeTeam)
+                    ratings(offense: board.game.homeTeam, defense: board.game.visitorTeam)
                 }
-                .accessibilityElement(children: .contain)
                 Picker("Compare team metric", selection: $metric) {
                     ForEach(Metric.allCases, id: \.self) { Text($0.label).tag($0) }
-                }.frame(minHeight: 44)
-                HStack(alignment: .top, spacing: 8) {
+                }
+                .frame(minHeight: 44)
+                let metricsLayout = textSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                    : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
+                metricsLayout {
                     ForEach(teams, id: \.id) { team in metricCard(team) }
                 }
             } else {
@@ -124,6 +125,33 @@ struct CourtMatchupLab: View {
             GameMarkets(away: marketTeam(board.game.visitorTeam), home: marketTeam(board.game.homeTeam),
                         offers: board.gameOdds?.map(\.book) ?? [])
         }
+    }
+
+    private func ratings(offense: CourtBoard.Team, defense: CourtBoard.Team) -> some View {
+        let ratingsLayout = textSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
+        return ratingsLayout {
+            ratingColumn(offense, title: "\(offense.abbreviation) offense", metric: .offense)
+            ratingColumn(defense, title: "\(defense.abbreviation) defense", metric: .defense)
+        }
+        .padding(12)
+        .background(slipPalette.surface, in: .rect(cornerRadius: 13))
+        .accessibilityElement(children: .contain)
+    }
+
+    private func ratingColumn(_ team: CourtBoard.Team, title: String, metric: Metric) -> some View {
+        HStack(spacing: 8) {
+            ResearchArtwork(urls: team.logo.map { [$0] } ?? [], fallback: "basketball")
+                .frame(width: 24, height: 24)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
+                Text(metric.format(rating(metric, team: team))).font(.headline).monospacedDigit()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 
     private func rating(_ metric: Metric, team: CourtBoard.Team) -> Double? {
@@ -172,7 +200,8 @@ struct CourtMatchupLab: View {
             ForEach(list.prefix(8)) { player in
                 NavigationLink {
                     CourtPlayerView(player: player, game: board.game, mode: board.oddsMode,
-                        frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason, researchScope: scope)
+                        frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason,
+                        researchScope: scope, matchupBoard: board)
                 } label: {
                     HStack {
                         CourtPlayerIdentity(player: player)
@@ -233,7 +262,8 @@ struct CourtAvailability: View {
                     ForEach(players) { player in
                         NavigationLink {
                             CourtPlayerView(player: player, game: board.game, mode: board.oddsMode,
-                                frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason, researchScope: scope)
+                                frozen: board.isFrozen, tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason,
+                                researchScope: scope, matchupBoard: board)
                         } label: {
                             card(player, color: color)
                         }

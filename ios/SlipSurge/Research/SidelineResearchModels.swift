@@ -62,8 +62,35 @@ struct SidelineResearchPayload: Decodable {
         }
 
         struct Game: Decodable {
+            struct Matchup {
+                let season: Int
+                let week: Int
+                let away: String
+                let home: String
+
+                init?(id: String) {
+                    let parts = id.split(separator: "_", omittingEmptySubsequences: false)
+                    guard parts.count == 4, parts[0].count == 4, let season = Int(parts[0]),
+                          let week = Int(parts[1]), week > 0,
+                          parts.suffix(2).allSatisfy({ $0.range(of: #"^[A-Z]{2,3}$"#, options: .regularExpression) != nil }) else { return nil }
+                    self.season = season
+                    self.week = week
+                    away = String(parts[2])
+                    home = String(parts[3])
+                }
+
+                func opponent(of team: String) -> String? {
+                    let code = SidelineResearchMarket.normalizeTeam(team)
+                    if code == SidelineResearchMarket.normalizeTeam(away) { return home }
+                    if code == SidelineResearchMarket.normalizeTeam(home) { return away }
+                    return nil
+                }
+            }
+
             let id: String
             let value: Double
+
+            var matchup: Matchup? { Matchup(id: id) }
         }
 
         let player: Player

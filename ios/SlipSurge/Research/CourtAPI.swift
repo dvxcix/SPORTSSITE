@@ -121,6 +121,13 @@ struct CourtBoard: Decodable {
         let fta: Double?
         let ftm: Double?
 
+        var opponentID: Int? {
+            guard let team = team?.id else { return nil }
+            if team == game.homeTeamId { return game.visitorTeamId }
+            if team == game.visitorTeamId { return game.homeTeamId }
+            return nil
+        }
+
         var played: Bool {
             guard let min, min.range(of: #"^\d+(?:\.\d+|:[0-5]\d)?$"#, options: .regularExpression) != nil else { return false }
             return min.contains { ("1"..."9").contains(String($0)) }

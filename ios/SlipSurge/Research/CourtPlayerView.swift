@@ -36,6 +36,7 @@ struct CourtPlayerView: View {
     var linkedPanel: CourtLinkContext.Panel?
     var linkedMetric: String?
     var initialVenue = CourtPlayerMarket.Venue.all
+    var initialTrendWindow = 10
 
     @Environment(\.slipPalette) private var slipPalette
     private var scheme: ColorScheme { slipPalette.colorScheme }
@@ -52,6 +53,7 @@ struct CourtPlayerView: View {
     @State private var selectedPanel: CourtLinkContext.Panel?
     @State private var trackingMetric: String?
     @State private var chosenVenue: CourtPlayerMarket.Venue?
+    @State private var opponentLogFilters = CourtOpponentLog.Filters()
     @State private var configured = false
     @State private var ownResults: CourtObservedResults.Snapshot?
 
@@ -124,6 +126,7 @@ struct CourtPlayerView: View {
                 sportsbook = initialBook.flatMap { $0 == "all" ? nil : $0 } ?? fallback
                 market = initialMarket ?? ""
                 side = initialSide
+                if [3, 5, 10, 20].contains(initialTrendWindow) { window = initialTrendWindow }
                 if initialMarket == nil { selectMarket() }
                 line = linkedQuote
                 configured = true
@@ -172,12 +175,16 @@ struct CourtPlayerView: View {
         case .opponent:
             Section { marketSelection }.listRowBackground(slipPalette.surface)
             if let metric = CourtPlayerMarket(rawValue: market) {
+                let reference = metric.reference(player, gameID: game.id, vendor: sportsbook.isEmpty ? nil : sportsbook,
+                    side: side, contract: line?.contract, target: line?.line)
+                if let line, reference == nil {
+                    Label("Recorded price for \(lineLabel(line)) is unavailable.", systemImage: "clock.badge.questionmark")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .listRowBackground(slipPalette.surface)
+                }
                 CourtOpponentLog(player: player, game: game, opponent: matchupOpponent, sampleSeason: sampleSeason,
-                    metric: metric, side: side,
-                    line: metric.reference(player, gameID: game.id, vendor: sportsbook.isEmpty ? nil : sportsbook,
-                                           side: side, contract: line?.contract, target: line?.line),
-                    initialVenue: venue, teams: matchupBoard?.teams ?? [])
-                    .id(metric)
+                    metric: metric, side: side, line: reference,
+                    initialVenue: venue, teams: matchupBoard?.teams ?? [], filters: $opponentLogFilters)
             }
         case .ladder, .markets:
             Section(panel == .ladder ? "Recorded lines" : mode == .live ? "Live markets" : "Pregame markets") {
@@ -321,7 +328,7 @@ struct CourtPlayerView: View {
                 }
                 if !contracts.isEmpty {
                     Picker("Line", selection: $line) {
-                        Text("Reference line").tag(nil as String?)
+                        Text("Reference line").tag(nil as CourtLinkContext.Quote?)
                         ForEach(contracts, id: \.self) { Text(lineLabel($0)).tag(Optional($0)) }
                     }
                 }
@@ -365,11 +372,7 @@ struct CourtPlayerView: View {
     @ViewBuilder
     private func opponentTrend(_ opponent: CourtBoard.Team, metric: CourtPlayerMarket,
                                history: [CourtBoard.PlayerLog], reference: CourtPlayerMarket.Reference?) -> some View {
-        let meetings = history.filter { log in
-            guard let playerTeam = log.team?.id,
-                  let home = log.game.homeTeamId, let away = log.game.visitorTeamId else { return false }
-            return playerTeam == home && away == opponent.id || playerTeam == away && home == opponent.id
-        }
+        let meetings = history.filter { $0.opponentID == opponent.id }
         let values = meetings.compactMap(metric.statistic)
         if !values.isEmpty {
             let average = (values.reduce(0, +) / Double(values.count)).formatted(.number.precision(.fractionLength(0...1)))

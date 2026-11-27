@@ -28,6 +28,7 @@ struct CourtVolumeTrends: View {
         var order = Order.rise
         var startersOnly = false
         var search = ""
+        var team: String?
     }
 
     private struct Row: Identifiable {
@@ -44,13 +45,15 @@ struct CourtVolumeTrends: View {
     let observedAt: Date
     let scope: CourtView.Scope
     @State private var filters = Filters()
-    @State private var team = ""
     @Environment(\.slipPalette) private var palette
+    @Environment(\.dynamicTypeSize) private var textSize
+
+    private var teams: [CourtBoard.Team] { [board.game.visitorTeam, board.game.homeTeam] }
 
     private var rows: [Row] {
         let starters = Set(board.starters ?? [])
         return board.players.compactMap { player -> Row? in
-            guard team.isEmpty || player.team.abbreviation == team,
+            guard filters.team == nil || player.team.abbreviation == filters.team,
                   !filters.startersOnly || starters.contains(player.id),
                   filters.search.isEmpty || "\(player.firstName) \(player.lastName)".localizedCaseInsensitiveContains(filters.search) else { return nil }
             let logs = CourtPlayerMarket.points.history(player, board: board).filter(filters.venue.accepts)
@@ -82,42 +85,43 @@ struct CourtVolumeTrends: View {
     }
 
     private var controls: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ScrollView(.horizontal) {
-                HStack(spacing: 8) {
-                    if case .member(_, let account) = scope {
-                        ResearchSavedFilters(account: account, board: "court.volume", current: filters) {
-                            filters = $0
-                            team = ""
-                        }
+        let actions = textSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(spacing: 8))
+        let summary = "Last \(filters.window) · \(filters.venue.rawValue) · \(filters.order.rawValue)"
+        return VStack(alignment: .leading, spacing: 8) {
+            actions {
+                if case .member(_, let account) = scope {
+                    ResearchSavedFilters(account: account, board: "court.volume", current: filters) {
+                        filters = $0
+                        if !teams.contains(where: { $0.abbreviation == filters.team }) { filters.team = nil }
                     }
-                    ResearchToolFilter(title: "Usage metric", symbol: "chart.bar", selection: filters.metric.rawValue) {
-                        Picker("Usage metric", selection: $filters.metric) {
-                            ForEach(Metric.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                        }
-                    }
-                    ResearchToolFilter(title: "Recent games", symbol: "clock", selection: "Last \(filters.window)") {
-                        Picker("Recent games", selection: $filters.window) {
-                            ForEach([3, 5, 10], id: \.self) { Text("Last \($0)").tag($0) }
-                        }
-                    }
-                    ResearchToolFilter(title: "Venue", symbol: "sportscourt", selection: filters.venue.rawValue) {
-                        Picker("Venue", selection: $filters.venue) {
-                            ForEach(CourtPlayerMarket.Venue.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                        }
-                    }
-                    ResearchToolFilter(title: "Sort", symbol: "arrow.up.arrow.down", selection: filters.order.rawValue) {
-                        Picker("Sort", selection: $filters.order) {
-                            ForEach(Order.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                        }
-                    }
-                    ResearchArtworkPicker(title: "Team", options: [.init(id: "", title: "Both teams", icon: "person.2")] +
-                        [board.game.visitorTeam, board.game.homeTeam].map {
-                            .team(id: $0.abbreviation, title: $0.abbreviation, logo: $0.logo)
-                        }, selection: $team)
                 }
+                ResearchArtworkPicker(title: "Team", options: [.init(id: "", title: "Both teams", icon: "person.2")] +
+                    teams.map { .team(id: $0.abbreviation, title: $0.abbreviation, logo: $0.logo) },
+                    selection: Binding(get: { filters.team ?? "" }, set: { filters.team = $0.isEmpty ? nil : $0 }))
             }
-            .scrollIndicators(.hidden)
+            actions {
+                ResearchToolFilter(title: "Usage metric", symbol: "chart.bar", selection: filters.metric.rawValue) {
+                    Picker("Usage metric", selection: $filters.metric) {
+                        ForEach(Metric.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                }
+                ResearchToolFilter(title: "More volume filters", symbol: "line.3.horizontal.decrease", selection: "Filters") {
+                    Picker("Recent games", selection: $filters.window) {
+                        ForEach([3, 5, 10], id: \.self) { Text("Last \($0)").tag($0) }
+                    }
+                    Picker("Venue", selection: $filters.venue) {
+                        ForEach(CourtPlayerMarket.Venue.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                    Picker("Sort", selection: $filters.order) {
+                        ForEach(Order.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                }
+                .accessibilityValue(summary)
+            }
+            Text(summary).font(.caption).foregroundStyle(.secondary)
+                .accessibilityHidden(true)
             if board.starters?.isEmpty == false || filters.startersOnly {
                 Toggle("Confirmed starters for this matchup", isOn: $filters.startersOnly).font(.subheadline)
             }

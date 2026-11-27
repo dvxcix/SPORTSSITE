@@ -49,6 +49,8 @@ struct CourtIntelligenceView: View {
     }
 
     private struct Filter: Equatable {
+        let gameID: Int
+        let mode: CourtResearchMode
         let market: CourtPlayerMarket
         let book: String
         let side: CourtPlayerMarket.Side
@@ -72,7 +74,10 @@ struct CourtIntelligenceView: View {
     @State private var error: (any Error)?
     @State private var retry = 0
 
-    private var filter: Filter { .init(market: market, book: book, side: side, revision: revision, retry: retry) }
+    private var filter: Filter {
+        .init(gameID: board.game.id, mode: board.oddsMode, market: market, book: book,
+              side: side, revision: revision, retry: retry)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -196,16 +201,16 @@ struct CourtIntelligenceView: View {
         error = nil
         do {
             let data = try await CourtToolAPI(scope: scope).read(DataSet.self, tool: "intelligence", publicPath: "/the-paint/intelligence", query: [
-                .init(name: "game", value: String(board.game.id)), .init(name: "mode", value: board.oddsMode.rawValue),
+                .init(name: "game", value: String(requested.gameID)), .init(name: "mode", value: requested.mode.rawValue),
                 .init(name: "market", value: requested.market.rawValue), .init(name: "side", value: requested.side.rawValue.lowercased()),
                 .init(name: "book", value: requested.book)
             ])
             guard !Task.isCancelled, requested == filter else { return }
-            guard data.mode == board.oddsMode, data.market == requested.market.rawValue, data.book == requested.book,
+            guard data.mode == requested.mode, data.market == requested.market.rawValue, data.book == requested.book,
                   data.side == requested.side.rawValue.lowercased() else { throw URLError(.cannotParseResponse) }
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.21)) { payload = (requested, data) }
         } catch {
-            if !Task.isCancelled { self.error = error }
+            if !Task.isCancelled, requested == filter { self.error = error }
         }
     }
 }
