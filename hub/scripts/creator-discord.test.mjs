@@ -217,15 +217,25 @@ test('access panel suppresses mentions and links to the exact community, never m
  assert.equal(JSON.stringify(message).includes('provider-fixture'),false)
 })
 test('bot connection diagnostics require a real administrator before contacting Discord',async()=>{
- for(const account of [null,'user','admin']){
+ for(const [account,native] of [null,'user','admin'].flatMap(account=>[[account,false],[account,true]])){
   let reads=0
+  const nextServer={NextResponse:{json:Response.json}}
+  const admin=database(()=>({count:0,error:null}))
+  const actor=compile('src/lib/discordAdminActor.ts',{
+   'next/server':nextServer,
+   './supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:account?{id:user}:null}})},from:()=>database(()=>({data:{account_type:account}})).from('users')})},
+   './supabase/adminDecisionActor':{adminDecisionActor:async()=>account==='admin'?{user:{id:user},admin}:{
+    error:Response.json({error:'Access denied'},{status:account?403:401}),
+   }},
+  })
   const route=compile('src/app/api/admin/discord/creator-health/route.ts',{
-   'next/server':{NextResponse:{json:Response.json}},'@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:account?{id:user}:null}})},from:()=>database(()=>({data:{account_type:account}})).from('users')})},
-   '@/lib/supabase/admin':{createAdminClient:()=>database(()=>({count:0,error:null}))},
+   'next/server':nextServer,'@/lib/discordAdminActor':actor,
+   '@/lib/supabase/admin':{createAdminClient:()=>admin},
    '@/lib/creatorDiscord':{creatorDiscordConfigured:()=>true,creatorDiscordRequest:async path=>{reads++;return response(path.endsWith('/commands')?[{name:'help'}]:{name:'SlipSurge',bot_public:true,bot_require_code_grant:false,interactions_endpoint_url:'https://www.slipsurge.com/api/discord/interactions'})}},
    '@/lib/creatorDiscordCommands':{CREATOR_DISCORD_COMMANDS:[{name:'help'},{name:'connect'}]},'@/lib/safeApiError':{safeApiError:()=>response({error:'unavailable'},502)},
   },{process:{env:{DISCORD_APPLICATION_ID:bot}}})
-  const result=await route.GET();assert.equal(result.status,account==='admin'?200:account?403:401)
+  const request=new Request('https://www.slipsurge.com/api/admin/discord/creator-health',native?{headers:{authorization:'Bearer fixture'}}:{})
+  const result=await route.GET(request);assert.equal(result.status,account==='admin'?200:account?403:401)
   assert.equal(reads,account==='admin'?2:0)
   if(account==='admin'){const data=await result.json();assert.deepEqual(data.missingCommands,['connect']);assert.equal(data.connected,true);assert.equal(Object.keys(data).some(key=>/token|secret|key/i.test(key)),false)}
  }

@@ -17,7 +17,7 @@ export async function GET(request: Request, context: Context) {
   try {
     const { supabase, userId } = account
     const [group, member, showMlb] = await Promise.all([
-      supabase.from('groups').select('id,sport,is_public,access_type,owner_id').eq('id', id).maybeSingle(),
+      supabase.from('groups').select('id,sport,is_public,access_type,owner_id,member_count').eq('id', id).maybeSingle(),
       supabase.from('group_members').select('role').eq('group_id', id).eq('user_id', userId).maybeSingle(),
       canViewMlb(supabase, userId),
     ])
@@ -33,6 +33,7 @@ export async function GET(request: Request, context: Context) {
     ])
     const flags = (capabilities.data ?? {}) as Record<string, boolean>
     return response({ ...feed, posts: feed.posts.map(mobilePost), canView, role: member.data?.role ?? null, allowMlb: showMlb,
+      memberCount: canView ? group.data.member_count : null,
       publicAudience: group.data.is_public && group.data.access_type !== 'paid',
       canManage: Boolean(member.data && (['owner', 'admin', 'moderator'].includes(member.data.role) ||
         ['manage_channels', 'manage_roles', 'manage_members', 'create_invites'].some(flag => flags[flag] === true))),
