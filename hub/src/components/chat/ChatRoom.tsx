@@ -174,20 +174,35 @@ export function ChatRoom({ channelId, channelSlug, channelName, initialMessages,
       }
       return
     }
-    const { data, error } = await supabase.from('messages').insert({
-      channel_id: channelId, sender_id: currentUserId, content,
+    const messageId = crypto.randomUUID()
+    // The room read policy resolves the message by ID. It sees the row
+    // after the insert commits, so fetch the display data separately.
+    const { error } = await supabase.from('messages').insert({
+      id: messageId, channel_id: channelId, sender_id: currentUserId, content,
       reply_to_id: replyingTo?.id ?? null,
       media_urls: imageUrl ? [imageUrl] : [],
       message_type: imageUrl ? 'media' : 'text',
-    }).select(CHANNEL_MESSAGE_COLUMNS).single()
-    if (!error && data) {
-      const sent = data as unknown as Message
-      setMessages(previous => previous.some(message => message.id === sent.id) ? previous : [...previous, sent])
+    })
+    if (!error) {
       clearSubmitted(submitted)
       setImageUrl('')
       setReplyingTo(null)
-      void notifyMentions(supabase, currentUserId, content, contextHref||`/channels/${channelSlug}`, sent.id, 'a channel message').catch(() => {})
+      void notifyMentions(supabase, currentUserId, content, contextHref||`/channels/${channelSlug}`, messageId, 'a channel message').catch(() => {})
       requestAnimationFrame(() => inputRef.current?.focus())
+      // The send is already complete. Reconnect history on a failed read
+      // without asking the author to send a second copy.
+      try {
+        const { data, error: readError } = await supabase.from('messages').select(CHANNEL_MESSAGE_COLUMNS)
+          .eq('channel_id', channelId).eq('id', messageId).maybeSingle()
+        if (!readError && data) {
+          const sent = data as unknown as Message
+          setMessages(previous => previous.some(message => message.id === sent.id) ? previous : [...previous, sent])
+        } else {
+          void recover()
+        }
+      } catch {
+        void recover()
+      }
     } else {
       retainFailed(submitted, draft)
       setSendError('Message not sent. Try again.')
