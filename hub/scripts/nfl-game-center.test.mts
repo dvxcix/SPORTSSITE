@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { buildNflGameCenter, nflCenterPortraitNames, type NflCenterFeed, type NflCenterStat } from '../src/lib/nflGameCenter.ts'
 import type { ESPNGame } from '../packages/core/src/espn-api.ts'
+import { espnNflPlayField, nflPlayField } from '../src/lib/nflPlayField.ts'
 
 // Entirely synthetic: no provider calls, current games, or holdout results.
 const team = (id: string, abbr: string) => ({ id, uid: id, location: abbr, name: abbr,
@@ -64,6 +65,29 @@ test('overtime appears when a fifth period is actually observed', () => {
 test('chronology uses provider sequence before identifiers', () => {
   const result = buildNflGameCenter(game, { ...feed, plays: [{ ...feed.plays![0], sequence_number: 1 }, { ...feed.plays![1], sequence_number: 2 }] })
   assert.deepEqual(result.summary.plays?.map(p => p.id), ['2', '1'])
+})
+
+test('field diagram retains measured forward, backward and stationary spots', () => {
+  const base = { kind: 'rush', text: 'Runner tackled', start: 67, end: 62, yards: 5, down: 2, distance: 9 }
+  assert.deepEqual(nflPlayField(base), { startToGoal: 67, endToGoal: 62, down: 2, distance: 9 })
+  assert.deepEqual(nflPlayField({ ...base, kind: 'sack', end: 71, yards: -4 }),
+    { startToGoal: 67, endToGoal: 71, down: 2, distance: 9 })
+  assert.equal(nflPlayField({ ...base, kind: 'Pass Incompletion', end: 67, yards: 0 })?.endToGoal, 67)
+  assert.equal(nflPlayField({ ...base, kind: 'passing-touchdown', end: 0, yards: 67 })?.endToGoal, 0)
+})
+
+test('unknown coordinates and ambiguous possession never become invented paths', () => {
+  const base = { kind: 'rush', text: 'Runner tackled', start: 42, end: 40, yards: 2, down: 1, distance: 10 }
+  for (const change of [
+    { start: null }, { end: 99 }, { yards: 0 }, { end: 0, yards: 42 }, { start: 0, end: 0, yards: 0 },
+    { kind: 'punt' }, { kind: 'fumble-recovery-opponent' }, { text: 'Runner tackled (No Play)' },
+  ]) assert.equal(nflPlayField({ ...base, ...change }), undefined)
+  const play = buildNflGameCenter(game, feed).summary.plays![0]
+  const start = { team: { id: '1' }, yardsToEndzone: 42 }
+  const end = { team: { id: '1' }, yardsToEndzone: 40 }
+  const espn = { ...play, type: { id: 'x', text: 'Rush' }, statYardage: 2, start, end }
+  assert.ok(espnNflPlayField(espn))
+  assert.equal(espnNflPlayField({ ...espn, end: { ...end, team: { id: '2' } } }), undefined)
 })
 test('NFL links open game center and refresh does not reload the document', () => {
   const source = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8')

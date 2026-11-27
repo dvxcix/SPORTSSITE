@@ -1,6 +1,7 @@
 import type { ESPNGame, ESPNPlay, ESPNSummary } from '@slipsurge/core/espn-api'
 import { nflPlayerPortrait } from './nflPlayerPortrait'
 import { normalizeNflPlayerName } from './nflPlayerName'
+import { nflPlayField } from './nflPlayField'
 
 type Row = Record<string, unknown>
 type Team = { id?: number; abbreviation: string }
@@ -104,6 +105,9 @@ export function buildNflGameCenter(game: ESPNGame, feed: NflCenterFeed | null, d
     period: { number: play.period ?? 0, displayValue: (play.period ?? 0) > 4 ? 'OT' : `Q${play.period ?? ''}` },
     clock: { displayValue: play.clock_display ?? '' },
     wallclock: play.wallclock,
+    nflField: nflPlayField({ kind: play.type_slug ?? play.type_text, text: play.text,
+      start: play.start_yards_to_endzone, end: play.end_yards_to_endzone, yards: play.stat_yardage,
+      down: play.start_down, distance: play.start_distance }),
     ...(play.team && teamFor(play.team.abbreviation) ? { team: { id: teamFor(play.team.abbreviation)!.team.id } } : {}),
     athletes: (play.participants ?? []).flatMap(participant => {
       const match = participant.player_id == null ? null : athletes.get(participant.player_id)
