@@ -34,6 +34,7 @@ struct SlipSurgeTabs: View {
     @State private var profilePresentation: SitePresentation?
     @State private var pendingProfilePresentation: SitePresentation?
     @State private var researchPath: [ResearchPresentation] = []
+    @State private var oddsFilterSheet: ResearchOddsFilterSheet?
     @State private var discoverDestination: DiscoverDestination?
     @State private var inboxSection = InboxSection.activity
     @State private var inboxNavigationRevision = 0
@@ -182,6 +183,7 @@ struct SlipSurgeTabs: View {
         .environment(\.nativeEmojiLibrary, emojiLibrary)
         .environment(\.memberResearchPreferences, researchPreferences)
         .environment(\.nativeResume, resume)
+        .environment(\.presentOddsFilters, { oddsFilterSheet = $0 })
         .environment(\.presentNativeSpotlight, presentSpotlight)
         .environment(\.openURL, OpenURLAction(handler: openLink))
         .task { await emojiLibrary.refresh() }
@@ -229,6 +231,7 @@ struct SlipSurgeTabs: View {
             .sheet(item: $sitePresentation) { site in siteSheet(site) }
         }
         .sheet(item: appSheet, onDismiss: presentQueuedProfileOrRelease) { site in siteSheet(site) }
+        .sheet(item: $oddsFilterSheet) { sheet in sheet }
         .sheet(item: $spotlight, onDismiss: presentNextRelease) { feature in
             NativeFeatureSpotlight(spotlight: feature, account: account, appearance: $appearance) {
                 spotlight = nil
@@ -254,6 +257,7 @@ struct SlipSurgeTabs: View {
                 .environment(\.openURL, OpenURLAction(handler: openLink))
         }
         .task { await account.restore() }
+        .onChange(of: selected) { oddsFilterSheet = nil }
         .onChange(of: reduceMotion, initial: true) { _, reduced in
             if reduced { launchReveal = false }
         }
@@ -416,7 +420,7 @@ struct SlipSurgeTabs: View {
     private func presentNextRelease() {
         guard release == nil, !closingRelease, account.memberID != nil, account.memberID == releaseOwner,
               sitePresentation == nil, profilePresentation == nil, spotlight == nil,
-              !opensIntroductionRegistration, !showsNativeWelcome, !showsLaunchReveal else { return }
+              oddsFilterSheet == nil, !opensIntroductionRegistration, !showsNativeWelcome, !showsLaunchReveal else { return }
         release = remainingReleases.first
     }
 
@@ -476,6 +480,7 @@ struct SlipSurgeTabs: View {
 
     private func routeLink(_ url: URL, track: Bool) -> OpenURLAction.Result {
         if let link = ResearchDeepLink(url) {
+            oddsFilterSheet = nil
             choseDestination = true
             pendingProfilePresentation = nil
             sitePresentation = nil
@@ -486,6 +491,7 @@ struct SlipSurgeTabs: View {
             return .handled
         }
         guard let link = NativeSiteLink(url) else { return .systemAction }
+        oddsFilterSheet = nil
         choseDestination = true
         pendingProfilePresentation = nil
         if track, let target = NativeResumeLocation.destination(url) { resume.record(target, account: account, interaction: true) }
@@ -547,6 +553,7 @@ struct SlipSurgeTabs: View {
 
     private func presentInbox(section: InboxSection) {
         choseDestination = true
+        oddsFilterSheet = nil
         sitePresentation = nil
         profilePresentation = nil
         pendingProfilePresentation = nil

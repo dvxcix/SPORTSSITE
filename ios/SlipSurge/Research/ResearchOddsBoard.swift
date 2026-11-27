@@ -143,6 +143,14 @@ enum OddsSort: String, CaseIterable, Codable {
         clearLineSelection()
     }
 
+    func players(in slate: ResearchOddsSlate) -> [ResearchOddsSlate.Player] {
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        return slate.players.filter { player in
+            (game == nil || player.gameID == game) && (team == nil || player.team.code == team) &&
+            (query.isEmpty || "\(player.name) \(player.team.code) \(player.team.name)".localizedStandardContains(query))
+        }
+    }
+
     func clearLineSelection() {
         target = nil
         sortedPriceLine = nil
@@ -162,27 +170,14 @@ struct ResearchOddsBoard: View {
     var defaultSort = OddsSort.alphabetical
 
     @Environment(\.slipPalette) private var slipPalette
+    @Environment(\.presentOddsFilters) private var presentOddsFilters
     private var scheme: ColorScheme { slipPalette.colorScheme }
     @ScaledMetric(relativeTo: .subheadline) private var identityWidth = 153.0
     @Environment(\.dynamicTypeSize) private var textSize
     @Namespace private var priceViewport
     @ScaledMetric(relativeTo: .subheadline) private var priceWidth = 88.0
-    @State private var filtersOpen = false
 
     private var selectedSort: OddsSort { filter.sort ?? defaultSort }
-
-    private var teams: [ResearchOddsSlate.Team] {
-        Array(Set(slate.players.filter { filter.game == nil || $0.gameID == filter.game }.map(\.team)))
-            .sorted { $0.name < $1.name }
-    }
-
-    private var players: [ResearchOddsSlate.Player] {
-        let query = filter.search.trimmingCharacters(in: .whitespacesAndNewlines)
-        return slate.players.filter {
-            (filter.game == nil || $0.gameID == filter.game) && (filter.team == nil || $0.team.code == filter.team) &&
-            (query.isEmpty || "\($0.name) \($0.team.code) \($0.team.name)".localizedStandardContains(query))
-        }
-    }
 
     private func rows(for players: [ResearchOddsSlate.Player], sortedLine line: Double?) -> [ResearchOddsSlate.Player] {
         let nameAscending = line != nil || selectedSort != .alphabetical || filter.ascendingName
@@ -215,7 +210,7 @@ struct ResearchOddsBoard: View {
     }
 
     var body: some View {
-        let players = players
+        let players = filter.players(in: slate)
         let milestones = Array(Set(players.lazy.flatMap(\.prices).map(\.line))).sorted()
         let sortedLine = filter.sortedPriceLine.flatMap { milestones.contains($0) && (filter.target == nil || filter.target == $0) ? $0 : nil }
         let rows = rows(for: players, sortedLine: sortedLine)
@@ -234,9 +229,6 @@ struct ResearchOddsBoard: View {
         }
         .onChange(of: selectedGame, initial: true) { _, value in
             filter.followSlateGame(value)
-        }
-        .sheet(isPresented: $filtersOpen) {
-            filters(milestones: Array(Set(milestones + (filter.target.map { [$0] } ?? []))).sorted())
         }
     }
 
@@ -265,7 +257,8 @@ struct ResearchOddsBoard: View {
 
     private var filterButton: some View {
         Button {
-            filtersOpen = true
+            presentOddsFilters(.init(slate: slate, marketLabel: marketLabel, live: live,
+                defaultSort: defaultSort, allowsMilestones: scorerLabel == nil, filter: filter))
         } label: {
             Image(systemName: "slider.horizontal.3").frame(minWidth: 31, minHeight: 31)
         }
@@ -335,55 +328,6 @@ struct ResearchOddsBoard: View {
         }
         .buttonStyle(SlipSurgePressStyle())
         .accessibilityLabel("Clear \(title)")
-    }
-
-    private func filters(milestones: [Double]) -> some View {
-        NavigationStack {
-            Form {
-                Section {
-                    ResearchArtworkPicker(title: "Odds Board matchup", options: [.init(id: "", title: "All games", icon: "calendar")]
-                        + slate.games.map { matchup in
-                            .init(id: matchup.id, title: matchup.title, url: matchup.away?.logo ?? matchup.home?.logo,
-                                  secondaryLogo: matchup.away?.logo == nil ? nil : matchup.home?.logo, icon: "calendar")
-                        }, selection: Binding(get: { filter.game ?? "" }, set: { filter.selectGame($0.isEmpty ? nil : $0) }))
-                    ResearchArtworkPicker(title: "Team", options: [.init(id: "", title: "All teams", icon: "shield")]
-                        + teams.map { item in
-                            .team(id: item.code, title: item.name, logo: slate.players.first { $0.team.code == item.code }?.logo)
-                        }, selection: Binding(get: { filter.team ?? "" }, set: { filter.team = $0.isEmpty ? nil : $0 }))
-                    Picker(selection: $filter.comparison) {
-                        ForEach(OddsComparison.allCases, id: \.self) { Label($0.label(live: live), systemImage: $0.symbol).tag($0) }
-                    } label: {
-                        Label("Compare with", systemImage: "clock")
-                    }
-                    Picker(selection: Binding(get: { selectedSort }, set: { filter.sort = $0; filter.sortedPriceLine = nil; filter.ascendingName = true })) {
-                        ForEach(OddsSort.allCases, id: \.self) { Label($0.rawValue, systemImage: $0.symbol).tag($0) }
-                    } label: {
-                        Label("Sort", systemImage: "arrow.up.arrow.down")
-                    }
-                    if scorerLabel == nil {
-                        Picker(selection: $filter.target) {
-                            Label("All milestones", systemImage: "line.3.horizontal.decrease").tag(nil as Double?)
-                            ForEach(milestones, id: \.self) {
-                                Label("\($0.formatted())+", systemImage: "plus.circle").tag(Optional($0))
-                            }
-                        } label: {
-                            Label("Milestone", systemImage: "target")
-                        }
-                    }
-                } header: {
-                    Text(marketLabel)
-                }
-            }
-            .navigationTitle("Odds Board filters")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { filtersOpen = false }
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-        .tint(slipPalette.accent)
     }
 
     private func table(_ players: [ResearchOddsSlate.Player], columns: [Double], sortedLine: Double?) -> some View {

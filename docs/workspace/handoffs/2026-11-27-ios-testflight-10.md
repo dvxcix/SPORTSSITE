@@ -23,3 +23,12 @@ The separately installed Launch QA app was relaunched without preview overrides 
 - Confirm TestFlight build 10 is available to the existing internal QA group, install it, and verify the installed build before collecting production evidence.
 - Test NBA/NFL Matchup Lab and Odds Boards, followed by Inbox Activity, Messages and the recipient picker, in full-screen and resized windows. Verify archived records and partial line coverage against the signed-in production APIs.
 - Continue through Feed, Live Games, Community chat and the You tab. Track any repairs separately and repeat the affected device checks. Document account-dependent flows and multi-account or delivery checks with the evidence available.
+
+## Build 11 native navigation follow-up
+
+The production walkthrough reproduced a stale Odds Board filter sheet over Inbox and Community after an incoming link changed tabs. The app shell now presents and closes the sheet when it handles navigation. Both boards still use their original filters, including matchup, team, milestone and sort. This fix changes SwiftUI only.
+
+- On signed-in Launch QA against production, NBA and NFL Matchup Lab and Odds Board filters opened at full screen and at 375 × 720 pt. The NFL records disclosed 4/10 archived lines for both ATS and totals. The NBA opponent log opened at both sizes.
+- On the patched build at 375 × 724 pt, selected a different NFL sort and left the filter sheet open. The incoming Inbox link dismissed the sheet, Activity showed named production injuries, and Messages opened and dismissed the recipient picker. Returning to Research preserved the changed sort.
+- Full-screen Community opened the joined private QA room. The composer showed Photo, GIF and Emoji and the keyboard dismissed on request. The You tab displayed the signed-in avatar and opened the Appearance setting. The run sent no posts or chat messages.
+- Xcode archived and exported 1.0 (11) from the source in this checkpoint. Verified its SlipSurge LLC distribution signature, production APNs entitlement, embedded extension versions, and absence of preview overrides. Its internal TestFlight upload and installation are tracked in the next status update.
