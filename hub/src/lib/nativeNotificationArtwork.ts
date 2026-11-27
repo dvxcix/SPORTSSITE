@@ -1,5 +1,12 @@
 import { getTeamLogoPngUrl, MLB_TEAM_IDS } from '@slipsurge/core/mlbTeamColors'
 
+export function nativePlayerNewsName(type: string, actor: string | null, value: unknown): string | null {
+  if (actor !== null || (type !== 'injury_update' && type !== 'roster_move') ||
+      typeof value !== 'string' || value.length > 100 || /[\p{Cc}\p{Cf}]/u.test(value)) return null
+  const name = value.trim().replace(/ +/g, ' ')
+  return name || null
+}
+
 /** Return public artwork only for existing system-generated sports alerts. */
 export function nativeNotificationArtwork(type: string, actor: string | null, source: unknown): string | null {
   if (actor !== null || typeof source !== 'string' || source.length > 1024) return null
