@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { appleNotificationPayload } from '../src/lib/appleNotificationPayload'
-import { nativeNotificationArtwork } from '../src/lib/nativeNotificationArtwork'
+import { nativeNotificationArtwork, nativePlayerNewsName } from '../src/lib/nativeNotificationArtwork'
 import { espnInjuryNews, espnRosterNews, matchesPlayerNews, mlbTransactionNews, playerNewsArtwork, playerNewsLink } from '../src/lib/nativePlayerNews'
 import type { FavoriteTeam } from '../src/lib/sportFavorites'
 
@@ -23,6 +23,15 @@ const report = (status: string, timestamp = '2026-11-26T22:00:00Z') => ({
   details: { type: 'Hip', location: 'Hip' },
 })
 const snapshot = (row = report('Out')) => ({ status: 'success', injuries: [{ id: '1', injuries: [row] }] })
+
+test('player identity is returned only for system injury and roster notifications', () => {
+  assert.equal(nativePlayerNewsName('injury_update', null, '  Alex  Santos  '), 'Alex Santos')
+  assert.equal(nativePlayerNewsName('roster_move', null, 'José Peña'), 'José Peña')
+  assert.equal(nativePlayerNewsName('follow', null, 'Alex Santos'), null)
+  assert.equal(nativePlayerNewsName('injury_update', 'member', 'Alex Santos'), null)
+  assert.equal(nativePlayerNewsName('injury_update', null, 'Alex\nSantos'), null)
+  assert.equal(nativePlayerNewsName('injury_update', null, 'a'.repeat(101)), null)
+})
 
 test('injury reports retain actual athlete identity, team and status, leaving unverified players out', () => {
   const [item] = espnInjuryNews('nba', snapshot())
