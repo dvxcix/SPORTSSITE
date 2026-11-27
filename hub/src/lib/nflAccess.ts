@@ -4,6 +4,7 @@ import { resolveAuthedClient } from '@/lib/requireTier'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hasNflAccess } from '@/lib/nflAccessPolicy'
 import { effectiveTier, type Tier } from '@slipsurge/core/tiers'
+import { ownsStoreKitUltimate } from '@/lib/storeKitEntitlements'
 import { publicWorkspaceScope } from './publicWorkspaceScope'
 
 // Uncached database grants: revocation must not wait for JWT/profile refresh.
@@ -20,7 +21,7 @@ export async function requireNflAccess() {
   if (profileError || !profile) return { error: NextResponse.json({ error: 'Access unavailable' }, { status: 503 }) }
   const isAdmin = profile.account_type === 'admin'
   const tier = effectiveTier((profile.tier as Tier) ?? 'free', profile.discord_advanced_claimed, profile.admin_granted_tier as Tier | null)
-  if (hasNflAccess(profile.account_type, false, tier)) return { userId, isAdmin }
+  if (hasNflAccess(profile.account_type, false, tier) || await ownsStoreKitUltimate(userId)) return { userId, isAdmin }
   const { data: grant, error } = await supabase.from('nfl_early_access')
     .select('user_id').eq('user_id', userId).maybeSingle()
   if (error) return { error: NextResponse.json({ error: 'Could not check NFL access' }, { status: 503 }) }

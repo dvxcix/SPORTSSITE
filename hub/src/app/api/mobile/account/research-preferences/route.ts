@@ -5,6 +5,7 @@ import { NBA_ACCESS_COLUMNS, hasNbaAccess } from '@/lib/nbaAccessPolicy'
 import { requireNflAccess } from '@/lib/nflAccess'
 import { DEFAULT_RESEARCH_PREFERENCES, LAUNCH_PAGES, RESEARCH_BOOKS } from '@/lib/researchPreferences'
 import { readResearchPreferences } from '@/lib/researchPreferencesServer'
+import { ownsStoreKitUltimate } from '@/lib/storeKitEntitlements'
 
 const headers = { 'Cache-Control': 'private, no-store' }
 
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
       requireNflAccess(),
     ])
     if (!saved.available || profile.error || nfl.error?.status === 503) throw Error()
-    const nba = hasNbaAccess(profile.data)
+    const nba = hasNbaAccess(profile.data) || await ownsStoreKitUltimate(userId)
     const football = !nfl.error && nfl.userId === userId
     const launchPages = LAUNCH_PAGES.map(page => ({
       ...page,

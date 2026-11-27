@@ -23,11 +23,15 @@ async function compiled(file: string, imports: Record<string, unknown>, fallback
   return target.exports
 }
 type Profile = policy.NbaAccessProfile & { beta_access_active?: boolean; nfl_early_access?: boolean }
-async function access(profile: Profile | null, signedIn = true, failed = false) {
+async function access(profile: Profile | null, signedIn = true, failed = false, apple = false) {
   let reads = 0, current = profile
   const gates = await compiled('../src/lib/paintAccess.ts', {
     'server-only': {}, 'next/server': { NextResponse: { json: Response.json } }, '@/lib/nbaAccessPolicy': policy,
     '@/lib/requireTier': { resolveAuthedClient: async () => ({ userId: signedIn ? 'viewer' : null }) },
+    '@/lib/storeKitEntitlements': { ownsStoreKitUltimate: async (userId: string) => {
+      assert.equal(userId, 'viewer')
+      return apple
+    } },
     '@/lib/supabase/admin': { createAdminClient: () => ({ from: (table: string) => {
       assert.equal(table, 'users'); reads++
       return { select: (columns: string) => { assert.equal(columns, policy.NBA_ACCESS_COLUMNS); return { eq: (key: string, id: string) => {
@@ -60,6 +64,9 @@ test('NBA release allows effective Ultimate and admin, excluding unrelated beta,
   const revoked = await access({ tier: 'ultimate' })
   assert.equal((await revoked.gate()).error, undefined)
   revoked.replace({ tier: 'free' }); assert.equal((await revoked.gate()).error?.status, 403); assert.equal(revoked.reads, 2)
+  const apple = await access({ tier: 'free' }, true, false, true)
+  assert.equal((await apple.gate()).error, undefined)
+  assert.equal((await apple.admin()).error?.status, 403)
 })
 
 test('NBA self-access endpoint returns only a private uncached decision and preserves outages', async () => {

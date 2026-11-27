@@ -76,6 +76,7 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
   }
   const fixture = {
     resolveAuthedClient: async () => ({ supabase: client(), userId: state.caller }),
+    ownsStoreKitUltimate: async () => false,
     createAdminClient: () => { state.adminCalls++; return client() },
     writeAdminAudit: async (_client: unknown, event: unknown) => { state.audit.push(event); return null },
     adminDecisionActor: async (request: Request) => {
@@ -99,11 +100,11 @@ test('real gate and admin handlers: grant, revoke, role isolation, MFA, invalid 
     plugins: [{
       name: 'isolated-auth-fixtures',
       setup(builder) {
-        builder.onResolve({ filter: /^(server-only|next\/server|@\/lib\/(requireTier|supabase\/admin|supabase\/adminDecisionActor|adminAudit))$/ }, args => ({ path: args.path, namespace: 'fixture' }))
+        builder.onResolve({ filter: /^(server-only|next\/server|@\/lib\/(requireTier|supabase\/admin|supabase\/adminDecisionActor|adminAudit|storeKitEntitlements))$/ }, args => ({ path: args.path, namespace: 'fixture' }))
         builder.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({
           contents: args.path === 'server-only' ? '' : args.path === 'next/server'
             ? 'export const NextResponse = Response'
-            : 'export const { resolveAuthedClient, createAdminClient, writeAdminAudit, adminDecisionActor } = globalThis.__nflAccessTest',
+            : 'export const { resolveAuthedClient, createAdminClient, writeAdminAudit, adminDecisionActor, ownsStoreKitUltimate } = globalThis.__nflAccessTest',
         }))
       },
     }],

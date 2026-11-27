@@ -78,6 +78,7 @@
     "test:creator-storefront": "node --test scripts/creator-storefront.test.mjs scripts/creator-commerce.test.mjs scripts/creator-business.test.mjs scripts/creator-guided-storefront.test.mjs scripts/creator-wallet.test.mjs scripts/community-unified.test.mjs scripts/community-channel-entry.test.mjs && node scripts/creator-discord-db.mjs"
   },
   "dependencies": {
+    "@apple/app-store-server-library": "3.1.0",
     "@browserbasehq/sdk": "^2.16.0",
     "@radix-ui/react-avatar": "^1.2.2",
     "@radix-ui/react-dialog": "^1.1.19",
