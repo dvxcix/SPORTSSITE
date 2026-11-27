@@ -1,27 +1,11 @@
 import SwiftUI
 
-struct GameMarketBook: Decodable, Identifiable {
-    let vendor: String
-    let moneylineAway: Int?
-    let moneylineHome: Int?
-    let spreadAway: Double?
-    let spreadHome: Double?
-    let spreadAwayOdds: Int?
-    let spreadHomeOdds: Int?
-    let total: Double?
-    let totalOverOdds: Int?
-    let totalUnderOdds: Int?
-    let updatedAt: String?
-    let isOpeningOnly: Bool?
-
-    var id: String { vendor }
-}
-
 struct GameMarkets: View {
     let away: ResearchMatchup.Team
     let home: ResearchMatchup.Team
     let offers: [GameMarketBook]
     var initialBook: String?
+    var showsBookPicker = true
     @State private var pickedBook: String?
     @Environment(\.slipPalette) private var slipPalette
     private var scheme: ColorScheme { slipPalette.colorScheme }
@@ -43,7 +27,7 @@ struct GameMarkets: View {
             HStack {
                 ResearchSectionTitle(title: "Game markets")
                 Spacer()
-                if !ordered.isEmpty {
+                if showsBookPicker, !ordered.isEmpty {
                     SportsbookPicker(books: ordered.map(\.vendor), selection: Binding(
                         get: { selected?.vendor ?? pickedBook ?? initialBook ?? "" }, set: { pickedBook = $0 }))
                 }

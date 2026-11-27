@@ -35,12 +35,13 @@ enum CourtMatchupTool: String, CaseIterable {
 }
 
 struct CourtMatchupLab: View {
-    private enum Section: String, CaseIterable {
-        case overview = "Overview", rotations = "Rotations", defense = "Defense"
+    enum Section: String, CaseIterable {
+        case overview = "Overview", projection = "Projection", rotations = "Rotations", defense = "Defense"
 
         var symbol: String {
             switch self {
             case .overview: "rectangle.split.2x1"
+            case .projection: "chart.line.uptrend.xyaxis"
             case .rotations: "person.3"
             case .defense: "shield"
             }
@@ -71,11 +72,14 @@ struct CourtMatchupLab: View {
     }
 
     let board: CourtBoard
+    let observedGame: CourtBoard.Game?
     let observedAt: Date
     let scope: CourtView.Scope
     let revision: Int
+    @Binding var section: Section
+    @Binding var projectionBook: String
+    let openPregame: () -> Void
     @State private var metric = Metric.pace
-    @State private var section = Section.overview
     @Environment(\.slipPalette) private var slipPalette
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var textSize
@@ -90,6 +94,8 @@ struct CourtMatchupLab: View {
             switch section {
             case .overview:
                 overview
+            case .projection:
+                CourtGameProjectionView(sportsbook: $projectionBook, board: board, observedGame: observedGame, openPregame: openPregame)
             case .rotations:
                 ForEach(teams, id: \.id) { team in rotation(team) }
             case .defense:

@@ -52,13 +52,21 @@ struct ResearchSlateControls: View {
     }
 
     private var calendarButton: some View {
-        Button {
+        let fullDate = SlateDate.label(date, year: true)
+        var compactStyle = Date.FormatStyle().month(.abbreviated).day().year()
+        compactStyle.timeZone = SlateDate.zone
+        return Button {
             calendarOpen = true
         } label: {
-            Label(SlateDate.label(date, year: true), systemImage: "calendar")
-                .font(.subheadline.weight(.semibold))
-                .frame(minHeight: 32)
+            ViewThatFits(in: .horizontal) {
+                Label(fullDate, systemImage: "calendar").fixedSize(horizontal: true, vertical: false)
+                Text(date.formatted(compactStyle)).fixedSize(horizontal: true, vertical: false)
+                Text(date.formatted(compactStyle))
+            }
+            .font(.subheadline.weight(.semibold))
+            .frame(minHeight: 32)
         }
+        .accessibilityLabel(fullDate)
         .accessibilityHint("Choose a slate date")
     }
 

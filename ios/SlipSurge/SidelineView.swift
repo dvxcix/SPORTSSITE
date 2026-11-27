@@ -80,6 +80,7 @@ struct SidelineView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.nativeResume) private var resume
     @Environment(\.nativeResumeActive) private var resumeActive
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var date = Date.now
     @State private var section = Section.gameDay
     @State private var tool = Workspace.matchup
@@ -193,7 +194,7 @@ struct SidelineView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
-            .padding(.bottom, 20)
+            .padding(.bottom, 20 + (sizeClass == .compact && resumeActive ? SlipSurgeTabBar.minimumHeight : 0))
         }
         .background { SlipBackdrop() }
         .foregroundStyle(slipPalette.text)

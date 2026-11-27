@@ -25,6 +25,7 @@ struct CourtView: View {
     enum Entry: String {
         case research, oddsBoard = "odds-board", gameMarkets = "game-markets", odds, ladders, movement
         case firstBasket = "first-basket", cheatsheets, trends, slate, score, dvp, matchup, lineups
+        case gameProjection = "game-projection"
         case availability, usage, tracking, publicActivity = "public", divergence, propTrends = "prop-trends"
 
         fileprivate var tool: CourtMatchupTool? {
@@ -35,7 +36,7 @@ struct CourtView: View {
             case .slate: .slateEdge
             case .score: .score
             case .dvp: .defense
-            case .matchup: .matchup
+            case .matchup, .gameProjection: .matchup
             case .lineups: .lineups
             case .availability: .availability
             case .usage: .scouting
@@ -123,12 +124,15 @@ struct CourtView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.nativeResume) private var resume
     @Environment(\.nativeResumeActive) private var resumeActive
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var date = Date.now
     @State private var revision = 0
     @State private var selectedGameID: Int?
     @State private var mode = CourtResearchMode.pregame
     @State private var section = BoardSection.players
     @State private var tool: CourtMatchupTool?
+    @State private var matchupSection = CourtMatchupLab.Section.overview
+    @State private var projectionBook = "consensus"
     @State private var trendBoard = CourtTrendsBoard.props
     @State private var market = CourtPlayerMarket.points
     @State private var sportsbook: String?
@@ -172,6 +176,8 @@ struct CourtView: View {
         self.comparisonBook = comparisonBook
         self.link = link
         _trendBoard = State(initialValue: entry == .trends ? .volume : .props)
+        _matchupSection = State(initialValue: entry == .gameProjection ? .projection : .overview)
+        _projectionBook = State(initialValue: entry == .gameProjection ? (comparisonBook ?? "consensus") : "consensus")
         linkedDate = SlateDate.key(date)
         _date = State(initialValue: date)
         _selectedGameID = State(initialValue: linkedGame)
@@ -276,7 +282,7 @@ struct CourtView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
-            .padding(.bottom, 20)
+            .padding(.bottom, 20 + (sizeClass == .compact && resumeActive ? SlipSurgeTabBar.minimumHeight : 0))
         }
         .navigationTitle(tool?.rawValue ?? "The Court")
         .navigationBarTitleDisplayMode(.inline)
@@ -370,7 +376,7 @@ struct CourtView: View {
             case .slateEdge: "slate"
             case .score: "score"
             case .defense: "dvp"
-            case .matchup: "matchup"
+            case .matchup: matchupSection == .projection ? "game-projection" : "matchup"
             case .lineups: "lineups"
             case .availability: "availability"
             case .scouting: "usage"
@@ -398,7 +404,11 @@ struct CourtView: View {
             .init(name: "book", value: sportsbook ?? "all"), .init(name: "side", value: side.rawValue.lowercased()),
             .init(name: "sort", value: sort.rawValue), .init(name: "order", value: ascending ? "asc" : "desc"),
         ]
-        if view == "odds-board" {
+        if view == "game-projection" {
+            query = Array(query.prefix(4))
+            let book = Sportsbook.normalized(projectionBook)
+            if book != "consensus", !book.isEmpty { query.append(.init(name: "book", value: book)) }
+        } else if view == "odds-board" {
             query = Array(query.prefix(4)) + [.init(name: "market", value: oddsMarket), .init(name: "book", value: oddsBook)]
             if let filters = ResearchResumeFilters.item(oddsFilters.resumeFilters(following: String(game.id))) { query.append(filters) }
         } else {
@@ -414,7 +424,8 @@ struct CourtView: View {
             }
         }
         components.queryItems = query
-        return components.url.flatMap { NativeResumeLocation.destination($0, title: tool?.rawValue ?? "The Court") }
+        let title = view == "game-projection" ? "Matchup Projection" : (tool?.rawValue ?? "The Court")
+        return components.url.flatMap { NativeResumeLocation.destination($0, title: title) }
     }
 
     @ViewBuilder
@@ -569,7 +580,11 @@ struct CourtView: View {
             }
             if let tool {
                 switch tool {
-                case .matchup: CourtMatchupLab(board: board, observedAt: observedAt, scope: scope, revision: revision)
+                case .matchup:
+                    CourtMatchupLab(board: board, observedGame: resultGame, observedAt: observedAt, scope: scope,
+                        revision: revision, section: $matchupSection, projectionBook: $projectionBook) {
+                        mode = .pregame
+                    }
                 case .trends:
                     CourtTrendsView(board: board, observedAt: observedAt, scope: scope, selection: $trendBoard)
                         .id("\(board.game.id):\(mode.rawValue)")
