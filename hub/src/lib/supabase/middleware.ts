@@ -141,6 +141,12 @@ export async function updateSession(request: NextRequest) {
   // Provider webhooks are server-to-server POSTs with no browser session.
   // Each route verifies its own Standard Webhooks signature before accepting
   // the payload, so the cookie-session proxy must let the request reach it.
+  // Apple's route verifies the signed notification and transaction using
+  // Apple's certificate chain before it touches subscription state.
+  if (request.method === 'POST' && request.nextUrl.pathname === '/api/apple/storekit-notifications') {
+    return NextResponse.next({ request })
+  }
+
   if (
     request.nextUrl.pathname === '/api/webhooks/whop' ||
     request.nextUrl.pathname === '/api/webhooks/whop-addon' ||
