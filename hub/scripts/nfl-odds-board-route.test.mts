@@ -172,19 +172,19 @@ test('a captured game designation suppresses both raw book quotes and carried ca
 test('saved pregame player artwork is sent once per exact game/player with the game team colors',async()=>{reset();const result=await(await request()).json();assert.deepEqual(result.identities,[['game',4,'Test','SEA','https://static.www.nfl.com/headshot.png',['https://a.espncdn.com/headshot.png']]]);assert.deepEqual(result.teams[0],['game','SEA','#002244','#69BE28','https://a.espncdn.com/seattle.png']);assert.equal(result.quotes.length,1);assert.equal(state.reads,2);await request();assert.equal(state.reads,2)})
 test('untrusted artwork hosts and a mismatched player name do not supply an avatar',async()=>{reset();const next=state.tables.nfl_odds_snapshot_history[0] as ReturnType<typeof sample>;next.board.players[0].headshot='https://example.org/untrusted.png';next.board.players[0].headshotFallbacks=[];const older=state.tables.nfl_odds_snapshot_history[1] as ReturnType<typeof sample>;older.board.players[0].name='Another Player';const result=await(await request()).json();assert.deepEqual(result.identities,[])})
 test('a valid saved fallback remains usable when the primary host is untrusted',async()=>{reset();const next=state.tables.nfl_odds_snapshot_history[0] as ReturnType<typeof sample>;next.board.players[0].headshot='https://example.org/untrusted.png';const result=await(await request()).json();assert.deepEqual(result.identities,[['game',4,'Test','SEA','https://a.espncdn.com/headshot.png',[]]])})
-test('v4 cached prices survive the identity rollout without inventing artwork',async()=>{reset();await request();const [key,value]=[...state.baselines.entries()].find(([entry])=>entry.includes('partial-view:v12'))!;const saved=value as {quotes:unknown[][]};state.baselines.set(key.replace('partial-view:v12','partial-view:v4'),{...saved,identities:undefined});state.baselines.delete(key);state.entries.clear();state.tables.nfl_odds_snapshot_history=[];const result=await(await request()).json();assert.equal(result.quotes[0][8],-140);assert.equal(result.quotes[0][9],'2020-11-02T21:29:00.000Z');assert.deepEqual(result.identities,[])})
+test('v4 cached prices survive the identity rollout without inventing artwork',async()=>{reset();await request();const [key,value]=[...state.baselines.entries()].find(([entry])=>entry.includes('partial-view:v13'))!;const saved=value as {quotes:unknown[][]};state.baselines.set(key.replace('partial-view:v13','partial-view:v4'),{...saved,identities:undefined});state.baselines.delete(key);state.entries.clear();state.tables.nfl_odds_snapshot_history=[];const result=await(await request()).json();assert.equal(result.quotes[0][8],-140);assert.equal(result.quotes[0][9],'2020-11-02T21:29:00.000Z');assert.deepEqual(result.identities,[])})
 test('unavailable selections retain requested market and book without substituting quotes',async()=>{reset();const missingBook=await(await request('receiving_yards','draftkings')).json();assert.equal(missingBook.market,'receiving_yards');assert.equal(missingBook.book,'draftkings');assert.deepEqual(missingBook.quotes,[]);assert.deepEqual(missingBook.books,['fanduel']);const missingMarket=await(await request('passing_tds','fanduel')).json();assert.equal(missingMarket.market,'passing_tds');assert.equal(missingMarket.book,'fanduel');assert.deepEqual(missingMarket.quotes,[]);assert.deepEqual(missingMarket.markets,['receiving_yards']);assert.equal(state.reads,2)})
 test('direct parser initialization is never treated as an opening',async()=>{reset();state.tables.nfl_odds_snapshot_history=[];state.tables.nfl_fanduel_capture_history=[sample('2020-11-02T21:30:00.000Z','2020-11-02T21:29:00.000Z',-120,3)];const result=await(await request()).json();assert.equal(result.quotes.length,1);assert.equal(result.quotes[0][12],null)})
 test('opening conflicts do not revive an older cached opening',async()=>{reset();await request();for(const key of state.entries.keys())if(key.includes('candidate')||key.includes('partial-view'))state.entries.delete(key);const changed=sample('2020-11-02T21:45:00.000Z','2020-11-02T21:44:00.000Z',-130);changed.board.players[0].markets[0].offers[0].opening.odds=400;state.tables.nfl_odds_snapshot_history=[changed];const result=await(await request()).json();assert.equal(result.games[0].status,'incomplete');assert.equal(result.quotes[0][12],null);assert.equal(result.quotes[0][13],true)})
 test('legacy views use one lookup and the newest saved version regardless of result order', async () => {
   reset()
   assert.equal((await request()).status, 200)
-  const [key, value] = [...state.baselines.entries()].find(([entry]) => entry.includes('partial-view:v12'))!
+  const [key, value] = [...state.baselines.entries()].find(([entry]) => entry.includes('partial-view:v13'))!
   const saved = value as { quotes: unknown[][] }
-  state.baselines.set(key.replace('partial-view:v12', 'partial-view:v9'), {
+  state.baselines.set(key.replace('partial-view:v13', 'partial-view:v9'), {
     ...saved, quotes: saved.quotes.map(quote => quote.map((field, index) => index === 8 ? -120 : field)),
   })
-  state.baselines.set(key.replace('partial-view:v12', 'partial-view:v11'), saved)
+  state.baselines.set(key.replace('partial-view:v13', 'partial-view:v11'), saved)
   state.baselines.delete(key)
   state.entries.clear()
   state.tables.nfl_odds_snapshot_history = []
@@ -194,7 +194,7 @@ test('legacy views use one lookup and the newest saved version regardless of res
   assert.equal(state.legacyKeyReads, 1)
 })
 
-test('the v3 last-seen baseline survives rollout without inventing an opening',async()=>{reset();await request();const [key,value]=[...state.baselines.entries()].find(([entry])=>entry.includes('partial-view:v12'))!;const saved=value as {quotes:unknown[][]};state.baselines.set(key.replace('partial-view:v12','partial-view:v3'),{...saved,quotes:saved.quotes.map(quote=>quote.slice(0,12))});state.baselines.delete(key);state.entries.clear();state.tables.nfl_odds_snapshot_history=[];const result=await(await request()).json();assert.equal(result.games[0].status,'incomplete');assert.equal(result.quotes[0][8],-140);assert.equal(result.quotes[0][9],'2020-11-02T21:29:00.000Z');assert.equal(result.quotes[0][12],null);assert.equal(result.quotes[0][13],false)})
+test('the v3 last-seen baseline survives rollout without inventing an opening',async()=>{reset();await request();const [key,value]=[...state.baselines.entries()].find(([entry])=>entry.includes('partial-view:v13'))!;const saved=value as {quotes:unknown[][]};state.baselines.set(key.replace('partial-view:v13','partial-view:v3'),{...saved,quotes:saved.quotes.map(quote=>quote.slice(0,12))});state.baselines.delete(key);state.entries.clear();state.tables.nfl_odds_snapshot_history=[];const result=await(await request()).json();assert.equal(result.games[0].status,'incomplete');assert.equal(result.quotes[0][8],-140);assert.equal(result.quotes[0][9],'2020-11-02T21:29:00.000Z');assert.equal(result.quotes[0][12],null);assert.equal(result.quotes[0][13],false)})
 test('an earlier corrected cutoff during the load rejects the entire response',async()=>{reset();state.cutoffs=[cutoff,older];const response=await request();assert.equal(response.status,503);assert.doesNotMatch(await response.text(),/Test|receiving_yards/)})
 test('truncated durable cutoff rows fail closed',async()=>{reset();state.truncated=true;assert.equal((await request()).status,503);assert.equal(state.reads,0)})
 test('legacy finals use a corroborated kickoff and exclude quotes captured after it', async () => {
@@ -298,6 +298,31 @@ test('frozen Props quotes cover a history gap without manufacturing opening or e
   reset();state.tables.nfl_odds_snapshot_history=[]
   state.archive={value:frozen.board,observedAt:cutoff}
   const invalid=await(await request()).json();assert.deepEqual(invalid.quotes,[])
+})
+
+for (const namespace of ['current', 'v12 rollout'] as const) test(`complete captures withdraw absent quotes without false partial coverage (${namespace})`, async () => {
+  reset()
+  const initial = Object.assign(sample('2020-11-02T21:40:00.000Z', '2020-11-02T21:39:00.000Z', -120, 3), { raw_tabs: [{ incomplete: false }] })
+  const market = initial.board.players[0].markets[0]
+  initial.board.players[0].markets.push({ ...market, key: 'receiving_yards:50', line: 50, offers: [{ ...market.offers[0], line: 50, openingLine: 50, current: { odds: 500 } }] })
+  state.tables.nfl_fanduel_capture_history = [initial]
+  const first = await (await request()).json()
+  assert.equal(first.games[0].status, 'ready')
+  assert.equal(first.quotes.length, 2)
+  if (namespace === 'v12 rollout') {
+    const [key, value] = [...state.baselines.entries()].find(([entry]) => entry.includes('partial-view:v13'))!
+    state.baselines.set(key.replace('partial-view:v13', 'partial-view:v12'), value)
+    state.baselines.delete(key)
+  }
+  state.entries.clear()
+  state.tables.nfl_fanduel_capture_history = [Object.assign(sample('2020-11-02T21:50:00.000Z', '2020-11-02T21:49:00.000Z', -130, 3), { raw_tabs: [{ incomplete: false }] })]
+  const next = await (await request()).json()
+  assert.equal(next.games[0].status, 'ready')
+  assert.equal(next.quotes.length, 1, 'a withdrawn rung must not return as an old last-seen quote')
+  assert.equal(next.quotes[0][7], 25)
+  assert.equal(next.quotes[0][8], -130)
+  assert.equal(next.quotes[0][9], '2020-11-02T21:49:00.000Z')
+  assert.equal(next.quotes[0][12], 300, 'the genuine opening remains available')
 })
 
 for (const [name,bytes,incomplete,expected] of [

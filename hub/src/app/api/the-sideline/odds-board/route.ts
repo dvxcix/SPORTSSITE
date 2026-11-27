@@ -82,7 +82,12 @@ function mergePartial(candidate:Pool, previous:Pool|null, clocks:NflOddsBoardClo
     if(openingConflict)incomplete.add(q[0])
     output.set(key,[...latest.slice(0,10),ambiguous?null:prev?.value??null,ambiguous?null:prev?.at??null,!openingConflict&&openings.length===1?openings[0]:null,openingConflict] as CompactQuote)
   }
-  for(const [key,q] of old){output.set(key,q);incomplete.add(q[0])}
+  for(const [key,q] of old){
+    // Complete captures confirm withdrawals. Only a partial source read may
+    // retain an absent quote, with its original last-seen observation time.
+    if(games.get(q[0])?.status==='ready')continue
+    output.set(key,q);incomplete.add(q[0])
+  }
   const quotes=[...output.values()],wanted=new Set(quotes.map(q=>nflBoardIdentityKey(q[0],q[1],q[3],q[2]))),identities=new Map<string,NflBoardIdentity>()
   // A partial board may retain an older price and its saved player artwork;
   // unknown or malformed artwork never changes a valid odds observation.
@@ -232,8 +237,8 @@ export async function GET(request:NextRequest){
       if(groups.length!==games.length)throw new Error('Odds board games missing')
       return packNflBoardPicks(pool,MAX_POOL_BYTES)
     },110)
-    const viewKey=`nfl:odds-board-partial-view:v12:${date}:${nflOddsBoardHash(phase)}`
-    const priorViewKeys=[`nfl:odds-board-partial-view:v11:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v10:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v9:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v8:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v7:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v6:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v5:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v4:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v3:${date}:${nflOddsBoardHash(phase)}`]
+    const viewKey=`nfl:odds-board-partial-view:v13:${date}:${nflOddsBoardHash(phase)}`
+    const priorViewKeys=[`nfl:odds-board-partial-view:v12:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v11:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v10:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v9:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v8:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v7:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v6:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v5:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v4:${date}:${nflOddsBoardHash(phase)}`,`nfl:odds-board-partial-view:v3:${date}:${nflOddsBoardHash(phase)}`]
     // This namespace is intentionally separate from verified archive and
     // baseline data. An incomplete read never replaces or alters those rows.
     const view=await nbaSharedCache(viewKey,300,3600,async()=>{
