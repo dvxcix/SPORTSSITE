@@ -1,7 +1,7 @@
 import Foundation
 
 // Metric names, reference selection and push handling mirror nbaPaint.ts.
-enum CourtPlayerMarket: String, CaseIterable {
+enum CourtPlayerMarket: String, CaseIterable, Codable {
     case points, rebounds, assists, threes, steals, blocks, turnovers
     case pointsReboundsAssists = "points_rebounds_assists"
     case pointsRebounds = "points_rebounds"
@@ -13,11 +13,11 @@ enum CourtPlayerMarket: String, CaseIterable {
     case reboundsFirstQuarter = "rebounds_1q"
     case assistsFirstQuarter = "assists_1q"
 
-    enum Side: String, CaseIterable {
+    enum Side: String, CaseIterable, Codable {
         case over = "Over", under = "Under"
     }
 
-    enum Venue: String, CaseIterable {
+    enum Venue: String, CaseIterable, Codable {
         case all = "All venues", home = "Home", away = "Away"
 
         func accepts(_ log: CourtBoard.PlayerLog) -> Bool {

@@ -137,7 +137,7 @@ struct ResearchDeepLink: Hashable {
         case .court:
             guard rawView == nil || courtEntry != nil, rawMode == nil || courtMode != nil else { return nil }
         case .sideline:
-            guard rawMode == nil || ["research", "public", "markets", "cheatsheets", "mm", "slate-edge", "ladders"].contains(rawMode ?? ""),
+            guard rawMode == nil || ["research", "public", "markets", "cheatsheets", "mm", "slate-edge", "ladders", "trends"].contains(rawMode ?? ""),
                   rawView == nil || rawMode != nil || sidelineEntry != nil,
                   !sidelineContext.preview || date != nil && nflGameID != nil else { return nil }
         case .spray:
@@ -213,8 +213,30 @@ struct LinkedResearchView: View {
     let account: AccountStore
     let link: ResearchDeepLink
     var preferredBook: String? = nil
+    @AppStorage("appearance") private var appearance = Appearance.color
+    @State private var signingIn = false
 
     var body: some View {
+        content
+            .sheet(isPresented: $signingIn) {
+                NavigationStack {
+                    AccountSignInView(account: account, appearance: $appearance,
+                        purpose: "Sign in to continue to the research you opened.")
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Close", systemImage: "xmark") { signingIn = false }
+                                    .labelStyle(.iconOnly)
+                            }
+                        }
+                }
+            }
+            .onChange(of: account.memberID) { _, member in
+                if member != nil { signingIn = false }
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         let date = link.date ?? .now
         switch link.tool {
         case .sideline:
@@ -222,7 +244,7 @@ struct LinkedResearchView: View {
                 SidelineView(api: SidelineAPI(scope: .member(account, userID)), date: link.date, linkedGame: link.nflGameID,
                     entry: link.sidelineEntry ?? .core, book: link.book ?? preferredBook, link: link.sidelineContext, restoredOdds: link.oddsFilters)
             } else if link.date != nil || link.nflGameID != nil || link.sidelineEntry != nil {
-                ContentUnavailableView("Sign in to open this matchup", systemImage: "lock")
+                accessGate("Sign in to open this matchup")
             } else { SidelineView(api: SidelineAPI()) }
         case .court:
             if let userID = account.memberID {
@@ -232,15 +254,24 @@ struct LinkedResearchView: View {
                     oddsMarket: link.courtMarket, restoredOdds: link.oddsFilters, restoredPlayers: link.playerFilters, restoredQuotes: link.quoteFilters)
             } else if link.date != nil || link.gameID != nil || link.courtEntry != nil || link.courtMode == .live
                 || link.courtContext.player != nil || link.courtMarket != nil {
-                ContentUnavailableView("Sign in to open this matchup", systemImage: "lock")
+                accessGate("Sign in to open this matchup")
             } else { CourtView(scope: .preview) }
         default:
             if let userID = account.memberID {
                 mlb(userID, date: date)
             } else {
-                ContentUnavailableView("Sign in to open this research", systemImage: "lock")
+                accessGate("Sign in to open this research")
             }
         }
+    }
+
+    private func accessGate(_ title: String) -> some View {
+        ContentUnavailableView {
+            Label(title, systemImage: "lock")
+        } actions: {
+            Button("Sign in") { signingIn = true }.buttonStyle(.borderedProminent)
+        }
+        .background { SlipBackdrop() }
     }
 
     @ViewBuilder

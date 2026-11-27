@@ -24,13 +24,14 @@ struct CourtView: View {
 
     enum Entry: String {
         case research, oddsBoard = "odds-board", gameMarkets = "game-markets", odds, ladders, movement
-        case firstBasket = "first-basket", cheatsheets, slate, score, dvp, matchup, lineups
+        case firstBasket = "first-basket", cheatsheets, trends, slate, score, dvp, matchup, lineups
         case availability, usage, tracking, publicActivity = "public", divergence
 
         fileprivate var tool: CourtMatchupTool? {
             switch self {
             case .firstBasket: .firstBasket
             case .cheatsheets: .cheatsheets
+            case .trends: .trends
             case .slate: .slateEdge
             case .score: .score
             case .dvp: .defense
@@ -251,7 +252,19 @@ struct CourtView: View {
                 if isPreview {
                     boardContent()
                 } else {
-                    ResearchSlateControls(date: $date)
+                    HStack(spacing: 6) {
+                        ResearchSlateControls(date: $date)
+                        if case .member(_, let user) = scope {
+                            ResearchGamePin(account: user, league: "nba", current: selectedGame.map {
+                                .init(date: $0.date, id: String($0.id), label: "\($0.visitorTeam.abbreviation) at \($0.homeTeam.abbreviation)")
+                            }) { pin in
+                                guard let id = Int(pin.id), let day = SlateDate.fromKey(pin.date) else { return }
+                                date = day
+                                selectedGameID = id
+                                mode = .pregame
+                            }
+                        }
+                    }
                     memberContent()
                     if showsOddsBoard {
                         if selectedGame != nil { selectors }
@@ -351,6 +364,7 @@ struct CourtView: View {
             view = switch tool {
             case .firstBasket: "first-basket"
             case .cheatsheets: "cheatsheets"
+            case .trends: "trends"
             case .slateEdge: "slate"
             case .score: "score"
             case .defense: "dvp"
@@ -527,7 +541,7 @@ struct CourtView: View {
                 linkedBooks: link.booksChoice)
                 .id("\(board.game.id):\(mode.rawValue)")
         } else if tool == .cheatsheets {
-            CourtCheatsheetsView(scope: scope, board: board, reload: revision, initialBook: preferredBook)
+            CourtCheatsheetsView(scope: scope, board: board, reload: revision, observedAt: observedAt, initialBook: preferredBook)
                 .id("\(board.game.id):\(mode.rawValue)")
         } else if tool == .lineups {
             CourtLineupView(scope: scope, board: board, observedAt: observedAt, revision: revision)
@@ -554,6 +568,8 @@ struct CourtView: View {
             if let tool {
                 switch tool {
                 case .matchup: CourtMatchupLab(board: board, observedAt: observedAt, scope: scope)
+                case .trends: CourtVolumeTrends(board: board, observedAt: observedAt, scope: scope)
+                    .id("\(board.game.id):\(mode.rawValue)")
                 case .availability: CourtAvailability(board: board, observedAt: observedAt, scope: scope)
                 case .firstBasket, .cheatsheets, .slateEdge, .score, .defense, .lineups, .publicActivity, .crossMarket, .scouting, .tracking: EmptyView()
                 }

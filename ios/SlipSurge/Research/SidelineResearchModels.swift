@@ -10,7 +10,7 @@ enum SidelineResearchTool: String {
     case compare
 }
 
-enum SidelineResearchSample: String, CaseIterable {
+enum SidelineResearchSample: String, CaseIterable, Codable {
     case automatic, previous, preseason, regular
 
     var label: String {

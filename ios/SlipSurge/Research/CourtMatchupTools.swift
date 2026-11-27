@@ -5,6 +5,7 @@ enum CourtMatchupTool: String, CaseIterable {
     case availability = "Availability"
     case firstBasket = "First Basket"
     case cheatsheets = "Cheatsheets"
+    case trends = "Volume Trends"
     case slateEdge = "Slate Edge"
     case score = "SlipSurge Score"
     case defense = "Defense vs. Position"
@@ -20,6 +21,7 @@ enum CourtMatchupTool: String, CaseIterable {
         case .availability: "heart.text.square"
         case .firstBasket: SlipGlyph.firstBasket.rawValue
         case .cheatsheets: SlipGlyph.cheatsheets.rawValue
+        case .trends: "chart.bar"
         case .slateEdge: SlipGlyph.slateEdge.rawValue
         case .score: "bolt"
         case .defense: "shield"
@@ -33,6 +35,18 @@ enum CourtMatchupTool: String, CaseIterable {
 }
 
 struct CourtMatchupLab: View {
+    private enum Section: String, CaseIterable {
+        case overview = "Overview", rotations = "Rotations", defense = "Defense"
+
+        var symbol: String {
+            switch self {
+            case .overview: "rectangle.split.2x1"
+            case .rotations: "person.3"
+            case .defense: "shield"
+            }
+        }
+    }
+
     private enum Metric: String, CaseIterable {
         case pace, offense = "off_rating", defense = "def_rating", net = "net_rating", rebounds = "reb_pct", shooting = "ts_pct"
 
@@ -60,6 +74,7 @@ struct CourtMatchupLab: View {
     let observedAt: Date
     let scope: CourtView.Scope
     @State private var metric = Metric.pace
+    @State private var section = Section.overview
     @Environment(\.slipPalette) private var slipPalette
     private var scheme: ColorScheme { slipPalette.colorScheme }
 
@@ -67,18 +82,57 @@ struct CourtMatchupLab: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker("Compare team metric", selection: $metric) {
-                ForEach(Metric.allCases, id: \.self) { Text($0.label).tag($0) }
+            ResearchToolRail(title: "Matchup breakdown", choices: Section.allCases, selection: $section,
+                             label: \.rawValue, glyph: \.symbol, compact: true)
+            switch section {
+            case .overview:
+                overview
+            case .rotations:
+                ForEach(teams, id: \.id) { team in rotation(team) }
+            case .defense:
+                CourtIntelligenceView(scope: scope, board: board, defense: true, revision: 0)
             }
-            .frame(minHeight: 44)
-            HStack(alignment: .top, spacing: 8) {
-                ForEach(teams, id: \.id) { team in metricCard(team) }
-            }
-            if board.teamStats?.isEmpty != false {
+        }
+    }
+
+    private var overview: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if board.teamStats?.isEmpty == false {
+                ResearchSectionTitle(title: "Offense against defense")
+                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
+                    ForEach(teams, id: \.id) { team in
+                        if let opponent = teams.first(where: { $0.id != team.id }) {
+                            GridRow {
+                                Text("\(team.abbreviation) offense").font(.subheadline.weight(.semibold))
+                                Text(Metric.offense.format(rating(.offense, team: team))).monospacedDigit()
+                                Text("vs \(opponent.abbreviation) defense").font(.subheadline).foregroundStyle(.secondary)
+                                Text(Metric.defense.format(rating(.defense, team: opponent))).monospacedDigit()
+                            }
+                       }
+                    }
+                }
+                .accessibilityElement(children: .contain)
+                Picker("Compare team metric", selection: $metric) {
+                    ForEach(Metric.allCases, id: \.self) { Text($0.label).tag($0) }
+                }.frame(minHeight: 44)
+                HStack(alignment: .top, spacing: 8) {
+                    ForEach(teams, id: \.id) { team in metricCard(team) }
+                }
+            } else {
                 Text("Team metrics are unavailable for this snapshot.").font(.footnote).foregroundStyle(.secondary)
             }
-            ForEach(teams, id: \.id) { team in rotation(team) }
+            GameMarkets(away: marketTeam(board.game.visitorTeam), home: marketTeam(board.game.homeTeam),
+                        offers: board.gameOdds?.map(\.book) ?? [])
         }
+    }
+
+    private func rating(_ metric: Metric, team: CourtBoard.Team) -> Double? {
+        board.teamStats?.first { $0.team.id == team.id }?.stats[metric.rawValue] ?? nil
+    }
+
+    private func marketTeam(_ team: CourtBoard.Team) -> ResearchMatchup.Team {
+        let colors = CourtTeamColors.colors(for: team.abbreviation)
+        return .init(name: team.abbreviation, logo: team.logo, color: colors.primary, secondary: colors.secondary)
     }
 
     private func metricCard(_ team: CourtBoard.Team) -> some View {

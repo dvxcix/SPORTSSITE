@@ -26,13 +26,13 @@ struct SidelineView: View {
 
     enum Entry: String {
         case core, props, oddsBoard = "odds-board", touchdowns, publicActivity = "public", markets, cheatsheets
-        case mismatch = "mm", slateEdge = "slate-edge", ladders, usage, tracking, team, all, custom, research, movement
+        case mismatch = "mm", slateEdge = "slate-edge", ladders, usage, tracking, team, all, custom, research, movement, trends
     }
 
     private enum Workspace: String, CaseIterable {
         case matchup = "The Sideline", mismatch = "MM", cheatsheets = "Cheatsheets", slateEdge = "Slate Edge"
         case publicActivity = "The Public", sportsbooks = "Sportsbooks", ladders = "Prop Ladders"
-        case matchupLab = "Matchup Lab"
+        case matchupLab = "Matchup Lab", trends = "Prop Trends"
 
         var glyph: String {
             switch self {
@@ -44,6 +44,7 @@ struct SidelineView: View {
             case .sportsbooks: "sportscourt"
             case .ladders: "stairs"
             case .matchupLab: "chart.xyaxis.line"
+            case .trends: "chart.bar"
             }
         }
     }
@@ -112,6 +113,7 @@ struct SidelineView: View {
         case .markets: workspace = .sportsbooks
         case .ladders: workspace = .ladders
         case .research: workspace = .matchupLab
+        case .trends: workspace = .trends
         default: workspace = .matchup
         }
         let exactProp = link.line != nil
@@ -175,7 +177,17 @@ struct SidelineView: View {
                     }
                     if tool == .matchup || lastBoard?.games.isEmpty != false { oddsContent() }
                 } else {
-                    ResearchSlateControls(date: dateSelection)
+                    HStack(spacing: 6) {
+                        ResearchSlateControls(date: dateSelection)
+                        if case .member(_, let user) = api.scope {
+                            ResearchGamePin(account: user, league: "nfl", current: currentMatchupPin) { pin in
+                                guard let day = SlateDate.fromKey(pin.date) else { return }
+                                useDefaultDate = false
+                                date = day
+                                selectedGameID = pin.id
+                            }
+                        }
+                    }
                     memberSlate()
                 }
             }
@@ -228,6 +240,12 @@ struct SidelineView: View {
         }
     }
 
+    private var currentMatchupPin: ResearchGamePin.Matchup? {
+        guard case .loaded(let slate) = schedule, slate.date == dayRequest.date,
+              let game = slate.games.first(where: { $0.id == selectedGameID }) ?? slate.games.first else { return nil }
+        return .init(date: slate.date, id: game.id, label: "\(game.away.abbreviation) at \(game.home.abbreviation)")
+    }
+
     private var resumeLocation: NativeResumeLocation? {
         guard resumeActive, let selectedGameID, !api.isFeatured, link.capture == nil, link.player == nil, link.line == nil else { return nil }
         let view: String = switch tool {
@@ -247,6 +265,7 @@ struct SidelineView: View {
         case .matchupLab: "research"
         case .mismatch: "mm"
         case .cheatsheets: "cheatsheets"
+        case .trends: "trends"
         case .slateEdge: "slate-edge"
         case .publicActivity: "public"
         case .sportsbooks: "markets"
@@ -256,7 +275,7 @@ struct SidelineView: View {
         components.scheme = "https"
         components.host = SlipSurgeHTTP.site
         components.path = "/the-sideline"
-        let mode = tool == .matchupLab || tool == .publicActivity || tool == .sportsbooks || tool == .cheatsheets
+        let mode = tool == .matchupLab || tool == .publicActivity || tool == .sportsbooks || tool == .cheatsheets || tool == .trends
         var query: [URLQueryItem] = [.init(name: "date", value: dayRequest.date), .init(name: "game", value: selectedGameID),
             .init(name: mode ? "mode" : "view", value: view), .init(name: "book", value: selection.book)]
         if tool == .matchup, section.quotes { query.append(.init(name: "market", value: selection.market)) }
@@ -354,9 +373,10 @@ struct SidelineView: View {
             SidelineMarketTools(api: api, tool: tool == .publicActivity ? .publicActivity : .sportsbooks,
                 date: date, gameID: gameID, teams: selectedTeams)
                 .id("\(gameID):\(tool.rawValue)")
-        case .mismatch, .cheatsheets:
+        case .mismatch, .cheatsheets, .trends:
             SidelineResearchView(api: api, tool: tool == .mismatch ? .mismatch : .cheatsheets,
-                date: date, game: gameID, teams: selectedTeams, revision: revision, initialBook: preferredBook, initialSample: link.sample)
+                date: date, game: gameID, teams: selectedTeams, revision: revision, initialBook: preferredBook,
+                initialSample: link.sample, trends: tool == .trends)
                 .id("\(gameID):\(tool.rawValue)")
         case .slateEdge:
             SidelineSlateEdgeView(api: api, date: date, teams: slateTeams, revision: revision, initialSample: link.sample)

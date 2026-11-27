@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CourtCheatsheetsView: View {
-    private enum Contract: String, CaseIterable {
+    private enum Contract: String, CaseIterable, Codable {
         case all, overUnder = "over_under", milestone
         var label: String {
             switch self {
@@ -12,8 +12,8 @@ struct CourtCheatsheetsView: View {
         }
     }
 
-    private enum Location: String, CaseIterable { case all, home, away }
-    private enum Sort: String, CaseIterable {
+    private enum Location: String, CaseIterable, Codable { case all, home, away }
+    private enum Sort: String, CaseIterable, Codable {
         case hit = "Hit rate", mismatch = "MM", gap = "Form gap"
     }
 
@@ -28,9 +28,22 @@ struct CourtCheatsheetsView: View {
         let retry: Int
     }
 
+    private struct Saved: Codable, Equatable {
+        let market: CourtPlayerMarket
+        let book: String
+        let side: CourtPlayerMarket.Side
+        let location: Location
+        let contract: Contract
+        let line: Double?
+        let sort: Sort
+        let search: String
+        let team: Int?
+    }
+
     let scope: CourtView.Scope
     let board: CourtBoard
     let reload: Int
+    let observedAt: Date
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var market = CourtPlayerMarket.points
@@ -46,10 +59,11 @@ struct CourtCheatsheetsView: View {
     @State private var error: (any Error)?
     @State private var retry = 0
 
-    init(scope: CourtView.Scope, board: CourtBoard, reload: Int, initialBook: String? = nil) {
+    init(scope: CourtView.Scope, board: CourtBoard, reload: Int, observedAt: Date, initialBook: String? = nil) {
         self.scope = scope
         self.board = board
         self.reload = reload
+        self.observedAt = observedAt
         _book = State(initialValue: initialBook ?? "all")
     }
 
@@ -83,8 +97,23 @@ struct CourtCheatsheetsView: View {
             }
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
+                    if case .member(_, let user) = scope {
+                        ResearchSavedFilters(account: user, board: "court.cheatsheets", current:
+                            Saved(market: market, book: book, side: side, location: location, contract: contract,
+                                  line: line, sort: sort, search: ResearchResumeFilters.searchTerm(search), team: selectedTeam)) { saved in
+                            market = saved.market
+                            book = saved.book
+                            side = saved.side
+                            location = saved.location
+                            contract = saved.contract
+                            line = saved.line
+                            sort = saved.sort
+                            search = saved.search
+                            selectedTeam = [board.game.visitorTeam.id, board.game.homeTeam.id].first { $0 == saved.team }
+                        }
+                    }
                     ResearchToolFilter(title: "Market", symbol: "ticket", selection: market.label) {
-                        Picker("Market", selection: $market) {
+                        Picker("Market", selection: Binding(get: { market }, set: { market = $0; line = nil })) {
                             ForEach(CourtPlayerMarket.allCases.filter { available.isEmpty || available.contains($0.rawValue) || $0 == market }, id: \.self) {
                                 Label($0.label, systemImage: $0.symbol).tag($0)
                             }
@@ -94,7 +123,7 @@ struct CourtCheatsheetsView: View {
                         options: [.init(id: "all", title: "All books", icon: "books.vertical")] + books.map(ResearchArtworkPicker.Option.sportsbook),
                         selection: $book)
                     ResearchToolFilter(title: "Contract", symbol: "doc.text", selection: contract.label) {
-                        Picker("Contract", selection: $contract) {
+                        Picker("Contract", selection: Binding(get: { contract }, set: { contract = $0; line = nil })) {
                             ForEach(Contract.allCases, id: \.self) { Text($0.label).tag($0) }
                         }
                     }
@@ -124,8 +153,6 @@ struct CourtCheatsheetsView: View {
             TextField("Find a player", text: $search)
                 .textFieldStyle(.roundedBorder).autocorrectionDisabled()
         }
-        .onChange(of: market) { _, _ in line = nil }
-        .onChange(of: contract) { _, _ in line = nil }
     }
 
     @ViewBuilder
@@ -164,10 +191,23 @@ struct CourtCheatsheetsView: View {
             : row.milestone ? "\(row.line.formatted())+" : "\(side.rawValue) \(row.line.formatted())"
         let rateSuffix = market.isBinary ? "%" : ""
         return ResearchToolCard(color: colors.primary) {
-            ResearchToolPortrait(name: "\(player.firstName) \(player.lastName)",
-                subtitle: "\(player.team.abbreviation) · \(row.label) · \(target)",
-                portraits: player.headshot.map { [$0] } ?? [], teamLogo: player.team.logo,
-                primary: colors.primary, secondary: colors.secondary)
+            NavigationLink {
+                CourtPlayerView(player: player, game: board.game, mode: board.oddsMode, frozen: board.isFrozen,
+                    tip: board.tip, observedAt: observedAt, sampleSeason: board.sampleSeason, initialBook: row.book,
+                    initialMarket: row.market, initialSide: side, researchScope: scope,
+                    linkedQuote: .init(line: row.line, contract: row.milestone ? .milestone : .standard),
+                    matchupBoard: board, initialVenue: CourtPlayerMarket.Venue(rawValue: location.rawValue.capitalized) ?? .all)
+            } label: {
+                HStack {
+                    ResearchToolPortrait(name: "\(player.firstName) \(player.lastName)",
+                        subtitle: "\(player.team.abbreviation) · \(row.label) · \(target)",
+                        portraits: player.headshot.map { [$0] } ?? [], teamLogo: player.team.logo,
+                        primary: colors.primary, secondary: colors.secondary)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
         } content: {
             ResearchToolBook(book: row.book, price: row.odds)
             ResearchToolValues(items: [

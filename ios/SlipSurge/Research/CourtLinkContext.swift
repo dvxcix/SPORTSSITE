@@ -2,11 +2,12 @@ import Foundation
 
 struct CourtLinkContext: Hashable {
     enum Panel: String, CaseIterable {
-        case trends, ladder, movement, tracking, court, markets
+        case trends, opponent, ladder, movement, tracking, court, markets
 
         var label: String {
             switch self {
             case .trends: "Trends"
+            case .opponent: "Opponent log"
             case .ladder: "Ladder"
             case .movement: "Market Story"
             case .tracking: "Tracking"
@@ -18,6 +19,7 @@ struct CourtLinkContext: Hashable {
         var icon: String {
             switch self {
             case .trends: "chart.bar.xaxis"
+            case .opponent: "list.bullet.rectangle"
             case .ladder: "stairs"
             case .movement: "chart.line.uptrend.xyaxis"
             case .tracking: "waveform.path"
@@ -27,14 +29,14 @@ struct CourtLinkContext: Hashable {
         }
     }
 
-    enum Contract: String, CaseIterable, Decodable {
+    enum Contract: String, CaseIterable, Codable {
         case milestone
         case standard = "over_under"
 
         var label: String { self == .milestone ? "Milestones" : "Over / Under" }
     }
 
-    enum Sort: String, CaseIterable {
+    enum Sort: String, CaseIterable, Codable {
         case mm, average, line, odds, l5, l10, l20, minutes, name
 
         var label: String {

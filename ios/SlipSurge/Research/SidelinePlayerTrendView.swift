@@ -5,6 +5,7 @@ struct SidelinePlayerTrendView: View {
     let visual: SidelineMarketTools.Visual
     let market: String
     let book: String
+    var opponent: SidelineMarketTools.Visual?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.slipPalette) private var slipPalette
@@ -19,7 +20,8 @@ struct SidelinePlayerTrendView: View {
                         portraits: row.player.portraits, teamLogo: visual.logo, primary: visual.primary,
                         secondary: visual.secondary ?? visual.primary)
                 } content: { EmptyView() }
-                SidelineTrendCard(row: row, color: visual.primary, market: market, book: book, window: $window)
+                SidelineTrendCard(row: row, color: visual.primary, market: market, book: book, window: $window,
+                                  opponent: opponent)
             }
             .padding(16)
         }
@@ -41,6 +43,20 @@ private struct SidelineTrendCard: View {
     let market: String
     let book: String
     @Binding var window: Int
+    var opponent: SidelineMarketTools.Visual?
+    @State private var opponentOnly = false
+
+    private var history: [SidelineResearchPayload.Row.Game] {
+        let log = row.gameLog ?? []
+        guard opponentOnly, let opponent else { return log }
+        let team = SidelineResearchMarket.normalizeTeam(row.player.team)
+        return log.filter { game in
+            let parts = game.id.split(separator: "_")
+            guard parts.count == 4 else { return false }
+            let codes = Set(parts.suffix(2).map { SidelineResearchMarket.normalizeTeam(String($0)) })
+            return codes == Set([team, SidelineResearchMarket.normalizeTeam(opponent.code)])
+        }
+    }
 
     var body: some View {
         ResearchToolCard(color: color) {
@@ -53,9 +69,20 @@ private struct SidelineTrendCard: View {
                 ResearchToolBook(book: book, price: row.odds)
             }
         } content: {
-            ResearchSampleBars(labels: ["Season", "L10", "L5", "L3", "L1"],
-                rates: (row.hits ?? []).map { $0.map { $0.rate / 100 } },
-                counts: (row.hits ?? []).map { $0.map { "\($0.hits)/\($0.total)" } })
+            if !opponentOnly {
+                ResearchSampleBars(labels: ["Season", "L10", "L5", "L3", "L1"],
+                    rates: (row.hits ?? []).map { $0.map { $0.rate / 100 } },
+                    counts: (row.hits ?? []).map { $0.map { "\($0.hits)/\($0.total)" } })
+            }
+            if let opponent {
+                ResearchToolRail(title: "Opponent game log", choices: [false, true], selection: $opponentOnly,
+                    label: { $0 ? "vs \(opponent.code)" : "All opponents" }, glyph: { $0 ? "target" : "list.bullet" },
+                    compact: true)
+                if opponentOnly {
+                    Text("\(history.count) \(history.count == 1 ? "recorded matchup" : "recorded matchups") against \(opponent.code)")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
             Picker("Games shown", selection: $window) {
                 ForEach([3, 5, 10, 20], id: \.self) { Text("L\($0)").tag($0) }
             }
@@ -65,7 +92,7 @@ private struct SidelineTrendCard: View {
     }
 
     private var games: [ResearchGameChart.Game] {
-        let recorded = (row.gameLog ?? []).prefix(window)
+        let recorded = history.prefix(window)
         return recorded.enumerated().reversed().map { index, game in
             let title = game.id.split(separator: "_")
             let label = title.count == 4 ? "Week \(title[1]) · \(title[2]) @ \(title[3])" : "Game \(index + 1) ago"

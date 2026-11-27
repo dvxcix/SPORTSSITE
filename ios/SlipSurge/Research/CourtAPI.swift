@@ -170,6 +170,7 @@ struct CourtBoard: Decodable {
     let teamStats: [TeamStats]?
     let teamStatsSeason: Int?
     let starters: [Int]?
+    let teams: [Team]?
     let fetchedAt: String?
     let researchSnapshot: Snapshot?
 

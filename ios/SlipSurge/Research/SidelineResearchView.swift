@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SidelineResearchView: View {
-    private enum Page: String, CaseIterable {
+    private enum Page: String, CaseIterable, Codable {
         case market = "Market Edge", exact = "Exact Lines", explosive = "Explosive Plays", gaps = "Run Gaps", defense = "Defense vs. Position"
 
         var glyph: String {
@@ -15,9 +15,49 @@ struct SidelineResearchView: View {
         }
     }
 
-    private enum Window: String, CaseIterable { case season = "Season", l1 = "L1", l3 = "L3", l5 = "L5", l10 = "L10" }
+    private enum Window: String, CaseIterable, Codable {
+        case season = "Season", l1 = "L1", l3 = "L3", l5 = "L5", l10 = "L10"
 
-    private enum Sort: String, CaseIterable { case mismatch = "MM", score = "SlipSurge Score", edge = "Model Edge", hits = "Season hit rate" }
+        var count: Int {
+            switch self {
+            case .season, .l5: 5
+            case .l1: 1
+            case .l3: 3
+            case .l10: 10
+            }
+        }
+    }
+
+    private enum Sort: String, CaseIterable, Codable {
+        case mismatch = "MM", score = "SlipSurge Score", edge = "Model Edge", hits = "Season hit rate"
+        case recent = "Recent average", rising = "Biggest increases", falling = "Biggest decreases"
+    }
+
+    private struct Saved: Codable, Equatable {
+        let sample: SidelineResearchSample
+        let window: Window
+        let page: Page
+        let sort: Sort?
+        let market: String
+        let book: String
+        let search: String
+        let team: String?
+    }
+
+    private struct Trend {
+        let recent: Double?
+        let comparison: Double?
+        let recentCount: Int
+        let earlierCount: Int
+        var change: Double? { recent.flatMap { recent in comparison.map { recent - $0 } } }
+    }
+
+    private struct RankedPlayer: Identifiable {
+        let row: SidelineResearchPayload.Row
+        let trend: Trend?
+        let rank: Double
+        var id: Int { row.id }
+    }
 
     private struct Filters: Equatable {
         let sample: SidelineResearchSample
@@ -34,6 +74,7 @@ struct SidelineResearchView: View {
     let game: String
     let teams: [SidelineMarketTools.Visual]
     let revision: Int
+    let trends: Bool
     @Environment(\.slipPalette) private var slipPalette
     private var scheme: ColorScheme { slipPalette.colorScheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -52,20 +93,24 @@ struct SidelineResearchView: View {
     @State private var selectedRow: SidelineResearchPayload.Row?
 
     init(api: SidelineAPI, tool: SidelineResearchTool, date: String, game: String, teams: [SidelineMarketTools.Visual],
-        revision: Int, initialBook: String? = nil, initialSample: SidelineResearchSample = .automatic) {
+        revision: Int, initialBook: String? = nil, initialSample: SidelineResearchSample = .automatic, trends: Bool = false) {
         self.api = api
         self.tool = tool
         self.date = date
         self.game = game
         self.teams = teams
         self.revision = revision
+        self.trends = trends
         _sample = State(initialValue: initialSample)
+        if trends { _window = State(initialValue: .l5) }
         if let initialBook { _book = State(initialValue: initialBook) }
     }
 
     private var mismatch: Bool { tool == .mismatch }
-    private var filters: Filters { .init(sample: sample, window: window, market: market, book: book, revision: revision, retry: retry) }
-    private var activeSort: Sort { sort ?? (mismatch ? .mismatch : page == .exact ? .hits : .edge) }
+    private var filters: Filters {
+        .init(sample: sample, window: trends ? .season : window, market: market, book: book, revision: revision, retry: retry)
+    }
+    private var activeSort: Sort { sort ?? (trends ? .rising : mismatch ? .mismatch : page == .exact ? .hits : .edge) }
     private var validResult: SidelineResearchPayload? { result.flatMap { $0.0 == filters ? $0.1 : nil } }
 
     var body: some View {
@@ -73,13 +118,13 @@ struct SidelineResearchView: View {
             ResearchToolMessage(title: "Research unavailable", error: SlipSurgeHTTP.Status(code: 403, data: Data()))
         } else {
             VStack(alignment: .leading, spacing: 9) {
-                if mismatch {
-                    ResearchToolRail(title: "Sample window", choices: Window.allCases, selection: $window, label: \.rawValue) {
+                if mismatch || trends {
+                    ResearchToolRail(title: "Sample window", choices: trends ? [.l3, .l5, .l10] : Window.allCases,
+                                     selection: $window, label: \.rawValue) {
                         $0 == .season ? "calendar" : "clock.arrow.circlepath"
                     }
                 } else {
                     ResearchToolRail(title: "Cheatsheet board", choices: Page.allCases, selection: $page, label: \.rawValue, glyph: \.glyph)
-                        .onChange(of: page) { _, _ in sort = nil }
                 }
                 controls
                 if let validResult {
@@ -95,7 +140,8 @@ struct SidelineResearchView: View {
                         SidelineMMPlayerView(api: api, player: row.player, mm: row.mm, score: row.score, visual: visual(row.player.team), date: date, game: game,
                             market: market == "completions" ? "passing_completions" : market, sample: sample, initialBook: book)
                     } else {
-                        SidelinePlayerTrendView(row: row, visual: visual(row.player.team), market: market, book: book)
+                        SidelinePlayerTrendView(row: row, visual: visual(row.player.team), market: market, book: book,
+                                                opponent: teams.first { $0.code != visual(row.player.team).code })
                     }
                 }
                 .presentationDragIndicator(.visible)
@@ -104,17 +150,33 @@ struct SidelineResearchView: View {
     }
 
     private var controls: some View {
-        let servesPlayers = mismatch || page == .market || page == .exact || page == .explosive
+        let servesPlayers = trends || mismatch || page == .market || page == .exact || page == .explosive
         return VStack(alignment: .leading, spacing: 7) {
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
+                    if case .member(_, let user) = api.scope {
+                        ResearchSavedFilters(account: user, board: trends ? "sideline.trends" : "sideline.\(tool.rawValue)",
+                            current: Saved(sample: sample, window: window, page: page, sort: sort, market: market,
+                                           book: book, search: ResearchResumeFilters.searchTerm(search), team: team)) { saved in
+                            sample = saved.sample
+                            window = saved.window
+                            page = saved.page
+                            sort = saved.sort
+                            market = saved.market
+                            book = saved.book
+                            search = saved.search
+                            team = teams.first { $0.code == saved.team }?.code ?? ""
+                            matrixID = nil
+                        }
+                    }
                     samplePicker
-                    if mismatch || page == .market || page == .exact {
+                    if trends || mismatch || page == .market || page == .exact {
                         marketPicker
                         if !mismatch { sportsbookPicker }
                         ResearchToolFilter(title: "Sort", symbol: "arrow.up.arrow.down", selection: activeSort.rawValue) {
                             Picker("Sort", selection: Binding(get: { activeSort }, set: { sort = $0 })) {
-                                ForEach(mismatch ? [Sort.mismatch, .score] : [.edge, .hits], id: \.self) { Text($0.rawValue).tag($0) }
+                                ForEach(trends ? [Sort.rising, .falling, .recent] : mismatch ? [.mismatch, .score] : [.edge, .hits],
+                                        id: \.self) { Text($0.rawValue).tag($0) }
                             }
                         }
                     }
@@ -169,7 +231,11 @@ struct SidelineResearchView: View {
             }
             matrixFilters(data.rows)
         }
-        if mismatch || page == .market || page == .exact {
+        if trends {
+            Text("Compare recent results with earlier recorded games in the selected season.")
+                .font(.caption).foregroundStyle(.secondary)
+            playerRows(data.rows.filter { $0.gameLog?.isEmpty == false })
+        } else if mismatch || page == .market || page == .exact {
             playerRows(data.rows)
         } else if page == .explosive {
             explosiveRows(data.explosives ?? [])
@@ -182,39 +248,57 @@ struct SidelineResearchView: View {
 
     @ViewBuilder
     private func playerRows(_ rows: [SidelineResearchPayload.Row]) -> some View {
-        let visible = rows.filter { row in
-            includes(row.player.team, name: row.player.name)
-                && (page != .exact || mismatch || row.hits?.contains { $0 != nil } == true)
-                && (matrixID == nil || row.matrices?.contains { $0.id == matrixID } == true)
-        }
-            .sorted { a, b in rank(a) == rank(b) ? a.player.name < b.player.name : rank(a) > rank(b) }
+        let visible = rankedPlayers(rows)
         if visible.isEmpty {
             empty
         } else {
             LazyVStack(spacing: 9) {
-                ForEach(visible) { row in
-                    ResearchToolCard(color: visual(row.player.team).primary) {
-                        if mismatch || row.gameLog?.isEmpty == false {
-                            Button { selectedRow = row } label: {
-                                HStack {
-                                    portrait(row.player)
-                                    Spacer(minLength: 8)
-                                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                                }
-                            }
-                            .buttonStyle(SlipSurgePressStyle())
-                            .accessibilityHint("Opens player trends")
-                        } else {
-                            portrait(row.player)
-                        }
-                    } content: {
-                        if mismatch {
-                            mismatchValues(row)
-                        } else {
-                            cheatsheetsValues(row)
-                        }
+                ForEach(visible) { item in playerRow(item) }
+            }
+        }
+    }
+
+    private func rankedPlayers(_ rows: [SidelineResearchPayload.Row]) -> [RankedPlayer] {
+        let filtered = rows.filter { row in
+            includes(row.player.team, name: row.player.name)
+                && (page != .exact || mismatch || row.hits?.contains { $0 != nil } == true)
+                && (matrixID == nil || row.matrices?.contains { $0.id == matrixID } == true)
+        }
+        let ranked = filtered.map { row -> RankedPlayer in
+            let measured = trends ? trend(for: row) : nil
+            return RankedPlayer(row: row, trend: measured, rank: rank(row, trend: measured))
+        }
+        return ranked.sorted { a, b in a.rank == b.rank ? a.row.player.name < b.row.player.name : a.rank > b.rank }
+    }
+
+    private func playerRow(_ item: RankedPlayer) -> some View {
+        let row = item.row
+        return ResearchToolCard(color: visual(row.player.team).primary) {
+            if mismatch || row.gameLog?.isEmpty == false {
+                Button { selectedRow = row } label: {
+                    HStack {
+                        portrait(row.player)
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     }
                 }
+                .buttonStyle(SlipSurgePressStyle())
+                .accessibilityHint("Opens player trends")
+            } else {
+                portrait(row.player)
+            }
+        } content: {
+            if let trend = item.trend {
+                ResearchToolValues(items: [
+                    .init(label: "Recent · \(trend.recentCount) games", text: ResearchFormat.decimal(trend.recent)),
+                    .init(label: "Earlier · \(trend.earlierCount) games", text: ResearchFormat.decimal(trend.comparison)),
+                    .init(label: "Change", text: ResearchFormat.signedDecimal(trend.change),
+                          tone: Brand.signal(trend.change, for: scheme))
+                ])
+            } else if mismatch {
+                mismatchValues(row)
+            } else {
+                cheatsheetsValues(row)
             }
         }
     }
@@ -401,25 +485,38 @@ struct SidelineResearchView: View {
 
     private func rankText(_ rank: Int?) -> String { rank.map { "#\($0)" } ?? "—" }
 
-    private func rank(_ row: SidelineResearchPayload.Row) -> Double {
+    private func trend(for row: SidelineResearchPayload.Row) -> Trend {
+        let values = (row.gameLog ?? []).map(\.value)
+        let recent = values.prefix(window.count)
+        let earlier = values.dropFirst(window.count)
+        return Trend(recent: recent.isEmpty ? nil : recent.reduce(0, +) / Double(recent.count),
+                     comparison: earlier.isEmpty ? nil : earlier.reduce(0, +) / Double(earlier.count),
+                     recentCount: recent.count, earlierCount: earlier.count)
+    }
+
+    private func rank(_ row: SidelineResearchPayload.Row, trend: Trend?) -> Double {
         switch activeSort {
         case .mismatch: row.mm.map(Double.init) ?? -.infinity
         case .score: row.score ?? -.infinity
         case .edge: row.edge ?? -.infinity
         case .hits: (row.hits?.first ?? nil)?.rate ?? -.infinity
+        case .recent: trend?.recent ?? -.infinity
+        case .rising: trend?.change ?? -.infinity
+        case .falling: trend?.change.map { -$0 } ?? -.infinity
         }
     }
 
     private func load(_ requested: Filters) async {
         error = nil
         do {
+            let requestWindow = requested.window.rawValue.lowercased()
             let data = try await api.research(SidelineResearchPayload.self, tool: tool, date: date, game: game, sample: requested.sample, filters: [
-                .init(name: "window", value: requested.window.rawValue.lowercased()), .init(name: "market", value: requested.market),
+                .init(name: "window", value: requestWindow), .init(name: "market", value: requested.market),
                 .init(name: "book", value: requested.book)
             ])
             guard !Task.isCancelled, requested == filters else { return }
             guard data.gameId == game, data.date == date, data.tool == tool.rawValue, data.market == requested.market,
-                  data.book == requested.book, data.window == requested.window.rawValue.lowercased() else { throw URLError(.cannotParseResponse) }
+                  data.book == requested.book, data.window == requestWindow else { throw URLError(.cannotParseResponse) }
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { result = (requested, data) }
         } catch {
             if !Task.isCancelled, requested == filters { self.error = error }

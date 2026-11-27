@@ -169,6 +169,16 @@ struct CourtPlayerView: View {
                     stat("Assists", average["ast"] ?? nil)
                 }.listRowBackground(slipPalette.surface)
             }
+        case .opponent:
+            Section { marketSelection }.listRowBackground(slipPalette.surface)
+            if let metric = CourtPlayerMarket(rawValue: market) {
+                CourtOpponentLog(player: player, game: game, opponent: matchupOpponent, sampleSeason: sampleSeason,
+                    metric: metric, side: side,
+                    line: metric.reference(player, gameID: game.id, vendor: sportsbook.isEmpty ? nil : sportsbook,
+                                           side: side, contract: line?.contract, target: line?.line),
+                    initialVenue: venue, teams: matchupBoard?.teams ?? [])
+                    .id(metric)
+            }
         case .ladder, .markets:
             Section(panel == .ladder ? "Recorded lines" : mode == .live ? "Live markets" : "Pregame markets") {
                 marketSelection
@@ -324,6 +334,8 @@ struct CourtPlayerView: View {
                     })
                 if let opponent = matchupOpponent {
                     opponentTrend(opponent, metric: metric, history: history, reference: reference)
+                    Button("Open opponent log", systemImage: "list.bullet.rectangle") { selectedPanel = .opponent }
+                        .buttonStyle(.bordered)
                 }
                 Picker("Games shown", selection: $window) {
                     ForEach([3, 5, 10, 20], id: \.self) { Text("L\($0)").tag($0) }
