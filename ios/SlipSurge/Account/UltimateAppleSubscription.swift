@@ -1,16 +1,18 @@
 import Foundation
+import OSLog
 import StoreKit
 
 @MainActor
 enum UltimateAppleSubscription {
     static let productID = "com.slipsurge.ios.ultimate.monthly"
+    private static let log = Logger(subsystem: "com.slipsurge.ios", category: "StoreKit")
 
     enum PurchaseResult {
         case active, pending, cancelled, verificationPending
     }
 
     enum RestoreResult {
-        case active, none, otherAccount
+        case active, none, otherAccount, cancelled
     }
 
     enum PurchaseError: Error {
@@ -34,6 +36,7 @@ enum UltimateAppleSubscription {
                 let active = try await redeem(result, account: account, userID: userID)
                 return active ? .active : .verificationPending
             } catch {
+                report(error, action: "Purchase verification")
                 return .verificationPending
             }
         case .pending: return .pending
@@ -44,7 +47,20 @@ enum UltimateAppleSubscription {
 
     static func restore(account: AccountStore, userID: UUID) async throws -> RestoreResult {
         guard account.memberID == userID else { throw PurchaseError.differentAccount }
-        try await AppStore.sync()
+        do {
+            let current = try await restoreCurrentEntitlements(account: account, userID: userID)
+            guard case .none = current else { return current }
+            try await AppStore.sync()
+            return try await restoreCurrentEntitlements(account: account, userID: userID)
+        } catch StoreKitError.userCancelled {
+            return .cancelled
+        } catch {
+            report(error, action: "Restore")
+            throw error
+        }
+    }
+
+    private static func restoreCurrentEntitlements(account: AccountStore, userID: UUID) async throws -> RestoreResult {
         var foundOtherAccount = false
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result, transaction.productID == productID else { continue }
@@ -71,7 +87,22 @@ enum UltimateAppleSubscription {
     private static func recover(_ result: VerificationResult<Transaction>, account: AccountStore, userID: UUID) async {
         guard case .verified(let transaction) = result, transaction.productID == productID,
               transaction.appAccountToken == userID else { return }
-        _ = try? await redeem(result, account: account, userID: userID)
+        do {
+            _ = try await redeem(result, account: account, userID: userID)
+        } catch is CancellationError {
+            return
+        } catch {
+            report(error, action: "Transaction recovery")
+        }
+    }
+
+    private static func report(_ error: any Error, action: String) {
+        if let response = error as? SlipSurgeHTTP.Status {
+            log.error("\(action, privacy: .public) returned HTTP \(response.code, privacy: .public)")
+        } else {
+            let failure = error as NSError
+            log.error("\(action, privacy: .public) failed with \(failure.domain, privacy: .public) \(failure.code, privacy: .public)")
+        }
     }
 
     private static func redeem(_ result: VerificationResult<Transaction>, account: AccountStore, userID: UUID) async throws -> Bool {

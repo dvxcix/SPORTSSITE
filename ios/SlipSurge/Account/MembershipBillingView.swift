@@ -281,6 +281,8 @@ struct MembershipBillingView: View {
                 notice = "Apple found no active Ultimate subscription for this account."
             case .otherAccount:
                 notice = "This Apple subscription belongs to a different SlipSurge account."
+            case .cancelled:
+                break
             }
         } catch {
             notice = "Apple purchases couldn’t be restored yet. Try again in a moment."
