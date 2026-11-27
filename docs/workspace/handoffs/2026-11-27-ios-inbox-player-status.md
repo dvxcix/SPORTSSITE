@@ -16,5 +16,16 @@ research follow-up restored the FanDuel benchmark and the native NFL scoreboard
 displayed the live Denver–Pittsburgh score. The private QA room composer raised
 and hid the keyboard and offered Photo, GIF, and Emoji without sending a post.
 
-The new server and view source is staged for signed-in preview testing on
-Devin’s iPad. Production is still on the verified main checkout.
+The signed-in protected preview passed on Devin’s iPad at 756 × 1158 and
+375 × 720 points. The real Activity rows rendered the names alongside their
+recorded inactive status, and the compact test scrolled the named rows into
+view. The signed-out preview returned 401. The five player-news tests, Hub
+TypeScript check, and Xcode builds passed. The You avatar opened the signed-in
+profile, then Account settings opened Appearance on the full-screen iPad.
+
+The release changes for the canonical site are in
+[archive draft PR #104](https://github.com/dvxcix/SPORTSSITE/pull/104) and
+[player-status draft PR #105](https://github.com/dvxcix/SPORTSSITE/pull/105).
+Production remained READY on main at `fdfeb1f8`. Devin’s iPad is running the
+local Launch QA build with the two feature reads on the protected preview.
+Distribution and broader role and purchase checks remain open.
